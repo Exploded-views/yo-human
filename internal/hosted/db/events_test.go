@@ -140,3 +140,31 @@ func TestStatusPutReplacesAndScopes(t *testing.T) {
 		t.Fatalf("all statuses: %+v", all)
 	}
 }
+
+func TestEventSwarmMatchesDeskTypes(t *testing.T) {
+	d, _ := openTemp(t)
+	for _, e := range []bus.Event{ev("crew", bus.EventDeskMinted), ev("", bus.EventItemPosted)} {
+		err := d.Tx(ctxb(), func(x bus.Tx) error { _, err := x.AppendEvent(e); return err })
+		if err == nil {
+			t.Fatalf("event %+v was stored", e)
+		}
+	}
+}
+
+func TestEventsSinceLimit(t *testing.T) {
+	d, _ := openTemp(t)
+	es := make([]bus.Event, 0, 105)
+	for range 105 {
+		es = append(es, ev("crew", bus.EventItemPosted))
+	}
+	appendAll(t, d, es...)
+	for _, limit := range []int{0, -1} {
+		err := d.Tx(ctxb(), func(x bus.Tx) error { _, err := x.EventsSince("crew", 0, limit); return err })
+		if err == nil {
+			t.Fatalf("limit %d was accepted", limit)
+		}
+	}
+	if got := eventsSince(t, d, "crew", 0, 1000); len(got) != db.MaxEvents {
+		t.Fatalf("limit 1000 returned %d events, want %d", len(got), db.MaxEvents)
+	}
+}

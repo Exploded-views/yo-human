@@ -92,16 +92,61 @@ func TestListOpenForHuman(t *testing.T) {
 	a := item("itm_a", "crew", "a")
 	b := item("itm_b", "client", "b")
 	b.Created = t0.Add(time.Second)
-	decided := item("itm_c", "crew", "c")
-	decided.State = bus.StateDecided
 	toCrew := item("itm_d", "crew", "d")
 	toCrew.To = "crew"
-	for _, it := range []bus.Item{b, a, decided, toCrew} {
+	for _, it := range []bus.Item{b, a, question("itm_c", "crew", "c"), toCrew} {
 		insertItem(t, d, it)
+	}
+	if err := insertRecord(d, bus.Record{ItemID: "itm_c", Revision: 1, Kind: bus.RecordAnswer, ActorKind: bus.ActorAgent, Recorded: t0}); err != nil {
+		t.Fatal(err)
 	}
 	var got []bus.Item
 	tx(t, d, func(x bus.Tx) (err error) { got, err = x.ListOpenForHuman(); return })
 	if len(got) != 2 || got[0].ID != "itm_a" || got[1].ID != "itm_b" {
 		t.Fatalf("got %d items, want itm_a then itm_b: %+v", len(got), got)
+	}
+}
+
+func TestStateOnlyFromDecisions(t *testing.T) {
+	d, _ := openTemp(t)
+	it := item("itm_1", "crew", "first")
+	it.State = bus.StateDecided
+	insertItem(t, d, it)
+	if itemState(t, d, "itm_1") != bus.StateOpen {
+		t.Fatal("InsertItem stored the state it was given")
+	}
+	tx(t, d, func(x bus.Tx) error { return x.UpdateItem(it) })
+	if itemState(t, d, "itm_1") != bus.StateOpen {
+		t.Fatal("UpdateItem took the state it was given")
+	}
+}
+
+func TestUpdateItemDerivesStateFromRevision(t *testing.T) {
+	d, _ := openTemp(t)
+	q := question("itm_1", "crew", "first")
+	insertItem(t, d, q)
+	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 1)); err != nil {
+		t.Fatal(err)
+	}
+	tx(t, d, func(x bus.Tx) error { return x.UpdateItem(q) })
+	if itemState(t, d, "itm_1") != bus.StateDecided {
+		t.Fatal("an update at the decided revision reopened the item")
+	}
+	q.Revision = 2
+	tx(t, d, func(x bus.Tx) error { return x.UpdateItem(q) })
+	if itemState(t, d, "itm_1") != bus.StateOpen {
+		t.Fatal("a new revision without a decision stayed decided")
+	}
+}
+
+func TestEmptySwarmRefused(t *testing.T) {
+	d, _ := openTemp(t)
+	err := d.Tx(ctxb(), func(x bus.Tx) error { return x.InsertItem(item("itm_1", "", "first")) })
+	if err == nil {
+		t.Fatal("an item with an empty swarm was stored")
+	}
+	err = d.Tx(ctxb(), func(x bus.Tx) error { return x.PutStatus(bus.StatusDoc{Doc: []byte(`{}`), Updated: t0}) })
+	if err == nil {
+		t.Fatal("a status with an empty swarm was stored")
 	}
 }

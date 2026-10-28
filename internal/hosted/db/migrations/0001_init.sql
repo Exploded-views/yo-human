@@ -1,9 +1,10 @@
--- Hosted mode, schema 1. Times are UTC text of fixed width (see timeLayout in db.go), so they
--- sort as strings. Token and secret columns hold hashes only, never the value.
+-- Hosted mode, schema 1: the tables Task 4 uses. Later tasks add theirs (credentials, OAuth,
+-- passkeys, nudges). Times are UTC text of fixed width (see timeLayout in db.go), so they sort
+-- as strings.
 
 CREATE TABLE items (
 	id              TEXT PRIMARY KEY,
-	swarm           TEXT NOT NULL,
+	swarm           TEXT NOT NULL CHECK (swarm <> ''),
 	handle          TEXT NOT NULL,
 	kind            TEXT NOT NULL,
 	severity        TEXT NOT NULL,
@@ -35,9 +36,12 @@ CREATE TABLE items (
 );
 CREATE INDEX items_open_for_human ON items (state, to_target, created);
 
--- Answers and approvals share this table. The CHECK is the database's refusal of an agent
+-- Answers and approvals share this table. The trigger below is the database's own check that a
+-- record is for the item's kind and current revision. The CHECK is the database's refusal of an agent
 -- approval; UNIQUE(item_id, revision, actor_kind) is its backstop for "first wins" within each
--- actor kind. assertion_id is the passkey challenge an approval consumed (NULL for answers).
+-- actor kind. assertion_id is the passkey challenge an approval consumed. It is nullable and
+-- UNIQUE: SQLite's UNIQUE treats every NULL as distinct, so rows without one never collide.
+-- Task 10c writes it and refuses an approval that has none.
 CREATE TABLE decisions (
 	item_id        TEXT NOT NULL REFERENCES items (id),
 	revision       INTEGER NOT NULL CHECK (revision >= 1),
@@ -89,83 +93,22 @@ CREATE TABLE events (
 	starter   TEXT NOT NULL,
 	phrase    TEXT NOT NULL,
 	user_code TEXT NOT NULL,
-	expires   TEXT NOT NULL
+	expires   TEXT NOT NULL,
+	-- Only the desk_* events belong to no swarm, and they belong to nothing else.
+	CHECK ((type LIKE 'desk\_%' ESCAPE '\') = (swarm = ''))
 );
 CREATE INDEX events_by_swarm ON events (swarm, seq);
 
 CREATE TABLE statuses (
-	swarm   TEXT PRIMARY KEY,
+	swarm   TEXT PRIMARY KEY CHECK (swarm <> ''),
 	doc     TEXT NOT NULL,
 	updated TEXT NOT NULL
 );
 
--- Credentials and flow state. The tasks that use these tables (7, 9, 10) own their columns'
--- meaning; each holds a hash of the credential, never the credential.
-CREATE TABLE tokens (
-	id      TEXT PRIMARY KEY,
-	swarm   TEXT NOT NULL,
-	name    TEXT NOT NULL,
-	hash    TEXT NOT NULL UNIQUE,
-	created TEXT NOT NULL,
-	revoked TEXT NOT NULL DEFAULT ''
-);
-
-CREATE TABLE desk_starters (
-	id      TEXT PRIMARY KEY,
-	hash    TEXT NOT NULL UNIQUE,
-	created TEXT NOT NULL,
-	expires TEXT NOT NULL,
-	revoked TEXT NOT NULL DEFAULT ''
-);
-
-CREATE TABLE desk_tokens (
-	id         TEXT PRIMARY KEY,
-	starter_id TEXT NOT NULL REFERENCES desk_starters (id),
-	hash       TEXT NOT NULL UNIQUE,
-	created    TEXT NOT NULL,
-	expires    TEXT NOT NULL,
-	revoked    TEXT NOT NULL DEFAULT ''
-);
-
-CREATE TABLE desk_flows (
-	id         TEXT PRIMARY KEY,
-	starter_id TEXT NOT NULL REFERENCES desk_starters (id),
-	device_hash TEXT NOT NULL UNIQUE,
-	user_code  TEXT NOT NULL UNIQUE,
-	phrase     TEXT NOT NULL,
-	state      TEXT NOT NULL,
-	created    TEXT NOT NULL,
-	expires    TEXT NOT NULL
-);
-
-CREATE TABLE oauth_clients (
-	client_id     TEXT PRIMARY KEY,
-	name          TEXT NOT NULL,
-	redirect_uris TEXT NOT NULL,
-	created       TEXT NOT NULL
-);
-
-CREATE TABLE oauth_codes (
-	code_hash      TEXT PRIMARY KEY,
-	client_id      TEXT NOT NULL REFERENCES oauth_clients (client_id),
-	redirect_uri   TEXT NOT NULL,
-	code_challenge TEXT NOT NULL,
-	created        TEXT NOT NULL,
-	expires        TEXT NOT NULL,
-	used           TEXT NOT NULL DEFAULT ''
-);
-
-CREATE TABLE oauth_tokens (
-	hash      TEXT PRIMARY KEY,
-	kind      TEXT NOT NULL CHECK (kind IN ('access', 'refresh')),
-	client_id TEXT NOT NULL REFERENCES oauth_clients (client_id),
-	created   TEXT NOT NULL,
-	expires   TEXT NOT NULL,
-	revoked   TEXT NOT NULL DEFAULT ''
-);
-
-CREATE TABLE nudge_state (
-	key     TEXT PRIMARY KEY,
-	value   TEXT NOT NULL,
-	updated TEXT NOT NULL
-);
+CREATE TRIGGER decisions_guard BEFORE INSERT ON decisions
+BEGIN
+	SELECT RAISE(ABORT, 'decision kind does not match the item kind')
+	WHERE (NEW.kind = 'approval') <> (SELECT kind = 'approval' FROM items WHERE id = NEW.item_id);
+	SELECT RAISE(ABORT, 'decision revision is not the item''s current revision')
+	WHERE NEW.revision <> (SELECT revision FROM items WHERE id = NEW.item_id);
+END;

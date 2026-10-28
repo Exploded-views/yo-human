@@ -57,3 +57,10 @@ func insertItem(t *testing.T, d *db.DB, it bus.Item) {
 	t.Helper()
 	tx(t, d, func(x bus.Tx) error { return x.InsertItem(it) })
 }
+
+// question is an item that takes answers, not approvals.
+func question(id, swarm, handle string) bus.Item {
+	it := item(id, swarm, handle)
+	it.Kind, it.Action = bus.KindQuestion, bus.ActionNone
+	return it
+}

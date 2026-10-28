@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Exploded-views/yo-human/internal/hosted/bus"
@@ -21,9 +22,16 @@ func (x *txn) AppendEvent(e bus.Event) (int64, error) {
 	return seq, nil
 }
 
-// EventsSince returns events with seq greater than since, in seq order, at most limit. A swarm
+// MaxEvents caps one EventsSince call.
+const MaxEvents = 100
+
+// EventsSince returns events with seq greater than since, in seq order, at most limit (above zero, clamped to MaxEvents). A swarm
 // restricts the result to that swarm's events; an empty swarm means all of them.
 func (x *txn) EventsSince(swarm string, since int64, limit int) ([]bus.Event, error) {
+	if limit <= 0 {
+		return nil, errors.New("db: EventsSince needs a limit above zero")
+	}
+	limit = min(limit, MaxEvents)
 	q := `SELECT seq, swarm, item_id, type, created, starter, phrase, user_code, expires FROM events
 		WHERE seq > ? AND (? = '' OR swarm = ?) ORDER BY seq LIMIT ?`
 	rows, err := x.tx.QueryContext(x.ctx, q, since, swarm, swarm, limit)

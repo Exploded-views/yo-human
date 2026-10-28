@@ -33,19 +33,40 @@ func (x *txn) Decision(itemID string, rev int) (bus.Record, bool, error) {
 	return r, true, nil
 }
 
+// The errors InsertDecision returns when a record doesn't fit its item.
+var (
+	ErrKindMismatch  = errors.New("db: decision kind does not match the item kind")
+	ErrStaleRevision = errors.New("db: decision revision is not the item's current revision")
+)
+
 // InsertDecision stores an answer or approval and, in the same transaction, marks the item
-// decided if the record is for its current revision. That is the only way an item becomes
-// decided. A second record for the same (item, revision, actor kind) is a conflict
+// decided. That is the only way an item becomes decided. The record must match the item's kind
+// (approval for approvals, answer for the rest) and its current revision, else ErrKindMismatch
+// or ErrStaleRevision. A second record for the same (item, revision, actor kind) is a conflict
 // (IsConflict), and the database refuses an agent approval.
 func (x *txn) InsertDecision(r bus.Record) error {
-	_, err := x.tx.ExecContext(x.ctx, `INSERT INTO decisions (item_id, revision, kind, decision, actor_kind, text,
+	it, found, err := x.oneItem("id = ?", r.ItemID)
+	if err != nil {
+		return err
+	}
+	if found {
+		if (r.Kind == bus.RecordApproval) != (it.Kind == bus.KindApproval) {
+			return ErrKindMismatch
+		}
+		if r.Revision != it.Revision {
+			return ErrStaleRevision
+		}
+	}
+	// A missing item falls through to the foreign key. The decisions_guard trigger repeats both
+	// checks for any other write path.
+	_, err = x.tx.ExecContext(x.ctx, `INSERT INTO decisions (item_id, revision, kind, decision, actor_kind, text,
 		source, by_name, source_message, human_ts, recorded) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		r.ItemID, r.Revision, r.Kind, r.Decision, r.ActorKind, r.Text, r.Source, r.By, r.SourceMessage,
 		fmtTime(r.HumanTS), fmtTime(r.Recorded))
 	if err != nil {
 		return fmt.Errorf("db: insert decision: %w", err)
 	}
-	if _, err := x.tx.ExecContext(x.ctx, "UPDATE items SET state = 'decided' WHERE id = ? AND revision = ?", r.ItemID, r.Revision); err != nil {
+	if _, err := x.tx.ExecContext(x.ctx, "UPDATE items SET state = 'decided' WHERE id = ?", r.ItemID); err != nil {
 		return fmt.Errorf("db: mark item decided: %w", err)
 	}
 	return nil

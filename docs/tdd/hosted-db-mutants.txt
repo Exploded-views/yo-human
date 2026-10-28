@@ -39,3 +39,64 @@ against main's .golangci.yml (LINT_RULES_CONFIG): 7 probe cases fail, e.g.:
   FAIL internal/hosted/db/caseweb/x.go: hosted db imports web: want hosted-db-imports, got clean
   FAIL internal/hosted/db/casestore/x.go: hosted db imports the CLI store: want hosted-db-imports, got hosted-imports
 against the committed config: lint_rules_test: all 131 cases pass
+
+# Review fixes (Opus review of 7e9483c), 2026-10-28T19:32:51Z: mutants on the fixed implementation, each applied by hand, vetted, run, reverted
+baseline internal/hosted/db: exit=0
+Not covered here: _txlock=immediate and busy_timeout. Task 6's concurrency test on a real file pins them.
+
+## kind guard removed from InsertDecision, and the decisions_guard trigger removed (the Go revision guard stays)
+internal/hosted/db/decisions.go: 'if (r.Kind == bus.RecordApproval) != (it.Kind == bus.KindApproval) {' -> 'if false {'
+vet exit=0
+--- FAIL: TestAgentAnswerOnApprovalRefused (0.02s)
+--- FAIL: TestApprovalOnQuestionRefused (0.02s)
+--- FAIL: TestTriggerGuardsDirectInserts (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.737s
+FAIL
+suite exit=1
+
+## InsertItem stores it.State
+internal/hosted/db/items.go: 'it.Revision, bus.StateOpen, it.ContentHash' -> 'it.Revision, it.State, it.ContentHash'
+vet exit=0
+--- FAIL: TestStateOnlyFromDecisions (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	2.610s
+FAIL
+suite exit=1
+
+## EventsSince accepts limit <= 0
+internal/hosted/db/events.go: 'if limit <= 0 {' -> 'if limit < -1000 {'
+vet exit=0
+--- FAIL: TestEventsSinceLimit (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.476s
+FAIL
+suite exit=1
+
+## existing-file 0600 check skipped
+internal/hosted/db/db.go: 'fi.Mode().Perm()&^0o600 != 0 {' -> 'fi.Mode().Perm()&^0o600 != 0 && false {'
+vet exit=0
+--- FAIL: TestOpenRefusesLooseFile (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.435s
+FAIL
+suite exit=1
+
+## foreign_keys pragma dropped
+internal/hosted/db/db.go: 'q.Add("_pragma", "foreign_keys(1)")' -> '_ = 0'
+vet exit=0
+--- FAIL: TestMissingItemDecisionRefusedByForeignKey (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.463s
+FAIL
+suite exit=1
+
+## EventsSince limit not clamped
+internal/hosted/db/events.go: 'limit = min(limit, MaxEvents)' -> '_ = MaxEvents'
+vet exit=0
+--- FAIL: TestEventsSinceLimit (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.400s
+FAIL
+suite exit=1
+

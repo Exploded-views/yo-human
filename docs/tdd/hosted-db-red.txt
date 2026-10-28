@@ -52,3 +52,10 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.754s
 FAIL
 exit=1
+
+## Notes (added after the recorded run; the output above is unedited)
+- Base: origin/main at db614ca (the branch point).
+- Every test failed on the stub's `Open: not implemented` error, not on its own assertion.
+- Test changes after RED: `openTemp` now makes a 0700 subdirectory (t.TempDir() is 0755 here), the
+  item round trip with no risk flags also asserts `Untrusted` false, and `events_test.go` was split
+  into helpers to meet gocyclo. Review fixes (7e9483c onward) changed more tests; see the commits.

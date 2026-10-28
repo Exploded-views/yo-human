@@ -166,11 +166,47 @@ func TestCheckReportsIntegrity(t *testing.T) {
 	if c.Integrity != "ok" {
 		t.Fatalf("integrity = %q, want ok", c.Integrity)
 	}
-	if c.Items != 0 || c.Decisions != 0 || c.Events != 0 || c.Messages != 0 {
+	if c.Items != 0 || c.Decisions != 0 || c.Relays != 0 || c.Events != 0 || c.Messages != 0 {
 		t.Fatalf("fresh database has counts %+v", c)
 	}
 	insertItem(t, d, item("itm_1", "crew", "first"))
 	if c, err = d.Check(context.Background()); err != nil || c.Items != 1 {
 		t.Fatalf("after one item: %+v, %v", c, err)
+	}
+}
+
+func TestOpenRefusesLooseFile(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "data")
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "bus.db")
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := db.Open(path)
+	if err == nil || !strings.Contains(err.Error(), "chmod 600") {
+		t.Fatalf("Open of a 0644 file gave %v, want a chmod 600 refusal", err)
+	}
+}
+
+func TestOpenSetsFileModeAndWAL(t *testing.T) {
+	d, path := openTemp(t)
+	insertItem(t, d, item("itm_1", "crew", "first"))
+	fi, err := os.Stat(path)
+	if err != nil || fi.Mode().Perm() != 0o600 {
+		t.Fatalf("database file mode = %v, %v; want 0600", fi, err)
+	}
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = raw.Close() }()
+	var mode string
+	if err := raw.QueryRow("PRAGMA journal_mode").Scan(&mode); err != nil || mode != "wal" {
+		t.Fatalf("journal_mode = %q, %v; want wal", mode, err)
 	}
 }

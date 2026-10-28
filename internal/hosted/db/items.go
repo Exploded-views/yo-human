@@ -74,7 +74,7 @@ func (x *txn) InsertItem(it bus.Item) error {
 	_, err = x.tx.ExecContext(x.ctx, `INSERT INTO items (`+itemCols+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		it.ID, it.Swarm, it.Handle, it.Kind, it.Severity, it.To, it.From, it.FromKind, it.Title, it.Summary,
 		it.Detail, it.RequiredAction, it.Repo, it.Ref, it.BaseRef, it.Target, it.PinnedCommit, it.PinnedTree,
-		it.Action, it.Link, flags, boolInt(it.Untrusted), it.Revision, it.State, it.ContentHash, it.LastSeq,
+		it.Action, it.Link, flags, boolInt(it.Untrusted), it.Revision, bus.StateOpen, it.ContentHash, it.LastSeq,
 		it.AckedSeq, fmtTime(it.Created), fmtTime(it.Updated))
 	if err != nil {
 		return fmt.Errorf("db: insert item: %w", err)
@@ -89,6 +89,9 @@ func boolInt(b bool) int {
 	return 0
 }
 
+// InsertItem always stores the item open, and UpdateItem derives the state from whether a
+// decision exists for the new revision: State comes only from the decisions table.
+
 // UpdateItem rewrites the item's mutable fields. ID, swarm, author and creation time never change.
 func (x *txn) UpdateItem(it bus.Item) error {
 	flags, err := flagsJSON(it.RiskFlags)
@@ -97,11 +100,12 @@ func (x *txn) UpdateItem(it bus.Item) error {
 	}
 	res, err := x.tx.ExecContext(x.ctx, `UPDATE items SET handle = ?, kind = ?, severity = ?, to_target = ?, title = ?,
 		summary = ?, detail = ?, required_action = ?, repo = ?, ref = ?, base_ref = ?, target = ?, pinned_commit = ?,
-		pinned_tree = ?, action = ?, link = ?, risk_flags = ?, untrusted = ?, revision = ?, state = ?,
+		pinned_tree = ?, action = ?, link = ?, risk_flags = ?, untrusted = ?, revision = ?,
+		state = CASE WHEN EXISTS (SELECT 1 FROM decisions WHERE item_id = items.id AND revision = ?) THEN 'decided' ELSE 'open' END,
 		content_hash = ?, last_seq = ?, acked_seq = ?, updated = ? WHERE id = ?`,
 		it.Handle, it.Kind, it.Severity, it.To, it.Title, it.Summary, it.Detail, it.RequiredAction, it.Repo,
 		it.Ref, it.BaseRef, it.Target, it.PinnedCommit, it.PinnedTree, it.Action, it.Link, flags,
-		boolInt(it.Untrusted), it.Revision, it.State, it.ContentHash, it.LastSeq, it.AckedSeq,
+		boolInt(it.Untrusted), it.Revision, it.Revision, it.ContentHash, it.LastSeq, it.AckedSeq,
 		fmtTime(it.Updated), it.ID)
 	if err != nil {
 		return fmt.Errorf("db: update item: %w", err)

@@ -2,6 +2,8 @@ package db_test
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -30,7 +32,8 @@ func insertRecord(d *db.DB, r bus.Record) error {
 
 func TestDecisionUniquePerRevision(t *testing.T) {
 	d, _ := openTemp(t)
-	insertItem(t, d, item("itm_1", "crew", "first"))
+	q := question("itm_1", "crew", "first")
+	insertItem(t, d, q)
 	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 1)); err != nil {
 		t.Fatal(err)
 	}
@@ -41,6 +44,8 @@ func TestDecisionUniquePerRevision(t *testing.T) {
 	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorHuman, 1)); err != nil {
 		t.Fatalf("the human record for the same revision: %v", err)
 	}
+	q.Revision = 2
+	tx(t, d, func(x bus.Tx) error { return x.UpdateItem(q) })
 	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 2)); err != nil {
 		t.Fatalf("an agent record for another revision: %v", err)
 	}
@@ -69,10 +74,10 @@ func TestDecisionRoundTrip(t *testing.T) {
 
 func TestDecisionPrefersHuman(t *testing.T) {
 	d, _ := openTemp(t)
-	insertItem(t, d, item("itm_1", "crew", "first"))
+	insertItem(t, d, question("itm_1", "crew", "first"))
 	agent, human := record(bus.RecordAnswer, bus.ActorAgent, 1), record(bus.RecordAnswer, bus.ActorHuman, 1)
 	agent.Text, human.Text = "from the agent", "from the human"
-	for _, r := range []bus.Record{human, agent} {
+	for _, r := range []bus.Record{agent, human} {
 		if err := insertRecord(d, r); err != nil {
 			t.Fatal(err)
 		}
@@ -96,25 +101,89 @@ func TestDatabaseRefusesAgentApproval(t *testing.T) {
 	}
 }
 
-func TestInsertDecisionMarksOnlyThatRevisionDecided(t *testing.T) {
+func itemState(t *testing.T, d *db.DB, id string) bus.State {
+	t.Helper()
+	var it bus.Item
+	tx(t, d, func(x bus.Tx) (err error) { it, _, err = x.ItemByID(id); return })
+	return it.State
+}
+
+func TestInsertDecisionMarksItemDecided(t *testing.T) {
 	d, _ := openTemp(t)
-	insertItem(t, d, item("itm_1", "crew", "first"))
-	state := func() bus.State {
-		var it bus.Item
-		tx(t, d, func(x bus.Tx) (err error) { it, _, err = x.ItemByID("itm_1"); return })
-		return it.State
-	}
-	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 2)); err != nil {
-		t.Fatal(err)
-	}
-	if state() != bus.StateOpen {
-		t.Fatal("a record for another revision decided the item")
-	}
+	insertItem(t, d, question("itm_1", "crew", "first"))
 	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 1)); err != nil {
 		t.Fatal(err)
 	}
-	if state() != bus.StateDecided {
+	if itemState(t, d, "itm_1") != bus.StateDecided {
 		t.Fatal("a record for the current revision did not decide the item")
+	}
+}
+
+func TestDecisionForAnotherRevisionRefused(t *testing.T) {
+	d, _ := openTemp(t)
+	insertItem(t, d, question("itm_1", "crew", "first"))
+	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 5)); !errors.Is(err, db.ErrStaleRevision) {
+		t.Fatalf("revision 5 on a revision 1 item gave %v, want ErrStaleRevision", err)
+	}
+	if itemState(t, d, "itm_1") != bus.StateOpen {
+		t.Fatal("a refused record decided the item")
+	}
+}
+
+func TestAgentAnswerOnApprovalRefused(t *testing.T) {
+	d, _ := openTemp(t)
+	insertItem(t, d, item("itm_1", "crew", "first"))
+	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 1)); !errors.Is(err, db.ErrKindMismatch) {
+		t.Fatalf("an answer on an approval gave %v, want ErrKindMismatch", err)
+	}
+	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorHuman, 1)); !errors.Is(err, db.ErrKindMismatch) {
+		t.Fatalf("a human answer on an approval gave %v, want ErrKindMismatch", err)
+	}
+	var open []bus.Item
+	tx(t, d, func(x bus.Tx) (err error) { open, err = x.ListOpenForHuman(); return })
+	if len(open) != 1 {
+		t.Fatalf("the approval left the inbox: %d open", len(open))
+	}
+	if c, _ := d.Check(ctxb()); c.Decisions != 0 {
+		t.Fatalf("%d decision rows stored", c.Decisions)
+	}
+}
+
+func TestApprovalOnQuestionRefused(t *testing.T) {
+	d, _ := openTemp(t)
+	insertItem(t, d, question("itm_1", "crew", "first"))
+	if err := insertRecord(d, record(bus.RecordApproval, bus.ActorHuman, 1)); !errors.Is(err, db.ErrKindMismatch) {
+		t.Fatalf("an approval on a question gave %v, want ErrKindMismatch", err)
+	}
+}
+
+func TestMissingItemDecisionRefusedByForeignKey(t *testing.T) {
+	d, _ := openTemp(t)
+	err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 1))
+	if err == nil || errors.Is(err, db.ErrKindMismatch) || errors.Is(err, db.ErrStaleRevision) {
+		t.Fatalf("a decision for a missing item gave %v, want a foreign key failure", err)
+	}
+}
+
+func TestTriggerGuardsDirectInserts(t *testing.T) {
+	d, path := openTemp(t)
+	insertItem(t, d, item("itm_1", "crew", "first"))
+	_ = d.Close()
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = raw.Close() }()
+	ins := `INSERT INTO decisions (item_id, revision, kind, decision, actor_kind, text, source, by_name,
+		source_message, human_ts, recorded) VALUES ('itm_1', ?, ?, ?, ?, '', '', '', '', '', '')`
+	if _, err := raw.Exec(ins, 1, "answer", "", "agent"); err == nil {
+		t.Fatal("the trigger let an answer on an approval in")
+	}
+	if _, err := raw.Exec(ins, 5, "approval", "approve", "human"); err == nil {
+		t.Fatal("the trigger let a decision for revision 5 in")
+	}
+	if _, err := raw.Exec(ins, 1, "approval", "approve", "human"); err != nil {
+		t.Fatalf("the trigger refused a valid approval: %v", err)
 	}
 }
 

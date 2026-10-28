@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/Exploded-views/yo-human/internal/hosted/bus"
@@ -49,6 +50,9 @@ var _ bus.Store = (*DB)(nil)
 // 0700, and one looser than 0700 is refused.
 func Open(path string) (*DB, error) {
 	if err := checkDir(filepath.Dir(path)); err != nil {
+		return nil, err
+	}
+	if err := checkFile(path); err != nil {
 		return nil, err
 	}
 	// Create the file 0600 before SQLite does, so the WAL and shared-memory files follow.
@@ -96,8 +100,27 @@ func checkDir(dir string) error {
 	if !fi.IsDir() {
 		return errors.New("db: the database's parent is not a directory")
 	}
+	// The other-owner case needs a second user (root) to test, so no test covers it.
+	if st, ok := fi.Sys().(*syscall.Stat_t); ok && int(st.Uid) != os.Getuid() {
+		return errors.New("db: data directory is not owned by the current user")
+	}
 	if fi.Mode().Perm()&^0o700 != 0 {
 		return fmt.Errorf("db: data directory is %04o, looser than 0700: run chmod 700 on it", fi.Mode().Perm())
+	}
+	return nil
+}
+
+// checkFile refuses an existing database file that group or others can access.
+func checkFile(path string) error {
+	fi, err := os.Stat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("db: database file: %w", err)
+	}
+	if fi.Mode().Perm()&^0o600 != 0 {
+		return fmt.Errorf("db: database file is %04o, looser than 0600: run chmod 600 on it", fi.Mode().Perm())
 	}
 	return nil
 }
@@ -138,8 +161,8 @@ var _ bus.Tx = (*txn)(nil)
 
 // Counts is what Check reports: SQLite's integrity verdict ("ok" when sound) and row counts.
 type Counts struct {
-	Integrity                          string
-	Items, Decisions, Events, Messages int
+	Integrity                                  string
+	Items, Decisions, Relays, Events, Messages int
 }
 
 // Check runs PRAGMA integrity_check and counts rows.
@@ -165,7 +188,7 @@ func (d *DB) Check(ctx context.Context) (Counts, error) {
 	if len(problems) != 1 || problems[0] != "ok" {
 		c.Integrity = fmt.Sprintf("%d problems reported", len(problems))
 	}
-	for table, dst := range map[string]*int{"items": &c.Items, "decisions": &c.Decisions, "events": &c.Events, "messages": &c.Messages} {
+	for table, dst := range map[string]*int{"items": &c.Items, "decisions": &c.Decisions, "relays": &c.Relays, "events": &c.Events, "messages": &c.Messages} {
 		if err := d.sql.QueryRowContext(ctx, "SELECT count(*) FROM "+table).Scan(dst); err != nil { //nolint:gosec // table is a literal from the map above
 			return c, fmt.Errorf("db: count %s: %w", table, err)
 		}
