@@ -121,18 +121,29 @@ linters:
             - $gostd
             - github.com/Exploded-views/yo-human/internal/hosted/
             - github.com/Exploded-views/yo-human/internal/version$
-        # bus is the domain: standard library only. No database/sql (db owns storage) and no
-        # other hosted package (lax: only these entries deny).
+        # bus is the domain: standard library only, plus the owner's approval policy. No
+        # database/sql (db owns storage) and no other hosted package (lax: only these entries
+        # deny, and the longer policy allow beats the hosted/ deny prefix).
         hosted-bus-imports:
           list-mode: lax
           files:
             - "**/internal/hosted/bus/**"
             - "!$test"
+          allow:
+            - github.com/Exploded-views/yo-human/internal/hosted/policy$
           deny:
             - pkg: database/sql
               desc: bus is standard library only; storage lives in internal/hosted/db
             - pkg: github.com/Exploded-views/yo-human/internal/hosted/
               desc: bus imports no other hosted package
+        # policy (the owner's approval policy) is a leaf: standard library only, so bus, approval
+        # and the executor can all import it.
+        hosted-policy-leaf:
+          files:
+            - "**/internal/hosted/policy/**"
+            - "!$test"
+          allow:
+            - $gostd
         # An egress package (one per outbound destination) imports only the standard library
         # and the notify interface it implements.
         hosted-egress-imports:
