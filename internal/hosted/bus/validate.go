@@ -135,7 +135,9 @@ func (f textField) check() *Error {
 // Other_Default_Ignorable_Code_Point (U+3164 and U+115F, the Hangul fillers; U+034F, the
 // combining grapheme joiner) and the variation selectors, except ZWNJ and ZWJ, which scripts and
 // emoji need, and U+FE0F, the emoji presentation selector; the line and paragraph separators
-// (Zl, Zp); and U+2800, the blank braille pattern, which renders as a space.
+// (Zl, Zp); and U+2800, the blank braille pattern, which renders as a space. The variation
+// selector refusal also catches the Mongolian free variation selectors U+180B-180D and U+180F:
+// an accepted casualty (Mongolian text renders without them, with default glyph forms).
 func isRefusedRune(r rune) bool {
 	switch {
 	case r == '\n' || r == '\t' || r == 0x200C || r == 0x200D || r == 0xFE0F:

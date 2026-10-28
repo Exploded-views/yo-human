@@ -177,12 +177,14 @@ func TestEmptyPatternMatchesOnlyEmpty(t *testing.T) {
 }
 
 func TestParseRefusesMidOrMultipleStarInRef(t *testing.T) {
-	for _, mode := range []string{"passkey", "standing", "deny"} {
-		for _, ref := range []string{"release/*/hotfix", "a*b", "**", "*x*", "v*.*"} {
-			file := `{"v": 1, "rules": [{"action": "merge", "repo": "a/b", "ref": "` + ref + `", "mode": "` + mode + `"}]}`
-			_, err := Parse([]byte(file))
-			if err == nil || !strings.Contains(err.Error(), "only as the last character") {
-				t.Errorf("%s ref %q: err = %v, want the trailing-* reason", mode, ref, err)
+	for _, action := range []string{"merge", "release", "public-sync"} {
+		for _, mode := range []string{"passkey", "standing", "deny"} {
+			for _, ref := range []string{"release/*/hotfix", "a*b", "**", "*x*", "*x", "v*.*"} {
+				file := `{"v": 1, "rules": [{"action": "` + action + `", "repo": "a/b", "ref": "` + ref + `", "mode": "` + mode + `"}]}`
+				_, err := Parse([]byte(file))
+				if err == nil || !strings.Contains(err.Error(), "only as the last character") {
+					t.Errorf("%s %s ref %q: err = %v, want the trailing-* reason", action, mode, ref, err)
+				}
 			}
 		}
 	}
