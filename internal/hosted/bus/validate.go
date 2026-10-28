@@ -129,16 +129,19 @@ func (f textField) check() *Error {
 }
 
 // isRefusedRune: the runes that can make the text the owner reads differ from the text
-// stored. Control characters other than newline and tab; every format character (Cf: bidi
-// marks, embeddings, overrides and isolates, tag characters, BOM, zero-width space, word
-// joiner, soft hyphen, U+180E, U+061C) except ZWNJ and ZWJ, which scripts and emoji need; the
-// line and paragraph separators (Zl, Zp); and the variation selectors supplement.
+// stored. Control characters other than newline and tab; the default-ignorable code points,
+// which render as nothing: every format character (Cf: bidi marks, embeddings, overrides and
+// isolates, tag characters, BOM, zero-width space, word joiner, soft hyphen, U+180E, U+061C),
+// Other_Default_Ignorable_Code_Point (U+3164 and U+115F, the Hangul fillers; U+034F, the
+// combining grapheme joiner) and the variation selectors, except ZWNJ and ZWJ, which scripts and
+// emoji need, and U+FE0F, the emoji presentation selector; the line and paragraph separators
+// (Zl, Zp); and U+2800, the blank braille pattern, which renders as a space.
 func isRefusedRune(r rune) bool {
 	switch {
-	case r == '\n' || r == '\t' || r == 0x200C || r == 0x200D:
+	case r == '\n' || r == '\t' || r == 0x200C || r == 0x200D || r == 0xFE0F:
 		return false
 	case unicode.IsControl(r), unicode.Is(unicode.Cf, r), unicode.In(r, unicode.Zl, unicode.Zp),
-		r >= 0xE0100 && r <= 0xE01EF:
+		unicode.In(r, unicode.Other_Default_Ignorable_Code_Point, unicode.Variation_Selector), r == 0x2800:
 		return true
 	}
 	return false

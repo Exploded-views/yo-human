@@ -69,6 +69,13 @@ var (
 	envPatRE  = regexp.MustCompile(`^[a-z0-9*-]+$`)
 )
 
+// Pattern length caps, the targets' own limits (bus validation).
+const (
+	maxRepoPat = 200
+	maxRefPat  = 100
+	maxEnvPat  = 63
+)
+
 // keyNames are the only keys a policy file may use. encoding/json matches keys without regard
 // to case (and folds runes such as U+017F to s), and the last duplicate wins, so checkKeys
 // refuses any key not spelled exactly so, and any key given twice in one object.
@@ -150,14 +157,33 @@ func checkRule(r Rule) error {
 		return fmt.Errorf("mode %q is not passkey, standing or deny", r.Mode)
 	case !repoPatRE.MatchString(r.Repo) || strings.HasSuffix(strings.ToLower(r.Repo), ".git"):
 		return fmt.Errorf("repo %q: an owner/name pattern of letters, digits, ., _, - and *, with no .git alias", r.Repo)
+	case len(r.Repo) > maxRepoPat:
+		return fmt.Errorf("repo pattern: at most %d bytes", maxRepoPat)
 	case r.Action == "deploy":
+		if len(r.Env) > maxEnvPat {
+			return fmt.Errorf("env pattern: at most %d bytes", maxEnvPat)
+		}
 		return checkFields(r, "env", r.Env, envPatRE, "ref", r.Ref)
 	}
 	if err := checkFields(r, "ref", r.Ref, refPatRE, "env", r.Env); err != nil {
 		return err
 	}
-	if strings.HasPrefix(r.Ref, "refs/") {
+	return checkRefPattern(r.Ref)
+}
+
+// checkRefPattern: no refs/ prefix, at most maxRefPat bytes, and `*` only as the last character.
+// GitHub rulesets match with fnmatch, where `*` stops at `/`; a trailing `*` is the one form
+// whose policy meaning ("starts with") a pair of ruleset patterns covers exactly
+// (RulesetRefPatterns). The rule holds for every mode, so no rule matches differently from
+// the ruleset it implies.
+func checkRefPattern(ref string) error {
+	switch {
+	case strings.HasPrefix(ref, "refs/"):
 		return errors.New("a ref pattern names the branch or tag, without refs/")
+	case len(ref) > maxRefPat:
+		return fmt.Errorf("ref pattern: at most %d bytes", maxRefPat)
+	case strings.Contains(strings.TrimSuffix(ref, "*"), "*"):
+		return fmt.Errorf("ref pattern %q: * may appear once, only as the last character, so a GitHub ruleset (where * stops at /) can cover exactly what the rule matches", ref)
 	}
 	return nil
 }
@@ -224,38 +250,6 @@ func match(pat, v string) bool {
 		return v == ""
 	}
 	return glob(pat, v)
-}
-
-// glob reports whether v matches pat, where `*` matches any run of characters (`/` included)
-// and every other character matches itself. Greedy with one backtrack point: linear in practice.
-func glob(pat, v string) bool {
-	p, s := []rune(pat), []rune(v)
-	pi, si, star, mark := 0, 0, -1, 0
-	for si < len(s) {
-		switch {
-		case pi < len(p) && p[pi] == '*':
-			star, mark = pi, si
-			pi++
-		case pi < len(p) && p[pi] == s[si]:
-			pi, si = pi+1, si+1
-		case star >= 0:
-			mark++
-			pi, si = star+1, mark
-		default:
-			return false
-		}
-	}
-	for pi < len(p) && p[pi] == '*' {
-		pi++
-	}
-	return pi == len(p)
-}
-
-// RulesetRefPattern is a ref pattern as a GitHub ruleset's fnmatch needs it: there `*` stops at
-// `/` and `**` doesn't, so each `*` becomes `**` and the ruleset covers what Decide covers.
-// `policy gates` emits it, and the executor's ruleset check (Task 10e) compares with it.
-func RulesetRefPattern(ref string) string {
-	return strings.ReplaceAll(ref, "*", "**")
 }
 
 // ErrNoWitness: every rune that could stand for `*` in a witness appears in the policy's
