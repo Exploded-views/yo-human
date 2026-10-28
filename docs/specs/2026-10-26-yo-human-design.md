@@ -95,7 +95,7 @@ The design provides these knobs. The setup agent proposes defaults with the huma
 - ~~Language and runtime~~: decided, Go (same as bitc and memsync; a static binary starting in milliseconds suits a call-only CLI).
 - Storage for questions, rules, context and delivery state (likely a small local SQLite or file store with atomic writes).
 - The exact CLI verbs, exit codes, MCP tool shapes and the agent skill text.
-- How question sessions are created and torn down in herdr, and how the answer is relayed back to the asker (herdr API, SendMessage, a file the asker waits on).
+- ~~How question sessions are created and torn down in herdr, and how the answer is relayed back to the asker (herdr API, SendMessage, a file the asker waits on).~~ Superseded (2026-10-28): hosted mode drops herdr question sessions (hosted-mode spec, "Build order", H2). Answers reach the asker through the bus, and sessions on one host message each other with SendMessage (hosted-mode spec, Agents).
 - The Heeler integration surface: what works today through its plugin and relay, and what needs upstream changes.
 - The rule language for conversationally set rules, and how agents write and validate them.
 - Test harnesses: fake channels, a fake PagerDuty, a fake clock for escalation.
