@@ -83,6 +83,7 @@ The owner's binding constraint is his shared Claude usage window: Duet's session
 - Duet measured one empty routine run (connect, list tools, one call, nothing to report) at about 124k tokens of context, roughly $0.75 at API list prices. Startup is the cost, so the saving comes from not starting a session, not from a cheaper check inside one.
 - So: push first (quiet nudges that bring the human to Duet; real-time hand-offs where available), and keep polling to two or three runs a day. Use one-off runs at a known time for something in flight instead of a faster schedule.
 - MCP answers stay small: summaries and handles first, detail only on request (`item(id)`).
+- The bus moves no files (owner, 2026-10-28): an item carries text and at most one allow-listed `https` link, a pointer and never a copy. A future file hand-off must meet the plan's four conditions: no reads from protected Mac folders, owner-initiated and named per crew, logged with size and sha256 only, and client files only to that crew's node.
 
 ## What Duet is and how it behaves (from its own notes and the 2026-10-27 spike)
 

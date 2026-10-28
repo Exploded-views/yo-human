@@ -113,6 +113,11 @@ internal/hosted/bus/casesql|hosted-bus-imports|x.go|database/sql|hosted bus impo
 internal/hosted/bus/casehttp|internal-no-network|x.go|net/http|hosted bus imports net/http
 internal/hosted/bus/casestore|hosted-imports|x.go|M/internal/store|hosted bus imports the CLI store
 internal/hosted/bus/casenotify|hosted-bus-imports|x.go|M/internal/hosted/notify|hosted bus imports notify (bus is standard library only)
+internal/hosted/bus/casepolicy|clean|x.go|M/internal/hosted/policy|hosted bus imports policy (the approval policy)
+internal/hosted/policy/casebus|hosted-policy-leaf|x.go|M/internal/hosted/bus|hosted policy imports bus (policy is a leaf)
+internal/hosted/policy/caseversion|hosted-policy-leaf|x.go|M/internal/version|hosted policy imports version (standard library only)
+internal/hosted/policy/casehttp|internal-no-network|x.go|net/http|hosted policy imports net/http
+internal/hosted/policy/caseok|clean|x.go|encoding/json path strings|hosted policy imports the standard library
 internal/hosted/db/casehttp|internal-no-network|x.go|net/http|hosted db imports net/http
 internal/hosted/db/caseok|clean|x.go|M/internal/hosted/bus database/sql|hosted db imports bus and database/sql
 internal/hosted/notify/casehttp|internal-no-network|x.go|net/http|hosted notify imports net/http
@@ -164,7 +169,7 @@ for s in internal/cli internal/version internal/core internal/store internal/con
   internal/problem internal/channel internal/channel/ntfy internal/channel/bark \
   internal/channel/channeltest internal/channel/registry internal/channel/transport \
   internal/hosted/app internal/hosted/bus internal/hosted/db internal/hosted/web internal/hosted/oauth \
-  internal/hosted/notify internal/hosted/egress/bark; do
+  internal/hosted/notify internal/hosted/egress/bark internal/hosted/policy; do
   mkdir -p "$d/$s" && echo "package $(basename "$s")" > "$d/$s/stub.go" || exit 2
 done
 echo "$cases" | while IFS='|' read -r dir want file imps what code tag pass; do

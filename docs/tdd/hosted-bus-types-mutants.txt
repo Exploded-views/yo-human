@@ -1,0 +1,356 @@
+# H1 Task 3 mutants, 2026-10-28T07:52:35Z, head 67bb725
+baseline ./internal/hosted/policy/: exit=0
+baseline ./internal/hosted/bus/: exit=0
+
+## never-list checked after the rules (only when no rule matches)
+internal/hosted/policy/policy.go: 'if NeverListed(a) {\n\t\treturn Deny\n\t}\n\tbest := 0' -> 'best := 0'
+--- FAIL: TestNeverListNotOverridable (0.00s)
+suite exit=1
+
+## first match wins (file order)
+internal/hosted/policy/policy.go: 'if k > best {' -> 'if best == 0 {'
+--- FAIL: TestPasskeyBeatsStandingRegardlessOfOrder (0.00s)
+--- FAIL: TestShadowedRuleReported (0.00s)
+suite exit=1
+
+## no match returns standing
+internal/hosted/policy/policy.go: 'if best == 0 {\n\t\treturn Deny\n\t}\n\treturn mode' -> 'if best == 0 {\n\t\treturn Standing\n\t}\n\treturn mode'
+--- FAIL: TestEmptyPolicyDeniesEverything (0.00s)
+--- FAIL: TestUnlistedRepoDenied (0.00s)
+--- FAIL: TestRepoCaseFolded (0.00s)
+--- FAIL: TestEmptyPatternMatchesOnlyEmpty (0.00s)
+--- FAIL: TestStarMatchesSlash (0.00s)
+suite exit=1
+
+## TargetFor uses Ref for a merge
+internal/hosted/policy/policy.go: 'return Target{Repo: repo, Ref: baseRef}' -> 'return Target{Repo: repo, Ref: ref}'
+--- FAIL: TestTargetFor (0.00s)
+suite exit=1
+
+## money missing from the never-list
+internal/hosted/policy/policy.go: '"force-push", "delete", "spend", "secrets", "money":' -> '"force-push", "delete", "spend", "secrets":'
+--- FAIL: TestNeverListNotOverridable (0.00s)
+suite exit=1
+
+## repo not case-folded
+internal/hosted/policy/policy.go: 'match(strings.ToLower(r.Repo), strings.ToLower(t.Repo))' -> 'match(r.Repo, t.Repo)'
+--- FAIL: TestRepoCaseFolded (0.00s)
+suite exit=1
+
+## empty pattern matches anything
+internal/hosted/policy/policy.go: 'if pat == "" {\n\t\treturn v == ""\n\t}' -> 'if pat == "" {\n\t\treturn true\n\t}'
+--- FAIL: TestEmptyPatternMatchesOnlyEmpty (0.00s)
+suite exit=1
+
+## witness rune not checked against patterns
+internal/hosted/policy/policy.go: 'if !used {\n\t\t\treturn z, true\n\t\t}' -> 'if true || !used {\n\t\t\treturn z, true\n\t\t}'
+--- FAIL: TestWitnessAvoidsRunesInPatterns (0.00s)
+--- FAIL: TestFreshRuneBoundedFailsClosed (0.00s)
+suite exit=1
+
+## ? allowed in ref patterns
+internal/hosted/policy/policy.go: 'refPatRE  = regexp.MustCompile(`^[A-Za-z0-9._/*-]+$`)' -> 'refPatRE  = regexp.MustCompile(`^[A-Za-z0-9._/*?-]+$`)'
+--- FAIL: TestParseRefusesBadPatterns (0.00s)
+suite exit=1
+
+## deploy rule may name a ref
+internal/hosted/policy/policy.go: 'return checkFields(r, "env", r.Env, envPatRE, "ref", r.Ref)' -> 'return checkFields(r, "env", r.Env, envPatRE, "ref", "")'
+--- FAIL: TestParseRefusesUnreachableRules (0.00s)
+suite exit=1
+
+## merge rule may name an env
+internal/hosted/policy/policy.go: 'if err := checkFields(r, "ref", r.Ref, refPatRE, "env", r.Env); err !=' -> 'if err := checkFields(r, "ref", r.Ref, refPatRE, "env", ""); err != ni'
+--- FAIL: TestParseRefusesUnreachableRules (0.00s)
+suite exit=1
+
+## env pattern accepts upper case
+internal/hosted/policy/policy.go: 'envPatRE  = regexp.MustCompile(`^[a-z0-9*-]+$`)' -> 'envPatRE  = regexp.MustCompile(`^[A-Za-z0-9*-]+$`)'
+--- FAIL: TestParseRefusesUnreachableRules (0.00s)
+suite exit=1
+
+## duplicate keys allowed
+internal/hosted/policy/policy.go: 'if !keyNames[k] || seen[k] {' -> 'if !keyNames[k] {'
+--- FAIL: TestParseRefusesDuplicateAndFoldedKeys (0.00s)
+suite exit=1
+
+## folded keys allowed
+internal/hosted/policy/policy.go: 'if !keyNames[k] || seen[k] {' -> 'if !keyNames[strings.ToLower(k)] || seen[k] {'
+--- FAIL: TestParseRefusesDuplicateAndFoldedKeys (0.00s)
+suite exit=1
+
+## trailing data allowed
+internal/hosted/policy/policy.go: 'if _, err := dec.Token(); !errors.Is(err, io.EOF) {' -> 'if _, err := dec.Token(); false && !errors.Is(err, io.EOF) {'
+--- FAIL: TestParseRefusesBadFiles (0.00s)
+suite exit=1
+
+## no witness rune: Gates guesses instead of erroring
+internal/hosted/policy/policy.go: 'if !ok {\n\t\treturn nil, ErrNoWitness\n\t}' -> 'if !ok {\n\t\tz = 0xF8FF\n\t}'
+--- FAIL: TestFreshRuneBoundedFailsClosed (0.05s)
+suite exit=1
+
+## Gates lists every passkey rule
+internal/hosted/policy/policy.go: 'return r.Mode == Passkey && wins' -> 'return r.Mode == Passkey'
+--- FAIL: TestNeverListNotOverridable (0.00s)
+--- FAIL: TestPasskeyBeatsStandingRegardlessOfOrder (0.00s)
+--- FAIL: TestStarMatchesSlash (0.00s)
+suite exit=1
+
+## repo pattern without a slash
+internal/hosted/policy/policy.go: 'repoPatRE = regexp.MustCompile(`^[A-Za-z0-9*][A-Za-z0-9*-]*/[A-Za-z0-9' -> 'repoPatRE = regexp.MustCompile(`^[A-Za-z0-9*][A-Za-z0-9*/-]*[A-Za-z0-9'
+--- FAIL: TestParseRefusesUnreachableRules (0.00s)
+suite exit=1
+
+## repo pattern owner may start with -
+internal/hosted/policy/policy.go: 'repoPatRE = regexp.MustCompile(`^[A-Za-z0-9*][A-Za-z0-9*-]*/' -> 'repoPatRE = regexp.MustCompile(`^[A-Za-z0-9*-][A-Za-z0-9*-]*/'
+--- FAIL: TestParseRefusesUnreachableRules (0.00s)
+suite exit=1
+
+## repo pattern .git alias allowed
+internal/hosted/policy/policy.go: '|| strings.HasSuffix(strings.ToLower(r.Repo), ".git")' -> ''
+--- FAIL: TestParseRefusesUnreachableRules (0.00s)
+suite exit=1
+
+## format characters allowed (Cf)
+internal/hosted/bus/validate.go: 'unicode.Is(unicode.Cf, r),' -> ''
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## line and paragraph separators allowed
+internal/hosted/bus/validate.go: 'unicode.In(r, unicode.Zl, unicode.Zp),' -> ''
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## ref may start with -
+internal/hosted/bus/validate.go: '&&\n\t\t!strings.HasPrefix(s, "-")' -> ''
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## ref may carry refs/
+internal/hosted/bus/validate.go: '&& !strings.HasPrefix(s, "refs/")' -> ''
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## ref may be HEAD
+internal/hosted/bus/validate.go: '&& s != "HEAD"' -> ''
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## ref may end in a dot
+internal/hosted/bus/validate.go: '&& !strings.HasSuffix(s, ".") &&' -> '&&'
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## ref components unchecked
+internal/hosted/bus/validate.go: '&&\n\t\tvalidRefComponents(s)' -> ''
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## ref component may end in .lock
+internal/hosted/bus/validate.go: '|| strings.HasSuffix(c, ".lock")' -> ''
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## ref component may start with a dot
+internal/hosted/bus/validate.go: '|| strings.HasPrefix(c, ".")' -> ''
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## repo .git alias allowed
+internal/hosted/bus/validate.go: '&&\n\t\t!strings.HasSuffix(strings.ToLower(s), ".git")' -> ''
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## repo owner may start with -
+internal/hosted/bus/validate.go: 'repoRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]*/' -> 'repoRE = regexp.MustCompile(`^[A-Za-z0-9-][A-Za-z0-9-]*/'
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## refs/ prefix allowed in a ref pattern
+internal/hosted/policy/policy.go: 'case strings.HasPrefix(ref, "refs/"):\n\t\treturn errors.New' -> 'case false:\n\t\treturn errors.New'
+--- FAIL: TestParseRefusesBadPatterns (0.00s)
+suite exit=1
+
+## glob * stops at /
+internal/hosted/policy/ruleset.go: 'case star >= 0:\n\t\t\tmark++' -> "case star >= 0 && s[mark] != '/':\n\t\t\tmark++"
+--- FAIL: TestStarMatchesSlash (0.00s)
+--- FAIL: TestGlob (0.00s)
+--- FAIL: TestRulesetPatternsMatchGlob (0.00s)
+suite exit=1
+
+## glob literal compare folds case
+internal/hosted/policy/ruleset.go: 'case pi < len(p) && p[pi] == s[si]:' -> 'case pi < len(p) && (p[pi] == s[si] || p[pi]|0x20 == s[si]|0x20):'
+--- FAIL: TestRepoCaseFolded (0.00s)
+--- FAIL: TestGlob (0.00s)
+--- FAIL: TestRulesetPatternsMatchGlob (0.00s)
+suite exit=1
+
+## ruleset: * mapped to ** (no pair)
+internal/hosted/policy/ruleset.go: 'out = append(out, pre+ref)\n\t\tif strings.HasSuffix(ref, "*") {\n\t\t\tout =' -> 'out = append(out, strings.ReplaceAll(pre+ref, "*", "**"))'
+--- FAIL: TestRulesetRefPatterns (0.00s)
+--- FAIL: TestRulesetPatternsMatchGlob (0.00s)
+suite exit=1
+
+## ruleset: only pre* emitted
+internal/hosted/policy/ruleset.go: 'if strings.HasSuffix(ref, "*") {\n\t\t\tout = append(out, pre+ref+"/**/*")' -> 'if false && strings.HasSuffix(ref, "*") {\n\t\t\tout = append(out, pre+ref'
+--- FAIL: TestRulesetRefPatterns (0.00s)
+--- FAIL: TestRulesetPatternsMatchGlob (0.00s)
+suite exit=1
+
+## ruleset: pre** emitted instead of pre*/**/*
+internal/hosted/policy/ruleset.go: 'out = append(out, pre+ref+"/**/*")' -> 'out = append(out, pre+ref+"*")'
+--- FAIL: TestRulesetRefPatterns (0.00s)
+--- FAIL: TestRulesetPatternsMatchGlob (0.00s)
+suite exit=1
+
+## ruleset: public-sync gets branches only
+internal/hosted/policy/ruleset.go: '"public-sync": {"refs/heads/", "refs/tags/"},' -> '"public-sync": {"refs/heads/"},'
+--- FAIL: TestRulesetRefPatterns (0.00s)
+--- FAIL: TestRulesetPatternsMatchGlob (0.00s)
+suite exit=1
+
+## ruleset: release under refs/heads/
+internal/hosted/policy/ruleset.go: '"release":     {"refs/tags/"},' -> '"release":     {"refs/heads/"},'
+--- FAIL: TestRulesetRefPatterns (0.00s)
+--- FAIL: TestRulesetPatternsMatchGlob (0.00s)
+suite exit=1
+
+## mid-pattern * allowed in a ref
+internal/hosted/policy/policy.go: 'case strings.Contains(strings.TrimSuffix(ref, "*"), "*"):' -> 'case strings.Count(ref, "*") > 1:'
+--- FAIL: TestParseRefusesMidOrMultipleStarInRef (0.00s)
+suite exit=1
+
+## ref pattern length uncapped
+internal/hosted/policy/policy.go: 'case len(ref) > maxRefPat:' -> 'case false:'
+--- FAIL: TestParseCapsPatternLengths (0.00s)
+suite exit=1
+
+## env pattern length uncapped
+internal/hosted/policy/policy.go: 'if len(r.Env) > maxEnvPat {' -> 'if false {'
+--- FAIL: TestParseCapsPatternLengths (0.00s)
+suite exit=1
+
+## repo pattern length uncapped
+internal/hosted/policy/policy.go: 'case len(r.Repo) > maxRepoPat:' -> 'case false:'
+--- FAIL: TestParseCapsPatternLengths (0.00s)
+suite exit=1
+
+## carriage return allowed
+internal/hosted/bus/validate.go: "case r == '\\n' || r == '\\t' || r == 0x200C" -> "case r == '\\n' || r == '\\t' || r == '\\r' || r == 0x200C"
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## ZWJ refused
+internal/hosted/bus/validate.go: '|| r == 0x200C || r == 0x200D ||' -> '|| r == 0x200C ||'
+--- FAIL: TestDraftValidationControls (0.00s)
+suite exit=1
+
+## emoji presentation selector refused
+internal/hosted/bus/validate.go: '|| r == 0x200D || r == 0xFE0F:' -> '|| r == 0x200D:'
+--- FAIL: TestDraftValidationControls (0.00s)
+suite exit=1
+
+## other default-ignorables allowed
+internal/hosted/bus/validate.go: 'unicode.In(r, unicode.Other_Default_Ignorable_Code_Point, unicode.Vari' -> 'unicode.In(r, unicode.Variation_Selector)'
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## variation selectors allowed
+internal/hosted/bus/validate.go: 'unicode.In(r, unicode.Other_Default_Ignorable_Code_Point, unicode.Vari' -> 'unicode.In(r, unicode.Other_Default_Ignorable_Code_Point)'
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## blank braille allowed
+internal/hosted/bus/validate.go: ', r == 0x2800:' -> ':'
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## scheme check accepts http
+internal/hosted/bus/validate.go: 'u.Scheme != "https"' -> '(u.Scheme != "https" && u.Scheme != "http")'
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## host check uses strings.Contains
+internal/hosted/bus/validate.go: 'if host == h || strings.HasSuffix(host, "."+h) {' -> 'if strings.Contains(host, h) {'
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## host suffix without the dot
+internal/hosted/bus/validate.go: 'strings.HasSuffix(host, "."+h)' -> 'strings.HasSuffix(host, h)'
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## userinfo allowed
+internal/hosted/bus/validate.go: '|| u.User != nil' -> ''
+ok  	github.com/Exploded-views/yo-human/internal/hosted/bus	0.015s
+suite exit=0
+SURVIVED
+
+## ref may contain ..
+internal/hosted/bus/validate.go: '!strings.Contains(s, "..") &&' -> ''
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## merge ref need not be a PR number
+internal/hosted/bus/validate.go: 'if d.Action == ActionMerge && !prRE.MatchString(d.Ref) {' -> 'if false {'
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## deploy env free text
+internal/hosted/bus/validate.go: 'if d.Action == ActionDeploy && !ValidName(d.Target) {' -> 'if false {'
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## repo name .. allowed
+internal/hosted/bus/validate.go: '&& !strings.HasSuffix(s, "/..")' -> ''
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## title counted in bytes
+internal/hosted/bus/validate.go: '{"title", d.Title, 1, MaxTitle, false},' -> '{"title", d.Title, 1, MaxTitle, true},'
+--- FAIL: TestDraftValidationControls (0.00s)
+suite exit=1
+
+## question may carry an action
+internal/hosted/bus/validate.go: 'if d.Action != ActionNone && d.Kind != KindApproval {' -> 'if d.Action != ActionNone && d.Kind == KindNotice {'
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## other may carry pins
+internal/hosted/bus/validate.go: 'if d.Action == ActionOther {\n\t\tfor' -> 'if false {\n\t\tfor'
+--- FAIL: TestOtherCannotCarryPins (0.00s)
+suite exit=1
+
+## pinned tree not required for public-sync
+internal/hosted/bus/validate.go: '{"repo", "ref", "pinned_commit", "pinned_tree"}' -> '{"repo", "ref", "pinned_commit"}'
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## standing treated as approvable
+internal/hosted/bus/validate.go: 'case policy.Passkey:\n\t\treturn nil\n\tcase policy.Standing:' -> 'case policy.Passkey, policy.Standing:\n\t\treturn nil\n\tcase "x":'
+--- FAIL: TestPolicyStandingNoPrompt (0.00s)
+suite exit=1
+
+## none approvable
+internal/hosted/bus/validate.go: 'case a == ActionNone:\n\t\treturn &Error' -> 'case a == "x":\n\t\treturn &Error'
+--- FAIL: TestNoneNeverApprovable (0.00s)
+suite exit=1
+
+## SHA check accepts upper case
+internal/hosted/bus/validate.go: '`^[0-9a-f]{40}$`' -> '`^[0-9a-fA-F]{40}$`'
+--- FAIL: TestDraftValidation (0.00s)
+suite exit=1
+
+## desk-start counted as human
+internal/hosted/bus/types.go: 'case PrincipalPasskey, PrincipalDesk:' -> 'case PrincipalPasskey, PrincipalDesk, PrincipalDeskStart:'
+--- FAIL: TestActorKind (0.00s)
+suite exit=1
+
+all mutants killed: no
+
+## userinfo allowed (re-run after adding TestDraftValidation/link_with_userinfo_on_an_allowed_host)
+internal/hosted/bus/validate.go: '|| u.User != nil' -> ''
+--- FAIL: TestDraftValidation (0.00s)
+--- FAIL: TestDraftValidation/link_with_userinfo_on_an_allowed_host (0.00s)
+suite exit=1
+
+after the added test: all 65 mutants killed (64 in the run above, plus the userinfo survivor on its re-run)
