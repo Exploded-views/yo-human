@@ -242,3 +242,50 @@ func TestRelayDoesNotDecide(t *testing.T) {
 		t.Fatal("a relay decided the item")
 	}
 }
+
+// rawConn closes d and opens the file with no pragmas, as a future tool or migration would.
+func rawConn(t *testing.T, d *db.DB, path string) *sql.DB {
+	t.Helper()
+	_ = d.Close()
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = raw.Close() })
+	return raw
+}
+
+func TestDecisionsCannotBeDeleted(t *testing.T) {
+	d, path := openTemp(t)
+	insertItem(t, d, question("itm_1", "crew", "first"))
+	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 1)); err != nil {
+		t.Fatal(err)
+	}
+	raw := rawConn(t, d, path)
+	if _, err := raw.Exec("DELETE FROM decisions"); err == nil {
+		t.Fatal("a decision row was deleted")
+	}
+}
+
+func TestStateGuardTriggerOnRawConnection(t *testing.T) {
+	d, path := openTemp(t)
+	insertItem(t, d, question("itm_1", "crew", "first"))
+	insertItem(t, d, question("itm_2", "crew", "second"))
+	if err := d.Tx(ctxb(), func(x bus.Tx) error {
+		r := record(bus.RecordAnswer, bus.ActorAgent, 1)
+		r.ItemID = "itm_2"
+		return x.InsertDecision(r)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	raw := rawConn(t, d, path)
+	if _, err := raw.Exec("UPDATE items SET state = 'decided' WHERE id = 'itm_1'"); err == nil {
+		t.Fatal("an item was set decided with no decision")
+	}
+	if _, err := raw.Exec("UPDATE items SET state = 'open' WHERE id = 'itm_2'"); err == nil {
+		t.Fatal("a decided item was reopened at the same revision")
+	}
+	if _, err := raw.Exec("UPDATE items SET state = 'decided' WHERE id = 'itm_2'"); err != nil {
+		t.Fatalf("the trigger refused a state that matches the decisions: %v", err)
+	}
+}

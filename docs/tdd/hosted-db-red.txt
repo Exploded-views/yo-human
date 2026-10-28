@@ -83,3 +83,14 @@ exit=1
 The Notes above say "Review fixes (7e9483c onward)". The first review-fix commit is 580618b.
 Round 2 follows the RED rule: its failing tests are the section "2026-10-28 review round 2" above,
 committed as 20f9ffc before the fix.
+
+## 2026-10-28 review round 3 (delta review of 510f2cc, R2-2 and R2-4)
+$ go test -count=1 -timeout 120s ./internal/hosted/db/
+--- FAIL: TestDecisionsCannotBeDeleted (0.11s)
+    decisions_test.go:266: a decision row was deleted
+--- FAIL: TestStateGuardTriggerOnRawConnection (0.07s)
+    decisions_test.go:283: an item was set decided with no decision
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.112s
+FAIL
+exit=1
