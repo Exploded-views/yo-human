@@ -206,3 +206,76 @@ FAIL internal/hosted/policy/casebus/x.go: hosted policy imports bus (policy is a
 FAIL internal/hosted/policy/caseversion/x.go: hosted policy imports version (standard library only): want hosted-policy-leaf, got clean
 lint_rules_test: a case failed
 exit=1
+
+# Review round 1 (Opus on 2d5a0c6) RED, 2026-10-28T06:14:57Z: the new tests against the 2d5a0c6 code; passing tests omitted
+$ go test -count=1 ./internal/hosted/policy/ ./internal/hosted/bus/
+--- FAIL: TestParseRefusesBadPatterns (0.00s)
+    policy_test.go:80: Parse accepted "repo": "a/b", "ref": "\u00e9"
+--- FAIL: TestParseRefusesUnreachableRules (0.00s)
+    policy_test.go:220: repo with no name: Parse accepted {"v": 1, "rules": [{"action": "merge", "repo": "a/", "ref": "main", "mode": "deny"}]}
+    policy_test.go:220: merge with an env: Parse accepted {"v": 1, "rules": [{"action": "merge", "repo": "a/b", "ref": "main", "env": "prod", "mode": "deny"}]}
+    policy_test.go:220: public-sync with an env: Parse accepted {"v": 1, "rules": [{"action": "public-sync", "repo": "a/b", "ref": "v*", "env": "prod", "mode": "deny"}]}
+    policy_test.go:220: deploy with no env: Parse accepted {"v": 1, "rules": [{"action": "deploy", "repo": "a/b", "mode": "deny"}]}
+    policy_test.go:220: deploy with a ref: Parse accepted {"v": 1, "rules": [{"action": "deploy", "repo": "a/b", "ref": "main", "env": "prod", "mode": "deny"}]}
+    policy_test.go:220: deploy env with a space: Parse accepted {"v": 1, "rules": [{"action": "deploy", "repo": "a/b", "env": "prod 2", "mode": "deny"}]}
+    policy_test.go:220: repo with no owner: Parse accepted {"v": 1, "rules": [{"action": "merge", "repo": "/b", "ref": "main", "mode": "deny"}]}
+    policy_test.go:220: repo with two slashes: Parse accepted {"v": 1, "rules": [{"action": "merge", "repo": "a/b/c", "ref": "main", "mode": "deny"}]}
+    policy_test.go:220: merge with no ref: Parse accepted {"v": 1, "rules": [{"action": "merge", "repo": "a/b", "mode": "deny"}]}
+    policy_test.go:220: release with no ref: Parse accepted {"v": 1, "rules": [{"action": "release", "repo": "a/b", "mode": "deny"}]}
+    policy_test.go:220: deploy env upper case: Parse accepted {"v": 1, "rules": [{"action": "deploy", "repo": "a/b", "env": "Prod", "mode": "deny"}]}
+    policy_test.go:220: repo *: Parse accepted {"v": 1, "rules": [{"action": "merge", "repo": "*", "ref": "main", "mode": "deny"}]}
+    policy_test.go:220: no repo: Parse accepted {"v": 1, "rules": [{"action": "merge", "ref": "main", "mode": "deny"}]}
+--- FAIL: TestParseRefusesDuplicateAndFoldedKeys (0.00s)
+    policy_test.go:243: long s in rules: Parse accepted {"v": 1, "rule\u017f": []}
+    policy_test.go:243: duplicate v: Parse accepted {"v": 1, "v": 1, "rules": []}
+    policy_test.go:243: duplicate rules: Parse accepted {"v": 1, "rules": [], "rules": [{"action": "merge", "repo": "a/b", "ref": "main", "mode": "passkey"}]}
+    policy_test.go:243: duplicate mode: Parse accepted {"v": 1, "rules": [{"action": "merge", "repo": "a/b", "ref": "main", "mode": "deny", "mode": "passkey"}]}
+    policy_test.go:243: MODE after mode: Parse accepted {"v": 1, "rules": [{"action": "merge", "repo": "a/b", "ref": "main", "mode": "deny", "MODE": "passkey"}]}
+    policy_test.go:243: upper-case V: Parse accepted {"V": 1, "rules": []}
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/policy	0.166s
+--- FAIL: TestDraftValidation (0.00s)
+    --- FAIL: TestDraftValidation/merge_ref_not_a_PR_number (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/merge_ref_zero (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/merge_ref_of_11_digits (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/base_ref_--admin (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/base_ref_with_a_refs/_prefix (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/base_ref_with_a_leading_slash (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/base_ref_ending_in_.lock (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/base_ref_with_a_trailing_slash (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/release_ref_-d (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/release_ref_.. (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/release_ref_with_.. (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/deploy_env_in_upper_case (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/deploy_env_with_a_tab (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/deploy_env_with_a_space (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/right-to-left_override_in_the_title (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/isolate_in_the_summary (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/right-to-left_mark_in_the_detail (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/embedding_in_the_target (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/repo_o/. (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/repo_o/.. (0.00s)
+        validate_test.go:117: Validate = <nil>, want a bus error
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.021s
+FAIL
+exit=1

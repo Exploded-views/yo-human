@@ -61,6 +61,8 @@ func TestParseRefusesBadFiles(t *testing.T) {
 		"unknown mode":       `{"v": 1, "rules": [{"action": "merge", "repo": "a/b", "mode": "maybe"}]}`,
 		"trailing data":      `{"v": 1, "rules": []} {"v": 1}`,
 		"not json":           `v: 1`,
+		"v as a string":      `{"v": "1", "rules": []}`,
+		"truncated":          `{"v": 1, `,
 	}
 	for name, file := range bad {
 		if _, err := Parse([]byte(file)); err == nil {
@@ -71,7 +73,8 @@ func TestParseRefusesBadFiles(t *testing.T) {
 
 func TestParseRefusesBadPatterns(t *testing.T) {
 	for _, r := range []string{
-		`"repo": "a/b?"`, `"repo": "a/[b]"`, `"repo": "a/\\*"`, `"env": "["`,
+		`"repo": "a/b?", "ref": "main"`, `"repo": "a/[b]", "ref": "main"`, `"repo": "a/\\*", "ref": "main"`,
+		`"repo": "a/b", "ref": "["`, `"repo": "a/b", "ref": "m?in"`, `"repo": "a/b", "ref": "\u00e9"`,
 		`"repo": "a/b", "ref": "refs/heads/main"`,
 	} {
 		file := `{"v": 1, "rules": [{"action": "merge", ` + r + `, "mode": "passkey"}]}`
@@ -195,5 +198,68 @@ func TestWitnessAvoidsRunesInPatterns(t *testing.T) {
 	p := Policy{V: 1, Rules: []Rule{gate, {Action: "release", Repo: "a/b", Ref: "\ue000", Mode: Deny}}}
 	if g := p.Gates(); !reflect.DeepEqual(g, []Rule{gate}) {
 		t.Errorf("Gates = %v, want the gate", g)
+	}
+}
+
+func TestParseRefusesUnreachableRules(t *testing.T) {
+	for name, r := range map[string]string{
+		"repo *":                  `"action": "merge", "repo": "*", "ref": "main"`,
+		"no repo":                 `"action": "merge", "ref": "main"`,
+		"repo with no name":       `"action": "merge", "repo": "a/", "ref": "main"`,
+		"repo with no owner":      `"action": "merge", "repo": "/b", "ref": "main"`,
+		"repo with two slashes":   `"action": "merge", "repo": "a/b/c", "ref": "main"`,
+		"merge with no ref":       `"action": "merge", "repo": "a/b"`,
+		"merge with an env":       `"action": "merge", "repo": "a/b", "ref": "main", "env": "prod"`,
+		"release with no ref":     `"action": "release", "repo": "a/b"`,
+		"public-sync with an env": `"action": "public-sync", "repo": "a/b", "ref": "v*", "env": "prod"`,
+		"deploy with no env":      `"action": "deploy", "repo": "a/b"`,
+		"deploy with a ref":       `"action": "deploy", "repo": "a/b", "ref": "main", "env": "prod"`,
+		"deploy env upper case":   `"action": "deploy", "repo": "a/b", "env": "Prod"`,
+		"deploy env with a space": `"action": "deploy", "repo": "a/b", "env": "prod 2"`,
+	} {
+		file := `{"v": 1, "rules": [{` + r + `, "mode": "deny"}]}`
+		if _, err := Parse([]byte(file)); err == nil {
+			t.Errorf("%s: Parse accepted %s", name, file)
+		}
+	}
+	for _, r := range []string{
+		`"action": "merge", "repo": "*/*", "ref": "*"`,
+		`"action": "deploy", "repo": "a/b", "env": "prod-*"`,
+		`"action": "release", "repo": "a/my.repo", "ref": "v*"`,
+	} {
+		mustParse(t, `{"v": 1, "rules": [{`+r+`, "mode": "deny"}]}`)
+	}
+}
+
+func TestParseRefusesDuplicateAndFoldedKeys(t *testing.T) {
+	for name, file := range map[string]string{
+		"duplicate mode":  `{"v": 1, "rules": [{"action": "merge", "repo": "a/b", "ref": "main", "mode": "deny", "mode": "passkey"}]}`,
+		"MODE after mode": `{"v": 1, "rules": [{"action": "merge", "repo": "a/b", "ref": "main", "mode": "deny", "MODE": "passkey"}]}`,
+		"upper-case V":    `{"V": 1, "rules": []}`,
+		"long s in rules": `{"v": 1, "rule\u017f": []}`,
+		"duplicate v":     `{"v": 1, "v": 1, "rules": []}`,
+		"duplicate rules": `{"v": 1, "rules": [], "rules": [{"action": "merge", "repo": "a/b", "ref": "main", "mode": "passkey"}]}`,
+		"Kelvin in a key": `{"v": 1, "rules": [{"action": "merge", "repo": "a/b", "ref": "main", "mode": "deny", "\u212aey": 1}]}`,
+	} {
+		if _, err := Parse([]byte(file)); err == nil {
+			t.Errorf("%s: Parse accepted %s", name, file)
+		}
+	}
+}
+
+func TestFreshRuneBoundedFailsClosed(t *testing.T) {
+	// A hand-built policy whose patterns use every private-use rune leaves no witness. Gates then
+	// lists every passkey rule (over-gating is the safe side) and Shadowed reports none.
+	var all []rune
+	for z := rune(0xE000); z <= 0xF8FF; z++ {
+		all = append(all, z)
+	}
+	gate := Rule{Action: "release", Repo: "a/b", Ref: "*", Mode: Passkey}
+	p := Policy{V: 1, Rules: []Rule{gate, {Action: "release", Repo: "a/b", Ref: "v*", Mode: Deny}, {Action: "release", Repo: "a/b", Ref: string(all), Mode: Deny}}}
+	if g := p.Gates(); !reflect.DeepEqual(g, []Rule{gate}) {
+		t.Errorf("Gates = %v, want the gate (fail closed)", g)
+	}
+	if sh := p.Shadowed(); len(sh) != 0 {
+		t.Errorf("Shadowed = %v, want none (fail closed)", sh)
 	}
 }
