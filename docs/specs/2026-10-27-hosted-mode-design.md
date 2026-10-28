@@ -201,4 +201,4 @@ Get an MCP up fast. Hosted mode's first release is the MCP bus with only what Du
 
 - Whether Duet's `watch_url` tool can watch a bus endpoint for changes without a model run. Untested; if it is cheap it could make Duet's reads cheaper, but it would never carry anything time-sensitive.
 - Whether a local Claude Code session can load the Claude Code Remote connector for real-time hand-offs (today the orchestrator's session can't see it).
-- How the human tells the bus where he is ("heads down", "driving"): through Duet, through any agent, or both.
+- How the human tells the bus where he is ("heads down", "driving"): through Duet, through any agent, or both. H2's to-do digest (plan, H2 outline) depends on it.
