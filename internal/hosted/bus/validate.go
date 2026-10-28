@@ -17,7 +17,24 @@ var (
 	repoRE = regexp.MustCompile(`^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$`)
 	refRE  = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
 	shaRE  = regexp.MustCompile(`^[0-9a-f]{40}$`)
+	prRE   = regexp.MustCompile(`^[1-9][0-9]{0,9}$`)
 )
+
+// validRepo: owner/name, and the name is not . or ..
+func validRepo(s string) bool {
+	return repoRE.MatchString(s) && !strings.HasSuffix(s, "/.") && !strings.HasSuffix(s, "/..")
+}
+
+// validRef: a branch or tag name an executor can pass as one argument, never mistaken for an
+// option or a path: no leading - or /, no .., no trailing / or .lock, and no refs/ prefix (the
+// policy's ref patterns don't carry one either).
+func validRef(s string) bool {
+	return refRE.MatchString(s) && !strings.HasPrefix(s, "-") && !strings.HasPrefix(s, "/") &&
+		!strings.Contains(s, "..") && !strings.HasSuffix(s, "/") && !strings.HasSuffix(s, ".lock") &&
+		!strings.HasPrefix(s, "refs/")
+}
+
+func validSHA(s string) bool { return shaRE.MatchString(s) }
 
 var (
 	kinds      = []Kind{KindApproval, KindQuestion, KindBlocker, KindFinished, KindFailed, KindNotice}
@@ -31,8 +48,10 @@ func ValidName(s string) bool { return nameRE.MatchString(s) }
 
 // Validate checks d against the limits and returns an invalid error naming the first bad
 // field. It never changes d: text that reads like instructions is data and is kept verbatim.
+// It checks shape only and doesn't decide approvability: posting an approval (Task 5's Post)
+// must call both Validate and Limits.Approvable on d.PolicyTarget().
 func (d *Draft) Validate(l Limits) error {
-	for _, check := range []func(Limits) *Error{d.checkEnums, d.checkText, d.checkLink, d.checkFlags, d.checkRefs, d.checkAction} {
+	for _, check := range []func(Limits) *Error{d.checkEnums, d.checkText, d.checkLink, d.checkFlags, d.checkRefs, d.checkAction, d.checkActionShape} {
 		if e := check(l); e != nil {
 			return e
 		}
@@ -83,8 +102,8 @@ func (d *Draft) checkText(Limits) *Error {
 }
 
 func (f textField) check() *Error {
-	if !utf8.ValidString(f.v) || strings.ContainsFunc(f.v, isRefusedControl) {
-		return invalid(f.name, "valid UTF-8 with no control characters other than newline and tab")
+	if !utf8.ValidString(f.v) || strings.ContainsFunc(f.v, isRefusedRune) {
+		return invalid(f.name, "valid UTF-8 with no control or bidirectional formatting characters (newline and tab are allowed)")
 	}
 	n := utf8.RuneCountInString(f.v)
 	if f.bytes {
@@ -96,7 +115,18 @@ func (f textField) check() *Error {
 	return nil
 }
 
-func isRefusedControl(r rune) bool { return unicode.IsControl(r) && r != '\n' && r != '\t' }
+// isRefusedRune: control characters other than newline and tab, and the bidirectional
+// formatting characters (marks, embeddings, overrides, isolates) that can make the text the
+// owner reads differ from the text stored.
+func isRefusedRune(r rune) bool {
+	switch {
+	case r == '\n' || r == '\t':
+		return false
+	case unicode.IsControl(r), r == 0x200E, r == 0x200F, r >= 0x202A && r <= 0x202E, r >= 0x2066 && r <= 0x2069:
+		return true
+	}
+	return false
+}
 
 func (d *Draft) checkLink(l Limits) *Error {
 	if d.Link == "" {
@@ -129,22 +159,22 @@ func (d *Draft) checkFlags(Limits) *Error {
 	return nil
 }
 
-// refField is one identifier field: empty, or matching re within max bytes.
+// refField is one identifier field: empty, or valid within max bytes.
 type refField struct {
 	name, v, valid string
-	re             *regexp.Regexp
+	ok             func(string) bool
 	max            int
 }
 
 func (d *Draft) checkRefs(Limits) *Error {
 	for _, f := range []refField{
-		{"repo", d.Repo, "owner/name", repoRE, 200},
-		{"ref", d.Ref, "a PR number or a tag, at most 100 characters", refRE, MaxRef},
-		{"base_ref", d.BaseRef, "a branch name, at most 100 characters", refRE, MaxRef},
-		{"pinned_commit", d.PinnedCommit, "a full 40-hex lowercase SHA", shaRE, 40},
-		{"pinned_tree", d.PinnedTree, "a full 40-hex lowercase SHA", shaRE, 40},
+		{"repo", d.Repo, "owner/name", validRepo, 200},
+		{"ref", d.Ref, "a PR number or a tag, at most 100 characters", validRef, MaxRef},
+		{"base_ref", d.BaseRef, "a branch name, at most 100 characters", validRef, MaxRef},
+		{"pinned_commit", d.PinnedCommit, "a full 40-hex lowercase SHA", validSHA, 40},
+		{"pinned_tree", d.PinnedTree, "a full 40-hex lowercase SHA", validSHA, 40},
 	} {
-		if f.v != "" && (len(f.v) > f.max || !f.re.MatchString(f.v)) {
+		if f.v != "" && (len(f.v) > f.max || !f.ok(f.v)) {
 			return invalid(f.name, f.valid)
 		}
 	}
@@ -180,7 +210,21 @@ func (d *Draft) checkAction(Limits) *Error {
 	return nil
 }
 
-// PolicyTarget is the policy target of d, through the one mapping policy.TargetFor.
+// checkActionShape: a merge's ref is the PR number, and a deploy's target is the environment,
+// in the alphabet the policy's env patterns use, so "Prod" or "prod\t" can't slip past a rule.
+func (d *Draft) checkActionShape(Limits) *Error {
+	if d.Action == ActionMerge && !prRE.MatchString(d.Ref) {
+		return invalid("ref", "the PR number")
+	}
+	if d.Action == ActionDeploy && !ValidName(d.Target) {
+		return invalid("target", "the environment: ^[a-z0-9][a-z0-9-]{0,62}$")
+	}
+	return nil
+}
+
+// PolicyTarget is the policy target of d, through the one mapping policy.TargetFor. For a merge
+// that is d.BaseRef, the poster's claim, which the bus can't verify; the executor's merge
+// wrapper (Task 10e) checks it against the PR's real base.
 func (d *Draft) PolicyTarget() policy.Target {
 	return policy.TargetFor(string(d.Action), d.Repo, d.Ref, d.BaseRef, d.Target)
 }
