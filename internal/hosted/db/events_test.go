@@ -168,3 +168,11 @@ func TestEventsSinceLimit(t *testing.T) {
 		t.Fatalf("limit 1000 returned %d events, want %d", len(got), db.MaxEvents)
 	}
 }
+
+func TestDeskTypeMatchIsCaseSensitive(t *testing.T) {
+	d, _ := openTemp(t)
+	err := d.Tx(ctxb(), func(x bus.Tx) error { _, err := x.AppendEvent(ev("", "DESK_x")); return err })
+	if err == nil {
+		t.Fatal("an upper-case DESK_ event with no swarm was stored")
+	}
+}

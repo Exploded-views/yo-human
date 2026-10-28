@@ -150,3 +150,47 @@ func TestEmptySwarmRefused(t *testing.T) {
 		t.Fatal("a status with an empty swarm was stored")
 	}
 }
+
+func TestUpdateItemKindChangeRefused(t *testing.T) {
+	d, _ := openTemp(t)
+	q := question("itm_1", "crew", "first")
+	insertItem(t, d, q)
+	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 1)); err != nil {
+		t.Fatal(err)
+	}
+	var before bus.Item
+	tx(t, d, func(x bus.Tx) (err error) { before, _, err = x.ItemByID("itm_1"); return })
+	q.Kind = bus.KindApproval
+	err := d.Tx(ctxb(), func(x bus.Tx) error { return x.UpdateItem(q) })
+	if !errors.Is(err, db.ErrKindMismatch) {
+		t.Fatalf("a kind change at the same revision gave %v, want ErrKindMismatch", err)
+	}
+	var after bus.Item
+	tx(t, d, func(x bus.Tx) (err error) { after, _, err = x.ItemByID("itm_1"); return })
+	if !reflect.DeepEqual(before, after) {
+		t.Fatalf("the refused update changed the row:\n%+v\n%+v", before, after)
+	}
+}
+
+func TestUpdateItemRevisionBackwardsRefused(t *testing.T) {
+	d, _ := openTemp(t)
+	q := question("itm_1", "crew", "first")
+	insertItem(t, d, q)
+	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 1)); err != nil {
+		t.Fatal(err)
+	}
+	q.Revision = 2
+	tx(t, d, func(x bus.Tx) error { return x.UpdateItem(q) })
+	var before bus.Item
+	tx(t, d, func(x bus.Tx) (err error) { before, _, err = x.ItemByID("itm_1"); return })
+	q.Revision = 1
+	err := d.Tx(ctxb(), func(x bus.Tx) error { return x.UpdateItem(q) })
+	if !errors.Is(err, db.ErrStaleRevision) {
+		t.Fatalf("revision 2 to 1 gave %v, want ErrStaleRevision", err)
+	}
+	var after bus.Item
+	tx(t, d, func(x bus.Tx) (err error) { after, _, err = x.ItemByID("itm_1"); return })
+	if !reflect.DeepEqual(before, after) || after.State != bus.StateOpen {
+		t.Fatalf("the refused update changed the row:\n%+v\n%+v", before, after)
+	}
+}

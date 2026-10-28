@@ -59,3 +59,22 @@ exit=1
 - Test changes after RED: `openTemp` now makes a 0700 subdirectory (t.TempDir() is 0755 here), the
   item round trip with no risk flags also asserts `Untrusted` false, and `events_test.go` was split
   into helpers to meet gocyclo. Review fixes (7e9483c onward) changed more tests; see the commits.
+
+## 2026-10-28 review round 2 (delta review of 5d34363, NEW-1, NEW-2, NIT a and b)
+$ go test -count=1 -timeout 120s ./internal/hosted/db/
+--- FAIL: TestMissingItemDecisionIsNotFound (0.05s)
+    decisions_test.go:164: a decision for a missing item gave db: insert decision: constraint failed: FOREIGN KEY constraint failed (787), want ErrNotFound
+--- FAIL: TestDecisionsAreAppendOnly (0.20s)
+    decisions_test.go:191: a decision row was updated
+--- FAIL: TestTriggerGuardsDirectInserts (0.01s)
+    decisions_test.go:214: the trigger let a decision for a missing item in (foreign keys are off on this connection)
+--- FAIL: TestDeskTypeMatchIsCaseSensitive (0.00s)
+    events_test.go:176: an upper-case DESK_ event with no swarm was stored
+--- FAIL: TestUpdateItemKindChangeRefused (0.00s)
+    items_test.go:166: a kind change at the same revision gave <nil>, want ErrKindMismatch
+--- FAIL: TestUpdateItemRevisionBackwardsRefused (0.00s)
+    items_test.go:189: revision 2 to 1 gave <nil>, want ErrStaleRevision
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.356s
+FAIL
+exit=1

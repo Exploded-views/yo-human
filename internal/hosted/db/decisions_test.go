@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -157,11 +158,37 @@ func TestApprovalOnQuestionRefused(t *testing.T) {
 	}
 }
 
-func TestMissingItemDecisionRefusedByForeignKey(t *testing.T) {
+func TestMissingItemDecisionIsNotFound(t *testing.T) {
 	d, _ := openTemp(t)
-	err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 1))
-	if err == nil || errors.Is(err, db.ErrKindMismatch) || errors.Is(err, db.ErrStaleRevision) {
-		t.Fatalf("a decision for a missing item gave %v, want a foreign key failure", err)
+	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 1)); !errors.Is(err, db.ErrNotFound) {
+		t.Fatalf("a decision for a missing item gave %v, want ErrNotFound", err)
+	}
+}
+
+func TestForeignKeysAreOn(t *testing.T) {
+	d, _ := openTemp(t)
+	err := d.Tx(ctxb(), func(x bus.Tx) error {
+		return x.InsertRelay(bus.Relay{ID: "rel_1", ItemID: "nope", Revision: 1, HumanTS: t0, Recorded: t0})
+	})
+	if err == nil {
+		t.Fatal("a relay for a missing item was stored: foreign_keys is off")
+	}
+}
+
+func TestDecisionsAreAppendOnly(t *testing.T) {
+	d, path := openTemp(t)
+	insertItem(t, d, question("itm_1", "crew", "first"))
+	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 1)); err != nil {
+		t.Fatal(err)
+	}
+	_ = d.Close()
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = raw.Close() }()
+	if _, err := raw.Exec("UPDATE decisions SET text = 'changed'"); err == nil {
+		t.Fatal("a decision row was updated")
 	}
 }
 
@@ -181,6 +208,10 @@ func TestTriggerGuardsDirectInserts(t *testing.T) {
 	}
 	if _, err := raw.Exec(ins, 5, "approval", "approve", "human"); err == nil {
 		t.Fatal("the trigger let a decision for revision 5 in")
+	}
+	orphan := strings.Replace(ins, "'itm_1'", "'nope'", 1)
+	if _, err := raw.Exec(orphan, 1, "answer", "", "agent"); err == nil {
+		t.Fatal("the trigger let a decision for a missing item in (foreign keys are off on this connection)")
 	}
 	if _, err := raw.Exec(ins, 1, "approval", "approve", "human"); err != nil {
 		t.Fatalf("the trigger refused a valid approval: %v", err)
