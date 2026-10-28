@@ -1,0 +1,267 @@
+# baseline (unmutated)
+ok  	github.com/Exploded-views/yo-human/tools/coverfloors	(cached)
+exit=0
+
+## mutant 1: < to <= in floor comparison
+# diff:
+142c142
+< 	case RoundDown(c) < f.Statements:
+---
+> 	case RoundDown(c) <= f.Statements:
+--- FAIL: TestCheckAtFloorPasses (0.00s)
+    floors_test.go:66: want none, got [{Pkg:a Msg:75.0 < floor 75.0}]
+--- FAIL: TestCheckPackageWithoutCoverageFails (0.00s)
+    floors_test.go:82: want one violation for b containing "no coverage (no tests?)", got [{Pkg:a Msg:80.0 < floor 80.0} {Pkg:b Msg:no coverage (no tests?)}]
+--- FAIL: TestExemptPackageNeedsNoFloorOrCoverage (0.00s)
+    floors_test.go:120: want clean, got [{Pkg:a Msg:80.0 < floor 80.0}]
+--- FAIL: TestRunCleanAndViolationExitCodes (0.00s)
+    floors_test.go:190: clean: exit 1 out="example.com/m/a: 80.0 < floor 80.0\n" err=""
+--- FAIL: TestRunUpdateWritesFloors (0.00s)
+    floors_test.go:215: exit 1 err="" out="example.com/m/a: 80.0 < floor 80.0\n"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.012s
+FAIL
+exit=1
+
+## mutant 2: drop missing-coverage check
+# diff:
+138c138
+< 	case !hasCov:
+---
+> 	case !hasCov && false:
+--- FAIL: TestCheckPackageWithoutCoverageFails (0.00s)
+    floors_test.go:82: want one violation for b containing "no coverage (no tests?)", got [{Pkg:b Msg:0.0 < floor 50.0}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.012s
+FAIL
+exit=1
+
+## mutant 3: drop lowered-floor check
+# diff:
+153c153
+< 	case f.Statements < b.Statements:
+---
+> 	case false:
+--- FAIL: TestCheckFloorLoweredFails (0.00s)
+    floors_test.go:72: want one violation for a containing "floor lowered 80.0 → 75.0", got []
+--- FAIL: TestRunBaseFloorsLoweredIsExit1 (0.00s)
+    floors_test.go:207: exit 0 out=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.012s
+FAIL
+exit=1
+
+## mutant 4: drop internal-exemption refusal
+# diff:
+181c181
+< 		case strings.Contains(p, "/internal/"):
+---
+> 		case false:
+--- FAIL: TestExemptionForInternalPackageFails (0.00s)
+    floors_test.go:127: want one violation for github.com/Exploded-views/yo-human/internal/cli containing "internal", got []
+--- FAIL: TestRunExemptInternalIsExit1 (0.00s)
+    floors_test.go:230: exit 0 out=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.012s
+FAIL
+exit=1
+
+## mutant 5: update may lower floors
+# diff:
+168c168
+< 			out[p] = Floor{Statements: math.Max(RoundDown(c), old[p].Statements)}
+---
+> 			out[p] = Floor{Statements: RoundDown(c)}
+--- FAIL: TestUpdateNeverLowers (0.00s)
+    floors_test.go:105: got map[a:{Statements:70} b:{Statements:91.2}], want a=80.0 (kept) b=91.2
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.012s
+FAIL
+exit=1
+
+## mutant 6: DropStatementless drops every unmeasured package
+# diff:
+68c68
+< 		if has {
+---
+> 		if false && has {
+--- FAIL: TestDropStatementlessKeepsMeasuredAndCodeBearing (0.00s)
+    statements_test.go:22: got [measured], want [measured stmt]: statementless dropped, unmeasured code kept
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.015s
+FAIL
+exit=1
+
+# fix round (review of 1de2ab7): exemption-added and new-floor checks
+# baseline (unmutated)
+ok  	github.com/Exploded-views/yo-human/tools/coverfloors	0.015s
+exit=0
+
+## mutant: drop the exemption-added check
+# diff:
+63c63
+< 		vs = append(vs, CheckExemptions(ff.Exempt, bf.Exempt)...)
+---
+> 		_ = CheckExemptions
+--- FAIL: TestRunExemptionAddedIsExit1 (0.00s)
+    floors_test.go:263: exit 0 out="" err=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.013s
+FAIL
+exit=1
+
+## mutant: exemption-added check never fires
+# diff:
+181c181
+< 		if _, ok := base[p]; !ok {
+---
+> 		if _, ok := base[p]; !ok && false {
+--- FAIL: TestRunExemptionAddedIsExit1 (0.00s)
+    floors_test.go:263: exit 0 out="" err=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.015s
+FAIL
+exit=1
+
+## mutant: drop the new-floor check
+# diff:
+133c133
+< 		if _, old := base[p]; base != nil && !old {
+---
+> 		if _, old := base[p]; false && base != nil && !old {
+--- FAIL: TestCheckNewFloorBelowCurrentFails (0.00s)
+    floors_test.go:236: want one violation for a containing "new floor 0.0 must equal current coverage 85.6", got []
+--- FAIL: TestRunNewFloorAtZeroIsExit1 (0.00s)
+    floors_test.go:283: exit 0 out="" err=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.014s
+FAIL
+exit=1
+
+## mutant: new floor may sit below current coverage (only above is caught)
+# diff:
+170c170
+< 	if ok && math.Abs(f.Statements-RoundDown(c)) > eps {
+---
+> 	if ok && f.Statements-RoundDown(c) > eps {
+--- FAIL: TestCheckNewFloorBelowCurrentFails (0.00s)
+    floors_test.go:236: want one violation for a containing "new floor 0.0 must equal current coverage 85.6", got []
+--- FAIL: TestRunNewFloorAtZeroIsExit1 (0.00s)
+    floors_test.go:283: exit 0 out="" err=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.016s
+FAIL
+exit=1
+
+# fix round 2: the new-floor window [RoundDown(current) - 0.5, current]
+# baseline (unmutated)
+ok  	github.com/Exploded-views/yo-human/tools/coverfloors	0.035s
+exit=0
+
+## mutant: drop the new-floor check
+# diff:
+133c133
+< 		if _, old := base[p]; base != nil && !old {
+---
+> 		if _, old := base[p]; false && base != nil && !old {
+--- FAIL: TestCheckNewFloorBelowCurrentFails (0.00s)
+    floors_test.go:236: want one violation for a containing "new floor 0.0 outside [85.1, 85.6]", got []
+--- FAIL: TestCheckNewFloorWindow (0.00s)
+    floors_test.go:265: floor 85.0: new-floor violation false, want true (all: [])
+    floors_test.go:265: floor 85.7: new-floor violation false, want true (all: [{Pkg:a Msg:85.6 < floor 85.7}])
+--- FAIL: TestRunNewFloorAtZeroIsExit1 (0.00s)
+    floors_test.go:314: exit 0 out="" err=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.039s
+FAIL
+exit=1
+
+## mutant: drop the lower bound
+# diff:
+179c179
+< 	if f.Statements < lo-eps || f.Statements > c+eps {
+---
+> 	if f.Statements > c+eps {
+--- FAIL: TestCheckNewFloorBelowCurrentFails (0.00s)
+    floors_test.go:236: want one violation for a containing "new floor 0.0 outside [85.1, 85.6]", got []
+--- FAIL: TestCheckNewFloorWindow (0.00s)
+    floors_test.go:265: floor 85.0: new-floor violation false, want true (all: [])
+--- FAIL: TestRunNewFloorAtZeroIsExit1 (0.00s)
+    floors_test.go:314: exit 0 out="" err=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.050s
+FAIL
+exit=1
+
+## mutant: drop the upper bound
+# diff:
+179c179
+< 	if f.Statements < lo-eps || f.Statements > c+eps {
+---
+> 	if f.Statements < lo-eps {
+--- FAIL: TestCheckNewFloorWindow (0.00s)
+    floors_test.go:265: floor 85.7: new-floor violation false, want true (all: [{Pkg:a Msg:85.6 < floor 85.7}])
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.050s
+FAIL
+exit=1
+
+## mutant: lower edge exclusive
+# diff:
+179c179
+< 	if f.Statements < lo-eps || f.Statements > c+eps {
+---
+> 	if f.Statements < lo+eps || f.Statements > c+eps {
+--- FAIL: TestCheckNewFloorWindow (0.00s)
+    floors_test.go:265: floor 85.1: new-floor violation true, want false (all: [{Pkg:a Msg:new floor 85.1 outside [85.1, 85.6]}])
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.068s
+FAIL
+exit=1
+
+## mutant: upper edge exclusive
+# diff:
+179c179
+< 	if f.Statements < lo-eps || f.Statements > c+eps {
+---
+> 	if f.Statements < lo-eps || f.Statements > c-eps {
+--- FAIL: TestCheckNewFloorEqualToCurrentPasses (0.00s)
+    floors_test.go:273: upper edge is inclusive: want none, got [{Pkg:a Msg:new floor 85.6 outside [85.1, 85.6]}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.035s
+FAIL
+exit=1
+
+## mutant: slack 0.5 to 0.6
+# diff:
+168c168
+< const newFloorSlack = 0.5
+---
+> const newFloorSlack = 0.6
+--- FAIL: TestCheckNewFloorBelowCurrentFails (0.00s)
+    floors_test.go:236: want one violation for a containing "new floor 0.0 outside [85.1, 85.6]", got [{Pkg:a Msg:new floor 0.0 outside [85.0, 85.6]}]
+--- FAIL: TestCheckNewFloorWindow (0.00s)
+    floors_test.go:265: floor 85.0: new-floor violation false, want true (all: [])
+--- FAIL: TestRunNewFloorAtZeroIsExit1 (0.00s)
+    floors_test.go:314: exit 1 out="example.com/m/a: new floor 0.0 outside [79.4, 80.0]\n" err=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.018s
+FAIL
+exit=1
+
+## mutant: slack 0.5 to 0.4
+# diff:
+168c168
+< const newFloorSlack = 0.5
+---
+> const newFloorSlack = 0.4
+--- FAIL: TestCheckNewFloorBelowCurrentFails (0.00s)
+    floors_test.go:236: want one violation for a containing "new floor 0.0 outside [85.1, 85.6]", got [{Pkg:a Msg:new floor 0.0 outside [85.2, 85.6]}]
+--- FAIL: TestCheckNewFloorWindow (0.00s)
+    floors_test.go:265: floor 85.1: new-floor violation true, want false (all: [{Pkg:a Msg:new floor 85.1 outside [85.2, 85.6]}])
+--- FAIL: TestRunNewFloorAtZeroIsExit1 (0.00s)
+    floors_test.go:314: exit 1 out="example.com/m/a: new floor 0.0 outside [79.6, 80.0]\n" err=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.043s
+FAIL
+exit=1

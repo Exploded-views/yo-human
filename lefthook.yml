@@ -1,0 +1,22 @@
+# Pre-commit runs the fast gates every commit must pass, a RED commit (a deliberately failing
+# test) included: so it runs no tests. Pre-push runs the tests: a RED commit is never pushed as a
+# branch tip on its own, so a push always carries its fix. `make ci` runs everything, the
+# full-history secret scan and the perf budgets included. Never --no-verify.
+pre-commit:
+  parallel: true
+  commands:
+    gofmt:
+      glob: "*.go"
+      run: out=$(gofmt -l {staged_files}) || exit 1; test -z "$out" || { echo "$out"; exit 1; }
+    vet:
+      run: go vet ./...
+    lint:
+      run: sh scripts/lint.sh --new-from-rev=HEAD
+    secrets:
+      run: sh scripts/secrets.sh --staged
+    e2e-tags:
+      run: go test ./internal/repolint/ -run '^TestRepoE2EOnly$' -count=1
+pre-push:
+  commands:
+    test:
+      run: go test -race ./...

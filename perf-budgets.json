@@ -1,0 +1,7 @@
+{
+  "runs": 20,
+  "ci_headroom": 2.0,
+  "budgets": {
+    "version-startup": { "p95_ms": 10 }
+  }
+}

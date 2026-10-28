@@ -1,0 +1,25 @@
+--- FAIL: TestRunVersion (0.00s)
+    cli_test.go:13: code=0 out="" err=""
+--- FAIL: TestRunNoArgsIsUsage (0.00s)
+    cli_test.go:21: code=0 out="" err=""
+--- FAIL: TestRunUnknownVerbIsUsage (0.00s)
+    cli_test.go:29: code=0 out="" err=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.006s
+FAIL
+
+## mutants
+
+Mutant 1: ExitUsage = 64 -> 2 in internal/cli/exit.go, with only the three behaviour tests.
+Result: SURVIVED (tests compared against the constant, so changing its value changed both sides).
+Fix: added TestExitCodeValues pinning ExitOK=0 and ExitUsage=64.
+
+Mutant 2: same mutation, with TestExitCodeValues. Result: KILLED.
+```
+--- FAIL: TestExitCodeValues (0.00s)
+    cli_test.go:37: ExitOK=0 ExitUsage=2, want 0 and 64
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.014s
+FAIL
+```
+Reverted; full suite green.

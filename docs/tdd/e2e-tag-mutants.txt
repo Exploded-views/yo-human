@@ -1,0 +1,214 @@
+# baseline (unmutated)
+ok  	github.com/Exploded-views/yo-human/internal/repolint	0.010s
+exit=0
+
+## mutant: any //go:build line counts as e2e-only
+# diff:
+100c100
+< 	f.e2eOnly = expr != nil && !expr.Eval(func(tag string) bool { return tag != "e2e" })
+---
+> 	f.e2eOnly = expr != nil
+--- FAIL: TestE2EOnlyFixtures (0.00s)
+    e2e_test.go:22: E2EOnly =
+        [{prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e}]
+        want
+        [{prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.009s
+FAIL
+exit=1
+
+## mutant: drop the _e2e.go tag check
+# diff:
+163c163
+< 		if strings.HasSuffix(f.path, "_e2e.go") && !f.e2eOnly {
+---
+> 		if false && strings.HasSuffix(f.path, "_e2e.go") && !f.e2eOnly {
+--- FAIL: TestE2EOnlyFixtures (0.00s)
+    e2e_test.go:22: E2EOnly =
+        [{prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag}]
+        want
+        [{prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.009s
+FAIL
+exit=1
+
+## mutant: drop the e2e-only import check
+# diff:
+170c170
+< 			if e2eOnly[ip] {
+---
+> 			if false && e2eOnly[ip] {
+--- FAIL: TestE2EOnlyFixtures (0.00s)
+    e2e_test.go:22: E2EOnly =
+        [{untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+        want
+        [{prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.011s
+FAIL
+exit=1
+
+## mutant: test files checked for e2e-only imports
+# diff:
+166c166
+< 		if f.test || f.e2eOnly {
+---
+> 		if f.e2eOnly {
+--- FAIL: TestE2EOnlyFixtures (0.00s)
+    e2e_test.go:22: E2EOnly =
+        [{prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {prodtest/prod_test.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+        want
+        [{prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.010s
+FAIL
+exit=1
+
+## mutant: e2e files checked for e2e-only imports
+# diff:
+166c166
+< 		if f.test || f.e2eOnly {
+---
+> 		if f.test {
+--- FAIL: TestE2EOnlyFixtures (0.00s)
+    e2e_test.go:22: E2EOnly =
+        [{e2euser/u_e2e.go imports example.com/m/hooks, which builds only with the e2e tag} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+        want
+        [{prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.018s
+FAIL
+exit=1
+
+## mutant: one e2e file makes a package e2e-only
+# diff:
+141,143c141
+< 		if all, seen := only[ip]; !seen || all {
+< 			only[ip] = f.e2eOnly
+< 		}
+---
+> 		only[ip] = only[ip] || f.e2eOnly
+--- FAIL: TestE2EOnlyFixtures (0.00s)
+    e2e_test.go:22: E2EOnly =
+        [{prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {user/user.go imports example.com/m/mixed, which builds only with the e2e tag} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+        want
+        [{prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.009s
+FAIL
+exit=1
+
+# fix round 1: the header rule
+# baseline
+ok  	github.com/Exploded-views/yo-human/internal/repolint	0.010s
+exit=0
+
+## mutant: back to the old rule: needs e2e when it fails to build with every other tag set
+# diff:
+102c102
+< 	f.e2eOnly = expr != nil && needsE2E(expr)
+---
+> 	f.e2eOnly = expr != nil && !expr.Eval(func(tag string) bool { return tag != "e2e" })
+--- FAIL: TestE2EOnlyFixtures (0.00s)
+    e2e_test.go:36: E2EOnly =
+        [{andneg/x_e2e.go an _e2e.go file must carry //go:build e2e} {blockcomment/x_e2e.go an _e2e.go file must carry //go:build e2e} {orchain/x_e2e.go an _e2e.go file must carry //go:build e2e} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+        want
+        [{andneg/x_e2e.go an _e2e.go file must carry //go:build e2e} {andnotor/x_e2e.go an _e2e.go file must carry //go:build e2e} {andor/x_e2e.go an _e2e.go file must carry //go:build e2e} {blockcomment/x_e2e.go an _e2e.go file must carry //go:build e2e} {negos/x_e2e.go an _e2e.go file must carry //go:build e2e} {negpurego/x_e2e.go an _e2e.go file must carry //go:build e2e} {orchain/x_e2e.go an _e2e.go file must carry //go:build e2e} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.010s
+FAIL
+exit=1
+
+## mutant: an && chain may hold ||
+# diff:
+143c143
+< 		return noOr(x) && (needsE2E(x.X) || needsE2E(x.Y))
+---
+> 		return needsE2E(x.X) || needsE2E(x.Y)
+--- FAIL: TestE2EOnlyFixtures (0.00s)
+    e2e_test.go:36: E2EOnly =
+        [{andneg/x_e2e.go an _e2e.go file must carry //go:build e2e} {blockcomment/x_e2e.go an _e2e.go file must carry //go:build e2e} {negos/x_e2e.go an _e2e.go file must carry //go:build e2e} {negpurego/x_e2e.go an _e2e.go file must carry //go:build e2e} {orchain/x_e2e.go an _e2e.go file must carry //go:build e2e} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+        want
+        [{andneg/x_e2e.go an _e2e.go file must carry //go:build e2e} {andnotor/x_e2e.go an _e2e.go file must carry //go:build e2e} {andor/x_e2e.go an _e2e.go file must carry //go:build e2e} {blockcomment/x_e2e.go an _e2e.go file must carry //go:build e2e} {negos/x_e2e.go an _e2e.go file must carry //go:build e2e} {negpurego/x_e2e.go an _e2e.go file must carry //go:build e2e} {orchain/x_e2e.go an _e2e.go file must carry //go:build e2e} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.010s
+FAIL
+exit=1
+
+## mutant: || under ! is not seen
+# diff:
+155c155
+< 		return noOr(x.X)
+---
+> 		return true
+--- FAIL: TestE2EOnlyFixtures (0.00s)
+    e2e_test.go:36: E2EOnly =
+        [{andneg/x_e2e.go an _e2e.go file must carry //go:build e2e} {andor/x_e2e.go an _e2e.go file must carry //go:build e2e} {blockcomment/x_e2e.go an _e2e.go file must carry //go:build e2e} {negos/x_e2e.go an _e2e.go file must carry //go:build e2e} {negpurego/x_e2e.go an _e2e.go file must carry //go:build e2e} {orchain/x_e2e.go an _e2e.go file must carry //go:build e2e} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+        want
+        [{andneg/x_e2e.go an _e2e.go file must carry //go:build e2e} {andnotor/x_e2e.go an _e2e.go file must carry //go:build e2e} {andor/x_e2e.go an _e2e.go file must carry //go:build e2e} {blockcomment/x_e2e.go an _e2e.go file must carry //go:build e2e} {negos/x_e2e.go an _e2e.go file must carry //go:build e2e} {negpurego/x_e2e.go an _e2e.go file must carry //go:build e2e} {orchain/x_e2e.go an _e2e.go file must carry //go:build e2e} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.009s
+FAIL
+exit=1
+
+## mutant: e2e under ! counts
+# diff:
+139a140,141
+> 	case *constraint.NotExpr:
+> 		return needsE2E(x.X)
+--- FAIL: TestE2EOnlyFixtures (0.00s)
+    e2e_test.go:36: E2EOnly =
+        [{andnotor/x_e2e.go an _e2e.go file must carry //go:build e2e} {andor/x_e2e.go an _e2e.go file must carry //go:build e2e} {blockcomment/x_e2e.go an _e2e.go file must carry //go:build e2e} {negos/x_e2e.go an _e2e.go file must carry //go:build e2e} {negpurego/x_e2e.go an _e2e.go file must carry //go:build e2e} {orchain/x_e2e.go an _e2e.go file must carry //go:build e2e} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+        want
+        [{andneg/x_e2e.go an _e2e.go file must carry //go:build e2e} {andnotor/x_e2e.go an _e2e.go file must carry //go:build e2e} {andor/x_e2e.go an _e2e.go file must carry //go:build e2e} {blockcomment/x_e2e.go an _e2e.go file must carry //go:build e2e} {negos/x_e2e.go an _e2e.go file must carry //go:build e2e} {negpurego/x_e2e.go an _e2e.go file must carry //go:build e2e} {orchain/x_e2e.go an _e2e.go file must carry //go:build e2e} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.009s
+FAIL
+exit=1
+
+## mutant: comments after the package clause count
+# diff:
+120c120
+< 			if c.Pos() >= file.Package || !constraint.IsGoBuild(c.Text) {
+---
+> 			if !constraint.IsGoBuild(c.Text) {
+--- FAIL: TestBuildConstraintIgnoresLinesAfterThePackageClause (0.00s)
+    e2e_test.go:69: got e2e, <nil>; want no constraint
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.010s
+FAIL
+exit=1
+
+## mutant: a //go:build line inside a block comment counts
+# diff:
+119a120,123
+> 			if c.Pos() < file.Package && strings.HasPrefix(c.Text, "/*") && strings.Contains(c.Text, "//go:build e2e") {
+> 				expr = &constraint.TagExpr{Tag: "e2e"}
+> 				continue
+> 			}
+--- FAIL: TestE2EOnlyFixtures (0.00s)
+    e2e_test.go:36: E2EOnly =
+        [{andneg/x_e2e.go an _e2e.go file must carry //go:build e2e} {andnotor/x_e2e.go an _e2e.go file must carry //go:build e2e} {andor/x_e2e.go an _e2e.go file must carry //go:build e2e} {negos/x_e2e.go an _e2e.go file must carry //go:build e2e} {negpurego/x_e2e.go an _e2e.go file must carry //go:build e2e} {orchain/x_e2e.go an _e2e.go file must carry //go:build e2e} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+        want
+        [{andneg/x_e2e.go an _e2e.go file must carry //go:build e2e} {andnotor/x_e2e.go an _e2e.go file must carry //go:build e2e} {andor/x_e2e.go an _e2e.go file must carry //go:build e2e} {blockcomment/x_e2e.go an _e2e.go file must carry //go:build e2e} {negos/x_e2e.go an _e2e.go file must carry //go:build e2e} {negpurego/x_e2e.go an _e2e.go file must carry //go:build e2e} {orchain/x_e2e.go an _e2e.go file must carry //go:build e2e} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.010s
+FAIL
+exit=1
+
+## mutant: two //go:build lines: the last one wins
+# diff:
+123,125c123
+< 			if expr != nil {
+< 				return nil, fmt.Errorf("more than one //go:build line")
+< 			}
+---
+> 
+--- FAIL: TestBuildConstraintTwoLinesIsAnError (0.00s)
+    e2e_test.go:57: want an error for two //go:build lines
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.010s
+FAIL
+exit=1

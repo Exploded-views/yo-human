@@ -1,0 +1,22 @@
+# what this is: go test ./internal/repolint/ with E2EOnly stubbed to return nil (RED). TestRepoE2EOnly passes for the wrong reason (the stub reports nothing).
+--- FAIL: TestE2EOnlyFixtures (0.00s)
+    e2e_test.go:22: E2EOnly =
+        []
+        want
+        [{prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.008s
+FAIL
+exit=1
+
+# fix round 1 (review at e240081): negated tags, || chains, e2e under !, and a //go:build line inside a block comment all pass today (RED)
+$ go test -count=1 ./internal/repolint/
+--- FAIL: TestE2EOnlyFixtures (0.00s)
+    e2e_test.go:33: E2EOnly =
+        [{andneg/x_e2e.go an _e2e.go file must carry //go:build e2e} {orchain/x_e2e.go an _e2e.go file must carry //go:build e2e} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+        want
+        [{andneg/x_e2e.go an _e2e.go file must carry //go:build e2e} {andor/x_e2e.go an _e2e.go file must carry //go:build e2e} {blockcomment/x_e2e.go an _e2e.go file must carry //go:build e2e} {negos/x_e2e.go an _e2e.go file must carry //go:build e2e} {negpurego/x_e2e.go an _e2e.go file must carry //go:build e2e} {orchain/x_e2e.go an _e2e.go file must carry //go:build e2e} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.010s
+FAIL
+exit=1

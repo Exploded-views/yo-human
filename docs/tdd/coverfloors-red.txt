@@ -1,0 +1,92 @@
+# what this is: go test ./tools/coverfloors/ against stubs returning zero values (RED)
+--- FAIL: TestPackageCoverageWeightsStatements (0.00s)
+    floors_test.go:33: a = 0, want 75.0 (3 of 4 statements; a block counts if any line has count > 0)
+    floors_test.go:36: b = 0 (present false), want 0.0 present
+--- FAIL: TestPackageCoverageRejectsMissingMode (0.00s)
+    floors_test.go:47: want an error for a profile without a mode: line
+--- FAIL: TestPackageCoverageRejectsMalformedBlock (0.00s)
+    floors_test.go:54: want an error for a malformed block line
+--- FAIL: TestCheckBelowFloorFails (0.00s)
+    floors_test.go:60: want one violation for a containing "74.9 < floor 75.0", got []
+--- FAIL: TestCheckFloorLoweredFails (0.00s)
+    floors_test.go:72: want one violation for a containing "floor lowered 80.0 → 75.0", got []
+--- FAIL: TestCheckFloorRemovedFails (0.00s)
+    floors_test.go:77: want one violation for a containing "floor removed", got []
+--- FAIL: TestCheckPackageWithoutCoverageFails (0.00s)
+    floors_test.go:82: want one violation for b containing "no coverage (no tests?)", got []
+--- FAIL: TestCheckPackageWithoutFloorFails (0.00s)
+    floors_test.go:87: want one violation for c containing "no floor; run make floors", got []
+--- FAIL: TestUpdateRoundsDown (0.00s)
+    floors_test.go:92: 75.06 → 0
+    floors_test.go:95: 75.0 → 0
+    floors_test.go:98: 3/5 → 0, want 60.0
+--- FAIL: TestUpdateNeverLowers (0.00s)
+    floors_test.go:105: got map[], want a=80.0 (kept) b=91.2
+--- FAIL: TestExemptPackageNeedsNoFloorOrCoverage (0.00s)
+    floors_test.go:114: pkgs=[] vs=[]
+--- FAIL: TestExemptionForInternalPackageFails (0.00s)
+    floors_test.go:127: want one violation for github.com/Exploded-views/yo-human/internal/cli containing "internal", got []
+--- FAIL: TestExemptionNeedsReason (0.00s)
+    floors_test.go:133: want one violation for github.com/Exploded-views/yo-human/cmd/yo-human containing "reason", got []
+--- FAIL: TestFloorsRoundTripKeepsExempt (0.00s)
+    floors_test.go:143: parsed {Floors:map[] Exempt:map[]}
+--- FAIL: TestMissingProfileIsExit2 (0.00s)
+    floors_test.go:158: exit 0, want 2 (stderr "")
+--- FAIL: TestNoFlagsIsExit2 (0.00s)
+    floors_test.go:165: exit 0, want 2
+--- FAIL: TestRunCleanAndViolationExitCodes (0.00s)
+    floors_test.go:195: below floor: exit 0 out=""
+--- FAIL: TestRunBaseFloorsLoweredIsExit1 (0.00s)
+    floors_test.go:207: exit 0 out=""
+--- FAIL: TestRunUpdateWritesFloors (0.00s)
+    floors_test.go:222: floors file: {"exempt":{"example.com/m/cmd":"one-line main"}}
+--- FAIL: TestRunExemptInternalIsExit1 (0.00s)
+    floors_test.go:230: exit 0 out=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.019s
+FAIL
+exit=1
+
+# what this is: GitHub proof of the fail-closed base check. Throwaway draft PR #56 (base feat/m0-scaffold, which already holds coverage-floors.json) lowers internal/repolint 84.8 -> 84.7.
+# PR #55 cannot show this: its merge base is main, which has no coverage-floors.json yet, so no base floors are compared.
+# Raw lines from 'gh run view <run> --job <job> --log' filtered with: grep -E 'base=|floor lowered|make: |Process completed|coverfloors --profile'
+## FAIL run https://github.com/Exploded-views/yo-human/actions/runs/40284671836/job/121445424453 (commit 4ba31a8)
+coverage	2026-10-26T07:15:42.7369286Z base=<private-commit> args=FLOORS_ARGS=--base-floors=/home/runner/work/_temp/base-floors.json
+coverage	2026-10-26T07:16:02.2715768Z go run ./tools/coverfloors --profile .cache/cover.out --packages .cache/pkgs.txt --base-floors=/home/runner/work/_temp/base-floors.json
+coverage	2026-10-26T07:16:03.7242936Z github.com/Exploded-views/yo-human/internal/repolint: floor lowered 84.8 → 84.7
+coverage	2026-10-26T07:16:03.7286871Z make: *** [Makefile:32: floors] Error 1
+coverage	2026-10-26T07:16:03.7301984Z ##[error]Process completed with exit code 2.
+## GREEN after revert https://github.com/Exploded-views/yo-human/actions/runs/40284998668/job/121446572665 (commit revert commit 87812af)
+coverage	2026-10-26T07:19:23.5883415Z base=<private-commit> args=FLOORS_ARGS=--base-floors=/home/runner/work/_temp/base-floors.json
+coverage	2026-10-26T07:19:45.7031540Z go run ./tools/coverfloors --profile .cache/cover.out --packages .cache/pkgs.txt --base-floors=/home/runner/work/_temp/base-floors.json
+conclusion: coverage job failure, then success
+
+# fix round (review of 1de2ab7): ratchet bypasses. go test ./tools/coverfloors/ on 1de2ab7's code with the new tests (RED)
+--- FAIL: TestCheckNewFloorBelowCurrentFails (0.00s)
+    floors_test.go:236: want one violation for a containing "new floor 0.0 must equal current coverage 85.6", got []
+--- FAIL: TestRunExemptionAddedIsExit1 (0.00s)
+    floors_test.go:263: exit 0 out="" err=""
+--- FAIL: TestRunNewFloorAtZeroIsExit1 (0.00s)
+    floors_test.go:283: exit 0 out="" err=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.015s
+FAIL
+exit=1
+
+# GREEN check on the repo: same command against 1de2ab7's coverfloors exits 0; with the fix:
+# the reviewer bypass on the repo itself: tools/perf exempted, floor kept, base = the committed floors
+$ go run ./tools/coverfloors --profile .cache/cover.out --packages .cache/pkgs.txt --floors $SCRATCH/bypass-floors.json --base-floors=$SCRATCH/base-floors.json
+github.com/Exploded-views/yo-human/tools/perf: exemption added: needs a constitution amendment
+exit=1
+
+# fix round 2: new floors may sit within [RoundDown(current) - 0.5, current]. go test ./tools/coverfloors/ on 5c74275's code with the window tests (RED)
+--- FAIL: TestCheckNewFloorBelowCurrentFails (0.00s)
+    floors_test.go:236: want one violation for a containing "new floor 0.0 outside [85.1, 85.6]", got [{Pkg:a Msg:new floor 0.0 must equal current coverage 85.6}]
+--- FAIL: TestCheckNewFloorWindow (0.00s)
+    floors_test.go:265: floor 85.1: new-floor violation true, want false (all: [{Pkg:a Msg:new floor 85.1 must equal current coverage 85.6}])
+--- FAIL: TestRunNewFloorAtZeroIsExit1 (0.01s)
+    floors_test.go:307: exit 1 out="example.com/m/a: new floor 0.0 must equal current coverage 80.0\n" err=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.045s
+FAIL
+exit=1

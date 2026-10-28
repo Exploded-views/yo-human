@@ -1,0 +1,39 @@
+name: Decision
+description: A question that needs a recorded decision
+labels: ["type:decision"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What has to be decided.
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options considered
+      description: Each option with its trade-offs.
+    validations:
+      required: true
+  - type: textarea
+    id: decision
+    attributes:
+      label: Decision
+      description: The option chosen. Leave "Pending" until decided.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: The reasoning, tied to the constitution where it applies.
+    validations:
+      required: true
+  - type: textarea
+    id: consequences
+    attributes:
+      label: Consequences
+      description: What changes as a result, and what it costs.
+    validations:
+      required: true

@@ -1,0 +1,101 @@
+# RED: H1 Task 2 against main's config (.golangci.yml, .gitleaks.toml) and a stub app.Run
+## go test ./internal/hosted/app/
+--- FAIL: TestHostedVersion (0.00s)
+    app_test.go:15: code=0 out="" err=""
+--- FAIL: TestHostedNoArgsIsUsage (0.00s)
+    app_test.go:23: code=0 out="" err=""
+--- FAIL: TestHostedUnknownVerbIsUsage (0.00s)
+    app_test.go:31: code=0 out="" err=""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.008s
+FAIL
+exit=1
+## make lint-rules-test (hosted cases only, plus the summary)
+exit=2
+FAIL internal/hosted/bus/casesql/x.go: hosted bus imports database/sql: want hosted-bus-imports, got clean
+ok   internal/hosted/bus/casehttp/x.go: hosted bus imports net/http (internal-no-network)
+FAIL internal/hosted/bus/casestore/x.go: hosted bus imports the CLI store: want hosted-imports, got clean
+FAIL internal/hosted/bus/casenotify/x.go: hosted bus imports notify (bus is standard library only): want hosted-bus-imports, got clean
+ok   internal/hosted/db/casehttp/x.go: hosted db imports net/http (internal-no-network)
+ok   internal/hosted/db/caseok/x.go: hosted db imports bus and database/sql (clean)
+ok   internal/hosted/notify/casehttp/x.go: hosted notify imports net/http (internal-no-network)
+FAIL internal/hosted/egress/bark/casebus/x.go: an egress package imports bus: want hosted-egress-imports, got clean
+FAIL internal/hosted/egress/bark/caseok/x.go: an egress package imports net/http and notify: want clean, got internal-no-network
+internal/hosted/egress/bark/caseok/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/egress/bark/caseok/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/egress/bark/caseok/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/egress/bark/caseok/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/egress/bark/caseok/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+FAIL internal/hosted/egress/bark/caseclient/x.go: an egress package builds an http.Client: want clean, got internal-no-network
+internal/hosted/egress/bark/caseclient/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/egress/bark/caseclient/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/egress/bark/caseclient/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/egress/bark/caseclient/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/egress/bark/caseclient/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+FAIL internal/hosted/web/casehttp/x.go: hosted web imports net/http (inbound): want clean, got internal-no-network
+internal/hosted/web/casehttp/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/web/casehttp/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/web/casehttp/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/web/casehttp/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/web/casehttp/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+FAIL internal/hosted/oauth/casehttp/x.go: hosted oauth imports net/http (inbound): want clean, got internal-no-network
+internal/hosted/oauth/casehttp/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/oauth/casehttp/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/oauth/casehttp/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/oauth/casehttp/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/oauth/casehttp/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+FAIL internal/hosted/web/caseegress/x.go: hosted web imports an egress package: want hosted-egress-only-via-app, got clean
+ok   internal/hosted/app/caseegress/x.go: hosted app imports egress, web and version (clean)
+FAIL internal/hosted/web/caseclient/x.go: hosted web builds an http.Client (outbound only in egress): want forbidigo, got internal-no-network
+internal/hosted/web/caseclient/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/web/caseclient/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/web/caseclient/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/web/caseclient/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/web/caseclient/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+FAIL internal/hosted/oauth/caseget/x.go: hosted oauth calls http.Get (outbound only in egress): want forbidigo, got internal-no-network
+internal/hosted/oauth/caseget/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/oauth/caseget/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/oauth/caseget/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/oauth/caseget/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/oauth/caseget/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+FAIL internal/hosted/web/casedefault/x.go: hosted web uses http.DefaultClient: want forbidigo, got internal-no-network
+internal/hosted/web/casedefault/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/web/casedefault/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/web/casedefault/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/web/casedefault/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/hosted/web/casedefault/x.go:4:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+ok   internal/hosted/web/caseclienttest/x_test.go: a hosted web test calls http.Get (clean)
+FAIL internal/hosted/app/caseevil/x.go: a hosted package imports an unreviewed module: want hosted-imports, got clean
+FAIL internal/core/casehosted/x.go: core imports the hosted bus: want cli-side-not-hosted, got clean
+FAIL cmd/yo-human/casehosted/x.go: the CLI main imports the hosted app: want cli-side-not-hosted cmd-only-cli, got cmd-only-cli
+cmd/yo-human/casehosted/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/app' is not allowed from list 'cmd-only-cli' (depguard)
+cmd/yo-human/casehosted/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/app' is not allowed from list 'cmd-only-cli' (depguard)
+cmd/yo-human/casehosted/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/app' is not allowed from list 'cmd-only-cli' (depguard)
+cmd/yo-human/casehosted/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/app' is not allowed from list 'cmd-only-cli' (depguard)
+cmd/yo-human/casehosted/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/app' is not allowed from list 'cmd-only-cli' (depguard)
+FAIL cmd/yo-human-hosted/casebus/x.go: the hosted main imports bus: want cmd-hosted-only-app, got cmd-only-cli
+cmd/yo-human-hosted/casebus/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/bus' is not allowed from list 'cmd-only-cli' (depguard)
+cmd/yo-human-hosted/casebus/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/bus' is not allowed from list 'cmd-only-cli' (depguard)
+cmd/yo-human-hosted/casebus/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/bus' is not allowed from list 'cmd-only-cli' (depguard)
+cmd/yo-human-hosted/casebus/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/bus' is not allowed from list 'cmd-only-cli' (depguard)
+cmd/yo-human-hosted/casebus/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/bus' is not allowed from list 'cmd-only-cli' (depguard)
+FAIL cmd/yo-human-hosted/caseok/x.go: the hosted main imports app, version and the standard library: want clean, got cmd-only-cli
+cmd/yo-human-hosted/caseok/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/app' is not allowed from list 'cmd-only-cli' (depguard)
+cmd/yo-human-hosted/caseok/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/app' is not allowed from list 'cmd-only-cli' (depguard)
+cmd/yo-human-hosted/caseok/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/app' is not allowed from list 'cmd-only-cli' (depguard)
+cmd/yo-human-hosted/caseok/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/app' is not allowed from list 'cmd-only-cli' (depguard)
+cmd/yo-human-hosted/caseok/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/hosted/app' is not allowed from list 'cmd-only-cli' (depguard)
+lint_rules_test: a case failed
+## make secrets-test (token cases)
+exit=2
+ok   token-yhn (exit 1)
+FAIL token-yhn: output lacks 'yo-human-token bus.env '
+ok   token-yha (exit 1)
+FAIL token-yha: output lacks 'yo-human-token bus.env '
+ok   token-yhr (exit 1)
+FAIL token-yhr: output lacks 'yo-human-token bus.env '
+ok   token-yhd (exit 1)
+FAIL token-yhd: output lacks 'yo-human-token bus.env '
+ok   token-yhh (exit 1)
+FAIL token-yhh: output lacks 'yo-human-token bus.env '
+secrets_test: 5 failure(s)

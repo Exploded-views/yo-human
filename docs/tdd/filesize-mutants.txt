@@ -1,0 +1,19 @@
+=== baseline (unmutated)
+ok  	github.com/Exploded-views/yo-human/internal/repolint	0.009s
+exit=0
+=== mutant 1: limit comparison lines <= limit becomes lines < limit
+diff: 62c62 < 	if lines <= limit || isGenerated(data) { --- > 	if lines < limit || isGenerated(data) { 
+--- FAIL: TestOversizedBoundary (0.00s)
+    filesize_test.go:20: Oversized = [{big401.go 401} {ok400.go 400}], want [{big401.go 401}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.011s
+FAIL
+exit=1
+=== mutant 2: generated-header regexp can never match the header
+diff: 19c19 < var generatedHeader = regexp.MustCompile(`^// Code generated .* DO NOT EDIT\.$`) --- > var generatedHeader = regexp.MustCompile(`^// Code generated .* DO NOT EDIT!$`) 
+--- FAIL: TestOversizedBoundary (0.00s)
+    filesize_test.go:20: Oversized = [{big401.go 401} {gen401.go 401}], want [{big401.go 401}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.010s
+FAIL
+exit=1

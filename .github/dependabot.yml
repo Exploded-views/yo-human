@@ -1,0 +1,15 @@
+# Dependabot version updates: Go modules and the SHA-pinned GitHub Actions, weekly. Security
+# updates are on in the repository settings. Every update is an ordinary PR through CI; pins
+# stay full SHAs (Dependabot updates the SHA and its version comment).
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

@@ -1,0 +1,8 @@
+# The release targets, one GOOS/GOARCH per line: the single source for every gate that must see
+# the release's build (make lint, the lint-rules harness, release_net_check). Releases are built
+# with CGO_ENABLED=0. goreleaser's goos and goarch (.goreleaser.yaml, which M1 brings) must list
+# exactly these; #59 adds a test that they match.
+linux/amd64
+linux/arm64
+darwin/amd64
+darwin/arm64

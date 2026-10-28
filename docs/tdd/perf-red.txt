@@ -1,0 +1,69 @@
+# what this is: go test ./tools/perf/ against stubs (P95 returns 0, Check returns nil, run returns 0) (RED)
+# command: go test -count=1 ./tools/perf/
+--- FAIL: TestP95NearestRank (0.00s)
+    budget_test.go:21: p95 of 1..20ms = 0s, want 19ms
+    budget_test.go:27: p95 of one sample = 0s, want 5ms
+--- FAIL: TestCheckOverBudgetFails (0.00s)
+    budget_test.go:36: got [], want one violation "x: p95 31.0ms > budget 30.0ms"
+--- FAIL: TestHeadroomOnlyInCI (0.00s)
+    budget_test.go:52: ci=false: got [], want 1 violation
+    budget_test.go:55: ci=true, 61ms vs 60ms: got [], want 1 violation
+--- FAIL: TestScenarioWithoutBudgetFails (0.00s)
+    budget_test.go:62: got [], want one "no budget" violation for z
+--- FAIL: TestBudgetWithoutScenarioFails (0.00s)
+    budget_test.go:70: got [], want one "no scenario" violation for y
+--- FAIL: TestNonZeroExitOfScenarioIsError (0.00s)
+    budget_test.go:98: exit 0, stderr ""; want exit 2 naming boom
+--- FAIL: TestUnstartableScenarioIsError (0.00s)
+    budget_test.go:105: exit 0, stderr ""; want exit 2 naming gone
+--- FAIL: TestRunWithinBudgetExitsZeroAndPrints (0.00s)
+    budget_test.go:113: exit 0, stdout ""; want 0 with p95 and budget printed
+--- FAIL: TestRunOverBudgetExitsOne (0.00s)
+    budget_test.go:122: exit 0, stdout ""; want 1 with "slow: p95 ... > budget 1.0ms"
+--- FAIL: TestBadInputIsUsageError (0.00s)
+    budget_test.go:133: zero runs: exit 0, want 2
+    budget_test.go:133: headroom<1: exit 0, want 2
+    budget_test.go:133: not json: exit 0, want 2
+    budget_test.go:138: missing file: exit 0, want 2
+    budget_test.go:141: bad flag: exit 0, want 2
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.009s
+FAIL
+exit=1
+
+# first budget from measurement: make build && go run ./tools/perf, five local runs (provisional budget 500ms in the file)
+version-startup: p95 3.6ms, budget 500ms (ci=false)
+exit=0
+version-startup: p95 3.5ms, budget 500ms (ci=false)
+exit=0
+version-startup: p95 3.6ms, budget 500ms (ci=false)
+exit=0
+version-startup: p95 3.6ms, budget 500ms (ci=false)
+exit=0
+version-startup: p95 3.4ms, budget 500ms (ci=false)
+exit=0
+
+# CI runners, run https://github.com/Exploded-views/yo-human/actions/runs/40286643180 (gh run view 40286643180 --log | grep 'version-startup: p95')
+perf (macos-latest)	p95 budgets that only tighten	2026-10-26T07:35:54.7119020Z version-startup: p95 7.9ms, budget 500ms (ci=true)
+perf (ubuntu-latest)	p95 budgets that only tighten	2026-10-26T07:35:29.6804676Z version-startup: p95 1.1ms, budget 500ms (ci=true)
+# largest p95 seen: 7.9ms (macos-latest); rounded up to the next 5ms: p95_ms = 10 (20ms with the 2.0 CI headroom)
+
+# fix round 1 RED: base comparison (CheckBase stub returns nil, --base-budgets parsed and ignored) and p95_ms <= 0 not yet rejected
+# command: go test -count=1 ./tools/perf/
+--- FAIL: TestReadBudgetsRejectsNonPositiveBudget (0.00s)
+    budget_test.go:150: p95_ms 0: err <nil>, want an error naming bad
+    budget_test.go:150: p95_ms -5: err <nil>, want an error naming bad
+    budget_test.go:154: exit 1, stderr ""; want exit 2 naming bad
+--- FAIL: TestCheckBaseViolations (0.00s)
+    budget_test.go:181: budget raised: got [], want exactly [a: budget raised 10ms → 15ms]
+    budget_test.go:181: headroom raised: got [], want exactly [ci_headroom: raised 2.0 → 2.5]
+    budget_test.go:181: runs lowered: got [], want exactly [runs: lowered 20 → 10]
+    budget_test.go:181: budget removed: got [], want exactly [b: budget removed]
+--- FAIL: TestRunBaseBudgets (0.03s)
+    budget_test.go:217: raised: exit 0, stdout "ok: p95 2.2ms, budget 5000ms (ci=false)\n"; want 1 naming the raise
+    budget_test.go:224: unreadable base: exit 0, stderr ""; want 2 naming the file
+    budget_test.go:228: malformed base: exit 0, want 2
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.175s
+FAIL
+exit=1

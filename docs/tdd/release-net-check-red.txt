@@ -1,0 +1,102 @@
+# what this is: scripts/release_net_check_test.sh against a stub release_net_check.sh that exits 0 (RED)
+$ sh scripts/release_net_check_test.sh
+ok   implementations and transport may import the network; store is not in the release build (exit 0)
+FAIL core imports net/http under a negated tag: want exit 1, got 0
+ok   core imports net/http only under the e2e tag (exit 0)
+FAIL registry imports net: want exit 1, got 0
+FAIL core imports net/rpc: want exit 1, got 0
+FAIL core imports crypto/tls: want exit 1, got 0
+FAIL core imports log/syslog: want exit 1, got 0
+ok   net/url, net/mail and net/netip are allowed (exit 0)
+FAIL a third-party module in the release build imports net/http: want exit 1, got 0
+FAIL go list fails: want exit 2, got 0
+release_net_check_test: 7 failure(s)
+exit=1
+
+# GREEN
+$ sh scripts/release_net_check_test.sh
+ok   implementations and transport may import the network; store is not in the release build (exit 0)
+ok   core imports net/http under a negated tag (exit 1)
+ok   core imports net/http only under the e2e tag (exit 0)
+ok   registry imports net (exit 1)
+ok   core imports net/rpc (exit 1)
+ok   core imports crypto/tls (exit 1)
+ok   core imports log/syslog (exit 1)
+ok   net/url, net/mail and net/netip are allowed (exit 0)
+ok   a third-party module in the release build imports net/http (exit 1)
+ok   go list fails (exit 2)
+release_net_check_test: all cases pass
+exit=0
+$ sh scripts/release_net_check.sh   (the repo)
+release_net_check: the release build imports no network package outside the channel implementations
+exit=0
+
+# fix round 2 (review at 7dbd5e0): the check saw the host's build. 7dbd5e0's release_net_check.sh against the new cases (RED); host darwin/arm64
+$ sh scripts/release_net_check_test.sh
+ok   implementations and transport may import the network; store is not in the release build (exit 0)
+ok   core imports net/http under a negated tag (exit 1)
+ok   core imports net/http only under the e2e tag (exit 0)
+ok   registry imports net (exit 1)
+ok   core imports net/rpc (exit 1)
+ok   core imports crypto/tls (exit 1)
+ok   core imports log/syslog (exit 1)
+ok   net/url, net/mail and net/netip are allowed (exit 0)
+ok   a third-party module in the release build imports net/http (exit 1)
+FAIL core imports net/http in a !cgo file (the release has cgo off): want exit 1, got 0
+     release_net_check: the release build imports no network package outside the channel implementations
+FAIL the same, with CGO_ENABLED=1 in the caller's environment: want exit 1, got 0
+     release_net_check: the release build imports no network package outside the channel implementations
+FAIL core imports net/http in an _darwin.go file: output lacks 'darwin/arm64: github.com/Exploded-views/yo-human/internal/core imports net/http'
+     release_net_check: github.com/Exploded-views/yo-human/internal/core imports net/http
+FAIL core imports net/http in an _linux.go file: want exit 1, got 0
+     release_net_check: the release build imports no network package outside the channel implementations
+FAIL core imports net/http in an _arm64.go file: output lacks 'linux/arm64: github.com/Exploded-views/yo-human/internal/core imports net/http'
+     release_net_check: github.com/Exploded-views/yo-human/internal/core imports net/http
+FAIL a cgo-only file is outside the release graph: want exit 0, got 1
+     release_net_check: github.com/Exploded-views/yo-human/internal/core imports net/http
+ok   GOFLAGS=-tags=e2e in the caller's environment is ignored (exit 0)
+FAIL GOFLAGS=-tags=e2e in a go env file is ignored: want exit 0, got 1
+     release_net_check: github.com/Exploded-views/yo-human/internal/core imports net/http
+FAIL a go.work in the module: want exit 2, got 0
+     release_net_check: the release build imports no network package outside the channel implementations
+FAIL RELEASE_TARGETS lists no target: want exit 2, got 0
+     release_net_check: the release build imports no network package outside the channel implementations
+FAIL RELEASE_TARGETS names a target go does not know: want exit 2, got 0
+     release_net_check: the release build imports no network package outside the channel implementations
+ok   go list fails (exit 2)
+release_net_check_test: 10 failure(s)
+exit=1
+
+# CI's view (GOOS=linux in the environment) of the darwin case, old script:
+$ GOOS=linux sh scripts/release_net_check.sh   (module with internal/core/x_darwin.go importing net/http)
+release_net_check: the release build imports no network package outside the channel implementations
+exit=0
+
+# GREEN (fix round 2)
+$ sh scripts/release_net_check_test.sh
+ok   implementations and transport may import the network; store is not in the release build (exit 0)
+ok   core imports net/http under a negated tag (exit 1)
+ok   core imports net/http only under the e2e tag (exit 0)
+ok   registry imports net (exit 1)
+ok   core imports net/rpc (exit 1)
+ok   core imports crypto/tls (exit 1)
+ok   core imports log/syslog (exit 1)
+ok   net/url, net/mail and net/netip are allowed (exit 0)
+ok   a third-party module in the release build imports net/http (exit 1)
+ok   core imports net/http in a !cgo file (the release has cgo off) (exit 1)
+ok   the same, with CGO_ENABLED=1 in the caller's environment (exit 1)
+ok   core imports net/http in an _darwin.go file (exit 1)
+ok   core imports net/http in an _linux.go file (exit 1)
+ok   core imports net/http in an _arm64.go file (exit 1)
+ok   a cgo-only file is outside the release graph (exit 0)
+ok   GOFLAGS=-tags=e2e in the caller's environment is ignored (exit 0)
+ok   GOFLAGS=-tags=e2e in a go env file is ignored (exit 0)
+ok   a go.work in the module (exit 2)
+ok   RELEASE_TARGETS lists no target (exit 2)
+ok   RELEASE_TARGETS names a target go does not know (exit 2)
+ok   go list fails (exit 2)
+release_net_check_test: all cases pass
+exit=0
+$ sh scripts/release_net_check.sh   (the repo)
+release_net_check: no release target (linux/amd64 linux/arm64 darwin/amd64 darwin/arm64) imports a network package outside the channel implementations
+exit=0

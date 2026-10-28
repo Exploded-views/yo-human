@@ -1,0 +1,417 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    - gocyclo
+    - gosec
+    - errorlint
+    - misspell
+    - bodyclose
+    - depguard
+    - forbidigo
+  settings:
+    # Constitution IV, single network path: raw socket calls only in a channel implementation
+    # (exclusions below), including the raw Syscall forms (Syscall(SYS_SOCKET, ...)). syscall
+    # itself stays allowed: M1 needs flock, O_NOFOLLOW, O_NONBLOCK and fstat in store, config,
+    # secrets, cli/bodyfile and logch. analyze-types matches by package, so an aliased
+    # (sc.Socket) or dot (Socket) import is caught too. This is the only forbidigo rule; setting
+    # forbid replaces its defaults. golang.org/x/sys/unix is not on any allow list; the PR that
+    # reviews and allows it must add its socket calls to this pattern in the same change.
+    forbidigo:
+      analyze-types: true
+      forbid:
+        - pattern: ^syscall\.(Socket|Connect|Sendto|Sendmsg|Bind|Syscall|Syscall6|RawSyscall|RawSyscall6)$
+          msg: only a channel implementation opens sockets
+        # Hosted mode's single outbound path: net/http may be imported by the inbound packages
+        # (web, oauth), but only internal/hosted/egress and the channel implementations build
+        # a client or call one. The http.Client and http.Transport patterns also catch their
+        # composite literals; DefaultTransport is the round tripper behind DefaultClient.
+        - pattern: ^http\.(Get|Post|Head|PostForm|DefaultClient|Client|Transport|DefaultTransport)$
+          pkg: ^net/http$
+          msg: only internal/hosted/egress makes outbound HTTP calls
+    gocyclo:
+      min-complexity: 10
+    depguard:
+      rules:
+        # Constitution IV (v1.0.1): core, store, config, secrets, problem and cli import only
+        # the standard library, this module's internal/ packages and the third-party modules
+        # reviewed and named in their own rule. main imports none yet; M1 adds its reviewed
+        # modules by name. Everything else is denied (an unreviewed module could open a
+        # connection of its own). The deny rules below still apply on top. Test files are free.
+        core-imports:
+          files:
+            - "**/internal/core/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/
+        store-imports:
+          files:
+            - "**/internal/store/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/
+        config-imports:
+          files:
+            - "**/internal/config/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/
+        secrets-imports:
+          files:
+            - "**/internal/secrets/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/
+        problem-imports:
+          files:
+            - "**/internal/problem/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/
+        cli-imports:
+          files:
+            - "**/internal/cli/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/
+        # Constitution IV: only cmd and internal/cli may import internal/cli.
+        cli-is-the-top:
+          files:
+            - $all
+            - "!**/internal/cli/**"
+            - "!**/cmd/**"
+          deny:
+            - pkg: github.com/Exploded-views/yo-human/internal/cli
+              desc: only cmd/ and internal/cli may import internal/cli
+        # Constitution IV: cmd/yo-human is a thin main. It imports internal/cli and internal/version
+        # (exact matches) and the standard library, nothing else.
+        cmd-only-cli:
+          files:
+            - "**/cmd/yo-human/**"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/cli$
+            - github.com/Exploded-views/yo-human/internal/version$
+        # Constitution IV (v1.1.0): cmd/yo-human-hosted is a thin main over internal/hosted/app.
+        cmd-hosted-only-app:
+          files:
+            - "**/cmd/yo-human-hosted/**"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/hosted/app$
+            - github.com/Exploded-views/yo-human/internal/version$
+        # Hosted mode has its own layer chain. A hosted package imports the standard library,
+        # other hosted packages and internal/version, never the CLI side; reviewed modules (the
+        # MCP SDK in web, the sqlite driver in db) are added here by name, per package.
+        hosted-imports:
+          files:
+            - "**/internal/hosted/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/hosted/
+            - github.com/Exploded-views/yo-human/internal/version$
+        # bus is the domain: standard library only. No database/sql (db owns storage) and no
+        # other hosted package (lax: only these entries deny).
+        hosted-bus-imports:
+          list-mode: lax
+          files:
+            - "**/internal/hosted/bus/**"
+            - "!$test"
+          deny:
+            - pkg: database/sql
+              desc: bus is standard library only; storage lives in internal/hosted/db
+            - pkg: github.com/Exploded-views/yo-human/internal/hosted/
+              desc: bus imports no other hosted package
+        # An egress package (one per outbound destination) imports only the standard library
+        # and the notify interface it implements.
+        hosted-egress-imports:
+          files:
+            - "**/internal/hosted/egress/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/hosted/notify$
+        # Only app, the composition root, wires an egress package in.
+        hosted-egress-only-via-app:
+          files:
+            - $all
+            - "!**/internal/hosted/app/**"
+            - "!**/internal/hosted/egress/**"
+            - "!$test"
+          deny:
+            - pkg: github.com/Exploded-views/yo-human/internal/hosted/egress/
+              desc: only internal/hosted/app wires an egress package
+        # web and oauth are inbound: they import net/http to serve (internal-no-network excludes
+        # them for that), but nothing else that dials out. Together with forbidigo's client and
+        # transport patterns, outbound calls stay in internal/hosted/egress.
+        hosted-inbound-no-dial:
+          list-mode: lax
+          files:
+            - "**/internal/hosted/web/**"
+            - "**/internal/hosted/oauth/**"
+            - "!$test"
+          allow:
+            - net/http$
+            - net/url$
+            - net/netip$
+          deny:
+            - pkg: net$
+              desc: web and oauth only serve; outbound calls live in internal/hosted/egress
+            - pkg: crypto/tls$
+              desc: web and oauth only serve; outbound calls live in internal/hosted/egress
+            - pkg: net/http/httputil$
+              desc: web and oauth only serve; outbound calls live in internal/hosted/egress
+            - pkg: net/smtp$
+              desc: web and oauth only serve; outbound calls live in internal/hosted/egress
+            - pkg: net/rpc
+              desc: web and oauth only serve; outbound calls live in internal/hosted/egress
+        # The CLI side never imports hosted mode; the two share only internal/version.
+        cli-side-not-hosted:
+          files:
+            - $all
+            - "!**/internal/hosted/**"
+            - "!**/cmd/yo-human-hosted/**"
+          deny:
+            - pkg: github.com/Exploded-views/yo-human/internal/hosted/
+              desc: the CLI side does not import hosted mode
+        # Constitution IV: cli is the composition root above core. It may import anything
+        # except the store (core owns state) and channel implementations (only
+        # internal/channel/registry builds them). Lax mode: the longer allow entry
+        # (registry) beats the internal/channel/ deny prefix. The internal/channel
+        # interface itself has no trailing slash, so it stays allowed.
+        cli-not-store-or-impls:
+          list-mode: lax
+          files:
+            - "**/internal/cli/**"
+            - "!$test"
+          allow:
+            - github.com/Exploded-views/yo-human/internal/channel/registry$
+          deny:
+            - pkg: github.com/Exploded-views/yo-human/internal/store
+              desc: cli must not import store; state goes through core
+            - pkg: github.com/Exploded-views/yo-human/internal/channel/
+              desc: cli must not import a channel implementation; use internal/channel/registry
+        # Only internal/channel/registry imports channel implementations; importing registry
+        # itself is allowed (lax: the longer allow entry wins). Implementations are excluded
+        # here because channel-implementations already covers them.
+        channel-impls-only-via-registry:
+          list-mode: lax
+          files:
+            - $all
+            - "!**/internal/channel/*/**"
+            - "!$test"
+          allow:
+            - github.com/Exploded-views/yo-human/internal/channel/registry$
+          deny:
+            - pkg: github.com/Exploded-views/yo-human/internal/channel/
+              desc: only internal/channel/registry may import a channel implementation
+        # Tests anywhere may also import the shared fake, internal/channel/channeltest.
+        channel-impls-only-via-registry-tests:
+          list-mode: lax
+          files:
+            - "**/*_test.go"
+            - "!**/internal/channel/*/**"
+          allow:
+            - github.com/Exploded-views/yo-human/internal/channel/channeltest$
+            - github.com/Exploded-views/yo-human/internal/channel/registry$
+          deny:
+            - pkg: github.com/Exploded-views/yo-human/internal/channel/
+              desc: only internal/channel/registry may import a channel implementation
+        # Constitution IV, single network path: no internal package but a channel
+        # implementation opens a connection. Denied: net, crypto/tls and log/syslog exactly,
+        # and every net/ package (net/http and its subpackages, net/rpc, net/smtp,
+        # net/textproto, ...) except the allow list net/url, net/mail and net/netip (lax: an
+        # exact allow entry is longer than net/, so it wins). There is no separate net/http
+        # entry: depguard v2.2.1 checks only the closest sorted entry, so a net/http entry would
+        # shadow net/ for every package sorting after it (net/rpc, net/smtp, ...). Registry is
+        # covered by registry-no-network.
+        # *_e2e.go files carry `//go:build e2e` and are compiled only into the test binary:
+        # repolint's E2EOnly check (make test, and the pre-commit hook) holds every _e2e.go file
+        # to `//go:build e2e` or an && chain with a bare e2e, and scripts/release_net_check.sh
+        # (make ci) proves from go list that, for every RELEASE_TARGETS target built as the
+        # release is (CGO_ENABLED=0, no tags), no package outside the channel implementations
+        # imports a network package. This config is linted per target, cgo off, and on the host
+        # with cgo on (scripts/lint.sh), so no file only some build sees escapes it.
+        internal-no-network:
+          list-mode: lax
+          files:
+            - "**/internal/**"
+            - "!**/internal/channel/*/**"
+            - "!**/internal/hosted/web/**"
+            - "!**/internal/hosted/oauth/**"
+            - "!**/internal/hosted/egress/**"
+            - "!**/*_e2e.go"
+            - "!$test"
+          allow:
+            - net/url$
+            - net/mail$
+            - net/netip$
+          deny:
+            - pkg: net$
+              desc: only a channel implementation makes network calls
+            - pkg: net/
+              desc: only a channel implementation makes network calls
+            - pkg: crypto/tls$
+              desc: only a channel implementation makes network calls
+            - pkg: log/syslog$
+              desc: only a channel implementation makes network calls
+        # plugin is denied in every internal/ package: it loads code no rule here can see. cgo
+        # (import "C") is NOT denied here and cannot be: golangci-lint lints the cgo-processed
+        # files, where import "C" is gone, so a depguard entry never fires. repolint's Cgo check
+        # (internal/repolint, run by make test) is the only deny for cgo; don't add a cgo
+        # exception here thinking depguard covers it.
+        internal-no-plugin:
+          files:
+            - "**/internal/**"
+          deny:
+            - pkg: plugin$
+              desc: internal packages do not load plugins
+        # os/exec is denied in every internal/ package, the channel implementations included.
+        # tools/ stays free (tools/perf runs the binary); tests may run programs.
+        internal-no-exec:
+          files:
+            - "**/internal/**"
+            - "!$test"
+          deny:
+            - pkg: os/exec$
+              desc: internal packages do not run other programs
+        # Registry only constructs implementations; they build their own HTTP clients. Same
+        # entries as internal-no-network.
+        registry-no-network:
+          list-mode: lax
+          files:
+            - "**/internal/channel/registry/**"
+            - "!$test"
+          allow:
+            - net/url$
+            - net/mail$
+            - net/netip$
+          deny:
+            - pkg: net$
+              desc: registry only constructs channels; implementations make network calls
+            - pkg: net/
+              desc: registry only constructs channels; implementations make network calls
+            - pkg: crypto/tls$
+              desc: registry only constructs channels; implementations make network calls
+            - pkg: log/syslog$
+              desc: registry only constructs channels; implementations make network calls
+        # Registry imports only the standard library, internal/channel and its
+        # implementations, and internal/problem.
+        registry-imports:
+          files:
+            - "**/internal/channel/registry/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/channel
+            - github.com/Exploded-views/yo-human/internal/problem
+        store-is-the-bottom:
+          files:
+            - "**/internal/store/**"
+          deny:
+            - pkg: github.com/Exploded-views/yo-human/internal/core
+              desc: store must not import core
+            - pkg: github.com/Exploded-views/yo-human/internal/channel
+              desc: store must not import channel
+        channel-interface:
+          files:
+            - "**/internal/channel/*.go"
+          deny:
+            - pkg: github.com/Exploded-views/yo-human/internal/core
+              desc: channel must not import core
+            - pkg: github.com/Exploded-views/yo-human/internal/store
+              desc: channel must not import store
+            - pkg: github.com/Exploded-views/yo-human/internal/cli
+              desc: channel must not import cli
+        # Constitution IV: an implementation imports only the standard library and the parent
+        # internal/channel. The allow list rejects everything else (config, secrets, core, store,
+        # problem, third-party); the deny entry rejects every internal/channel/<name>, which the
+        # parent's prefix would otherwise allow. Provider SDKs are added here by name when adopted.
+        # internal/channel/transport (the network helpers; arrives with M1) is allowed by its
+        # exact entry; strict mode lets that longer allow entry beat the internal/channel/ deny.
+        channel-implementations:
+          list-mode: strict
+          files:
+            - "**/internal/channel/*/**"
+            - "!**/internal/channel/registry/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/channel
+            - github.com/Exploded-views/yo-human/internal/channel/transport$
+          deny:
+            - pkg: github.com/Exploded-views/yo-human/internal/channel/
+              desc: a channel must not import another channel
+        # Tests of an implementation may also import internal/channel/... (channeltest, and the
+        # package itself from an external _test package). depguard cannot tell "itself" from
+        # "another channel", so a test importing another channel is not flagged.
+        channel-implementation-tests:
+          files:
+            - "**/internal/channel/*/**_test.go"
+            - "!**/internal/channel/registry/**"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/channel
+            # internal/channel/transport arrives with M1.
+            - github.com/Exploded-views/yo-human/internal/channel/transport$
+        # Constitution IV: core never reaches a channel implementation directly (only the
+        # internal/channel interface). Its network ban is internal-no-network.
+        core-no-network:
+          files:
+            - "**/internal/core/**"
+            - "!$test"
+          deny:
+            - pkg: github.com/Exploded-views/yo-human/internal/channel/
+              desc: core uses the internal/channel interface, never an implementation
+        # config, secrets and problem sit below core and cli.
+        below-core:
+          files:
+            - "**/internal/config/**"
+            - "**/internal/secrets/**"
+            - "**/internal/problem/**"
+          deny:
+            - pkg: github.com/Exploded-views/yo-human/internal/core
+              desc: config, secrets and problem must not import core
+            - pkg: github.com/Exploded-views/yo-human/internal/cli
+              desc: config, secrets and problem must not import cli
+        # problem is the leaf every layer imports, store included: it imports no other internal
+        # package (lax mode: the longer allow entry lets its own external tests import it).
+        problem-is-a-leaf:
+          list-mode: lax
+          files:
+            - "**/internal/problem/**"
+          allow:
+            - github.com/Exploded-views/yo-human/internal/problem
+          deny:
+            - pkg: github.com/Exploded-views/yo-human/internal/
+              desc: problem is a leaf and imports no other internal package
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [gosec]
+      - path: ^tools/
+        linters: [gosec]
+      # Channel implementations may open sockets; registry may not. golangci-lint refuses
+      # path and path-except in one rule and RE2 has no lookahead, so the pattern spells out
+      # "any internal/channel/<dir>/ whose name is not exactly registry".
+      - path: internal/channel/([^r/][^/]*|r([^e/][^/]*)?|re([^g/][^/]*)?|reg([^i/][^/]*)?|regi([^s/][^/]*)?|regis([^t/][^/]*)?|regist([^r/][^/]*)?|registr([^y/][^/]*)?|registry[^/]+)/
+        linters: [forbidigo]
+      # The outbound-HTTP patterns don't apply in egress, or in tests (which may call a test
+      # server). The socket patterns still do.
+      - path: internal/hosted/egress/
+        linters: [forbidigo]
+        text: only internal/hosted/egress makes outbound HTTP calls
+      - path: _test\.go
+        linters: [forbidigo]
+        text: only internal/hosted/egress makes outbound HTTP calls

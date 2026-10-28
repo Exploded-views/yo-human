@@ -1,0 +1,27 @@
+# H1 Task 2 mutants (2026-10-27). Each was run against a small probe module with the mutated
+# config (golangci-lint --enable-only depguard), or gitleaks over a fixture with a fake yhn_
+# token. Probes: internal/hosted/oauth importing net/http (clean), and
+# internal/hosted/egress/bark importing internal/hosted/bus (hosted-egress-imports).
+
+## real config
+egress/bark imports bus      -> hosted-egress-imports
+oauth imports net/http       -> clean
+gitleaks yhn_ fixture        -> yo-human-token
+
+## mutant 1: drop "!**/internal/hosted/oauth/**" from internal-no-network
+oauth imports net/http       -> internal-no-network   (killed: the clean probe fails)
+
+## mutant 2: hosted-egress-imports allows github.com/Exploded-views/yo-human/internal/
+egress/bark imports bus      -> clean                 (killed: its probe flips)
+
+## mutant 3: yo-human-token regex {52} -> {53}
+gitleaks yhn_ fixture        -> generic-api-key only  (killed: secrets_test expects "yo-human-token bus.env ")
+
+## review mutant 4: hosted-inbound-no-dial's net$ deny dropped
+FAIL internal/hosted/web/casedial/x.go: hosted web imports net (net.Dial): want hosted-inbound-no-dial, got clean
+suite exit=2
+
+## review mutant 5: Transport|DefaultTransport dropped from the forbidigo pattern
+FAIL internal/hosted/web/casetransport/x.go: hosted web uses http.DefaultTransport: want forbidigo, got clean
+FAIL internal/hosted/oauth/casetransportlit/x.go: hosted oauth builds an http.Transport: want forbidigo, got clean
+suite exit=2

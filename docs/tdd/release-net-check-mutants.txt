@@ -1,0 +1,21 @@
+# release_net_check mutants: each made in place, the test run, the script restored
+# baseline
+release_net_check_test: all cases pass
+mutant: registry treated as an implementation: exit=1, failing=1; first: FAIL registry imports net: want exit 1, got 0
+mutant: every net/ package allowed: exit=1, failing=3; first: FAIL core imports net/http under a negated tag: want exit 1, got 0
+mutant: crypto/tls allowed: exit=1, failing=1; first: FAIL core imports crypto/tls: want exit 1, got 0
+mutant: log/syslog allowed: exit=1, failing=1; first: FAIL core imports log/syslog: want exit 1, got 0
+mutant: build with the e2e tag: exit=1, failing=1; first: FAIL core imports net/http only under the e2e tag: want exit 0, got 1
+mutant: only this module's packages checked: exit=1, failing=1; first: FAIL a third-party module in the release build imports net/http: want exit 1, got 0
+mutant: a go list failure passes: exit=1, failing=1; first: FAIL go list fails: want exit 2, got 0
+mutant: violations do not fail: exit=1, failing=6; first: FAIL core imports net/http under a negated tag: want exit 1, got 0
+
+# fix round 2 mutants (under the lock)
+mutant: drop the darwin targets from RELEASE_TARGETS: exit=1, failing=1; first: FAIL core imports net/http in an _darwin.go file: want exit 1, got 0
+mutant: drop the arm64 targets from RELEASE_TARGETS: exit=1, failing=1; first: FAIL core imports net/http in an _arm64.go file: output lacks 'linux/arm64: github.com/Exploded-views/yo-human/internal/core imports net/http'
+mutant: drop CGO_ENABLED=0 from go list: exit=1, failing=2; first: FAIL the same, with CGO_ENABLED=1 in the caller's environment: want exit 1, got 0
+mutant: drop GOENV=off from go list: exit=1, failing=1; first: FAIL GOFLAGS=-tags=e2e in a go env file is ignored: want exit 0, got 1
+mutant: host GOOS/GOARCH instead of each target: exit=1, failing=1; first: FAIL core imports net/http in an _linux.go file: want exit 1, got 0
+mutant: a go.work is not refused: exit=1, failing=1; first: FAIL a go.work in the module: want exit 2, got 0
+mutant: release-targets.sh accepts an empty list: exit=1, failing=1; first: FAIL RELEASE_TARGETS lists no target: want exit 2, got 0
+mutant: release-targets.sh accepts unknown targets: exit=1, failing=1; first: FAIL RELEASE_TARGETS names a target go does not know: want exit 2, got 0

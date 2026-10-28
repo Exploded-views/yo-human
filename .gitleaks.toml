@@ -1,0 +1,22 @@
+# gitleaks configuration for `make secrets` (scripts/secrets.sh).
+title = "yo-human"
+
+[extend]
+useDefault = true
+
+# Test fixtures use fake values with FAKE as a whole hyphen-delimited word (for example
+# R0UTING-KEY-FAKE). None is a real secret. FAKE embedded in a longer word (AKIA...FAKE...) is
+# not allowlisted, so a real-looking key cannot hide behind it.
+[[allowlists]]
+description = "fake values used by tests and docs: upper-case or digit words joined by hyphens, one of them FAKE"
+regexTarget = "secret"
+regexes = ['''^([A-Z0-9]+-)*FAKE(-[A-Z0-9]+)*$''']
+
+# The tokens yo-human-hosted mints: node (yhn_), OAuth access (yha_), refresh (yhr_), desk
+# starter (yhd_), desk human (yhh_) and executor (yhx_), each 52 lowercase base32 characters.
+# Lowercase only, as minted: an upper-cased copy isn't a valid token and isn't matched.
+[[rules]]
+id = "yo-human-token"
+description = "a yo-human-hosted bearer or refresh token"
+regex = '''yh[narhdx]_[a-z2-7]{52}'''
+keywords = ["yhn_", "yha_", "yhr_", "yhd_", "yhh_", "yhx_"]

@@ -1,0 +1,17 @@
+$ sh scripts/check_hooks_test.sh   # check-hooks.sh is a stub that always exits 1
+ok   no hook installed (exit 1)
+ok   a hook that is not lefthook's (exit 1)
+ok   lefthook's hook, not executable (exit 1)
+FAIL lefthook's hook installed: want exit 0, got 1
+FAIL skipped in CI: want exit 0, got 1
+check_hooks_test: 2 case(s) failed
+[exit 1]
+
+GREEN, after scripts/check-hooks.sh was written. One fixture was corrected after the RED commit: the "not lefthook's" hook used to echo the word "lefthook", so any check matching that word would accept it. It now echoes "some other hook", and the check looks for `call_lefthook`, which lefthook's own hook script calls.
+$ sh scripts/check_hooks_test.sh
+check_hooks_test: all cases pass
+
+Mutants (each must fail the test):
+- the call_lefthook grep replaced by `true`: killed (exit 1)
+- the executable check dropped: killed (exit 1)
+- the CI skip compared against a different value: killed (exit 1)

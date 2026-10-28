@@ -1,0 +1,195 @@
+$ make hooks
+lefthook install
+sync hooks: ✔️(pre-commit)
+exit=0
+$ git commit -m "test: badly formatted file"
+[38;2;56;56;56m╭─────────────────────────────────────────╮[m
+[38;2;56;56;56m│[m 🥊 lefthook  v2.2.2   hook:  [1mpre-commit[m [38;2;56;56;56m│[m
+[38;2;56;56;56m╰─────────────────────────────────────────╯[m
+┃  gofmt ❯ 
+internal/hookproof/bad.go
+
+exit status 1
+┃  vet ❯ 
+
+┃  lint ❯ 
+0 issues.
+
+┃  test ❯ 
+?   	github.com/Exploded-views/yo-human/cmd/yo-human	[no test files]
+ok  	github.com/Exploded-views/yo-human/internal/cli	(cached)
+?   	github.com/Exploded-views/yo-human/internal/hookproof	[no test files]
+ok  	github.com/Exploded-views/yo-human/internal/repolint	0.009s
+?   	github.com/Exploded-views/yo-human/internal/version	[no test files]
+ok  	github.com/Exploded-views/yo-human/tools/coverfloors	0.013s
+ok  	github.com/Exploded-views/yo-human/tools/perf	0.178s
+
+[38;2;56;56;56m  ────────────────────────────────────[m
+summary: (done in 0.84 seconds)
+✔️ vet (0.28 seconds)
+✔️ lint (0.67 seconds)
+✔️ test (0.84 seconds)
+🥊 gofmt (0.03 seconds)
+exit=1
+$ gofmt -w internal/hookproof/bad.go; git add; git commit -m "test: formatted file"
+[38;2;56;56;56m╭─────────────────────────────────────────╮[m
+[38;2;56;56;56m│[m 🥊 lefthook  v2.2.2   hook:  [1mpre-commit[m [38;2;56;56;56m│[m
+[38;2;56;56;56m╰─────────────────────────────────────────╯[m
+┃  gofmt ❯ 
+
+┃  vet ❯ 
+
+┃  test ❯ 
+?   	github.com/Exploded-views/yo-human/cmd/yo-human	[no test files]
+ok  	github.com/Exploded-views/yo-human/internal/cli	(cached)
+?   	github.com/Exploded-views/yo-human/internal/hookproof	[no test files]
+ok  	github.com/Exploded-views/yo-human/internal/repolint	0.012s
+?   	github.com/Exploded-views/yo-human/internal/version	[no test files]
+ok  	github.com/Exploded-views/yo-human/tools/coverfloors	(cached)
+ok  	github.com/Exploded-views/yo-human/tools/perf	(cached)
+
+┃  lint ❯ 
+0 issues.
+
+[38;2;56;56;56m  ────────────────────────────────────[m
+summary: (done in 0.45 seconds)
+✔️ gofmt (0.01 seconds)
+✔️ vet (0.16 seconds)
+✔️ test (0.29 seconds)
+✔️ lint (0.45 seconds)
+[tmp/hooks-proof b70581d] test: formatted file
+ 1 file changed, 5 insertions(+)
+ create mode 100644 internal/hookproof/bad.go
+exit=0
+
+=== RED commits pass the hooks; tests run at pre-push (fix/depguard-allowlists, after e240081)
+--- RED: sh scripts/hooks_test.sh against e240081's lefthook.yml (pre-commit runs go test ./..., no pre-push hook)
+FAIL pre-commit accepts a RED commit (a failing test): want exit 0, got 1
+     ╭──────────────────────────────────────╮
+     │ lefthook  v2.2.2   hook:  pre-commit │
+     ╰──────────────────────────────────────╯
+     ┃  gofmt ❯ 
+     
+     ┃  vet ❯ 
+     
+     ┃  lint ❯ 
+     0 issues.
+     
+     ┃  test ❯ 
+     ?   	github.com/Exploded-views/yo-human/cmd/yo-human	[no test files]
+     ok  	github.com/Exploded-views/yo-human/internal/cli	0.017s
+     --- FAIL: TestRed (0.00s)
+         red_test.go:5: red on purpose
+     FAIL
+     FAIL	github.com/Exploded-views/yo-human/internal/hookred	0.010s
+     ok  	github.com/Exploded-views/yo-human/internal/repolint	0.025s
+     ?   	github.com/Exploded-views/yo-human/internal/version	[no test files]
+     ok  	github.com/Exploded-views/yo-human/tools/coverfloors	0.017s
+     ok  	github.com/Exploded-views/yo-human/tools/perf	0.163s
+     FAIL
+     
+     exit status 1
+       ────────────────────────────────────
+     summary: (done in 0.58 seconds)
+     ✓ gofmt (0.01 seconds)
+     ✓ vet (0.21 seconds)
+     ✓ lint (0.55 seconds)
+     ✗ test (0.58 seconds)
+ok   pre-commit refuses a gofmt violation (exit 1)
+ok   pre-commit refuses a staged secret (exit 1)
+FAIL the finding names the rule and file: output lacks 'aws-access-token leak.env'
+FAIL pre-push refuses a branch whose tests fail: want exit 1, got 0
+     To $TMP/remote.git
+      * [new branch]      HEAD -> red
+ok   pre-commit accepts the fix (exit 0)
+ok   pre-push accepts a branch whose tests pass (exit 0)
+hooks_test: 3 failure(s)
+exit=1
+--- RED: sh scripts/check_hooks_test.sh against e240081's check-hooks.sh (pre-commit only)
+ok   no hook installed (exit 1)
+ok   a pre-commit hook that is not lefthook's (exit 1)
+ok   lefthook's pre-commit, not executable (exit 1)
+ok   both lefthook hooks installed (exit 0)
+FAIL pre-commit only, no pre-push: want exit 1, got 0
+     check-hooks: lefthook pre-commit hook installed
+FAIL a pre-push hook that is not lefthook's: want exit 1, got 0
+     check-hooks: lefthook pre-commit hook installed
+FAIL lefthook's pre-push, not executable: want exit 1, got 0
+     check-hooks: lefthook pre-commit hook installed
+ok   skipped in CI (exit 0)
+check_hooks_test: 3 case(s) failed
+exit=1
+--- RED: sh scripts/secrets_test.sh against e240081's secrets.sh (no --staged mode; failures only, the 19 history cases pass)
+FAIL staged-clean: output lacks 'secrets (staged): 0 findings'
+FAIL staged-leak: want exit 1, got 0
+FAIL staged-inline-allow: want exit 1, got 0
+FAIL staged-gitleaksignore: want exit 1, got 0
+FAIL staged-first-commit: want exit 1, got 2
+FAIL unknown-flag: want exit 2, got 0
+secrets_test: 6 failure(s)
+exit=1
+--- GREEN: the fixed lefthook.yml (pre-commit: gofmt, vet, lint, secrets --staged, e2e-tags; pre-push: go test -race ./...), check-hooks.sh and secrets.sh --staged
+$ sh scripts/hooks_test.sh
+ok   pre-commit accepts a RED commit (a failing test) (exit 0)
+ok   pre-commit refuses a gofmt violation (exit 1)
+ok   pre-commit refuses an _e2e.go file without the e2e tag (exit 1)
+ok   pre-commit refuses a staged secret (exit 1)
+ok   pre-push refuses a branch whose tests fail (exit 1)
+ok   pre-commit accepts the fix (exit 0)
+ok   pre-push accepts a branch whose tests pass (exit 0)
+hooks_test: all cases pass
+exit=0
+$ sh scripts/check_hooks_test.sh
+ok   no hook installed (exit 1)
+ok   a pre-commit hook that is not lefthook's (exit 1)
+ok   lefthook's pre-commit, not executable (exit 1)
+ok   both lefthook hooks installed (exit 0)
+ok   pre-commit only, no pre-push (exit 1)
+ok   a pre-push hook that is not lefthook's (exit 1)
+ok   lefthook's pre-push, not executable (exit 1)
+ok   skipped in CI (exit 0)
+check_hooks_test: all cases pass
+exit=0
+$ sh scripts/secrets_test.sh
+ok   clean (exit 0)
+ok   merge-and-empty-commits (exit 0)
+ok   leak (exit 1)
+ok   missing-object (exit 2)
+ok   not-a-repo (exit 2)
+ok   unreadable-extra (exit 2)
+ok   shape-delete-only (exit 0)
+ok   shape-binary-only (exit 0)
+ok   shape-pure-rename (exit 0)
+ok   shape-mode-only (exit 0)
+ok   shape-empty-file (exit 0)
+ok   missing-middle-commit (exit 2)
+ok   missing-root-blob (exit 2)
+ok   missing-merge-only-blob (exit 2)
+ok   fake-word (exit 0)
+ok   fake-embedded (exit 1)
+ok   evil-merge (exit 1)
+ok   inline-allow (exit 1)
+ok   gitleaksignore-file (exit 1)
+ok   staged-clean (exit 0)
+ok   staged-leak (exit 1)
+ok   staged-ignores-unstaged (exit 0)
+ok   staged-inline-allow (exit 1)
+ok   staged-gitleaksignore (exit 1)
+ok   staged-first-commit (exit 1)
+ok   staged-relative-hook-env (exit 1)
+ok   staged-fake-word (exit 0)
+ok   unknown-flag (exit 2)
+secrets_test: all cases pass
+exit=0
+--- mutants (each made in place, the test run, the file restored)
+mutant: pre-commit runs go test again (lefthook.yml; hooks_test): exit=1; 2 failing; first: FAIL pre-commit accepts a RED commit (a failing test): want exit 0, got 1
+mutant: no staged secret scan at pre-commit (lefthook.yml; hooks_test): exit=1; 1 failing; first: FAIL pre-commit refuses a staged secret: want exit 1, got 0
+mutant: no e2e build-tag check at pre-commit (lefthook.yml; hooks_test): exit=1; 1 failing; first: FAIL pre-commit refuses an _e2e.go file without the e2e tag: want exit 1, got 0
+mutant: no gofmt at pre-commit (lefthook.yml; hooks_test): exit=1; 4 failing; first: FAIL pre-commit accepts a RED commit (a failing test): want exit 0, got 1
+mutant: no tests at pre-push (lefthook.yml; hooks_test): exit=1; 1 failing; first: FAIL pre-push refuses a branch whose tests fail: want exit 1, got 0
+mutant: pre-push without always_run: survived (exit 0). lefthook skips a pre-push command only when the push carries no changed files, which this test cannot produce with failing tests; always_run was then dropped from lefthook.yml as unneeded (YAGNI).
+mutant: check-hooks checks pre-commit only (scripts/check-hooks.sh; check_hooks_test): exit=1; 3 failing; first: FAIL pre-commit only, no pre-push: want exit 1, got 0
+mutant: staged scan honours inline gitleaks:allow (scripts/secrets.sh; secrets_test): exit=1; 1 failing; first: FAIL staged-inline-allow: want exit 1, got 0
+mutant: staged scan sources the work tree (its .gitleaksignore applies) (scripts/secrets.sh; secrets_test): exit=1; 1 failing; first: FAIL staged-gitleaksignore: want exit 1, got 0
+mutant: relative GIT_INDEX_FILE left as is (scripts/secrets.sh; secrets_test): exit=1; 1 failing; first: FAIL staged-relative-hook-env: want exit 1, got 2
+mutant: --staged falls back to the history scan (scripts/secrets.sh; secrets_test): exit=1; 6 failing; first: FAIL staged-clean: output lacks 'secrets (staged): 0 findings'

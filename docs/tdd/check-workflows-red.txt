@@ -1,0 +1,30 @@
+# check-workflows.py: the lint bites (vendored from crewkit's pre-public history; the sha256 pin is authoritative)
+
+## baseline: make workflows
+shasum -a 256 -c tools/check-workflows.sha256 && python3 tools/check-workflows.py
+tools/check-workflows.py: OK
+check-workflows: 1 file(s), 0 finding(s)
+exit=0
+
+## checkout pinned to @v7
+scratch/w.yml:22: uses actions/checkout@v7: not pinned to a full commit SHA
+scratch/w.yml:33: uses actions/checkout@v7: not pinned to a full commit SHA
+check-workflows: 1 file(s), 2 finding(s)
+exit=1
+
+## runs-on: self-hosted
+scratch/w.yml:20: runs-on self-hosted: not a GitHub-hosted label (ubuntu-*, macos-*, windows-*); self-hosted runners are not allowed
+check-workflows: 1 file(s), 1 finding(s)
+exit=1
+
+## pull_request_target trigger added
+scratch/w.yml:3: pull_request_target runs fork code with this repo's secrets; use pull_request
+check-workflows: 1 file(s), 1 finding(s)
+exit=1
+
+## vendored file tampered: sha256 check fails before the lint runs
+shasum -a 256 -c tools/check-workflows.sha256 && python3 tools/check-workflows.py
+tools/check-workflows.py: FAILED
+shasum: WARNING: 1 computed checksum did NOT match
+make: *** [workflows] Error 1
+exit=2

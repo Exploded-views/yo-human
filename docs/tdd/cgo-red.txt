@@ -1,0 +1,34 @@
+# what this is: go test ./internal/repolint/ with Cgo stubbed to return nil (RED). TestRepoCgo passes for the wrong reason.
+--- FAIL: TestCgoFixtures (0.00s)
+    cgo_test.go:17: Cgo = [], want [{internal/store/x.go imports "C": internal packages do not use cgo}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.010s
+FAIL
+exit=1
+
+# GREEN
+ok  	github.com/Exploded-views/yo-human/internal/repolint	0.015s
+exit=0
+
+## mutant: every directory checked, not just internal/
+19c19
+< 		if !strings.HasPrefix(f.path, "internal/") {
+---
+> 		if false {
+# github.com/Exploded-views/yo-human/internal/repolint [github.com/Exploded-views/yo-human/internal/repolint.test]
+internal/repolint/cgo.go:6:2: "strings" imported and not used
+FAIL	github.com/Exploded-views/yo-human/internal/repolint [build failed]
+FAIL
+exit=1
+
+## mutant: the C import never matches
+23c23
+< 			if ip == "C" {
+---
+> 			if ip == "c" {
+--- FAIL: TestCgoFixtures (0.00s)
+    cgo_test.go:17: Cgo = [], want [{internal/store/x.go imports "C": internal packages do not use cgo}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.022s
+FAIL
+exit=1

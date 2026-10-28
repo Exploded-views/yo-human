@@ -1,0 +1,54 @@
+name: Task
+description: A unit of work from the plan
+labels: ["type:feat"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What this task achieves, in a sentence or two.
+    validations:
+      required: true
+  - type: input
+    id: plan-task
+    attributes:
+      label: Plan task link
+      description: Link to the task in the plan document.
+      placeholder: docs/plans/...#task-N
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Files
+      description: Files to create or modify.
+    validations:
+      required: true
+  - type: textarea
+    id: interfaces
+    attributes:
+      label: Interfaces (consumes/produces)
+      description: What this task consumes from earlier work and what it produces for later work.
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Tests (names and assertions)
+      description: Test names and what each asserts. Written first, with a RED record.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: Observable conditions, including `make ci` green.
+    validations:
+      required: true
+  - type: textarea
+    id: blocked-by
+    attributes:
+      label: Blocked by
+      description: Issues or PRs that must land first, or "none".
+    validations:
+      required: true

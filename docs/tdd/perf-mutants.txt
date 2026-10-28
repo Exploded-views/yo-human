@@ -1,0 +1,116 @@
+# what this is: tools/perf/budget.go mutated one line at a time; go test -count=1 ./tools/perf/ each time
+## baseline
+ok  	github.com/Exploded-views/yo-human/tools/perf	0.141s
+exit=0
+
+## headroom always applies
+# sed: if ci {
+			limit => if true {
+			limit
+--- FAIL: TestCheckOverBudgetFails (0.00s)
+    budget_test.go:36: got [], want one violation "x: p95 31.0ms > budget 30.0ms"
+--- FAIL: TestHeadroomOnlyInCI (0.00s)
+    budget_test.go:52: ci=false: got [], want 1 violation
+--- FAIL: TestRunOverBudgetExitsOne (0.11s)
+    budget_test.go:122: exit 1, stdout "slow: p95 53.1ms, budget 1ms (ci=false)\nslow: p95 53.1ms > budget 2.0ms (1ms x 2.0 CI headroom)\n"; want 1 with "slow: p95 ... > budget 1.0ms"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.130s
+FAIL
+exit=1
+
+## P95 returns the max
+# sed: return s[(len(s)*95+99)/100-1] => return s[len(s)-1]
+--- FAIL: TestP95NearestRank (0.00s)
+    budget_test.go:21: p95 of 1..20ms = 20ms, want 19ms
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.132s
+FAIL
+exit=1
+
+## over-budget comparison p > limit to p >= limit
+# sed: p > limit => p >= limit
+--- FAIL: TestWithinBudgetPasses (0.00s)
+    budget_test.go:42: p95 equal to budget: got [x: p95 30.0ms > budget 30.0ms], want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.131s
+FAIL
+exit=1
+
+## dropped no-budget check
+# sed: vs = append(vs, Violation{name, "no budget in perf-budgets.json"}) => _ = 0
+--- FAIL: TestScenarioWithoutBudgetFails (0.00s)
+    budget_test.go:62: got [], want one "no budget" violation for z
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.141s
+FAIL
+exit=1
+
+
+# fix round 1: base comparison and p95_ms validation mutants
+## baseline
+ok  	github.com/Exploded-views/yo-human/tools/perf	0.173s
+exit=0
+
+## raised check uses >=
+# edit in tools/perf/budget.go: now.P95Ms > old => now.P95Ms >= old
+--- FAIL: TestCheckBaseViolations (0.00s)
+    budget_test.go:181: budget raised: got [a: budget raised 10ms → 15ms b: budget raised 10ms → 10ms], want exactly [a: budget raised 10ms → 15ms]
+    budget_test.go:181: headroom raised: got [a: budget raised 10ms → 10ms b: budget raised 10ms → 10ms ci_headroom: raised 2.0 → 2.5], want exactly [ci_headroom: raised 2.0 → 2.5]
+    budget_test.go:181: runs lowered: got [a: budget raised 10ms → 10ms b: budget raised 10ms → 10ms runs: lowered 20 → 10], want exactly [runs: lowered 20 → 10]
+    budget_test.go:181: budget removed: got [a: budget raised 10ms → 10ms b: budget removed], want exactly [b: budget removed]
+--- FAIL: TestCheckBaseAllowsTighteningAndGrowth (0.00s)
+    budget_test.go:196: headroom lowered: got [a: budget raised 10ms → 10ms], want none
+    budget_test.go:196: runs raised: got [a: budget raised 10ms → 10ms], want none
+    budget_test.go:196: scenario added: got [a: budget raised 10ms → 10ms], want none
+    budget_test.go:196: unchanged: got [a: budget raised 10ms → 10ms], want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.172s
+FAIL
+exit=1
+
+## removed-budget check dropped
+# edit in tools/perf/budget.go: vs = append(vs, Violation{name, "budget removed"}) => _ = vs
+--- FAIL: TestCheckBaseViolations (0.00s)
+    budget_test.go:181: budget removed: got [], want exactly [b: budget removed]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.155s
+FAIL
+exit=1
+
+## headroom check dropped
+# edit in tools/perf/budget.go: cur.CIHeadroom > base.CIHeadroom => false
+--- FAIL: TestCheckBaseViolations (0.00s)
+    budget_test.go:181: headroom raised: got [], want exactly [ci_headroom: raised 2.0 → 2.5]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.161s
+FAIL
+exit=1
+
+## runs check inverted to !=
+# edit in tools/perf/budget.go: cur.Runs < base.Runs => cur.Runs != base.Runs
+--- FAIL: TestCheckBaseAllowsTighteningAndGrowth (0.00s)
+    budget_test.go:196: runs raised: got [runs: lowered 20 → 30], want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.148s
+FAIL
+exit=1
+
+## p95_ms <= 0 to < 0
+# edit in tools/perf/budget.go: P95Ms <= 0 => P95Ms < 0
+--- FAIL: TestReadBudgetsRejectsNonPositiveBudget (0.00s)
+    budget_test.go:150: p95_ms 0: err <nil>, want an error naming bad
+    budget_test.go:154: exit 1, stderr ""; want exit 2 naming bad
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.157s
+FAIL
+exit=1
+
+## comparison skipped
+# edit in tools/perf/main.go: vs = CheckBase(b, base) => _ = base
+--- FAIL: TestRunBaseBudgets (0.02s)
+    budget_test.go:217: raised: exit 0, stdout "ok: p95 2.3ms, budget 5000ms (ci=false)\n"; want 1 naming the raise
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.150s
+FAIL
+exit=1
+

@@ -1,0 +1,58 @@
+# what this is: the gofmt gate against a scratch, never-committed internal/version/zz_scratch_windows.go holding a syntax error.
+# The build constraint keeps it out of go vet and golangci-lint on darwin, so only gofmt can catch it.
+## RED: Makefile and lefthook.yml at e57e92a
+$ printf 'package version\n\nfunc broken( {\n' > internal/version/zz_scratch_windows.go; cat internal/version/zz_scratch_windows.go; make lint
+package version
+
+func broken( {
+test -z "$(gofmt -l . | grep -v '^dist/')" && go vet ./... && golangci-lint run
+internal/version/zz_scratch_windows.go:3:14: expected ')', found '{'
+0 issues.
+exit=0
+$ gofmt -l . ; echo gofmt-exit=$?
+internal/version/zz_scratch_windows.go:3:14: expected ')', found '{'
+gofmt-exit=2
+
+## GREEN: fixed Makefile, same scratch file
+$ make lint
+files=$(git ls-files -co --exclude-standard '*.go') && test -n "$files" || exit 1; \
+	out=$(gofmt -l $files) || exit 1; \
+	test -z "$out" || { echo "gofmt needs to run on:"; echo "$out"; exit 1; }
+internal/version/zz_scratch_windows.go:3:14: expected ')', found '{'
+make: *** [lint] Error 1
+exit=2
+
+## GREEN: the fixed lefthook gofmt command, run by sh with {staged_files} replaced by the scratch file (lefthook itself is not run: running it could install hooks shared across worktrees)
+$ sh -c "$(sed -n 's/^ *run: \(out=.*gofmt.*\)/\1/p' lefthook.yml | sed 's|{staged_files}|internal/version/zz_scratch_windows.go|')"
+out=$(gofmt -l internal/version/zz_scratch_windows.go) || exit 1; test -z "$out" || { echo "$out"; exit 1; }
+internal/version/zz_scratch_windows.go:3:14: expected ')', found '{'
+exit=1
+
+## control: a badly formatted (but valid) scratch file
+$ printf 'package version\nvar  X=1\n' > internal/version/zz_scratch_windows.go; make lint
+files=$(git ls-files -co --exclude-standard '*.go') && test -n "$files" || exit 1; \
+	out=$(gofmt -l $files) || exit 1; \
+	test -z "$out" || { echo "gofmt needs to run on:"; echo "$out"; exit 1; }
+gofmt needs to run on:
+internal/version/zz_scratch_windows.go
+make: *** [lint] Error 1
+exit=2
+
+## scratch file removed; make lint on the clean tree
+$ rm -f internal/version/zz_scratch_windows.go; git status --short; make lint
+ M Makefile
+ M lefthook.yml
+?? docs/tdd/gofmt-gate-red.txt
+files=$(git ls-files -co --exclude-standard '*.go') && test -n "$files" || exit 1; \
+	out=$(gofmt -l $files) || exit 1; \
+	test -z "$out" || { echo "gofmt needs to run on:"; echo "$out"; exit 1; }
+go vet ./...
+golangci-lint run
+0 issues.
+exit=0
+
+## RED for lefthook (appended): the e57e92a lefthook gofmt command on the syntax-error scratch file
+$ printf 'package version\n\nfunc broken( {\n' > internal/version/zz_scratch_windows.go; sh -c "$(git show e57e92a:lefthook.yml | sed -n 's/^ *run: \(test -z.*gofmt.*\)/\1/p' | sed 's|{staged_files}|internal/version/zz_scratch_windows.go|g')"; rm -f internal/version/zz_scratch_windows.go
+test -z "$(gofmt -l internal/version/zz_scratch_windows.go)" || { gofmt -l internal/version/zz_scratch_windows.go; exit 1; }
+internal/version/zz_scratch_windows.go:3:14: expected ')', found '{'
+exit=0

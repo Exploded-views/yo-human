@@ -1,0 +1,3 @@
+package ok
+
+import "C"
