@@ -113,3 +113,7 @@ FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.627s
 FAIL
 exit=1
 Note: TestStateGuardChecksRevisionClause passes already (it pins the revision clause against a mutant, R3-2); the raw INSERT assertion in TestStateGuardCoversRevisionKindAndRawInsert was not reached in this run.
+
+## Notes, round 4
+- Correction to the round 3 notes: TestForeignKeysAreOn went into the round 2 RED commit (20f9ffc).
+  Only TestItemsGuardTriggerOnRawConnection skipped RED (it is in the fix commit 510f2cc).

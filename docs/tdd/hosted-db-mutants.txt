@@ -260,3 +260,60 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	4.396s
 FAIL
 suite exit=1
+
+# Review round 4 (delta review of 0030c97), 2026-10-28T22:00:39Z
+baseline internal/hosted/db: exit=0
+
+## Corrections to round 3 entries (earlier text left as recorded)
+- 'items_guard neutralised, BOTH clauses': the two replacements were
+    WHERE NEW.revision < OLD.revision;                              -> WHERE 0;
+    WHERE NEW.kind <> OLD.kind AND NEW.revision = OLD.revision;     -> WHERE 0;
+- 'items_state_guard, the open clause neutralised': the replacement was
+    WHERE NEW.state = 'open' AND EXISTS                             -> WHERE 0 AND EXISTS
+
+## items_born_open neutralised
+internal/hosted/db/migrations/0001_init.sql: 'WHERE NEW.state <> 'open';' -> 'WHERE 0;'
+vet exit=0
+--- FAIL: TestStateGuardCoversRevisionKindAndRawInsert (0.16s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.396s
+FAIL
+suite exit=1
+
+## items_keep_decided neutralised
+internal/hosted/db/migrations/0001_init.sql: '	WHERE EXISTS (SELECT 1 FROM decisions WHERE item_id = OLD.id);' -> '	WHERE 0;'
+vet exit=0
+--- FAIL: TestItemWithDecisionsCannotBeDeleted (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	2.658s
+FAIL
+suite exit=1
+
+## items_state_guard narrowed back to OF state
+internal/hosted/db/migrations/0001_init.sql: 'BEFORE UPDATE OF state, kind, revision ON items' -> 'BEFORE UPDATE OF state ON items'
+vet exit=0
+--- FAIL: TestStateGuardCoversRevisionKindAndRawInsert (0.34s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	3.732s
+FAIL
+suite exit=1
+
+## items_state_guard decided clause without the revision match
+internal/hosted/db/migrations/0001_init.sql: 'WHERE NEW.state = 'decided' AND NOT EXISTS (SELECT 1 FROM decisions
+		WHERE item_id = NEW.id AND revision = NEW.revision AND' -> 'WHERE NEW.state = 'decided' AND NOT EXISTS (SELECT 1 FROM decisions
+		WHERE item_id = NEW.id AND'
+vet exit=0
+--- FAIL: TestStateGuardCoversRevisionKindAndRawInsert (0.03s)
+--- FAIL: TestStateGuardChecksRevisionClause (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	4.368s
+FAIL
+suite exit=1
+
+## items_state_guard decided clause without the kind match: SURVIVES (kept; unreachable, as R2-1)
+internal/hosted/db/migrations/0001_init.sql: 'WHERE NEW.state = 'decided' AND NOT EXISTS (SELECT 1 FROM decisions
+		WHERE item_id = NEW.id AND revision = NEW.revision AND (kind = 'approval') = (NEW.kind = 'approval'));' -> 'WHERE NEW.state = 'decided' AND NOT EXISTS (SELECT 1 FROM decisions
+		WHERE item_id = NEW.id AND revision = NEW.revision);'
+vet exit=0
+ok  	github.com/Exploded-views/yo-human/internal/hosted/db	5.295s
+suite exit=0

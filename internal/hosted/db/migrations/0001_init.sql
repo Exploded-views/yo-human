@@ -141,7 +141,7 @@ END;
 
 -- State is derived: decided only while a decision of the item's kind exists at its current
 -- revision, open otherwise. InsertDecision and UpdateItem both satisfy this.
-CREATE TRIGGER items_state_guard BEFORE UPDATE OF state ON items
+CREATE TRIGGER items_state_guard BEFORE UPDATE OF state, kind, revision ON items
 BEGIN
 	SELECT RAISE(ABORT, 'item cannot be decided without a decision of its kind at its revision')
 	WHERE NEW.state = 'decided' AND NOT EXISTS (SELECT 1 FROM decisions
@@ -149,4 +149,16 @@ BEGIN
 	SELECT RAISE(ABORT, 'item cannot be open while a decision of its kind exists at its revision')
 	WHERE NEW.state = 'open' AND EXISTS (SELECT 1 FROM decisions
 		WHERE item_id = NEW.id AND revision = NEW.revision AND (kind = 'approval') = (NEW.kind = 'approval'));
+END;
+
+-- An item is born open, and an item with decisions is never deleted.
+CREATE TRIGGER items_born_open BEFORE INSERT ON items
+BEGIN
+	SELECT RAISE(ABORT, 'an item is inserted open') WHERE NEW.state <> 'open';
+END;
+
+CREATE TRIGGER items_keep_decided BEFORE DELETE ON items
+BEGIN
+	SELECT RAISE(ABORT, 'an item with decisions cannot be deleted')
+	WHERE EXISTS (SELECT 1 FROM decisions WHERE item_id = OLD.id);
 END;
