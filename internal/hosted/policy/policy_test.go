@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var categories = []string{"merge", "release", "deploy", "public-sync", "force-push", "delete", "spend", "secrets", "money"}
+var allCategories = []string{"merge", "release", "deploy", "public-sync", "force-push", "delete", "spend", "secrets", "money"}
 
 func mustParse(t *testing.T, s string) Policy {
 	t.Helper()
@@ -18,7 +18,7 @@ func mustParse(t *testing.T, s string) Policy {
 
 func TestEmptyPolicyDeniesEverything(t *testing.T) {
 	p := mustParse(t, `{"v": 1, "rules": []}`)
-	for _, a := range categories {
+	for _, a := range allCategories {
 		if got := p.Decide(a, Target{Repo: "example-org/r", Ref: "main"}); got != Deny {
 			t.Errorf("Decide(%s) on an empty policy = %q, want deny", a, got)
 		}
@@ -185,5 +185,15 @@ func TestTargetFor(t *testing.T) {
 		if got := TargetFor(c.action, "o/r", "v1.2.3", "main", "prod"); got != c.want {
 			t.Errorf("TargetFor(%s) = %+v, want %+v", c.action, got, c.want)
 		}
+	}
+}
+
+func TestWitnessAvoidsRunesInPatterns(t *testing.T) {
+	// A deny rule naming the first private-use rune must not make that rune the witness, or the
+	// gate's witness would match the deny rule and the gate would wrongly drop out.
+	gate := Rule{Action: "release", Repo: "a/b", Ref: "*", Mode: Passkey}
+	p := Policy{V: 1, Rules: []Rule{gate, {Action: "release", Repo: "a/b", Ref: "\ue000", Mode: Deny}}}
+	if g := p.Gates(); !reflect.DeepEqual(g, []Rule{gate}) {
+		t.Errorf("Gates = %v, want the gate", g)
 	}
 }

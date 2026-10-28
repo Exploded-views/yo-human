@@ -1,5 +1,10 @@
 package bus
 
+import (
+	"errors"
+	"fmt"
+)
+
 // Code is a machine-readable error class.
 type Code string
 
@@ -18,14 +23,27 @@ const (
 	CodeInternal       Code = "internal"
 )
 
-// Error is a bus error.
+// Error is a bus error: what was wrong, what is valid, and how to fix it. What names a field
+// or a rule, never the caller's value. Winner is set for already_decided.
 type Error struct {
 	Code             Code
 	What, Valid, Fix string
 	Winner           *Record
 }
 
-func (e *Error) Error() string { return "" }
+func (e *Error) Error() string {
+	return fmt.Sprintf("%s: %s (valid: %s)", e.Code, e.What, e.Valid)
+}
 
 // AsError finds a bus error in err's chain.
-func AsError(err error) (*Error, bool) { return nil, false }
+func AsError(err error) (*Error, bool) {
+	var e *Error
+	if errors.As(err, &e) {
+		return e, true
+	}
+	return nil, false
+}
+
+func invalid(what, valid string) *Error {
+	return &Error{Code: CodeInvalid, What: what, Valid: valid, Fix: "correct " + what + " and post again"}
+}
