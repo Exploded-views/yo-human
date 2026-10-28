@@ -58,6 +58,7 @@ func TestDraftValidation(t *testing.T) {
 		{"link host containing the allowed host", "link", func(d *Draft) { d.Link = "https://github.com.evil.example/x" }},
 		{"link host suffix without a dot", "link", func(d *Draft) { d.Link = "https://evilgithub.com/x" }},
 		{"link with userinfo", "link", func(d *Draft) { d.Link = "https://github.com" + "@evil.example/x" }},
+		{"link with userinfo on an allowed host", "link", func(d *Draft) { d.Link = "https://u" + "@github.com/x" }},
 		{"link of 2049 bytes", "link", func(d *Draft) { d.Link = "https://github.com/" + strings.Repeat("a", 2030) }},
 		{"nine risk flags", "risk_flags", func(d *Draft) { d.RiskFlags = strings.Fields("a b c d e f g h i") }},
 		{"risk flag Bad Flag", "risk_flags", func(d *Draft) { d.RiskFlags = []string{"Bad Flag"} }},
