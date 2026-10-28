@@ -88,7 +88,7 @@ The owner's binding constraint is his shared Claude usage window: Duet's session
 
 - Duet's sessions are event-driven, not a daemon: they wake when the human writes, a routine fires, a task thread reports, or a Claude Code session on his account hands a message over. Nothing can push into Duet from outside (no webhook a server can call).
 - Sessions are recycled and their disk is temporary. Anything Duet must remember lives on the bus or in its own notes.
-- Repeating routines run at most hourly; one-off runs can be set for an exact time.
+- Repeating routines run at most hourly; one-off runs can be set for an exact time. So nothing time-sensitive may depend on a Duet poll (owner, 2026-10-28). The bus pushes: approvals, pages and escalations reach the owner by Bark or PagerDuty. Duet reads the bus only on its routine or when he opens it.
 - Spike result (2026-10-27): Duet's main chat and a scheduled routine both called a custom remote MCP connector we hosted on Fly. Duet treated a test approval item as data and took no action. Each Duet session reconnects and lists tools before calling.
 
 ## Duet-facing MCP tools (minimal)
@@ -198,6 +198,6 @@ Get an MCP up fast. Hosted mode's first release is the MCP bus with only what Du
 
 ## Open questions
 
-- Whether Duet's `watch_url` tool can watch a bus endpoint for changes without a model run. Untested; if it is cheap it could replace most polling.
+- Whether Duet's `watch_url` tool can watch a bus endpoint for changes without a model run. Untested; if it is cheap it could make Duet's reads cheaper, but it would never carry anything time-sensitive.
 - Whether a local Claude Code session can load the Claude Code Remote connector for real-time hand-offs (today the orchestrator's session can't see it).
 - How the human tells the bus where he is ("heads down", "driving"): through Duet, through any agent, or both.
