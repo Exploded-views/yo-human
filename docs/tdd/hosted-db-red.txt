@@ -94,3 +94,10 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.112s
 FAIL
 exit=1
+
+## Notes, round 3
+- TestItemsGuardTriggerOnRawConnection (and TestForeignKeysAreOn) went into the round 2 fix commit
+  (510f2cc), not into its RED commit (20f9ffc). They are not part of the recorded round 2 failures.
+- Round 3's failing tests are the section "2026-10-28 review round 3" above (commit 6ef9cac). Only the
+  first assertion of TestStateGuardTriggerOnRawConnection ran; its reopen and allowed-update assertions
+  were exercised for the first time against the fix.

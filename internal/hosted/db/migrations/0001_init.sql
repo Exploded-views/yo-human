@@ -1,3 +1,7 @@
+-- The triggers below are part of the schema's guarantees. decisions is append-only (UPDATE and
+-- DELETE are refused). A later migration that rebuilds items or decisions (create new, copy,
+-- drop, rename) must drop and recreate their triggers in the same file, or the guarantees go.
+
 -- Hosted mode, schema 1: the tables Task 4 uses. Later tasks add theirs (credentials, OAuth,
 -- passkeys, nudges). Times are UTC text of fixed width (see timeLayout in db.go), so they sort
 -- as strings.
@@ -115,7 +119,7 @@ BEGIN
 	WHERE NEW.revision <> (SELECT revision FROM items WHERE id = NEW.item_id);
 END;
 
--- Decisions are append-only.
+-- Decisions are append-only: UPDATE (above) and DELETE are refused.
 CREATE TRIGGER decisions_append_only BEFORE UPDATE ON decisions
 BEGIN
 	SELECT RAISE(ABORT, 'decisions are append-only');
@@ -128,4 +132,21 @@ BEGIN
 	SELECT RAISE(ABORT, 'item revision cannot go backwards') WHERE NEW.revision < OLD.revision;
 	SELECT RAISE(ABORT, 'item kind cannot change without a new revision')
 	WHERE NEW.kind <> OLD.kind AND NEW.revision = OLD.revision;
+END;
+
+CREATE TRIGGER decisions_no_delete BEFORE DELETE ON decisions
+BEGIN
+	SELECT RAISE(ABORT, 'decisions are append-only');
+END;
+
+-- State is derived: decided only while a decision of the item's kind exists at its current
+-- revision, open otherwise. InsertDecision and UpdateItem both satisfy this.
+CREATE TRIGGER items_state_guard BEFORE UPDATE OF state ON items
+BEGIN
+	SELECT RAISE(ABORT, 'item cannot be decided without a decision of its kind at its revision')
+	WHERE NEW.state = 'decided' AND NOT EXISTS (SELECT 1 FROM decisions
+		WHERE item_id = NEW.id AND revision = NEW.revision AND (kind = 'approval') = (NEW.kind = 'approval'));
+	SELECT RAISE(ABORT, 'item cannot be open while a decision of its kind exists at its revision')
+	WHERE NEW.state = 'open' AND EXISTS (SELECT 1 FROM decisions
+		WHERE item_id = NEW.id AND revision = NEW.revision AND (kind = 'approval') = (NEW.kind = 'approval'));
 END;

@@ -124,7 +124,7 @@ FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	4.309s
 FAIL
 suite exit=1
 
-## state check no longer matches kinds
+## state check no longer matches kinds (CORRECTED below: this run was killed for the wrong reason)
 internal/hosted/db/items.go: 'AND (kind = 'approval') = (? = 'approval')) THEN' -> ') THEN'
 vet exit=0
 --- FAIL: TestDecisionUniquePerRevision (0.03s)
@@ -168,7 +168,7 @@ FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	2.541s
 FAIL
 suite exit=1
 
-## items_guard trigger neutralised (both clauses; the Go guards stay)
+## items_guard trigger neutralised (the Go guards stay): this entry replaced only the revision clause; the run below it replaces both
 internal/hosted/db/migrations/0001_init.sql: 'WHERE NEW.revision < OLD.revision;' -> 'WHERE 0;'
 vet exit=0
 --- FAIL: TestItemsGuardTriggerOnRawConnection (0.04s)
@@ -202,5 +202,61 @@ vet exit=0
 --- FAIL: TestOpenSetsFileModeAndWAL (0.01s)
 FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.904s
+FAIL
+suite exit=1
+
+# Review round 3 (delta review of 510f2cc), 2026-10-28T21:49:40Z
+baseline internal/hosted/db: exit=0
+
+## Correction (R2-1): 'state check no longer matches kinds'
+The earlier mutant replaced the clause with ') THEN', which dropped a bound argument, so the suite
+failed on an argument-count error, not on an assertion. The count-preserving mutant is below.
+
+## state check kind clause replaced, argument count kept: SURVIVES (suite exit=0)
+Why it survives: the Go guards in UpdateItem and the items_guard trigger make a kind change at one revision
+unreachable, and the items_state_guard trigger enforces the same rule; so this clause in the derivation is
+backup protection that no test can pin. Kept on purpose.
+internal/hosted/db/items.go: 'AND (kind = 'approval') = (? = 'approval')) THEN' -> 'AND (? IS NOT NULL)) THEN'
+vet exit=0
+ok  	github.com/Exploded-views/yo-human/internal/hosted/db	9.490s
+suite exit=0
+
+## items_guard neutralised, BOTH clauses (Go guards stay)
+internal/hosted/db/migrations/0001_init.sql: 'WHERE NEW.revision < OLD.revision;' -> 'WHERE 0;'
+vet exit=0
+--- FAIL: TestItemsGuardTriggerOnRawConnection (0.15s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	9.801s
+FAIL
+suite exit=1
+
+## decisions_no_delete neutralised
+internal/hosted/db/migrations/0001_init.sql: 'CREATE TRIGGER decisions_no_delete BEFORE DELETE ON decisions
+BEGIN
+	SELECT RAISE(ABORT, 'decisions are append-only');' -> 'CREATE TRIGGER decisions_no_delete BEFORE DELETE ON decisions
+BEGIN
+	SELECT RAISE(ABORT, 'decisions are append-only') WHERE 0;'
+vet exit=0
+--- FAIL: TestDecisionsCannotBeDeleted (1.04s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	13.569s
+FAIL
+suite exit=1
+
+## items_state_guard, the 'decided' clause neutralised
+internal/hosted/db/migrations/0001_init.sql: 'WHERE NEW.state = 'decided' AND NOT EXISTS' -> 'WHERE 0 AND NOT EXISTS'
+vet exit=0
+--- FAIL: TestStateGuardTriggerOnRawConnection (0.29s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.999s
+FAIL
+suite exit=1
+
+## items_state_guard, the 'open' clause neutralised (WHERE NEW.state = 'open' AND EXISTS -> WHERE 0 AND EXISTS, applied to the SQL file before the run; the run itself replaced nothing else)
+internal/hosted/db/migrations/0001_init.sql
+vet exit=0
+--- FAIL: TestStateGuardTriggerOnRawConnection (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	4.396s
 FAIL
 suite exit=1
