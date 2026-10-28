@@ -14,24 +14,37 @@ import (
 var (
 	nameRE = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
 	flagRE = regexp.MustCompile(`^[a-z0-9-]{1,40}$`)
-	repoRE = regexp.MustCompile(`^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$`)
+	repoRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$`)
 	refRE  = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
 	shaRE  = regexp.MustCompile(`^[0-9a-f]{40}$`)
 	prRE   = regexp.MustCompile(`^[1-9][0-9]{0,9}$`)
 )
 
-// validRepo: owner/name, and the name is not . or ..
+// validRepo: owner/name, the owner not starting with -, the name not . or .., and no .git
+// suffix in any case: GitHub resolves o/r.git as o/r, so the alias would dodge a rule on o/r.
+// (Renames and transfers are the executor's to catch: it resolves full_name, Task 10e.)
 func validRepo(s string) bool {
-	return repoRE.MatchString(s) && !strings.HasSuffix(s, "/.") && !strings.HasSuffix(s, "/..")
+	return repoRE.MatchString(s) && !strings.HasSuffix(s, "/.") && !strings.HasSuffix(s, "/..") &&
+		!strings.HasSuffix(strings.ToLower(s), ".git")
 }
 
-// validRef: a branch or tag name an executor can pass as one argument, never mistaken for an
-// option or a path: no leading - or /, no .., no trailing / or .lock, and no refs/ prefix (the
-// policy's ref patterns don't carry one either).
+// validRef: a branch or tag name that git check-ref-format accepts and an executor can pass as
+// one argument, never mistaken for an option or a path. Within the charset: not HEAD, no refs/
+// prefix (the policy's ref patterns don't carry one), no leading -, no .., not ending in . or /,
+// and no component that is empty, starts with . or ends in .lock.
 func validRef(s string) bool {
-	return refRE.MatchString(s) && !strings.HasPrefix(s, "-") && !strings.HasPrefix(s, "/") &&
-		!strings.Contains(s, "..") && !strings.HasSuffix(s, "/") && !strings.HasSuffix(s, ".lock") &&
-		!strings.HasPrefix(s, "refs/")
+	return refRE.MatchString(s) && s != "HEAD" && !strings.HasPrefix(s, "refs/") &&
+		!strings.HasPrefix(s, "-") && !strings.Contains(s, "..") && !strings.HasSuffix(s, ".") &&
+		validRefComponents(s)
+}
+
+func validRefComponents(s string) bool {
+	for _, c := range strings.Split(s, "/") {
+		if c == "" || strings.HasPrefix(c, ".") || strings.HasSuffix(c, ".lock") {
+			return false
+		}
+	}
+	return true
 }
 
 func validSHA(s string) bool { return shaRE.MatchString(s) }
@@ -103,7 +116,7 @@ func (d *Draft) checkText(Limits) *Error {
 
 func (f textField) check() *Error {
 	if !utf8.ValidString(f.v) || strings.ContainsFunc(f.v, isRefusedRune) {
-		return invalid(f.name, "valid UTF-8 with no control or bidirectional formatting characters (newline and tab are allowed)")
+		return invalid(f.name, "valid UTF-8 with no control, format or separator characters (newline, tab, ZWNJ and ZWJ are allowed)")
 	}
 	n := utf8.RuneCountInString(f.v)
 	if f.bytes {
@@ -115,14 +128,17 @@ func (f textField) check() *Error {
 	return nil
 }
 
-// isRefusedRune: control characters other than newline and tab, and the bidirectional
-// formatting characters (marks, embeddings, overrides, isolates) that can make the text the
-// owner reads differ from the text stored.
+// isRefusedRune: the runes that can make the text the owner reads differ from the text
+// stored. Control characters other than newline and tab; every format character (Cf: bidi
+// marks, embeddings, overrides and isolates, tag characters, BOM, zero-width space, word
+// joiner, soft hyphen, U+180E, U+061C) except ZWNJ and ZWJ, which scripts and emoji need; the
+// line and paragraph separators (Zl, Zp); and the variation selectors supplement.
 func isRefusedRune(r rune) bool {
 	switch {
-	case r == '\n' || r == '\t':
+	case r == '\n' || r == '\t' || r == 0x200C || r == 0x200D:
 		return false
-	case unicode.IsControl(r), r == 0x200E, r == 0x200F, r >= 0x202A && r <= 0x202E, r >= 0x2066 && r <= 0x2069:
+	case unicode.IsControl(r), unicode.Is(unicode.Cf, r), unicode.In(r, unicode.Zl, unicode.Zp),
+		r >= 0xE0100 && r <= 0xE01EF:
 		return true
 	}
 	return false

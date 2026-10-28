@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path"
 	"regexp"
 	"strings"
 )
@@ -29,9 +28,11 @@ type Target struct {
 }
 
 // Rule is one line of the policy file. Each pattern holds literal characters and `*`, which
-// matches within one path segment; an empty pattern matches only an empty value. Repo is
-// `owner/name`; merge, release and public-sync rules name a ref and no env; deploy rules name an
-// env and no ref.
+// matches any run of characters, `/` included, so ref `*` is every branch or tag, release/1.2
+// too; an empty pattern matches only an empty value. Repo is `owner/name` (matched without
+// regard to case); merge, release and public-sync rules name a ref and no env; deploy rules
+// name an env and no ref. Refs are matched case-sensitively, as git compares them: a deny on
+// `v*` doesn't cover a tag `V1.0`, so a policy that means every tag says `*`.
 type Rule struct {
 	Action string `json:"action"`
 	Repo   string `json:"repo"`
@@ -63,7 +64,7 @@ func NeverListed(a string) bool {
 
 // Pattern alphabets: the characters a real target can hold (bus validation), plus `*`.
 var (
-	repoPatRE = regexp.MustCompile(`^[A-Za-z0-9._*-]+/[A-Za-z0-9._*-]+$`)
+	repoPatRE = regexp.MustCompile(`^[A-Za-z0-9*][A-Za-z0-9*-]*/[A-Za-z0-9._*-]+$`)
 	refPatRE  = regexp.MustCompile(`^[A-Za-z0-9._/*-]+$`)
 	envPatRE  = regexp.MustCompile(`^[a-z0-9*-]+$`)
 )
@@ -147,8 +148,8 @@ func checkRule(r Rule) error {
 		return fmt.Errorf("action %q is on the never-list", r.Action)
 	case rank(r.Mode) == 0:
 		return fmt.Errorf("mode %q is not passkey, standing or deny", r.Mode)
-	case !repoPatRE.MatchString(r.Repo):
-		return fmt.Errorf("repo %q: owner/name patterns of letters, digits, ., _, - and *", r.Repo)
+	case !repoPatRE.MatchString(r.Repo) || strings.HasSuffix(strings.ToLower(r.Repo), ".git"):
+		return fmt.Errorf("repo %q: an owner/name pattern of letters, digits, ., _, - and *, with no .git alias", r.Repo)
 	case r.Action == "deploy":
 		return checkFields(r, "env", r.Env, envPatRE, "ref", r.Ref)
 	}
@@ -222,49 +223,84 @@ func match(pat, v string) bool {
 	if pat == "" {
 		return v == ""
 	}
-	ok, err := path.Match(pat, v)
-	return err == nil && ok
+	return glob(pat, v)
 }
+
+// glob reports whether v matches pat, where `*` matches any run of characters (`/` included)
+// and every other character matches itself. Greedy with one backtrack point: linear in practice.
+func glob(pat, v string) bool {
+	p, s := []rune(pat), []rune(v)
+	pi, si, star, mark := 0, 0, -1, 0
+	for si < len(s) {
+		switch {
+		case pi < len(p) && p[pi] == '*':
+			star, mark = pi, si
+			pi++
+		case pi < len(p) && p[pi] == s[si]:
+			pi, si = pi+1, si+1
+		case star >= 0:
+			mark++
+			pi, si = star+1, mark
+		default:
+			return false
+		}
+	}
+	for pi < len(p) && p[pi] == '*' {
+		pi++
+	}
+	return pi == len(p)
+}
+
+// RulesetRefPattern is a ref pattern as a GitHub ruleset's fnmatch needs it: there `*` stops at
+// `/` and `**` doesn't, so each `*` becomes `**` and the ruleset covers what Decide covers.
+// `policy gates` emits it, and the executor's ruleset check (Task 10e) compares with it.
+func RulesetRefPattern(ref string) string {
+	return strings.ReplaceAll(ref, "*", "**")
+}
+
+// ErrNoWitness: every rune that could stand for `*` in a witness appears in the policy's
+// patterns (only a hand-built Policy can do that), so which rules win can't be computed.
+var ErrNoWitness = errors.New("policy: no free witness rune in U+E000-U+F8FF")
 
 // Gates returns the passkey rules that win for at least one target, for the rulesets of
 // decision 2.
-func (p Policy) Gates() []Rule {
-	var out []Rule
-	for _, r := range p.Rules {
-		if r.Mode == Passkey && p.wins(r) {
-			out = append(out, r)
-		}
-	}
-	return out
+func (p Policy) Gates() ([]Rule, error) {
+	return p.filter(func(r Rule, wins bool) bool { return r.Mode == Passkey && wins })
 }
 
-// Shadowed returns the rules that never win, which `policy gates` prints as warnings.
-func (p Policy) Shadowed() []Rule {
+// Shadowed returns the rules that never win, which `policy gates` prints as warnings. With no
+// witness it returns ErrNoWitness rather than guess: a rule wrongly called shadowed could be
+// deleted while live.
+func (p Policy) Shadowed() ([]Rule, error) {
+	return p.filter(func(_ Rule, wins bool) bool { return !wins })
+}
+
+func (p Policy) filter(keep func(r Rule, wins bool) bool) ([]Rule, error) {
+	z, ok := p.freshRune()
+	if !ok {
+		return nil, ErrNoWitness
+	}
 	var out []Rule
 	for _, r := range p.Rules {
-		if !p.wins(r) {
+		if keep(r, p.wins(r, z)) {
 			out = append(out, r)
 		}
 	}
-	return out
+	return out, nil
 }
 
 // wins reports whether Decide returns r's mode for some target r matches. The witness is r's
 // patterns with each `*` replaced by a rune no pattern in the policy contains. Another rule
 // matches the witness exactly when its patterns cover r's, so if Decide gives r's mode there,
 // r wins; if not, a stronger rule covers r and r wins nowhere. So Gates and Decide agree over
-// all strings.
+// all strings. (With `*` matching any run, a fresh rune in the witness can only be matched by
+// another pattern's `*`, so the cover argument holds; z must be absent from every pattern.)
 //
 // Real targets use a smaller alphabet (bus validation), and the witness rune is outside it. So
 // a gate can be over-listed: one whose every real target is covered piecemeal by deny rules,
 // for example one per possible first character, is still listed. Over-listing gates more and
-// errs on the safe side. With no fresh rune left (only a hand-built Policy can use them all),
-// wins fails closed: every rule wins, so Gates lists every passkey rule and Shadowed none.
-func (p Policy) wins(r Rule) bool {
-	z, ok := p.freshRune()
-	if !ok {
-		return true
-	}
+// errs on the safe side.
+func (p Policy) wins(r Rule, z rune) bool {
 	w := Target{Repo: witness(r.Repo, z), Ref: witness(r.Ref, z), Env: witness(r.Env, z)}
 	return p.Decide(r.Action, w) == r.Mode
 }

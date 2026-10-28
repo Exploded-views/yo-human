@@ -16,6 +16,24 @@ func mustParse(t *testing.T, s string) Policy {
 	return p
 }
 
+func gates(t *testing.T, p Policy) []Rule {
+	t.Helper()
+	g, err := p.Gates()
+	if err != nil {
+		t.Fatalf("Gates: %v", err)
+	}
+	return g
+}
+
+func shadowed(t *testing.T, p Policy) []Rule {
+	t.Helper()
+	sh, err := p.Shadowed()
+	if err != nil {
+		t.Fatalf("Shadowed: %v", err)
+	}
+	return sh
+}
+
 func TestEmptyPolicyDeniesEverything(t *testing.T) {
 	p := mustParse(t, `{"v": 1, "rules": []}`)
 	for _, a := range allCategories {
@@ -45,7 +63,7 @@ func TestNeverListNotOverridable(t *testing.T) {
 		if got := hand.Decide(a, Target{Repo: "x"}); got != Deny {
 			t.Errorf("hand-built %s: Decide = %q, want deny", a, got)
 		}
-		if g := hand.Gates(); len(g) != 0 {
+		if g := gates(t, hand); len(g) != 0 {
 			t.Errorf("hand-built %s: Gates = %v, want none", a, g)
 		}
 	}
@@ -96,7 +114,7 @@ func TestPasskeyBeatsStandingRegardlessOfOrder(t *testing.T) {
 		if got := p.Decide("merge", Target{Repo: "example-org/other", Ref: "main"}); got != Standing {
 			t.Errorf("order %v: other repo = %q, want standing", rules, got)
 		}
-		if g := p.Gates(); !reflect.DeepEqual(g, []Rule{passkey}) {
+		if g := gates(t, p); !reflect.DeepEqual(g, []Rule{passkey}) {
 			t.Errorf("order %v: Gates = %v, want the passkey rule", rules, g)
 		}
 	}
@@ -106,7 +124,7 @@ func TestPasskeyBeatsStandingRegardlessOfOrder(t *testing.T) {
 		if got := p.Decide("merge", kept); got != Deny {
 			t.Errorf("deny %v: Decide = %q, want deny", rules, got)
 		}
-		if g := p.Gates(); len(g) != 0 {
+		if g := gates(t, p); len(g) != 0 {
 			t.Errorf("deny %v: Gates = %v, want none (the passkey rule never wins)", rules, g)
 		}
 	}
@@ -117,7 +135,7 @@ func TestShadowedRuleReported(t *testing.T) {
 	covered := Rule{Action: "release", Repo: "example-org/r", Ref: "v*", Mode: Standing}
 	partial := Rule{Action: "release", Repo: "*/r", Ref: "v*", Mode: Standing}
 	p := Policy{V: 1, Rules: []Rule{covered, broad, partial}}
-	if got := p.Shadowed(); !reflect.DeepEqual(got, []Rule{covered}) {
+	if got := shadowed(t, p); !reflect.DeepEqual(got, []Rule{covered}) {
 		t.Errorf("Shadowed = %v, want only the covered standing rule", got)
 	}
 	if got := p.Decide("release", Target{Repo: "other-org/r", Ref: "v1"}); got != Standing {
@@ -129,7 +147,7 @@ func TestGatesAgreeWithDecideUnderUnionOfDenies(t *testing.T) {
 	// Two deny rules that each cover half of the passkey rule's refs leave a ref neither matches.
 	gate := Rule{Action: "release", Repo: "a/b", Ref: "*", Mode: Passkey}
 	p := Policy{V: 1, Rules: []Rule{gate, {Action: "release", Repo: "a/b", Ref: "v*", Mode: Deny}, {Action: "release", Repo: "a/b", Ref: "x*", Mode: Deny}}}
-	if g := p.Gates(); !reflect.DeepEqual(g, []Rule{gate}) {
+	if g := gates(t, p); !reflect.DeepEqual(g, []Rule{gate}) {
 		t.Errorf("Gates = %v, want the gate (ref \"w1\" reaches it)", g)
 	}
 	if got := p.Decide("release", Target{Repo: "a/b", Ref: "w1"}); got != Passkey {
@@ -157,13 +175,51 @@ func TestEmptyPatternMatchesOnlyEmpty(t *testing.T) {
 	}
 }
 
-func TestStarDoesNotMatchSlash(t *testing.T) {
-	p := Policy{V: 1, Rules: []Rule{{Action: "merge", Repo: "*", Ref: "*", Mode: Passkey}}}
-	if got := p.Decide("merge", Target{Repo: "a/b", Ref: "main"}); got != Deny {
-		t.Errorf("repo * vs a/b: %q, want deny", got)
+func TestStarMatchesSlash(t *testing.T) {
+	// A ref * is "every ref": it must cover slashed branches and tags, or a deny-all on * is
+	// dodged by any rule naming release/*.
+	p := Policy{V: 1, Rules: []Rule{
+		{Action: "merge", Repo: "o/r", Ref: "*", Mode: Deny},
+		{Action: "merge", Repo: "o/r", Ref: "release/*", Mode: Passkey},
+	}}
+	for _, ref := range []string{"release/1.2", "main", "feature/a/b"} {
+		if got := p.Decide("merge", Target{Repo: "o/r", Ref: ref}); got != Deny {
+			t.Errorf("deny * vs %s: %q, want deny", ref, got)
+		}
 	}
-	if got := p.Decide("merge", Target{Repo: "ab", Ref: "feature/x"}); got != Deny {
-		t.Errorf("ref * vs feature/x: %q, want deny", got)
+	if g := gates(t, p); len(g) != 0 {
+		t.Errorf("Gates = %v, want none (the deny-all covers release/*)", g)
+	}
+	q := Policy{V: 1, Rules: []Rule{{Action: "release", Repo: "o/*", Ref: "v*", Mode: Passkey}}}
+	for target, want := range map[Target]Mode{
+		{Repo: "o/r", Ref: "v1/rc"}: Passkey, {Repo: "o/x/y", Ref: "v1"}: Passkey, {Repo: "p/r", Ref: "v1"}: Deny,
+	} {
+		if got := q.Decide("release", target); got != want {
+			t.Errorf("Decide(%+v) = %q, want %q", target, got, want)
+		}
+	}
+}
+
+func TestGlob(t *testing.T) {
+	for _, c := range []struct {
+		pat, v string
+		want   bool
+	}{
+		{"*", "", true}, {"*", "a/b", true}, {"a*", "a", true}, {"a*b", "a/x/b", true}, {"a*b", "a/x/c", false},
+		{"*a*", "bab", true}, {"*a*", "bbb", false}, {"a*a", "a", false}, {"**", "x", true}, {"main", "main", true},
+		{"main", "Main", false}, {"v*", "V1", false}, {"a*b*c", "abxbyc", true}, {"a*b*c", "acb", false},
+	} {
+		if got := glob(c.pat, c.v); got != c.want {
+			t.Errorf("glob(%q, %q) = %v, want %v", c.pat, c.v, got, c.want)
+		}
+	}
+}
+
+func TestRulesetRefPattern(t *testing.T) {
+	for in, want := range map[string]string{"*": "**", "release/*": "release/**", "v*": "v**", "main": "main", "a*b*": "a**b**"} {
+		if got := RulesetRefPattern(in); got != want {
+			t.Errorf("RulesetRefPattern(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
 
@@ -196,7 +252,7 @@ func TestWitnessAvoidsRunesInPatterns(t *testing.T) {
 	// gate's witness would match the deny rule and the gate would wrongly drop out.
 	gate := Rule{Action: "release", Repo: "a/b", Ref: "*", Mode: Passkey}
 	p := Policy{V: 1, Rules: []Rule{gate, {Action: "release", Repo: "a/b", Ref: "\ue000", Mode: Deny}}}
-	if g := p.Gates(); !reflect.DeepEqual(g, []Rule{gate}) {
+	if g := gates(t, p); !reflect.DeepEqual(g, []Rule{gate}) {
 		t.Errorf("Gates = %v, want the gate", g)
 	}
 }
@@ -204,6 +260,10 @@ func TestWitnessAvoidsRunesInPatterns(t *testing.T) {
 func TestParseRefusesUnreachableRules(t *testing.T) {
 	for name, r := range map[string]string{
 		"repo *":                  `"action": "merge", "repo": "*", "ref": "main"`,
+		"repo .git":               `"action": "merge", "repo": "o/r.git", "ref": "main"`,
+		"repo .GIT":               `"action": "merge", "repo": "o/r.GIT", "ref": "main"`,
+		"repo pattern *.git":      `"action": "merge", "repo": "o/*.git", "ref": "main"`,
+		"owner with a leading -":  `"action": "merge", "repo": "-o/r", "ref": "main"`,
 		"no repo":                 `"action": "merge", "ref": "main"`,
 		"repo with no name":       `"action": "merge", "repo": "a/", "ref": "main"`,
 		"repo with no owner":      `"action": "merge", "repo": "/b", "ref": "main"`,
@@ -226,6 +286,8 @@ func TestParseRefusesUnreachableRules(t *testing.T) {
 		`"action": "merge", "repo": "*/*", "ref": "*"`,
 		`"action": "deploy", "repo": "a/b", "env": "prod-*"`,
 		`"action": "release", "repo": "a/my.repo", "ref": "v*"`,
+		`"action": "release", "repo": "a/x.github", "ref": "v*"`,
+		`"action": "release", "repo": "*/r", "ref": "v*"`,
 	} {
 		mustParse(t, `{"v": 1, "rules": [{`+r+`, "mode": "deny"}]}`)
 	}
@@ -248,18 +310,22 @@ func TestParseRefusesDuplicateAndFoldedKeys(t *testing.T) {
 }
 
 func TestFreshRuneBoundedFailsClosed(t *testing.T) {
-	// A hand-built policy whose patterns use every private-use rune leaves no witness. Gates then
-	// lists every passkey rule (over-gating is the safe side) and Shadowed reports none.
+	// A hand-built policy whose patterns use every private-use rune leaves no witness. Gates and
+	// Shadowed then return an error rather than guess: a false "shadowed" could lead the owner to
+	// delete a live rule.
 	var all []rune
 	for z := rune(0xE000); z <= 0xF8FF; z++ {
 		all = append(all, z)
 	}
 	gate := Rule{Action: "release", Repo: "a/b", Ref: "*", Mode: Passkey}
-	p := Policy{V: 1, Rules: []Rule{gate, {Action: "release", Repo: "a/b", Ref: "v*", Mode: Deny}, {Action: "release", Repo: "a/b", Ref: string(all), Mode: Deny}}}
-	if g := p.Gates(); !reflect.DeepEqual(g, []Rule{gate}) {
-		t.Errorf("Gates = %v, want the gate (fail closed)", g)
+	p := Policy{V: 1, Rules: []Rule{gate, {Action: "release", Repo: "a/b", Ref: string(all), Mode: Deny}}}
+	if _, ok := p.freshRune(); ok {
+		t.Error("freshRune found a rune outside U+E000-U+F8FF or one the policy uses")
 	}
-	if sh := p.Shadowed(); len(sh) != 0 {
-		t.Errorf("Shadowed = %v, want none (fail closed)", sh)
+	if g, err := p.Gates(); err == nil {
+		t.Errorf("Gates = %v, nil; want an error", g)
+	}
+	if sh, err := p.Shadowed(); err == nil {
+		t.Errorf("Shadowed = %v, nil; want an error", sh)
 	}
 }
