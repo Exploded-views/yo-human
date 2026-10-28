@@ -100,7 +100,7 @@ func checkDir(dir string) error {
 	if !fi.IsDir() {
 		return errors.New("db: the database's parent is not a directory")
 	}
-	// The other-owner case needs a second user (root) to test, so no test covers it.
+	// Unix only (linux and darwin are the release targets). The other-owner case needs a second user (root) to test, so no test covers it.
 	if st, ok := fi.Sys().(*syscall.Stat_t); ok && int(st.Uid) != os.Getuid() {
 		return errors.New("db: data directory is not owned by the current user")
 	}

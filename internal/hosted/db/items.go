@@ -66,6 +66,7 @@ func flagsJSON(flags []string) (string, error) {
 	return string(b), err
 }
 
+// InsertItem stores the item open whatever it.State says: State comes only from the decisions.
 func (x *txn) InsertItem(it bus.Item) error {
 	flags, err := flagsJSON(it.RiskFlags)
 	if err != nil {
@@ -89,11 +90,24 @@ func boolInt(b bool) int {
 	return 0
 }
 
-// InsertItem always stores the item open, and UpdateItem derives the state from whether a
-// decision exists for the new revision: State comes only from the decisions table.
-
 // UpdateItem rewrites the item's mutable fields. ID, swarm, author and creation time never change.
+// The state is derived, never taken from it.State: decided only if a decision of the matching kind
+// exists for the new revision. The revision may not go backwards (ErrStaleRevision) and the kind
+// may not change without a new revision (ErrKindMismatch); the items_guard trigger repeats both.
 func (x *txn) UpdateItem(it bus.Item) error {
+	cur, found, err := x.oneItem("id = ?", it.ID)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return fmt.Errorf("db: update item: %w", ErrNotFound)
+	}
+	if it.Revision < cur.Revision {
+		return ErrStaleRevision
+	}
+	if it.Kind != cur.Kind && it.Revision == cur.Revision {
+		return ErrKindMismatch
+	}
 	flags, err := flagsJSON(it.RiskFlags)
 	if err != nil {
 		return fmt.Errorf("db: update item: %w", err)
@@ -101,11 +115,11 @@ func (x *txn) UpdateItem(it bus.Item) error {
 	res, err := x.tx.ExecContext(x.ctx, `UPDATE items SET handle = ?, kind = ?, severity = ?, to_target = ?, title = ?,
 		summary = ?, detail = ?, required_action = ?, repo = ?, ref = ?, base_ref = ?, target = ?, pinned_commit = ?,
 		pinned_tree = ?, action = ?, link = ?, risk_flags = ?, untrusted = ?, revision = ?,
-		state = CASE WHEN EXISTS (SELECT 1 FROM decisions WHERE item_id = items.id AND revision = ?) THEN 'decided' ELSE 'open' END,
+		state = CASE WHEN EXISTS (SELECT 1 FROM decisions WHERE item_id = items.id AND revision = ? AND (kind = 'approval') = (? = 'approval')) THEN 'decided' ELSE 'open' END,
 		content_hash = ?, last_seq = ?, acked_seq = ?, updated = ? WHERE id = ?`,
 		it.Handle, it.Kind, it.Severity, it.To, it.Title, it.Summary, it.Detail, it.RequiredAction, it.Repo,
 		it.Ref, it.BaseRef, it.Target, it.PinnedCommit, it.PinnedTree, it.Action, it.Link, flags,
-		boolInt(it.Untrusted), it.Revision, it.Revision, it.ContentHash, it.LastSeq, it.AckedSeq,
+		boolInt(it.Untrusted), it.Revision, it.Revision, it.Kind, it.ContentHash, it.LastSeq, it.AckedSeq,
 		fmtTime(it.Updated), it.ID)
 	if err != nil {
 		return fmt.Errorf("db: update item: %w", err)

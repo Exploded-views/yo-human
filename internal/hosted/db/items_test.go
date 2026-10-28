@@ -1,6 +1,7 @@
 package db_test
 
 import (
+	"database/sql"
 	"errors"
 	"reflect"
 	"testing"
@@ -192,5 +193,30 @@ func TestUpdateItemRevisionBackwardsRefused(t *testing.T) {
 	tx(t, d, func(x bus.Tx) (err error) { after, _, err = x.ItemByID("itm_1"); return })
 	if !reflect.DeepEqual(before, after) || after.State != bus.StateOpen {
 		t.Fatalf("the refused update changed the row:\n%+v\n%+v", before, after)
+	}
+}
+
+func TestItemsGuardTriggerOnRawConnection(t *testing.T) {
+	d, path := openTemp(t)
+	insertItem(t, d, question("itm_1", "crew", "first"))
+	if err := d.Close(); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = raw.Close() }()
+	if _, err := raw.Exec("UPDATE items SET kind = 'approval' WHERE id = 'itm_1'"); err == nil {
+		t.Fatal("the trigger let the kind change at the same revision")
+	}
+	if _, err := raw.Exec("UPDATE items SET revision = 3 WHERE id = 'itm_1'"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := raw.Exec("UPDATE items SET revision = 2 WHERE id = 'itm_1'"); err == nil {
+		t.Fatal("the trigger let the revision go backwards")
+	}
+	if _, err := raw.Exec("UPDATE items SET kind = 'approval', revision = 4 WHERE id = 'itm_1'"); err != nil {
+		t.Fatalf("the trigger refused a kind change with a new revision: %v", err)
 	}
 }

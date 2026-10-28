@@ -95,7 +95,7 @@ CREATE TABLE events (
 	user_code TEXT NOT NULL,
 	expires   TEXT NOT NULL,
 	-- Only the desk_* events belong to no swarm, and they belong to nothing else.
-	CHECK ((type LIKE 'desk\_%' ESCAPE '\') = (swarm = ''))
+	CHECK ((substr(type, 1, 5) = 'desk_') = (swarm = ''))
 );
 CREATE INDEX events_by_swarm ON events (swarm, seq);
 
@@ -107,8 +107,25 @@ CREATE TABLE statuses (
 
 CREATE TRIGGER decisions_guard BEFORE INSERT ON decisions
 BEGIN
+	SELECT RAISE(ABORT, 'decision for a missing item')
+	WHERE NOT EXISTS (SELECT 1 FROM items WHERE id = NEW.item_id);
 	SELECT RAISE(ABORT, 'decision kind does not match the item kind')
 	WHERE (NEW.kind = 'approval') <> (SELECT kind = 'approval' FROM items WHERE id = NEW.item_id);
 	SELECT RAISE(ABORT, 'decision revision is not the item''s current revision')
 	WHERE NEW.revision <> (SELECT revision FROM items WHERE id = NEW.item_id);
+END;
+
+-- Decisions are append-only.
+CREATE TRIGGER decisions_append_only BEFORE UPDATE ON decisions
+BEGIN
+	SELECT RAISE(ABORT, 'decisions are append-only');
+END;
+
+-- An item's revision never goes backwards, and its kind changes only with a new revision, so a
+-- decision recorded for one kind or revision can never come to decide another.
+CREATE TRIGGER items_guard BEFORE UPDATE OF revision, kind ON items
+BEGIN
+	SELECT RAISE(ABORT, 'item revision cannot go backwards') WHERE NEW.revision < OLD.revision;
+	SELECT RAISE(ABORT, 'item kind cannot change without a new revision')
+	WHERE NEW.kind <> OLD.kind AND NEW.revision = OLD.revision;
 END;

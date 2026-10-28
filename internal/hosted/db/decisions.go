@@ -42,23 +42,23 @@ var (
 // InsertDecision stores an answer or approval and, in the same transaction, marks the item
 // decided. That is the only way an item becomes decided. The record must match the item's kind
 // (approval for approvals, answer for the rest) and its current revision, else ErrKindMismatch
-// or ErrStaleRevision. A second record for the same (item, revision, actor kind) is a conflict
+// ErrStaleRevision, or ErrNotFound for a missing item. A second record for the same (item, revision, actor kind) is a conflict
 // (IsConflict), and the database refuses an agent approval.
 func (x *txn) InsertDecision(r bus.Record) error {
 	it, found, err := x.oneItem("id = ?", r.ItemID)
 	if err != nil {
 		return err
 	}
-	if found {
-		if (r.Kind == bus.RecordApproval) != (it.Kind == bus.KindApproval) {
-			return ErrKindMismatch
-		}
-		if r.Revision != it.Revision {
-			return ErrStaleRevision
-		}
+	if !found {
+		return fmt.Errorf("db: insert decision: %w", ErrNotFound)
 	}
-	// A missing item falls through to the foreign key. The decisions_guard trigger repeats both
-	// checks for any other write path.
+	if (r.Kind == bus.RecordApproval) != (it.Kind == bus.KindApproval) {
+		return ErrKindMismatch
+	}
+	if r.Revision != it.Revision {
+		return ErrStaleRevision
+	}
+	// The decisions_guard trigger repeats these checks for any other write path.
 	_, err = x.tx.ExecContext(x.ctx, `INSERT INTO decisions (item_id, revision, kind, decision, actor_kind, text,
 		source, by_name, source_message, human_ts, recorded) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		r.ItemID, r.Revision, r.Kind, r.Decision, r.ActorKind, r.Text, r.Source, r.By, r.SourceMessage,

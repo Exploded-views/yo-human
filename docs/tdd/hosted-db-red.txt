@@ -78,3 +78,8 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.356s
 FAIL
 exit=1
+
+## Notes, correction (round 2)
+The Notes above say "Review fixes (7e9483c onward)". The first review-fix commit is 580618b.
+Round 2 follows the RED rule: its failing tests are the section "2026-10-28 review round 2" above,
+committed as 20f9ffc before the fix.

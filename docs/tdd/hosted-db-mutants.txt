@@ -100,3 +100,107 @@ FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.400s
 FAIL
 suite exit=1
 
+
+# Review round 2 (delta review of 5d34363), 2026-10-28T21:31:13Z: mutants on the fixed implementation, each applied by hand, vetted, run, reverted
+baseline internal/hosted/db: exit=0
+
+## UpdateItem revision guard removed (items_guard revision clause also neutralised)
+internal/hosted/db/items.go: 'if it.Revision < cur.Revision {' -> 'if false {'
+vet exit=0
+--- FAIL: TestUpdateItemRevisionBackwardsRefused (0.06s)
+--- FAIL: TestItemsGuardTriggerOnRawConnection (0.15s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	3.222s
+FAIL
+suite exit=1
+
+## UpdateItem kind-change guard removed (items_guard kind clause also neutralised)
+internal/hosted/db/items.go: 'if it.Kind != cur.Kind && it.Revision == cur.Revision {' -> 'if false {'
+vet exit=0
+--- FAIL: TestUpdateItemKindChangeRefused (0.03s)
+--- FAIL: TestItemsGuardTriggerOnRawConnection (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	4.309s
+FAIL
+suite exit=1
+
+## state check no longer matches kinds
+internal/hosted/db/items.go: 'AND (kind = 'approval') = (? = 'approval')) THEN' -> ') THEN'
+vet exit=0
+--- FAIL: TestDecisionUniquePerRevision (0.03s)
+--- FAIL: TestUpdateItem (0.24s)
+--- FAIL: TestStateOnlyFromDecisions (0.22s)
+--- FAIL: TestUpdateItemDerivesStateFromRevision (0.35s)
+--- FAIL: TestUpdateItemRevisionBackwardsRefused (0.27s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	6.238s
+FAIL
+suite exit=1
+
+## orphan check dropped from decisions_guard
+internal/hosted/db/migrations/0001_init.sql: 'WHERE NOT EXISTS (SELECT 1 FROM items WHERE id = NEW.item_id);' -> 'WHERE 0;'
+vet exit=0
+--- FAIL: TestTriggerGuardsDirectInserts (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	4.284s
+FAIL
+suite exit=1
+
+## desk check back to a case-insensitive LIKE
+internal/hosted/db/migrations/0001_init.sql: '(substr(type, 1, 5) = 'desk_')' -> '(type LIKE 'desk\_%' ESCAPE '\')'
+vet exit=0
+--- FAIL: TestDeskTypeMatchIsCaseSensitive (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	3.664s
+FAIL
+suite exit=1
+
+## decisions_append_only trigger neutralised
+internal/hosted/db/migrations/0001_init.sql: 'CREATE TRIGGER decisions_append_only BEFORE UPDATE ON decisions
+BEGIN
+	SELECT RAISE(ABORT, 'decisions are append-only');' -> 'CREATE TRIGGER decisions_append_only BEFORE UPDATE ON decisions
+BEGIN
+	SELECT RAISE(ABORT, 'decisions are append-only') WHERE 0;'
+vet exit=0
+--- FAIL: TestDecisionsAreAppendOnly (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	2.541s
+FAIL
+suite exit=1
+
+## items_guard trigger neutralised (both clauses; the Go guards stay)
+internal/hosted/db/migrations/0001_init.sql: 'WHERE NEW.revision < OLD.revision;' -> 'WHERE 0;'
+vet exit=0
+--- FAIL: TestItemsGuardTriggerOnRawConnection (0.04s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.465s
+FAIL
+suite exit=1
+
+## agent row read first (ORDER BY rowid)
+internal/hosted/db/decisions.go: 'ORDER BY CASE actor_kind WHEN 'human' THEN 0 ELSE 1 END LIMIT 1' -> 'ORDER BY rowid LIMIT 1'
+vet exit=0
+--- FAIL: TestDecisionPrefersHuman (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.223s
+FAIL
+suite exit=1
+
+## WAL pragma dropped
+internal/hosted/db/db.go: 'q.Add("_pragma", "journal_mode(WAL)")' -> '_ = 0'
+vet exit=0
+--- FAIL: TestOpenSetsFileModeAndWAL (0.28s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	4.600s
+FAIL
+suite exit=1
+
+## database file created 0644
+internal/hosted/db/db.go: 'os.O_CREATE|os.O_RDWR, 0o600)' -> 'os.O_CREATE|os.O_RDWR, 0o644)'
+vet exit=0
+--- FAIL: TestOpenMigratesAndReopens (0.38s)
+--- FAIL: TestOpenSetsFileModeAndWAL (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.904s
+FAIL
+suite exit=1
