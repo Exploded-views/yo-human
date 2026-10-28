@@ -101,3 +101,15 @@ exit=1
 - Round 3's failing tests are the section "2026-10-28 review round 3" above (commit 6ef9cac). Only the
   first assertion of TestStateGuardTriggerOnRawConnection ran; its reopen and allowed-update assertions
   were exercised for the first time against the fix.
+
+## 2026-10-28 review round 4 (delta review of 0030c97, R3-1 and R3-2)
+$ go test -count=1 -timeout 120s ./internal/hosted/db/
+--- FAIL: TestStateGuardCoversRevisionKindAndRawInsert (0.03s)
+    decisions_test.go:302: a decided item was revised without reopening it
+--- FAIL: TestItemWithDecisionsCannotBeDeleted (0.01s)
+    decisions_test.go:337: an item with a decision was deleted
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.627s
+FAIL
+exit=1
+Note: TestStateGuardChecksRevisionClause passes already (it pins the revision clause against a mutant, R3-2); the raw INSERT assertion in TestStateGuardCoversRevisionKindAndRawInsert was not reached in this run.

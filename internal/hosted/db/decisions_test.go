@@ -289,3 +289,51 @@ func TestStateGuardTriggerOnRawConnection(t *testing.T) {
 		t.Fatalf("the trigger refused a state that matches the decisions: %v", err)
 	}
 }
+
+func TestStateGuardCoversRevisionKindAndRawInsert(t *testing.T) {
+	d, path := openTemp(t)
+	insertItem(t, d, question("itm_1", "crew", "first"))
+	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 1)); err != nil {
+		t.Fatal(err)
+	}
+	raw := rawConn(t, d, path)
+	// Revising behind the guard's back would leave a decided item with no decision at revision 2.
+	if _, err := raw.Exec("UPDATE items SET revision = 2 WHERE id = 'itm_1'"); err == nil {
+		t.Fatal("a decided item was revised without reopening it")
+	}
+	ins := `INSERT INTO items (id, swarm, handle, kind, severity, to_target, from_name, from_kind, title, summary,
+		detail, required_action, repo, ref, base_ref, target, pinned_commit, pinned_tree, action, link, untrusted,
+		revision, state, content_hash, created, updated) VALUES ('itm_9', 'crew', 'nine', 'question', 'low',
+		'human', 'n', 'node', 't', 's', '', '', '', '', '', '', '', '', 'none', '', 0, 1, 'decided', 'h', '', '')`
+	if _, err := raw.Exec(ins); err == nil {
+		t.Fatal("an item was inserted already decided")
+	}
+}
+
+func TestStateGuardChecksRevisionClause(t *testing.T) {
+	d, path := openTemp(t)
+	q := question("itm_1", "crew", "first")
+	insertItem(t, d, q)
+	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 1)); err != nil {
+		t.Fatal(err)
+	}
+	q.Revision = 2
+	tx(t, d, func(x bus.Tx) error { return x.UpdateItem(q) })
+	raw := rawConn(t, d, path)
+	if _, err := raw.Exec("UPDATE items SET state = 'decided' WHERE id = 'itm_1'"); err == nil {
+		t.Fatal("an item at revision 2 was decided by a revision 1 decision")
+	}
+}
+
+func TestItemWithDecisionsCannotBeDeleted(t *testing.T) {
+	d, path := openTemp(t)
+	insertItem(t, d, question("itm_1", "crew", "first"))
+	if err := insertRecord(d, record(bus.RecordAnswer, bus.ActorAgent, 1)); err != nil {
+		t.Fatal(err)
+	}
+	raw := rawConn(t, d, path)
+	// foreign_keys is off on this connection, so only the trigger can refuse.
+	if _, err := raw.Exec("DELETE FROM items WHERE id = 'itm_1'"); err == nil {
+		t.Fatal("an item with a decision was deleted")
+	}
+}
