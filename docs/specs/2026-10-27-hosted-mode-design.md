@@ -113,7 +113,7 @@ Excluded on purpose: merge, deploy, delete, spend, secrets access, and any tool 
 
 - Hosted mode is an MCP server first. Agents use the same server as Duet with an agent token and a broader tool set: `post` (notify, ask, done, escalate, with severity), `answers(since?)` and `item(id)` to read replies, `reply(thread_id, ...)`, and `status_push` for the registry feed. Answers reach agents by the agent reading the bus; the bus never calls into a machine.
 - A local Claude Code session adds it with `claude mcp add --transport http` and its token; a cloud session gets it as a connector.
-- A central orchestrator, and later each crew's own orchestrator, reads new answers and threads addressed to it and fans them out: over UDS (SendMessage) to sessions on its own host, and through its bridge to another host's bridge for sessions elsewhere. Never a herdr pane prompt on the same host (owner, 2026-10-28: "agent prompts between bridges only (host-to-host) and uds on a host"). The bus itself never wakes a session; sessions read it.
+- A central orchestrator, and later each crew's own orchestrator, reads new answers and threads addressed to it and fans them out: over UDS (SendMessage) to Claude sessions on its own host, and through its bridge to another host's bridge for sessions elsewhere. Never a herdr pane prompt on the same host. A non-Claude watcher never posts to the session socket; it writes an event file, which the session follows with Monitor (owner, 2026-10-28: "agent prompts between bridges only (host-to-host) and uds on a host"). The bus itself never wakes a session; sessions read it.
 - The yo-human CLI gets a hosted target after M1, as a second way in for scripts and hooks.
 
 ## Auth
@@ -199,8 +199,7 @@ Get an MCP up fast. Hosted mode's first release is the MCP bus with only what Du
 
 ## Open questions
 
-- Whether a non-Claude daemon (an H2 watcher, a script) can send on the host's session socket, or needs a small relay to wake a session over UDS.
-
+- A relay onto the session socket, only if the event-file pattern (a non-Claude watcher writes a file; the session follows it with Monitor) proves insufficient. MCP channels are a later re-check.
 - Whether Duet's `watch_url` tool can watch a bus endpoint for changes without a model run. Untested; if it is cheap it could make Duet's reads cheaper, but it would never carry anything time-sensitive.
 - Whether a local Claude Code session can load the Claude Code Remote connector for real-time hand-offs (today the orchestrator's session can't see it).
 - How the human tells the bus where he is ("heads down", "driving"): through Duet, through any agent, or both.
