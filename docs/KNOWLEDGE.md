@@ -27,10 +27,10 @@ Written 2026-10-26 by the session that ran the original design conversation, for
 - Read state without interrupting: `herdr agent list`, `herdr agent get <name|pane>`, `herdr agent read <name|pane> --source recent-unwrapped --lines 120`. Status values: working, idle, done, blocked, unknown (unknown proves nothing).
 - Spawn a named session without stealing focus, from an already-trusted folder (or it stops at the trust dialog):
   `herdr pane split --current --direction down --cwd "<trusted dir>" --no-focus` (read the pane id from `.result.pane.pane_id`), then
-  `herdr agent start <name> --kind claude --pane <pane-id> -- --name <name> --permission-mode <mode>`, then brief it with `herdr agent prompt <name> "<brief>" --wait --timeout 120000`.
+  `herdr agent start <name> --kind claude --pane <pane-id> -- --name <name> --permission-mode <mode>`, then, once it has started, brief it over SendMessage (find it with ListAgents). Between sessions, `herdr agent prompt` is only for bridge to bridge, across hosts. A host watch daemon may prompt only its own host's bridge pane.
 - **Never** `agent prompt`, `send-keys` or `pane run` into a session you didn't start: it arrives as the owner's own input. Never answer another session's Blocked dialog through herdr.
 - `herdr notification show <title> [--body] [--sound none|done|request]` shows a local notification. `herdr api snapshot` and `herdr api schema` expose the socket API. herdr plugins subscribe to events like `pane.agent_status_changed` (that's how Heeler's plugin works).
-- Claude Code sessions talk to each other with SendMessage; herdr is for looking, spawning and screens.
+- Claude Code sessions on one host talk to each other with SendMessage. Between sessions, across hosts only bridges talk, bridge to bridge with `herdr agent prompt`/`read`. A host watch daemon may prompt only its own host's bridge pane. Otherwise herdr is for looking, spawning and screens.
 
 ## Paging today (what yo-human replaces)
 

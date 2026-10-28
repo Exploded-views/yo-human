@@ -113,7 +113,7 @@ Excluded on purpose: merge, deploy, delete, spend, secrets access, and any tool 
 
 - Hosted mode is an MCP server first. Agents use the same server as Duet with an agent token and a broader tool set: `post` (notify, ask, done, escalate, with severity), `answers(since?)` and `item(id)` to read replies, `reply(thread_id, ...)`, and `status_push` for the registry feed. Answers reach agents by the agent reading the bus; the bus never calls into a machine.
 - A local Claude Code session adds it with `claude mcp add --transport http` and its token; a cloud session gets it as a connector.
-- A central orchestrator, and later each crew's own orchestrator, reads new answers and threads addressed to it and fans them out locally (herdr, SendMessage).
+- A central orchestrator, and later each crew's own orchestrator, reads new answers and threads addressed to it and fans them out: over UDS (SendMessage) to Claude sessions on its own host, and through its bridge to another host's bridge for sessions elsewhere. Never a herdr pane prompt between sessions on the same host. SendMessage is the Claude harness's own channel, an instruction for sessions that no yo-human code implements. A non-Claude watcher or daemon wakes only its own host's bridge pane, with `herdr agent prompt` (owner, 2026-10-28: "agent prompts between bridges only (host-to-host) and uds on a host"). The bus itself never wakes a session; sessions read it.
 - The yo-human CLI gets a hosted target after M1, as a second way in for scripts and hooks.
 
 ## Auth
@@ -195,7 +195,7 @@ Get an MCP up fast. Hosted mode's first release is the MCP bus with only what Du
 - The HTTP framework and MCP library versions (the spike used the Python SDK; the product is Go, per the earlier design).
 - Exact CLI verbs and flags for the hosted target, within the existing contract style.
 - The nudge's wording and collapse rules.
-- How the orchestrator fans out answers locally until crews read the bus themselves.
+- How the orchestrator fans out answers locally until crews read the bus themselves: settled (owner, 2026-10-28). UDS (SendMessage) between Claude sessions on the host, a non-Claude watcher prompting only its own host's bridge pane, and bridge to bridge across hosts.
 
 ## Open questions
 
