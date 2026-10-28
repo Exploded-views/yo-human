@@ -279,3 +279,55 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.021s
 FAIL
 exit=1
+
+# Review round 2 (Opus delta on 64888a1) RED, 2026-10-28T06:25:43Z: the new tests against the 64888a1 code (policy: the tests use the new Gates and Shadowed signatures, glob and RulesetRefPattern, so the package fails to build); passing tests omitted
+$ go test -count=1 ./internal/hosted/policy/ ./internal/hosted/bus/
+# github.com/Exploded-views/yo-human/internal/hosted/policy [github.com/Exploded-views/yo-human/internal/hosted/policy.test]
+internal/hosted/policy/policy_test.go:21:12: assignment mismatch: 2 variables but p.Gates returns 1 value
+internal/hosted/policy/policy_test.go:30:13: assignment mismatch: 2 variables but p.Shadowed returns 1 value
+internal/hosted/policy/policy_test.go:212:13: undefined: glob
+internal/hosted/policy/policy_test.go:220:13: undefined: RulesetRefPattern
+internal/hosted/policy/policy_test.go:325:15: assignment mismatch: 2 variables but p.Gates returns 1 value
+internal/hosted/policy/policy_test.go:328:16: assignment mismatch: 2 variables but p.Shadowed returns 1 value
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/policy [build failed]
+--- FAIL: TestDraftValidation (0.00s)
+    --- FAIL: TestDraftValidation/repo_with_a_.git_suffix (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/repo_with_a_.GIT_suffix (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/owner_with_a_leading_- (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/base_ref_with_an_empty_component (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/base_ref_ending_in_a_dot (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/base_ref_component_starting_with_a_dot (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/base_ref_component_ending_in_.lock (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/base_ref_HEAD (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/tag_character_in_the_title (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/variation_selector_supplement_in_the_title (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/byte_order_mark_in_the_summary (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/zero-width_space_in_the_detail (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/word_joiner_in_the_handle (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/Mongolian_vowel_separator_in_the_required_action (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/Arabic_letter_mark_in_the_target (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/soft_hyphen_in_the_title (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/line_separator_in_the_detail (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/paragraph_separator_in_the_summary (0.00s)
+        validate_test.go:136: Validate = <nil>, want a bus error
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.029s
+FAIL
+exit=1
