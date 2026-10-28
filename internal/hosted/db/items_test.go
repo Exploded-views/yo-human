@@ -37,11 +37,11 @@ func TestItemRoundTrip(t *testing.T) {
 func TestItemEmptyRiskFlagsRoundTrip(t *testing.T) {
 	d, _ := openTemp(t)
 	it := item("itm_1", "crew", "first")
-	it.RiskFlags = nil
+	it.RiskFlags, it.Untrusted = nil, false
 	insertItem(t, d, it)
 	var got bus.Item
 	tx(t, d, func(x bus.Tx) (err error) { got, _, err = x.ItemByID("itm_1"); return })
-	if len(got.RiskFlags) != 0 {
+	if got.Untrusted || len(got.RiskFlags) != 0 {
 		t.Fatalf("RiskFlags = %v, want none", got.RiskFlags)
 	}
 }

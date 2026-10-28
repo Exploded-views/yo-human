@@ -12,6 +12,9 @@
   "github.com/Exploded-views/yo-human/internal/hosted/bus": {
     "statements": 100.0
   },
+  "github.com/Exploded-views/yo-human/internal/hosted/db": {
+    "statements": 79.5
+  },
   "github.com/Exploded-views/yo-human/internal/hosted/policy": {
     "statements": 100.0
   },

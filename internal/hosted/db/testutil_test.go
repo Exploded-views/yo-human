@@ -2,6 +2,7 @@ package db_test
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -15,7 +16,11 @@ var t0 = time.Date(2026, 10, 28, 9, 30, 15, 123456000, time.UTC)
 // openTemp opens a database in a fresh 0700 temp directory.
 func openTemp(t *testing.T) (*db.DB, string) {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "bus.db")
+	dir := filepath.Join(t.TempDir(), "data")
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "bus.db")
 	d, err := db.Open(path)
 	if err != nil {
 		t.Fatalf("Open: %v", err)

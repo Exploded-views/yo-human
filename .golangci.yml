@@ -116,11 +116,23 @@ linters:
         hosted-imports:
           files:
             - "**/internal/hosted/**"
+            - "!**/internal/hosted/db/**"
             - "!$test"
           allow:
             - $gostd
             - github.com/Exploded-views/yo-human/internal/hosted/
             - github.com/Exploded-views/yo-human/internal/version$
+        # db implements bus.Store: the standard library, bus, and the one reviewed SQLite driver
+        # (modernc.org/sqlite, pure Go; constitution IV). Nothing else, so db never reaches web,
+        # oauth, egress or the CLI side.
+        hosted-db-imports:
+          files:
+            - "**/internal/hosted/db/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/hosted/bus$
+            - modernc.org/sqlite$
         # bus is the domain: standard library only, plus the owner's approval policy. No
         # database/sql (db owns storage) and no other hosted package (lax: only these entries
         # deny, and the longer policy allow beats the hosted/ deny prefix).
