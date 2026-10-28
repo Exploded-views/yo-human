@@ -123,6 +123,12 @@ func TestDraftValidation(t *testing.T) {
 		{"soft hyphen in the title", "title", func(d *Draft) { d.Title = "ap\u00adprove" }},
 		{"line separator in the detail", "detail", func(d *Draft) { d.Detail = "a\u2028b" }},
 		{"paragraph separator in the summary", "summary", func(d *Draft) { d.Summary = "a\u2029b" }},
+		// Review round 3 (Opus delta 2 on 0eacf75): default-ignorable code points.
+		{"Hangul filler in the title", "title", func(d *Draft) { d.Title = "ok\u3164" }},
+		{"Hangul choseong filler in the summary", "summary", func(d *Draft) { d.Summary = "\u115fok" }},
+		{"combining grapheme joiner in the detail", "detail", func(d *Draft) { d.Detail = "o\u034fk" }},
+		{"text variation selector in the title", "title", func(d *Draft) { d.Title = "ok \u2764\ufe0e" }},
+		{"blank braille pattern in the title", "title", func(d *Draft) { d.Title = "approve\u2800" }},
 		{"question with action other", "action", func(d *Draft) { d.Action = ActionOther }},
 		{"notice with action merge", "action", func(d *Draft) { d.Kind = KindNotice; d.Action = ActionMerge }},
 	}

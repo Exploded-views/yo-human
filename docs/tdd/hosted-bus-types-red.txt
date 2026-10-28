@@ -331,3 +331,52 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.029s
 FAIL
 exit=1
+
+# Review round 3 (Opus delta 2 on 0eacf75) RED, 2026-10-28T06:37:53Z: the new tests against the 0eacf75 code (policy: the tests call RulesetRefPatterns, which replaces RulesetRefPattern, so the package fails to build); passing tests omitted
+$ go test -count=1 ./internal/hosted/policy/ ./internal/hosted/bus/
+# github.com/Exploded-views/yo-human/internal/hosted/policy [github.com/Exploded-views/yo-human/internal/hosted/policy.test]
+internal/hosted/policy/ruleset_test.go:62:13: undefined: RulesetRefPatterns
+internal/hosted/policy/ruleset_test.go:87:26: undefined: RulesetRefPatterns
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/policy [build failed]
+--- FAIL: TestDraftValidation (0.00s)
+    --- FAIL: TestDraftValidation/Hangul_filler_in_the_title (0.00s)
+        validate_test.go:142: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/Hangul_choseong_filler_in_the_summary (0.00s)
+        validate_test.go:142: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/combining_grapheme_joiner_in_the_detail (0.00s)
+        validate_test.go:142: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/text_variation_selector_in_the_title (0.00s)
+        validate_test.go:142: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/blank_braille_pattern_in_the_title (0.00s)
+        validate_test.go:142: Validate = <nil>, want a bus error
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.018s
+FAIL
+exit=1
+
+# Review round 3, policy Parse tests alone (ruleset_test.go set aside, so the package builds) against the 0eacf75 code; passing tests omitted
+$ go test -count=1 ./internal/hosted/policy/
+--- FAIL: TestParseRefusesMidOrMultipleStarInRef (0.00s)
+    policy_test.go:185: passkey ref "release/*/hotfix": err = <nil>, want the trailing-* reason
+    policy_test.go:185: passkey ref "a*b": err = <nil>, want the trailing-* reason
+    policy_test.go:185: passkey ref "**": err = <nil>, want the trailing-* reason
+    policy_test.go:185: passkey ref "*x*": err = <nil>, want the trailing-* reason
+    policy_test.go:185: passkey ref "v*.*": err = <nil>, want the trailing-* reason
+    policy_test.go:185: standing ref "release/*/hotfix": err = <nil>, want the trailing-* reason
+    policy_test.go:185: standing ref "a*b": err = <nil>, want the trailing-* reason
+    policy_test.go:185: standing ref "**": err = <nil>, want the trailing-* reason
+    policy_test.go:185: standing ref "*x*": err = <nil>, want the trailing-* reason
+    policy_test.go:185: standing ref "v*.*": err = <nil>, want the trailing-* reason
+    policy_test.go:185: deny ref "release/*/hotfix": err = <nil>, want the trailing-* reason
+    policy_test.go:185: deny ref "a*b": err = <nil>, want the trailing-* reason
+    policy_test.go:185: deny ref "**": err = <nil>, want the trailing-* reason
+    policy_test.go:185: deny ref "*x*": err = <nil>, want the trailing-* reason
+    policy_test.go:185: deny ref "v*.*": err = <nil>, want the trailing-* reason
+--- FAIL: TestParseCapsPatternLengths (0.00s)
+    policy_test.go:201: repo of 201: Parse accepted it
+    policy_test.go:201: ref of 101: Parse accepted it
+    policy_test.go:201: env of 64: Parse accepted it
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/policy	0.077s
+FAIL
+exit=1

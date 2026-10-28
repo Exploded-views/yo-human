@@ -2,6 +2,7 @@ package policy
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -175,52 +176,33 @@ func TestEmptyPatternMatchesOnlyEmpty(t *testing.T) {
 	}
 }
 
-func TestStarMatchesSlash(t *testing.T) {
-	// A ref * is "every ref": it must cover slashed branches and tags, or a deny-all on * is
-	// dodged by any rule naming release/*.
-	p := Policy{V: 1, Rules: []Rule{
-		{Action: "merge", Repo: "o/r", Ref: "*", Mode: Deny},
-		{Action: "merge", Repo: "o/r", Ref: "release/*", Mode: Passkey},
-	}}
-	for _, ref := range []string{"release/1.2", "main", "feature/a/b"} {
-		if got := p.Decide("merge", Target{Repo: "o/r", Ref: ref}); got != Deny {
-			t.Errorf("deny * vs %s: %q, want deny", ref, got)
+func TestParseRefusesMidOrMultipleStarInRef(t *testing.T) {
+	for _, mode := range []string{"passkey", "standing", "deny"} {
+		for _, ref := range []string{"release/*/hotfix", "a*b", "**", "*x*", "v*.*"} {
+			file := `{"v": 1, "rules": [{"action": "merge", "repo": "a/b", "ref": "` + ref + `", "mode": "` + mode + `"}]}`
+			_, err := Parse([]byte(file))
+			if err == nil || !strings.Contains(err.Error(), "only as the last character") {
+				t.Errorf("%s ref %q: err = %v, want the trailing-* reason", mode, ref, err)
+			}
 		}
 	}
-	if g := gates(t, p); len(g) != 0 {
-		t.Errorf("Gates = %v, want none (the deny-all covers release/*)", g)
-	}
-	q := Policy{V: 1, Rules: []Rule{{Action: "release", Repo: "o/*", Ref: "v*", Mode: Passkey}}}
-	for target, want := range map[Target]Mode{
-		{Repo: "o/r", Ref: "v1/rc"}: Passkey, {Repo: "o/x/y", Ref: "v1"}: Passkey, {Repo: "p/r", Ref: "v1"}: Deny,
-	} {
-		if got := q.Decide("release", target); got != want {
-			t.Errorf("Decide(%+v) = %q, want %q", target, got, want)
-		}
+	for _, ref := range []string{"*", "release/*", "v*", "main", "v1.2.*"} {
+		mustParse(t, `{"v": 1, "rules": [{"action": "release", "repo": "a/b", "ref": "`+ref+`", "mode": "passkey"}]}`)
 	}
 }
 
-func TestGlob(t *testing.T) {
-	for _, c := range []struct {
-		pat, v string
-		want   bool
-	}{
-		{"*", "", true}, {"*", "a/b", true}, {"a*", "a", true}, {"a*b", "a/x/b", true}, {"a*b", "a/x/c", false},
-		{"*a*", "bab", true}, {"*a*", "bbb", false}, {"a*a", "a", false}, {"**", "x", true}, {"main", "main", true},
-		{"main", "Main", false}, {"v*", "V1", false}, {"a*b*c", "abxbyc", true}, {"a*b*c", "acb", false},
+func TestParseCapsPatternLengths(t *testing.T) {
+	for name, r := range map[string]string{
+		"repo of 201": `"action": "merge", "repo": "a/` + strings.Repeat("b", 199) + `", "ref": "main"`,
+		"ref of 101":  `"action": "merge", "repo": "a/b", "ref": "` + strings.Repeat("r", 101) + `"`,
+		"env of 64":   `"action": "deploy", "repo": "a/b", "env": "` + strings.Repeat("e", 64) + `"`,
 	} {
-		if got := glob(c.pat, c.v); got != c.want {
-			t.Errorf("glob(%q, %q) = %v, want %v", c.pat, c.v, got, c.want)
+		if _, err := Parse([]byte(`{"v": 1, "rules": [{` + r + `, "mode": "deny"}]}`)); err == nil {
+			t.Errorf("%s: Parse accepted it", name)
 		}
 	}
-}
-
-func TestRulesetRefPattern(t *testing.T) {
-	for in, want := range map[string]string{"*": "**", "release/*": "release/**", "v*": "v**", "main": "main", "a*b*": "a**b**"} {
-		if got := RulesetRefPattern(in); got != want {
-			t.Errorf("RulesetRefPattern(%q) = %q, want %q", in, got, want)
-		}
-	}
+	mustParse(t, `{"v": 1, "rules": [{"action": "merge", "repo": "a/`+strings.Repeat("b", 198)+`", "ref": "`+strings.Repeat("r", 100)+`", "mode": "deny"}]}`)
+	mustParse(t, `{"v": 1, "rules": [{"action": "deploy", "repo": "a/b", "env": "`+strings.Repeat("e", 63)+`", "mode": "deny"}]}`)
 }
 
 func TestInvalidModeInHandBuiltPolicyDenies(t *testing.T) {
