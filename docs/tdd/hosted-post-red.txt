@@ -339,3 +339,12 @@ exit=1
 
 # Note, round 3, part 4 (NIT-2): in 81e18f6 (GREEN of round 2, part 4) the setup of TestSamplersReportSetupErrors was corrected after its RED. The RED version's "unusable directory" was usable, because db.Open creates directories, so the RED's two "no error for an unusable directory" lines came from the stubs and from that setup. The intent is unchanged; the test now builds a directory that cannot be used. This is a post-RED test correction, recorded here.
 # Part 4 other items: LOW-1 and LOW-2 are in the part 1 RED (TestStoredWalledItemKeepsItsPolicyTarget, TestCheckWalledMessage); LOW-3 is part 1; NIT-1 and NIT-3 are comment edits with no behaviour change, so they have no RED; NIT-4 is left as is (the long-hex scrub is not configured in this repo, so there is no path-scoped allowlist to use).
+
+# H1 Task 5 RED, round 3, part 5 (make floors failed at 2352d06: internal/hosted/perf/cmd is an internal package, so it can't be exempt and has no floor; main now goes through a stubbed exit var so it can be tested, and the stub main does nothing yet), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/perf/cmd/
+--- FAIL: TestMainExitsWithRunsCode (0.00s)
+    main_test.go:18: main exited with -1, want 2
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf/cmd	0.010s
+FAIL
+exit=1

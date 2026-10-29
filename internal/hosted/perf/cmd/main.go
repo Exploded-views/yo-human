@@ -8,4 +8,9 @@ import (
 	"github.com/Exploded-views/yo-human/internal/hosted/perf"
 )
 
-func main() { os.Exit(perf.Run(os.Args[1:], os.Stdout, os.Stderr)) }
+// exit is os.Exit, a variable so a test can run main.
+var exit = os.Exit
+
+func main() {}
+
+var _ = perf.Run
