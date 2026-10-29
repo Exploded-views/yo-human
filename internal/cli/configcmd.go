@@ -15,6 +15,7 @@ import (
 	"github.com/Exploded-views/yo-human/internal/core"
 	"github.com/Exploded-views/yo-human/internal/problem"
 	"github.com/Exploded-views/yo-human/internal/secrets"
+	"gopkg.in/yaml.v3"
 )
 
 var configCommands = map[string]handler{"init": cmdInit, "check": cmdCheck, "schema": cmdSchema, "trust": cmdTrust}
@@ -39,8 +40,7 @@ func cmdInit(e *env, args []string) int {
 	} else if err := initExplicit(path); err != nil {
 		return e.fail(err)
 	}
-	logPath, _ := json.Marshal(filepath.Join(stateDir(), "messages.log")) // a JSON string is a YAML string
-	err := core.CreateFile(path, []byte(fmt.Sprintf(starterConfig, logPath)))
+	err := core.CreateFile(path, []byte(fmt.Sprintf(starterConfig, yamlQuoted(filepath.Join(stateDir(), "messages.log")))))
 	if errors.Is(err, fs.ErrExist) {
 		return e.fail(problem.Usagef("the config file %q already exists", "a path with no file at it",
 			"edit it, or remove "+problem.ShellQuote(path)+" first; `yo-human config init` never overwrites", path))
@@ -53,6 +53,12 @@ func cmdInit(e *env, args []string) int {
 		"next: run `yo-human config check`; it lists the secrets the human sets with `yo-human secret set <name>` in their own terminal",
 	}, map[string]any{"path": path})
 	return ExitOK
+}
+
+// yamlQuoted renders s as a double-quoted YAML scalar on one line, escaped by the YAML encoder.
+func yamlQuoted(s string) string {
+	out, _ := yaml.Marshal(&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Style: yaml.DoubleQuotedStyle, Value: s}) // a string scalar always encodes
+	return strings.TrimSuffix(string(out), "\n")
 }
 
 // initExplicit gates config init at a path the caller chose: that writes where the caller says, so
