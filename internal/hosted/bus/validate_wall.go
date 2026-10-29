@@ -24,8 +24,8 @@ var (
 	wallCodenameRE = regexp.MustCompile(`^cn:[a-z][a-z0-9-]{0,39}$`)
 	// A ref is a branch the plan names, a semver tag or a PR id; a base is a branch only, so a PR id
 	// is never one. Neither is a branch name of the client's, a PR title or a URL.
-	wallRefRE  = regexp.MustCompile(`^(main|release/` + wallCount + `(?:\.` + wallCount + `)*|v` + wallSemver + `\.` + wallSemver + `\.` + wallSemver + `|pr:` + wallID + `)$`)
-	wallBaseRE = regexp.MustCompile(`^(main|release/` + wallCount + `(?:\.` + wallCount + `)*)$`)
+	wallRefRE  = regexp.MustCompile(`^(main|release/` + wallCount + `(?:\.` + wallCount + `){0,2}|v` + wallSemver + `\.` + wallSemver + `\.` + wallSemver + `|pr:` + wallID + `)$`)
+	wallBaseRE = regexp.MustCompile(`^(main|release/` + wallCount + `(?:\.` + wallCount + `){0,2})$`)
 	// A target is one of the fixed environments, or a codename with an optional PR number: never a
 	// slug, and never a token of the poster's choosing (that would be a channel).
 	wallTargetRE = regexp.MustCompile(`^(prod|staging|preview|dev|cn:[a-z][a-z0-9-]{0,39}(#[0-9]{1,6})?)$`)
@@ -50,8 +50,8 @@ func CheckWalledDraft(d Draft) error {
 		{"required_action", d.RequiredAction, "empty", empty},
 		{"link", d.Link, "empty", empty},
 		{"repo", d.Repo, "empty or a codename: cn:<name>", orEmpty(wallCodenameRE.MatchString)},
-		{"ref", d.Ref, "empty, main, release/<n>, v<major>.<minor>.<patch> or pr:<n> (1 to 6 digits, no leading zero)", orEmpty(wallRefRE.MatchString)},
-		{"base_ref", d.BaseRef, "empty, main or release/<n>", orEmpty(wallBaseRE.MatchString)},
+		{"ref", d.Ref, "empty, main, release/<n>[.<n>[.<n>]] (at most 3 parts), v<major>.<minor>.<patch> or pr:<n> (1 to 6 digits, no leading zero)", orEmpty(wallRefRE.MatchString)},
+		{"base_ref", d.BaseRef, "empty, main or release/<n>[.<n>[.<n>]] (at most 3 parts)", orEmpty(wallBaseRE.MatchString)},
 		{"target", d.Target, "empty, prod, staging, preview, dev or a codename: cn:<name> with an optional #<n> (at most 6 digits)", orEmpty(wallTargetRE.MatchString)},
 	} {
 		if !c.ok(c.v) {
