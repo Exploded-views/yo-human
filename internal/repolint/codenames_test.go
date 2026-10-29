@@ -42,7 +42,8 @@ func TestCodenameMapLinesFindsAPlantedMapping(t *testing.T) {
 func TestCodenameMapLinesIgnoresWhatIsNotAMapping(t *testing.T) {
 	root := t.TempDir()
 	plant(t, root, "a.md", "cn:"+"alpha alone\n"+"cn/alpha acme/widgets\n"+"a codename is cn:<name>, never owner/name\n"+
-		"cn:"+"Alpha acme/widgets\n"+"acme/widgets alone\n"+"cn:"+"o/alpha has no owner before the slash\n")
+		"cn:"+"Alpha acme/widgets\n"+"acme/widgets alone\n"+"cn:"+"o/alpha has no owner before the slash\n"+
+		`d.Repo, d.Ref = "cn:`+`alpha-1", "release/1.2"`+"\n"+"a test wants cn:"+"alpha, got cn/alpha\n")
 	got, err := CodenameMapLines(root, []string{"a.md"})
 	if err != nil || len(got) != 0 {
 		t.Errorf("findings = %v, %v; want none", got, err)
@@ -74,20 +75,24 @@ func TestCodenameMapLinesReportsAnUnreadableFile(t *testing.T) {
 	}
 }
 
-func TestTrackedFilesNeedsAGitRepo(t *testing.T) {
-	if _, err := TrackedFiles(t.TempDir()); err == nil {
-		t.Error("no error outside a git repository")
+func TestRepoFilesSkipsIgnoredDirectories(t *testing.T) {
+	root := t.TempDir()
+	for _, f := range []string{"a.md", "d/b.go", "d/testdata/c.txt", ".git/x", ".cache/y", "dist/z"} {
+		plant(t, root, f, "x")
 	}
-	got, err := TrackedFiles("../..")
-	if err != nil || len(got) < 50 {
-		t.Fatalf("TrackedFiles = %d files, %v", len(got), err)
+	got, err := RepoFiles(root)
+	if want := []string{"a.md", "d/b.go", "d/testdata/c.txt"}; err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("RepoFiles = %v, %v; want %v", got, err, want)
+	}
+	if _, err := RepoFiles(filepath.Join(root, "missing")); err == nil {
+		t.Error("no error for a missing root")
 	}
 }
 
 // The wall's whole premise: a real codename mapping never enters this repository (the plan's
 // "codename map" bullet). Only example/<name> in test fixtures may follow a cn: name.
 func TestNoCodenameMapInRepo(t *testing.T) {
-	files, err := TrackedFiles("../..")
+	files, err := RepoFiles("../..")
 	if err != nil {
 		t.Fatal(err)
 	}
