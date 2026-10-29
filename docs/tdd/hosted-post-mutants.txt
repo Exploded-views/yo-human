@@ -195,3 +195,395 @@ vet exit=0
 suite exit=1
 
 28 mutants, 0 survivors
+
+################ round 2 (Opus review of ba4da48, plus the client wall, interrupt lanes and budget scenarios) ################
+# Labels for round 1 (NIT-2). Tests added after the RED commit, in the GREEN commit, to kill mutants (they pass against the implementation and fix nothing):
+#   faulty_test.go (TestStoreFailureIsInternalAndRollsBack): the store-failure paths; needed for the 100% floor and kills the store-error mapping mutants
+#   TestReviseOfAnsweredQuestionDoesNotVoid: kills 'approval_voided for any decision kind'
+#   the Duet-notice case in TestPostRefusesExcludedActions: kills 'explicit secrets/money refusal dropped'
+#   TestAsBusErrorFallsBackToInternal: kills no recorded mutant. It is kept because it is the only test of asBusError's fail-closed fallback (a nil *Error there would mean 'no error' and let a draft through), and it is needed for the 100% floor.
+# The mutants below ran on part 4 as of 81e18f6. Two survived ('post reuses one handle', 'revise measures an unchanged repost'); they were fixed test-first (RED a7cd7c3, fix e1dc103) and re-run at the end of this file.
+
+# H1 Task 5 round 2 mutants, 2026-10-29T06:13:17Z, on the GREEN implementation of parts 1-4; each applied by hand (script-applied string swap), vetted, run, reverted
+baseline bus, db, perf, tools/perf: exit=0
+
+## part 1: ValidSwarm accepts duet
+internal/hosted/bus/validate.go: 'ValidName(s) && s != "duet" && s != "human"' -> 'ValidName(s) && s != "human"'
+vet exit=0
+--- FAIL: TestPostRefusesNonPostingPrincipals
+--- FAIL: TestValidSwarmReservesDuetAndHuman
+--- FAIL: TestNodeInSwarmDuetReachesNothing
+--- FAIL: TestDuetCannotAddressReservedSwarms
+--- FAIL: TestVisibilityByKind
+suite exit=1
+
+## part 1: ValidSwarm accepts human
+internal/hosted/bus/validate.go: 'ValidName(s) && s != "duet" && s != "human"' -> 'ValidName(s) && s != "duet"'
+vet exit=0
+--- FAIL: TestPostRefusesNonPostingPrincipals
+--- FAIL: TestValidSwarmReservesDuetAndHuman
+--- FAIL: TestNodeInSwarmDuetReachesNothing
+--- FAIL: TestVisibilityByKind
+suite exit=1
+
+## part 1: mayWrite checks ValidName, not ValidSwarm
+internal/hosted/bus/scope.go: 'p.Kind == PrincipalNode && ValidSwarm(p.Swarm) && p.Name != ""' -> 'p.Kind == PrincipalNode && ValidName(p.Swarm) && p.Name != ""'
+vet exit=0
+--- FAIL: TestPostRefusesNonPostingPrincipals
+--- FAIL: TestNodeInSwarmDuetReachesNothing
+suite exit=1
+
+## part 1: visible checks ValidName, not ValidSwarm
+internal/hosted/bus/scope.go: 'return ValidSwarm(p.Swarm) && it.Swarm == p.Swarm' -> 'return ValidName(p.Swarm) && it.Swarm == p.Swarm'
+vet exit=0
+--- FAIL: TestNodeInSwarmDuetReachesNothing
+--- FAIL: TestVisibilityByKind
+suite exit=1
+
+## part 1 (LOW-3): visible's swarm guard dropped
+internal/hosted/bus/scope.go: 'return ValidSwarm(p.Swarm) && it.Swarm == p.Swarm' -> 'return it.Swarm == p.Swarm'
+vet exit=0
+--- FAIL: TestNodeInSwarmDuetReachesNothing
+--- FAIL: TestVisibilityByKind
+suite exit=1
+
+## part 1 (LOW-3): mayWrite's name check dropped
+internal/hosted/bus/scope.go: 'ValidSwarm(p.Swarm) && p.Name != ""' -> 'ValidSwarm(p.Swarm)'
+vet exit=0
+--- FAIL: TestPostRefusesNonPostingPrincipals
+suite exit=1
+
+## part 1 (MED-2): author check without FromKind
+internal/hosted/bus/post.go: 'cur.From != p.Name || cur.FromKind != p.Kind' -> 'cur.From != p.Name'
+vet exit=0
+--- FAIL: TestRepostByNodeNamedDuetRefused
+suite exit=1
+
+## part 1 (LOW-3): void check reads revision 1
+internal/hosted/bus/post.go: 'x.Decision(cur.ID, cur.Revision)' -> 'x.Decision(cur.ID, 1)'
+vet exit=0
+--- FAIL: TestVoidReadsTheCurrentRevision
+suite exit=1
+
+## part 1 (MED-3): link UTF-8 check dropped
+internal/hosted/bus/validate.go: '!utf8.ValidString(d.Link) || strings.ContainsFunc(d.Link, isRefusedRune)' -> 'strings.ContainsFunc(d.Link, isRefusedRune)'
+vet exit=0
+--- FAIL: TestDraftValidation
+suite exit=1
+
+## part 1 (MED-3): link refused-rune check dropped
+internal/hosted/bus/validate.go: '!utf8.ValidString(d.Link) || strings.ContainsFunc(d.Link, isRefusedRune)' -> '!utf8.ValidString(d.Link)'
+vet exit=0
+--- FAIL: TestDraftValidation
+suite exit=1
+
+## part 1 (LOW-2): a node may address a non-owner
+internal/hosted/bus/post.go: 'case p.Kind == PrincipalNode && d.To != "human":' -> 'case false:'
+vet exit=0
+--- FAIL: TestNodeToMustBeHuman
+suite exit=1
+
+## part 1 (MED-1): Duet may address duet
+internal/hosted/bus/post.go: 'case d.To != "human" && !ValidSwarm(d.To):' -> 'case d.To != "human" && !ValidName(d.To):'
+vet exit=0
+--- FAIL: TestDuetCannotAddressReservedSwarms
+suite exit=1
+
+## part 1 (LOW-1): hash version prefix dropped
+internal/hosted/bus/post.go: 'return "v1:" + hex.EncodeToString(sum[:])' -> 'return hex.EncodeToString(sum[:])'
+vet exit=0
+--- FAIL: TestHashBytesArePinned
+--- FAIL: TestContentHashIsVersionedSHA256OfHashDraft
+suite exit=1
+
+## part 1 (LOW-1): a hash tag renamed
+internal/hosted/bus/post.go: '`json:"required_action"`' -> '`json:"requiredAction"`'
+vet exit=0
+--- FAIL: TestHashBytesArePinned
+--- FAIL: TestContentHashIsVersionedSHA256OfHashDraft
+suite exit=1
+
+## part 1 (LOW-4): internal error drops its cause
+internal/hosted/bus/scope.go: ', cause: err}' -> '}'
+vet exit=0
+--- FAIL: TestInternalErrorKeepsItsCause
+suite exit=1
+
+## part 2: no swarm is ever walled
+internal/hosted/bus/scope.go: '_, ok := b.walled[swarm]\n\treturn ok' -> 'return false'
+vet exit=0
+--- FAIL: TestWalledPostRefusesFreeText
+--- FAIL: TestWalledRepostWithProseRefused
+--- FAIL: TestWalledReplyRefusesFreeText
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+--- FAIL: TestWalledApprovalRefusesRealSlug
+--- FAIL: TestWalledListOnlyFromConfig
+suite exit=1
+
+## part 2: every swarm is walled
+internal/hosted/bus/scope.go: '_, ok := b.walled[swarm]\n\treturn ok' -> 'return true'
+vet exit=0
+--- FAIL: TestStoreFailureIsInternalAndRollsBack
+--- FAIL: TestPostCreatesWithCredentialSwarm
+--- FAIL: TestFromComesFromCredential
+--- FAIL: TestNodeToMustBeHuman
+--- FAIL: TestRepostSameContentUnchanged
+--- FAIL: TestRepostEmptyAndNilFlagsAreTheSameContent
+... and 23 more failing tests
+suite exit=1
+
+## part 2: Duet's post checked as a walled node's
+internal/hosted/bus/scope.go: 'return checkIntoWalledDraft(d)' -> 'return CheckWalledDraft(d)'
+vet exit=0
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+suite exit=1
+
+## part 2: a walled node's post checked as Duet's
+internal/hosted/bus/scope.go: 'case p.Kind == PrincipalDuet:\n\t\treturn checkIntoWalledDraft(d)' -> 'case p.Kind != PrincipalDuet:\n\t\treturn checkIntoWalledDraft(d)'
+vet exit=0
+--- FAIL: TestWalledPostRefusesFreeText
+--- FAIL: TestWalledRepostWithProseRefused
+--- FAIL: TestWalledReplyRefusesFreeText
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+--- FAIL: TestWalledApprovalRefusesRealSlug
+--- FAIL: TestCrewProseReplyToWalledItemIsNotFound
+suite exit=1
+
+## part 2: reply direction flipped
+internal/hosted/bus/scope.go: 'CheckWalledMessage(body, p.Kind == PrincipalDuet)' -> 'CheckWalledMessage(body, p.Kind != PrincipalDuet)'
+vet exit=0
+--- FAIL: TestWalledReplyRefusesFreeText
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+suite exit=1
+
+## part 2 (Review Focus 3): the reply wall runs before the visibility check
+internal/hosted/bus/threads.go: 'if !found || !b.visible(p, it) {\n\t\t\treturn notFoundErr()\n\t\t}\n\t\tif err := b.checkSwarmMessa' -> 'if found {\n\t\t\tif err := b.checkSwarmMessage(p, it.Swarm, body); err != nil {\n\t\t\t\treturn er'
+vet exit=0
+--- FAIL: TestCrewProseReplyToWalledItemIsNotFound
+suite exit=1
+
+## part 2: the reply wall checks the caller's swarm, not the item's
+internal/hosted/bus/threads.go: 'b.checkSwarmMessage(p, it.Swarm, body)' -> 'b.checkSwarmMessage(p, p.Swarm, body)'
+vet exit=0
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+suite exit=1
+
+## part 2: the post wall runs after Validate and policy (cn: repo fails Validate)
+internal/hosted/bus/post.go: 'v := b.checkedView(swarm, d)' -> 'v := d'
+vet exit=0
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 2: walled handle may be empty
+internal/hosted/bus/validate_wall.go: 'wallHandleRE   = regexp.MustCompile(`^ob-[0-9]+$`)' -> 'wallHandleRE   = regexp.MustCompile(`^(ob-[0-9]+)?$`)'
+vet exit=0
+--- FAIL: TestWalledPostRefusesFreeText
+suite exit=1
+
+## part 2: walled handle accepts any number of digits or none
+internal/hosted/bus/validate_wall.go: '`^ob-[0-9]+$`)\n\twallTitleRE' -> '`^ob-[0-9]*$`)\n\twallTitleRE'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+suite exit=1
+
+## part 2: typed title accepts trailing text
+internal/hosted/bus/validate_wall.go: '( sha256:[0-9a-f]{64} bytes:[0-9]+)?$`' -> '( sha256:[0-9a-f]{64} bytes:[0-9]+)?.*$`'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestCheckWalledMessage
+--- FAIL: TestWalledPostRefusesFreeText
+--- FAIL: TestWalledReplyRefusesFreeText
+suite exit=1
+
+## part 2: go/hold accepts any verb
+internal/hosted/bus/validate_wall.go: '`^(go|hold) sl:[0-9]+$`' -> '`^[a-z]+ sl:[0-9]+$`'
+vet exit=0
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+suite exit=1
+
+## part 2: codename may be a real slug
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallCodenameRE.MatchString)}' -> 'orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 2: any ref allowed
+internal/hosted/bus/validate_wall.go: '{"ref", d.Ref, "empty, main, release/<n> or v<major>.<minor>.<patch>", orEmpty(wallRefRE.M' -> '{"ref", d.Ref, "any", orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 2: summary may carry text
+internal/hosted/bus/validate_wall.go: '{"summary", d.Summary, "empty", empty},' -> ''
+vet exit=0
+--- FAIL: TestWalledPostRefusesFreeText
+--- FAIL: TestWalledRepostWithProseRefused
+suite exit=1
+
+## part 2: link may carry text
+internal/hosted/bus/validate_wall.go: '{"link", d.Link, "empty", empty},' -> ''
+vet exit=0
+--- FAIL: TestWalledPostRefusesFreeText
+suite exit=1
+
+## part 2: target may carry text
+internal/hosted/bus/validate_wall.go: '{"target", d.Target, "empty, an environment name or a codename: cn:<name>", orEmpty(wallTa' -> ''
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledPostRefusesFreeText
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 2: Duet's walled post may carry a handle
+internal/hosted/bus/validate_wall.go: '{"handle", d.Handle}, {"summary", d.Summary}' -> '{"summary", d.Summary}'
+vet exit=0
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+suite exit=1
+
+## part 2: Duet's walled post may carry a summary
+internal/hosted/bus/validate_wall.go: '{"handle", d.Handle}, {"summary", d.Summary}' -> '{"handle", d.Handle}'
+vet exit=0
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+suite exit=1
+
+## part 3: a missing urgency is accepted by Validate
+internal/hosted/bus/validate.go: 'case !slices.Contains(urgencies, d.Urgency):\n\t\treturn invalid("urgency", "page, interrupt-' -> 'case d.To'
+vet exit=0
+--- FAIL: TestDraftValidation
+suite exit=1
+
+## part 3: a missing urgency is accepted by checkUrgency
+internal/hosted/bus/post.go: 'case !slices.Contains(urgencies, u):\n\t\treturn invalid("urgency", "page, interrupt-when-goo' -> 'case p.Kind'
+vet exit=0
+--- FAIL: TestReplyWithoutUrgencyRefused
+suite exit=1
+
+## part 3: Duet may use interrupt-when-good
+internal/hosted/bus/post.go: 'case p.Kind == PrincipalDuet && u == UrgencyInterruptWhenGood:' -> 'case false:'
+vet exit=0
+--- FAIL: TestDuetCannotPostInterruptWhenGood
+suite exit=1
+
+## part 3: a reply's urgency is not checked
+internal/hosted/bus/threads.go: 'return checkUrgency(p, urg)' -> 'return nil'
+vet exit=0
+--- FAIL: TestReplyWithoutUrgencyRefused
+--- FAIL: TestDuetCannotPostInterruptWhenGood
+suite exit=1
+
+## part 3: a reply's urgency is not stored
+internal/hosted/bus/threads.go: 'Severity: sev, Urgency: urg, Created: now}' -> 'Severity: sev, Urgency: UrgencyDigest, Created: now}'
+vet exit=0
+--- FAIL: TestUrgencyRoundTripsThroughTheStore
+suite exit=1
+
+## part 3: the hash ignores urgency
+internal/hosted/bus/post.go: '`json:"urgency"`' -> '`json:"-"`'
+vet exit=0
+--- FAIL: TestHashBytesArePinned
+--- FAIL: TestContentHashIsVersionedSHA256OfHashDraft
+--- FAIL: TestUrgencyChangeIsARevision
+suite exit=1
+
+## part 3: UpdateItem does not write urgency
+internal/hosted/db/items.go: 'updated = ?, urgency = ? WHERE id = ?`' -> 'updated = ?, urgency = urgency WHERE id = ?`'
+vet exit=0
+--- FAIL: TestDecisionUniquePerRevision
+--- FAIL: TestStateGuardChecksRevisionClause
+--- FAIL: TestUpdateItem
+--- FAIL: TestStateOnlyFromDecisions
+--- FAIL: TestUpdateItemDerivesStateFromRevision
+--- FAIL: TestUpdateItemRevisionBackwardsRefused
+... and 1 more failing tests
+suite exit=1
+
+## part 3: UpdateItem's urgency argument dropped (item keeps the old lane)
+internal/hosted/db/items.go: 'fmtTime(it.Updated), it.Urgency, it.ID)' -> 'fmtTime(it.Updated), "digest", it.ID)'
+vet exit=0
+--- FAIL: TestUpdateItem
+--- FAIL: TestUpdateItemChangesUrgency
+suite exit=1
+
+## part 3: 0002 CHECK on items dropped
+internal/hosted/db/migrations/0002_urgency.sql: "ALTER TABLE items ADD COLUMN urgency TEXT NOT NULL DEFAULT 'digest'\n\tCHECK (urgency IN ('p" -> "ALTER TABLE items ADD COLUMN urgency TEXT NOT NULL DEFAULT 'digest';"
+vet exit=0
+--- FAIL: TestUrgencyColumnsAreChecked
+suite exit=1
+
+## part 3: 0002 CHECK on messages dropped
+internal/hosted/db/migrations/0002_urgency.sql: "ALTER TABLE messages ADD COLUMN urgency TEXT NOT NULL DEFAULT 'digest'\n\tCHECK (urgency IN " -> "ALTER TABLE messages ADD COLUMN urgency TEXT NOT NULL DEFAULT 'digest';"
+vet exit=0
+--- FAIL: TestUrgencyColumnsAreChecked
+suite exit=1
+
+## part 3: 0001_init.sql edited (the frozen file)
+internal/hosted/db/migrations/0001_init.sql: 'CREATE INDEX items_open_for_human' -> 'CREATE INDEX IF NOT EXISTS items_open_for_human'
+vet exit=0
+--- FAIL: TestMigration0001IsFrozen
+suite exit=1
+
+## part 4: the helper accepts a zero count
+internal/hosted/perf/perf.go: 'if fn == nil || n < 1 {' -> 'if fn == nil || n < 0 {'
+vet exit=0
+--- FAIL: TestRunRefusesBadArguments
+suite exit=1
+
+## part 4: the helper prints one timing too few
+internal/hosted/perf/perf.go: 'for _, d := range samples {' -> 'for _, d := range samples[1:] {'
+vet exit=0
+--- FAIL: TestRunPrintsOneTimingPerLine
+suite exit=1
+
+## part 4: revise measures an unchanged repost
+internal/hosted/perf/perf.go: 'fmt.Sprintf("Build %d", i+1)' -> '"Build 0"'
+vet exit=0
+suite exit=0
+SURVIVED or did not vet
+
+## part 4: post reuses one handle
+internal/hosted/perf/perf.go: 'fmt.Sprintf("perf-%d", i), "Build done"' -> '"perf-0", "Build done"'
+vet exit=0
+suite exit=0
+SURVIVED or did not vet
+
+## part 4: zero-nanosecond timings accepted
+tools/perf/hosted.go: 'err != nil || ns <= 0' -> 'err != nil || ns < 0'
+vet exit=0
+--- FAIL: TestHostedSampleRefusesBadOutput
+suite exit=1
+
+## part 4: the timing count is not checked
+tools/perf/hosted.go: 'if len(lines) != n {' -> 'if len(lines) < 0 {'
+vet exit=0
+--- FAIL: TestHostedSampleRefusesBadOutput
+suite exit=1
+
+## part 4: the helper command is dropped from the sample
+tools/perf/main.go: 'if s.Sample != nil {\n\t\treturn s.Sample(n)\n\t}' -> ''
+vet exit=0
+--- FAIL: TestSampleScenarioUsesItsSamples
+suite exit=1
+
+52 mutants, 2 survivors
+
+######## re-run after the part 4 follow-up (e1dc103), the two survivors only
+
+## part 4: revise measures an unchanged repost
+internal/hosted/perf/perf.go: 'fmt.Sprintf("Build %d", i+1)' -> '"Build 0"'
+vet exit=0
+--- FAIL: TestSamplersTimeEachCall
+--- FAIL: TestRunPrintsOneTimingPerLine
+--- FAIL: TestSamplersOnTheRealSize
+suite exit=1
+
+## part 4: post reuses one handle
+internal/hosted/perf/perf.go: 'fmt.Sprintf("perf-%d", i), "Build done"' -> '"perf-0", "Build done"'
+vet exit=0
+--- FAIL: TestSamplersTimeEachCall
+--- FAIL: TestRunPrintsOneTimingPerLine
+--- FAIL: TestSamplersOnTheRealSize
+suite exit=1
+
+2 mutants, 0 survivors
