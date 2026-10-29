@@ -194,9 +194,11 @@ func TestStoredWalledItemKeepsItsPolicyTarget(t *testing.T) {
 
 func TestWalledRefAndTargetRefusals(t *testing.T) {
 	e := newEnvWalled(t, "client")
-	refuse := func(name, field string, edit func(*bus.Draft)) {
+	// The ref cases run on a merge, the one action a PR id is valid for, so the ref grammar itself
+	// decides them and the merge-only rule (the cases after them) cannot mask it.
+	refuseOn := func(base func() bus.Draft, name, field string, edit func(*bus.Draft)) {
 		t.Run(name, func(t *testing.T) {
-			d := walledRelease()
+			d := base()
 			edit(&d)
 			_, err := e.b.Post(context.Background(), walledNode, d)
 			if be := errWithCode(t, err, bus.CodeInvalid); be.What != field {
@@ -204,12 +206,13 @@ func TestWalledRefAndTargetRefusals(t *testing.T) {
 			}
 		})
 	}
+	refuse := func(name, field string, edit func(*bus.Draft)) { refuseOn(walledRelease, name, field, edit) }
 	for _, c := range []struct{ name, v string }{
-		{"letters in a PR id", "pr:4a"}, {"seven digits", "pr:1234567"}, {"bare pr:", "pr:"}, {"a branch name", "feature/x"},
+		{"letters in a PR id", "pr:4a"}, {"letters after digits", "pr:4a4"}, {"a letter alone", "pr:a"}, {"seven digits", "pr:1234567"}, {"bare pr:", "pr:"}, {"a branch name", "feature/x"},
 		{"a URL", "https://github.com/o/r/pull/7"}, {"capital PR", "PR:42"}, {"pr with a space", "pr: 42"}, {"two PR ids", "pr:4,pr:5"},
 		{"a bare number", "42"}, {"a pr: tag", "pr:42x"}, {"release with a letter", "release/1.x"},
 	} {
-		refuse("ref "+c.name, "ref", func(d *bus.Draft) { d.Ref = c.v })
+		refuseOn(walledMerge, "ref "+c.name, "ref", func(d *bus.Draft) { d.Ref = c.v })
 	}
 	// A PR id is a ref for a merge only: for a release it would be gated as the tag 42.
 	for _, a := range []bus.Action{bus.ActionRelease, bus.ActionPublicSync, bus.ActionDeploy, bus.ActionOther, bus.ActionNone} {

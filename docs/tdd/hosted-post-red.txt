@@ -348,3 +348,11 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf/cmd	0.010s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 3, part 1c (survivor-driven: in the first round 3 mutation run, 'pr: digit count unbounded' and 'pr: accepting letters' survived, suite exit=0, because the ref cases ran on a release draft and the merge-only rule refused them first; the tests below put the ref cases on a merge. See hosted-post-mutants.txt, first run.), 2026-10-29
+$ mutant: wallRefRE pr:[0-9]{1,6} -> pr:[0-9]+ ; go test ./internal/hosted/bus/
+ok  	github.com/Exploded-views/yo-human/internal/hosted/bus
+exit=0
+$ mutant: wallRefRE pr:[0-9]{1,6} -> pr:[0-9a-z]{1,6} ; go test ./internal/hosted/bus/
+ok  	github.com/Exploded-views/yo-human/internal/hosted/bus
+exit=0

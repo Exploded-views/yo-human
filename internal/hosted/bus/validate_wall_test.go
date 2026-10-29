@@ -27,7 +27,8 @@ func TestCheckWalledDraft(t *testing.T) {
 		{"base_ref", func(d *Draft) { d.BaseRef = "develop" }},
 		{"target", func(d *Draft) { d.Target = "Prod" }},
 		{"risk_flags", func(d *Draft) { d.RiskFlags = []string{"touches-auth"} }},
-		{"ref", func(d *Draft) { d.Ref = "pr:1234567" }},
+		{"ref", func(d *Draft) { d.Action, d.Ref = ActionMerge, "pr:1234567" }},
+		{"ref", func(d *Draft) { d.Action, d.Ref = ActionMerge, "pr:4a" }},
 		{"base_ref", func(d *Draft) { d.BaseRef = "pr:42" }},
 		{"ref", func(d *Draft) { d.Ref = "pr:42" }}, // the action is none, not merge
 		{"ref", func(d *Draft) { d.Action, d.Ref = ActionRelease, "pr:42" }},
