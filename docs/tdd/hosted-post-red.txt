@@ -285,3 +285,13 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.217s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 3, part 2 (MED-1: the 1 ms hosted budgets were measured on a Mac where fsync is nearly free; they must start at 10 ms), 2026-10-29
+$ go test -count=1 -timeout 300s ./tools/perf/
+--- FAIL: TestBudgetsFileHasTheHostedScenarios (0.00s)
+    hosted_test.go:78: hosted-post budget 1ms: must be 10 to 20ms (the plan's ceiling)
+    hosted_test.go:78: hosted-revise budget 1ms: must be 10 to 20ms (the plan's ceiling)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.192s
+FAIL
+exit=1

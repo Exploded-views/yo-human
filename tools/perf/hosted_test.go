@@ -70,8 +70,12 @@ func TestBudgetsFileHasTheHostedScenarios(t *testing.T) {
 		bud, ok := b.Budgets[name]
 		if !ok {
 			t.Errorf("no budget for %s", name)
-		} else if bud.P95Ms <= 0 || bud.P95Ms > 20 {
-			t.Errorf("%s budget %dms: must be above 0 and at most the plan's 20ms ceiling", name, bud.P95Ms)
+		} else if bud.P95Ms < 10 || bud.P95Ms > 20 {
+			// Each timed post commits with a durable fsync. A Mac's fsync is nearly free (0.3 ms p95
+			// measured there), CI's and a Pi's is not, and the ratchet never lets a budget rise: so
+			// it starts at 10 ms, under the plan's 20 ms ceiling, and is tightened from runner
+			// measurements (round 3, MED-1).
+			t.Errorf("%s budget %dms: must be 10 to 20ms (the plan's ceiling)", name, bud.P95Ms)
 		}
 	}
 }
