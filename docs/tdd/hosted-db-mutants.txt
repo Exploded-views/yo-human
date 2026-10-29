@@ -1,0 +1,319 @@
+# H1 Task 4 mutants, 2026-10-28T18:54:58Z, on the GREEN implementation (parent 2fd5f23); each applied by hand, vetted, run, reverted
+baseline internal/hosted/db: exit=0
+
+## UNIQUE(item_id, revision, actor_kind) dropped (the constraint line becomes a no-op CHECK)
+internal/hosted/db/migrations/0001_init.sql: '	UNIQUE (item_id, revision, actor_kind)' -> '	CHECK (revision >= 1)'
+vet exit=0
+--- FAIL: TestDecisionUniquePerRevision (0.07s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.828s
+FAIL
+suite exit=1
+
+## EventsSince ignores the swarm
+internal/hosted/db/events.go: '(? = '' OR swarm = ?)' -> '(? = '' OR ? = ?)'
+vet exit=0
+--- FAIL: TestEventsSinceIsOrderedAndScoped (0.32s)
+--- FAIL: TestEventRoundTrip (0.04s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.713s
+FAIL
+suite exit=1
+
+## directory-mode check skipped
+internal/hosted/db/db.go: 'fi.Mode().Perm()&^0o700 != 0 {' -> 'fi.Mode().Perm()&^0o700 != 0 && false {'
+vet exit=0
+--- FAIL: TestOpenRefusesLooseDir (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	2.508s
+FAIL
+suite exit=1
+
+## depguard config probes (make lint-rules-test)
+against main's .golangci.yml (LINT_RULES_CONFIG): 7 probe cases fail, e.g.:
+  FAIL internal/hosted/db/casesqlite/x.go: hosted db imports the reviewed SQLite driver: want clean, got hosted-imports
+  FAIL internal/hosted/db/casesqlitelib/x.go: hosted db imports a package of the driver that is not named: want hosted-db-imports, got hosted-imports
+  FAIL internal/hosted/db/caseevil/x.go: hosted db imports an unreviewed module: want hosted-db-imports, got hosted-imports
+  FAIL internal/hosted/db/casepolicy/x.go: hosted db imports policy (bus carries it): want hosted-db-imports, got clean
+  FAIL internal/hosted/db/casenotify/x.go: hosted db imports notify: want hosted-db-imports, got clean
+  FAIL internal/hosted/db/caseweb/x.go: hosted db imports web: want hosted-db-imports, got clean
+  FAIL internal/hosted/db/casestore/x.go: hosted db imports the CLI store: want hosted-db-imports, got hosted-imports
+against the committed config: lint_rules_test: all 131 cases pass
+
+# Review fixes (Opus review of 7e9483c), 2026-10-28T19:32:51Z: mutants on the fixed implementation, each applied by hand, vetted, run, reverted
+baseline internal/hosted/db: exit=0
+Not covered here: _txlock=immediate and busy_timeout. Task 6's concurrency test on a real file pins them.
+
+## kind guard removed from InsertDecision, and the decisions_guard trigger removed (the Go revision guard stays)
+internal/hosted/db/decisions.go: 'if (r.Kind == bus.RecordApproval) != (it.Kind == bus.KindApproval) {' -> 'if false {'
+vet exit=0
+--- FAIL: TestAgentAnswerOnApprovalRefused (0.02s)
+--- FAIL: TestApprovalOnQuestionRefused (0.02s)
+--- FAIL: TestTriggerGuardsDirectInserts (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.737s
+FAIL
+suite exit=1
+
+## InsertItem stores it.State
+internal/hosted/db/items.go: 'it.Revision, bus.StateOpen, it.ContentHash' -> 'it.Revision, it.State, it.ContentHash'
+vet exit=0
+--- FAIL: TestStateOnlyFromDecisions (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	2.610s
+FAIL
+suite exit=1
+
+## EventsSince accepts limit <= 0
+internal/hosted/db/events.go: 'if limit <= 0 {' -> 'if limit < -1000 {'
+vet exit=0
+--- FAIL: TestEventsSinceLimit (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.476s
+FAIL
+suite exit=1
+
+## existing-file 0600 check skipped
+internal/hosted/db/db.go: 'fi.Mode().Perm()&^0o600 != 0 {' -> 'fi.Mode().Perm()&^0o600 != 0 && false {'
+vet exit=0
+--- FAIL: TestOpenRefusesLooseFile (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.435s
+FAIL
+suite exit=1
+
+## foreign_keys pragma dropped
+internal/hosted/db/db.go: 'q.Add("_pragma", "foreign_keys(1)")' -> '_ = 0'
+vet exit=0
+--- FAIL: TestMissingItemDecisionRefusedByForeignKey (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.463s
+FAIL
+suite exit=1
+
+## EventsSince limit not clamped
+internal/hosted/db/events.go: 'limit = min(limit, MaxEvents)' -> '_ = MaxEvents'
+vet exit=0
+--- FAIL: TestEventsSinceLimit (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.400s
+FAIL
+suite exit=1
+
+
+# Review round 2 (delta review of 5d34363), 2026-10-28T21:31:13Z: mutants on the fixed implementation, each applied by hand, vetted, run, reverted
+baseline internal/hosted/db: exit=0
+
+## UpdateItem revision guard removed (items_guard revision clause also neutralised)
+internal/hosted/db/items.go: 'if it.Revision < cur.Revision {' -> 'if false {'
+vet exit=0
+--- FAIL: TestUpdateItemRevisionBackwardsRefused (0.06s)
+--- FAIL: TestItemsGuardTriggerOnRawConnection (0.15s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	3.222s
+FAIL
+suite exit=1
+
+## UpdateItem kind-change guard removed (items_guard kind clause also neutralised)
+internal/hosted/db/items.go: 'if it.Kind != cur.Kind && it.Revision == cur.Revision {' -> 'if false {'
+vet exit=0
+--- FAIL: TestUpdateItemKindChangeRefused (0.03s)
+--- FAIL: TestItemsGuardTriggerOnRawConnection (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	4.309s
+FAIL
+suite exit=1
+
+## state check no longer matches kinds (CORRECTED below: this run was killed for the wrong reason)
+internal/hosted/db/items.go: 'AND (kind = 'approval') = (? = 'approval')) THEN' -> ') THEN'
+vet exit=0
+--- FAIL: TestDecisionUniquePerRevision (0.03s)
+--- FAIL: TestUpdateItem (0.24s)
+--- FAIL: TestStateOnlyFromDecisions (0.22s)
+--- FAIL: TestUpdateItemDerivesStateFromRevision (0.35s)
+--- FAIL: TestUpdateItemRevisionBackwardsRefused (0.27s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	6.238s
+FAIL
+suite exit=1
+
+## orphan check dropped from decisions_guard
+internal/hosted/db/migrations/0001_init.sql: 'WHERE NOT EXISTS (SELECT 1 FROM items WHERE id = NEW.item_id);' -> 'WHERE 0;'
+vet exit=0
+--- FAIL: TestTriggerGuardsDirectInserts (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	4.284s
+FAIL
+suite exit=1
+
+## desk check back to a case-insensitive LIKE
+internal/hosted/db/migrations/0001_init.sql: '(substr(type, 1, 5) = 'desk_')' -> '(type LIKE 'desk\_%' ESCAPE '\')'
+vet exit=0
+--- FAIL: TestDeskTypeMatchIsCaseSensitive (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	3.664s
+FAIL
+suite exit=1
+
+## decisions_append_only trigger neutralised
+internal/hosted/db/migrations/0001_init.sql: 'CREATE TRIGGER decisions_append_only BEFORE UPDATE ON decisions
+BEGIN
+	SELECT RAISE(ABORT, 'decisions are append-only');' -> 'CREATE TRIGGER decisions_append_only BEFORE UPDATE ON decisions
+BEGIN
+	SELECT RAISE(ABORT, 'decisions are append-only') WHERE 0;'
+vet exit=0
+--- FAIL: TestDecisionsAreAppendOnly (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	2.541s
+FAIL
+suite exit=1
+
+## items_guard trigger neutralised (the Go guards stay): this entry replaced only the revision clause; the run below it replaces both
+internal/hosted/db/migrations/0001_init.sql: 'WHERE NEW.revision < OLD.revision;' -> 'WHERE 0;'
+vet exit=0
+--- FAIL: TestItemsGuardTriggerOnRawConnection (0.04s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.465s
+FAIL
+suite exit=1
+
+## agent row read first (ORDER BY rowid)
+internal/hosted/db/decisions.go: 'ORDER BY CASE actor_kind WHEN 'human' THEN 0 ELSE 1 END LIMIT 1' -> 'ORDER BY rowid LIMIT 1'
+vet exit=0
+--- FAIL: TestDecisionPrefersHuman (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.223s
+FAIL
+suite exit=1
+
+## WAL pragma dropped
+internal/hosted/db/db.go: 'q.Add("_pragma", "journal_mode(WAL)")' -> '_ = 0'
+vet exit=0
+--- FAIL: TestOpenSetsFileModeAndWAL (0.28s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	4.600s
+FAIL
+suite exit=1
+
+## database file created 0644
+internal/hosted/db/db.go: 'os.O_CREATE|os.O_RDWR, 0o600)' -> 'os.O_CREATE|os.O_RDWR, 0o644)'
+vet exit=0
+--- FAIL: TestOpenMigratesAndReopens (0.38s)
+--- FAIL: TestOpenSetsFileModeAndWAL (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.904s
+FAIL
+suite exit=1
+
+# Review round 3 (delta review of 510f2cc), 2026-10-28T21:49:40Z
+baseline internal/hosted/db: exit=0
+
+## Correction (R2-1): 'state check no longer matches kinds'
+The earlier mutant replaced the clause with ') THEN', which dropped a bound argument, so the suite
+failed on an argument-count error, not on an assertion. The count-preserving mutant is below.
+
+## state check kind clause replaced, argument count kept: SURVIVES (suite exit=0)
+Why it survives: the Go guards in UpdateItem and the items_guard trigger make a kind change at one revision
+unreachable, and the items_state_guard trigger enforces the same rule; so this clause in the derivation is
+backup protection that no test can pin. Kept on purpose.
+internal/hosted/db/items.go: 'AND (kind = 'approval') = (? = 'approval')) THEN' -> 'AND (? IS NOT NULL)) THEN'
+vet exit=0
+ok  	github.com/Exploded-views/yo-human/internal/hosted/db	9.490s
+suite exit=0
+
+## items_guard neutralised, BOTH clauses (Go guards stay)
+internal/hosted/db/migrations/0001_init.sql: 'WHERE NEW.revision < OLD.revision;' -> 'WHERE 0;'
+vet exit=0
+--- FAIL: TestItemsGuardTriggerOnRawConnection (0.15s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	9.801s
+FAIL
+suite exit=1
+
+## decisions_no_delete neutralised
+internal/hosted/db/migrations/0001_init.sql: 'CREATE TRIGGER decisions_no_delete BEFORE DELETE ON decisions
+BEGIN
+	SELECT RAISE(ABORT, 'decisions are append-only');' -> 'CREATE TRIGGER decisions_no_delete BEFORE DELETE ON decisions
+BEGIN
+	SELECT RAISE(ABORT, 'decisions are append-only') WHERE 0;'
+vet exit=0
+--- FAIL: TestDecisionsCannotBeDeleted (1.04s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	13.569s
+FAIL
+suite exit=1
+
+## items_state_guard, the 'decided' clause neutralised
+internal/hosted/db/migrations/0001_init.sql: 'WHERE NEW.state = 'decided' AND NOT EXISTS' -> 'WHERE 0 AND NOT EXISTS'
+vet exit=0
+--- FAIL: TestStateGuardTriggerOnRawConnection (0.29s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.999s
+FAIL
+suite exit=1
+
+## items_state_guard, the 'open' clause neutralised (WHERE NEW.state = 'open' AND EXISTS -> WHERE 0 AND EXISTS, applied to the SQL file before the run; the run itself replaced nothing else)
+internal/hosted/db/migrations/0001_init.sql
+vet exit=0
+--- FAIL: TestStateGuardTriggerOnRawConnection (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	4.396s
+FAIL
+suite exit=1
+
+# Review round 4 (delta review of 0030c97), 2026-10-28T22:00:39Z
+baseline internal/hosted/db: exit=0
+
+## Corrections to round 3 entries (earlier text left as recorded)
+- 'items_guard neutralised, BOTH clauses': the two replacements were
+    WHERE NEW.revision < OLD.revision;                              -> WHERE 0;
+    WHERE NEW.kind <> OLD.kind AND NEW.revision = OLD.revision;     -> WHERE 0;
+- 'items_state_guard, the open clause neutralised': the replacement was
+    WHERE NEW.state = 'open' AND EXISTS                             -> WHERE 0 AND EXISTS
+
+## items_born_open neutralised
+internal/hosted/db/migrations/0001_init.sql: 'WHERE NEW.state <> 'open';' -> 'WHERE 0;'
+vet exit=0
+--- FAIL: TestStateGuardCoversRevisionKindAndRawInsert (0.16s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.396s
+FAIL
+suite exit=1
+
+## items_keep_decided neutralised
+internal/hosted/db/migrations/0001_init.sql: '	WHERE EXISTS (SELECT 1 FROM decisions WHERE item_id = OLD.id);' -> '	WHERE 0;'
+vet exit=0
+--- FAIL: TestItemWithDecisionsCannotBeDeleted (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	2.658s
+FAIL
+suite exit=1
+
+## items_state_guard narrowed back to OF state
+internal/hosted/db/migrations/0001_init.sql: 'BEFORE UPDATE OF state, kind, revision ON items' -> 'BEFORE UPDATE OF state ON items'
+vet exit=0
+--- FAIL: TestStateGuardCoversRevisionKindAndRawInsert (0.34s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	3.732s
+FAIL
+suite exit=1
+
+## items_state_guard decided clause without the revision match
+internal/hosted/db/migrations/0001_init.sql: 'WHERE NEW.state = 'decided' AND NOT EXISTS (SELECT 1 FROM decisions
+		WHERE item_id = NEW.id AND revision = NEW.revision AND' -> 'WHERE NEW.state = 'decided' AND NOT EXISTS (SELECT 1 FROM decisions
+		WHERE item_id = NEW.id AND'
+vet exit=0
+--- FAIL: TestStateGuardCoversRevisionKindAndRawInsert (0.03s)
+--- FAIL: TestStateGuardChecksRevisionClause (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	4.368s
+FAIL
+suite exit=1
+
+## items_state_guard decided clause without the kind match: SURVIVES (kept; unreachable, as R2-1)
+internal/hosted/db/migrations/0001_init.sql: 'WHERE NEW.state = 'decided' AND NOT EXISTS (SELECT 1 FROM decisions
+		WHERE item_id = NEW.id AND revision = NEW.revision AND (kind = 'approval') = (NEW.kind = 'approval'));' -> 'WHERE NEW.state = 'decided' AND NOT EXISTS (SELECT 1 FROM decisions
+		WHERE item_id = NEW.id AND revision = NEW.revision);'
+vet exit=0
+ok  	github.com/Exploded-views/yo-human/internal/hosted/db	5.295s
+suite exit=0

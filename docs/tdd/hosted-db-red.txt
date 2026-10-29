@@ -1,0 +1,119 @@
+# H1 Task 4 RED, 2026-10-28T18:50:35Z: db stub whose Open returns an error; bus/store.go interfaces only
+$ go test -timeout 120s ./internal/hosted/db/
+--- FAIL: TestOpenMigratesAndReopens (0.13s)
+    db_test.go:34: Open: not implemented
+--- FAIL: TestOpenRefusesLooseDir (0.00s)
+    db_test.go:70: error "not implemented" does not name chmod 700
+--- FAIL: TestOpenCreatesMissingParentPrivate (0.30s)
+    db_test.go:81: not implemented
+--- FAIL: TestOpenRefusesNewerSchema (0.01s)
+    db_test.go:101: Open: not implemented
+--- FAIL: TestTxRollsBackOnError (0.02s)
+    db_test.go:117: Open: not implemented
+--- FAIL: TestTxRollsBackOnPanic (0.01s)
+    db_test.go:136: Open: not implemented
+--- FAIL: TestTxHonoursCancelledContext (0.00s)
+    db_test.go:152: Open: not implemented
+--- FAIL: TestCheckReportsIntegrity (0.16s)
+    db_test.go:161: Open: not implemented
+--- FAIL: TestDecisionUniquePerRevision (0.21s)
+    decisions_test.go:32: Open: not implemented
+--- FAIL: TestDecisionRoundTrip (0.01s)
+    decisions_test.go:50: Open: not implemented
+--- FAIL: TestDecisionPrefersHuman (0.21s)
+    decisions_test.go:71: Open: not implemented
+--- FAIL: TestDatabaseRefusesAgentApproval (0.02s)
+    decisions_test.go:88: Open: not implemented
+--- FAIL: TestInsertDecisionMarksOnlyThatRevisionDecided (0.01s)
+    decisions_test.go:100: Open: not implemented
+--- FAIL: TestRelayDoesNotDecide (0.02s)
+    decisions_test.go:122: Open: not implemented
+--- FAIL: TestEventsSinceIsOrderedAndScoped (0.00s)
+    events_test.go:50: Open: not implemented
+--- FAIL: TestEventRoundTrip (0.00s)
+    events_test.go:77: Open: not implemented
+--- FAIL: TestMessagesRoundTripInOrder (0.00s)
+    events_test.go:98: Open: not implemented
+--- FAIL: TestStatusPutReplacesAndScopes (0.35s)
+    events_test.go:119: Open: not implemented
+--- FAIL: TestItemRoundTrip (0.06s)
+    items_test.go:14: Open: not implemented
+--- FAIL: TestItemEmptyRiskFlagsRoundTrip (0.06s)
+    items_test.go:38: Open: not implemented
+--- FAIL: TestItemMissingIsNotAnError (0.11s)
+    items_test.go:50: Open: not implemented
+--- FAIL: TestItemHandleUniquePerSwarm (0.02s)
+    items_test.go:63: Open: not implemented
+--- FAIL: TestUpdateItem (0.00s)
+    items_test.go:73: Open: not implemented
+--- FAIL: TestListOpenForHuman (0.00s)
+    items_test.go:91: Open: not implemented
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.754s
+FAIL
+exit=1
+
+## Notes (added after the recorded run; the output above is unedited)
+- Base: origin/main at db614ca (the branch point).
+- Every test failed on the stub's `Open: not implemented` error, not on its own assertion.
+- Test changes after RED: `openTemp` now makes a 0700 subdirectory (t.TempDir() is 0755 here), the
+  item round trip with no risk flags also asserts `Untrusted` false, and `events_test.go` was split
+  into helpers to meet gocyclo. Review fixes (7e9483c onward) changed more tests; see the commits.
+
+## 2026-10-28 review round 2 (delta review of 5d34363, NEW-1, NEW-2, NIT a and b)
+$ go test -count=1 -timeout 120s ./internal/hosted/db/
+--- FAIL: TestMissingItemDecisionIsNotFound (0.05s)
+    decisions_test.go:164: a decision for a missing item gave db: insert decision: constraint failed: FOREIGN KEY constraint failed (787), want ErrNotFound
+--- FAIL: TestDecisionsAreAppendOnly (0.20s)
+    decisions_test.go:191: a decision row was updated
+--- FAIL: TestTriggerGuardsDirectInserts (0.01s)
+    decisions_test.go:214: the trigger let a decision for a missing item in (foreign keys are off on this connection)
+--- FAIL: TestDeskTypeMatchIsCaseSensitive (0.00s)
+    events_test.go:176: an upper-case DESK_ event with no swarm was stored
+--- FAIL: TestUpdateItemKindChangeRefused (0.00s)
+    items_test.go:166: a kind change at the same revision gave <nil>, want ErrKindMismatch
+--- FAIL: TestUpdateItemRevisionBackwardsRefused (0.00s)
+    items_test.go:189: revision 2 to 1 gave <nil>, want ErrStaleRevision
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	1.356s
+FAIL
+exit=1
+
+## Notes, correction (round 2)
+The Notes above say "Review fixes (7e9483c onward)". The first review-fix commit is 580618b.
+Round 2 follows the RED rule: its failing tests are the section "2026-10-28 review round 2" above,
+committed as 20f9ffc before the fix.
+
+## 2026-10-28 review round 3 (delta review of 510f2cc, R2-2 and R2-4)
+$ go test -count=1 -timeout 120s ./internal/hosted/db/
+--- FAIL: TestDecisionsCannotBeDeleted (0.11s)
+    decisions_test.go:266: a decision row was deleted
+--- FAIL: TestStateGuardTriggerOnRawConnection (0.07s)
+    decisions_test.go:283: an item was set decided with no decision
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.112s
+FAIL
+exit=1
+
+## Notes, round 3
+- TestItemsGuardTriggerOnRawConnection (and TestForeignKeysAreOn) went into the round 2 fix commit
+  (510f2cc), not into its RED commit (20f9ffc). They are not part of the recorded round 2 failures.
+- Round 3's failing tests are the section "2026-10-28 review round 3" above (commit 6ef9cac). Only the
+  first assertion of TestStateGuardTriggerOnRawConnection ran; its reopen and allowed-update assertions
+  were exercised for the first time against the fix.
+
+## 2026-10-28 review round 4 (delta review of 0030c97, R3-1 and R3-2)
+$ go test -count=1 -timeout 120s ./internal/hosted/db/
+--- FAIL: TestStateGuardCoversRevisionKindAndRawInsert (0.03s)
+    decisions_test.go:302: a decided item was revised without reopening it
+--- FAIL: TestItemWithDecisionsCannotBeDeleted (0.01s)
+    decisions_test.go:337: an item with a decision was deleted
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.627s
+FAIL
+exit=1
+Note: TestStateGuardChecksRevisionClause passes already (it pins the revision clause against a mutant, R3-2); the raw INSERT assertion in TestStateGuardCoversRevisionKindAndRawInsert was not reached in this run.
+
+## Notes, round 4
+- Correction to the round 3 notes: TestForeignKeysAreOn went into the round 2 RED commit (20f9ffc).
+  Only TestItemsGuardTriggerOnRawConnection skipped RED (it is in the fix commit 510f2cc).

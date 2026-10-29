@@ -120,6 +120,16 @@ internal/hosted/policy/casehttp|internal-no-network|x.go|net/http|hosted policy 
 internal/hosted/policy/caseok|clean|x.go|encoding/json path strings|hosted policy imports the standard library
 internal/hosted/db/casehttp|internal-no-network|x.go|net/http|hosted db imports net/http
 internal/hosted/db/caseok|clean|x.go|M/internal/hosted/bus database/sql|hosted db imports bus and database/sql
+internal/hosted/db/casesqlite|clean|x.go|modernc.org/sqlite|hosted db imports the reviewed SQLite driver
+internal/hosted/db/casesqlitelib|hosted-db-imports|x.go|modernc.org/sqlite/lib|hosted db imports a package of the driver that is not named
+internal/hosted/db/caseevil|hosted-db-imports|x.go|example.com/evil|hosted db imports an unreviewed module
+internal/hosted/db/casepolicy|hosted-db-imports|x.go|M/internal/hosted/policy|hosted db imports policy (bus carries it)
+internal/hosted/db/casenotify|hosted-db-imports|x.go|M/internal/hosted/notify|hosted db imports notify
+internal/hosted/db/caseweb|hosted-db-imports|x.go|M/internal/hosted/web|hosted db imports web
+internal/hosted/db/casestore|hosted-db-imports|x.go|M/internal/store|hosted db imports the CLI store
+internal/hosted/bus/casesqlite|hosted-imports|x.go|modernc.org/sqlite|hosted bus imports the SQLite driver
+internal/hosted/web/casesqlite|hosted-imports|x.go|modernc.org/sqlite|hosted web imports the SQLite driver
+internal/core/casesqlite|core-imports|x.go|modernc.org/sqlite|core imports the SQLite driver
 internal/hosted/notify/casehttp|internal-no-network|x.go|net/http|hosted notify imports net/http
 internal/hosted/egress/bark/casebus|hosted-egress-imports|x.go|M/internal/hosted/bus|an egress package imports bus
 internal/hosted/egress/bark/caseok|clean|x.go|net/http M/internal/hosted/notify|an egress package imports net/http and notify
@@ -149,7 +159,7 @@ cmd/yo-human-hosted/caseok|clean|x.go|M/internal/hosted/app M/internal/version o
 '
 
 cfg=${LINT_RULES_CONFIG:-$root/.golangci.yml}
-cp "$root/go.mod" "$d/" && cp "$cfg" "$d/.golangci.yml" || exit 2
+cp "$root/go.mod" "$root/go.sum" "$d/" && cp "$cfg" "$d/.golangci.yml" || exit 2
 printf '\nrequire example.com/evil v0.0.0\n\nreplace example.com/evil => ./thirdparty/evil\n' >> "$d/go.mod" || exit 2
 mkdir -p "$d/thirdparty/evil" || exit 2
 printf 'module example.com/evil\n\ngo 1.27\n' > "$d/thirdparty/evil/go.mod" || exit 2
