@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -36,6 +37,44 @@ func TestCodenameMapLinesFindsAPlantedMapping(t *testing.T) {
 	want := []LineFinding{{"notes.md", 2}, {"conf/codenames", 1}, {"conf/codenames", 2}, {"x.json", 1}, {"y.go", 1}}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("findings = %v, want %v", got, want)
+	}
+}
+
+// The paste forms a real map is likely to take (round 4, MED-1): a clone URL, scp style, the slug
+// first, a key of the slug, key=value, and a slug far from the name. Built at run time like the
+// rest, so this file holds none of them.
+func TestCodenameMapLinesFindsEveryPasteForm(t *testing.T) {
+	cn := "cn:" + "alpha"
+	for name, line := range map[string]string{
+		"clone URL":        cn + " https://github.com/acme/widgets",
+		"scp style":        cn + " git@github.com:acme/widgets.git",
+		"slug first":       "acme/widgets " + cn,
+		"slug as the key":  `{"acme/widgets": "` + cn + `"}`,
+		"key=value":        cn + " repo=acme/widgets",
+		"far padding":      cn + strings.Repeat(" ", 30) + "acme/widgets",
+		"URL first":        "https://github.com/acme/widgets " + cn,
+		"URL without http": cn + " github.com/acme/widgets",
+	} {
+		root := t.TempDir()
+		plant(t, root, "f.txt", "x\n"+line+"\n")
+		got, err := CodenameMapLines(root, []string{"f.txt"})
+		if want := []LineFinding{{"f.txt", 2}}; err != nil || !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: findings = %v, %v; want %v", name, got, err, want)
+		}
+	}
+}
+
+// A line holding a codename and only a ref, or the policy's cn/<name> form, is not an entry; in a
+// fixture example/<name> is allowed whichever side of the codename it is on.
+func TestCodenameMapLinesIgnoresRefsAndExamples(t *testing.T) {
+	cn := "cn:" + "alpha"
+	root := t.TempDir()
+	plant(t, root, "a.md", cn+" release/1.2\n"+cn+" refs/heads/main\n"+cn+" is cn/alpha in the policy\n"+
+		`d.Repo, d.Ref = "`+cn+`-1", "release/1.2"`+"\n")
+	plant(t, root, "x_test.go", "example/alpha "+cn+"\n")
+	got, err := CodenameMapLines(root, []string{"a.md", "x_test.go"})
+	if err != nil || len(got) != 0 {
+		t.Errorf("findings = %v, %v; want none", got, err)
 	}
 }
 
@@ -83,6 +122,14 @@ func TestRepoFilesSkipsIgnoredDirectories(t *testing.T) {
 	got, err := RepoFiles(root)
 	if want := []string{"a.md", "d/b.go", "d/testdata/c.txt"}; err != nil || !reflect.DeepEqual(got, want) {
 		t.Errorf("RepoFiles = %v, %v; want %v", got, err, want)
+	}
+	// Only the root's dist and .cache are ignored: the same names deeper down are walked.
+	for _, f := range []string{"d/dist/n.go", "d/.cache/m.go", "dist/sub/dist/o.go"} {
+		plant(t, root, f, "x")
+	}
+	got, err = RepoFiles(root)
+	if want := []string{"a.md", "d/.cache/m.go", "d/b.go", "d/dist/n.go", "d/testdata/c.txt"}; err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("RepoFiles with nested dist = %v, %v; want %v", got, err, want)
 	}
 	if _, err := RepoFiles(filepath.Join(root, "missing")); err == nil {
 		t.Error("no error for a missing root")

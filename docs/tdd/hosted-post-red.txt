@@ -356,3 +356,22 @@ exit=0
 $ mutant: wallRefRE pr:[0-9]{1,6} -> pr:[0-9a-z]{1,6} ; go test ./internal/hosted/bus/
 ok  	github.com/Exploded-views/yo-human/internal/hosted/bus
 exit=0
+
+# H1 Task 5 RED, round 4, item 1 (MED-1: the codename scan misses clone URL, scp, slug-first, slug-as-key, key=value and far-padded forms; NIT-1: RepoFiles skips dist and .cache at any depth, the root's only is meant). Note on 61bc689 (round 3 part 3): its GREEN replaced the RED's TestTrackedFilesNeedsAGitRepo with TestRepoFilesSkipsIgnoredDirectories, because internal packages may not run git (depguard); a post-RED test change, recorded here. Before the whole-line rule the scan flags 4 repo lines: 2 on cn/<name> in this record and 2 on release/<n> in tests; the fix excludes exactly those two slug kinds. 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/repolint/
+--- FAIL: TestCodenameMapLinesFindsEveryPasteForm (0.00s)
+    codenames_test.go:62: far padding: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:62: URL first: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:62: clone URL: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:62: scp style: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:62: slug first: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:62: slug as the key: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:62: key=value: findings = [], <nil>; want [{f.txt 2}]
+--- FAIL: TestCodenameMapLinesIgnoresRefsAndExamples (0.00s)
+    codenames_test.go:77: findings = [{a.md 1} {a.md 2}], <nil>; want none
+--- FAIL: TestRepoFilesSkipsIgnoredDirectories (0.00s)
+    codenames_test.go:132: RepoFiles with nested dist = [a.md d/b.go d/testdata/c.txt], <nil>; want [a.md d/.cache/m.go d/b.go d/dist/n.go d/testdata/c.txt]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.045s
+FAIL
+exit=1
