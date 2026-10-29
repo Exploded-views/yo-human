@@ -122,15 +122,13 @@ func postSwarm(p Principal, d Draft) string {
 	return d.To
 }
 
-// contentHash is the SHA-256, in hex, of the draft's encoding/json form. encoding/json writes
-// struct fields in declaration order, so the bytes are deterministic; the field order of Draft
-// is therefore part of the hash and must not change. Nil risk flags encode as [], so nil and
-// empty are the same content.
-// hashBytes is the JSON the content hash covers. (stub)
 // hashDraft is what the content hash covers: every content field of Draft, under a fixed JSON
 // name. It is a copy of Draft's fields so the hash doesn't depend on Draft's Go field names or
 // on a field added to Draft later. hashBytes converts a Draft to it, so a new Draft field stops the
 // build until it is added here, tag and all, and TestHashBytesArePinned pins the result.
+// The rule: a new Draft field goes in here with `omitempty`, so an item stored before the field
+// existed keeps its hash (an empty value adds nothing to the bytes). Only a change meant to alter
+// stored hashes is a v2 of the hash, with its own prefix (see contentHash).
 type hashDraft struct {
 	Kind           Kind     `json:"kind"`
 	Severity       Severity `json:"severity"`
