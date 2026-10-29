@@ -16,10 +16,11 @@ const bodyFlags = os.O_RDONLY | syscall.O_NONBLOCK | syscall.O_NOCTTY
 // bodyOpenGap is a test seam: it runs between the stat of --body-file and its open. Nil in the binary.
 var bodyOpenGap func()
 
-// sameRegular is the check on the opened descriptor: the file is the one that was checked
-// before the open (same device and inode). STUB: no regular-file check yet.
+// sameRegular is the check on the opened descriptor: it is a regular file, and it is the file that
+// was checked before the open (same device and inode). Both are needed: a swapped-in FIFO may be
+// handed the freed inode number of the file it replaced, so SameFile alone can hold for it.
 func sameRegular(before, after os.FileInfo) bool {
-	return os.SameFile(before, after)
+	return after.Mode().IsRegular() && os.SameFile(before, after)
 }
 
 // openBody opens --body-file once: a regular file that is not a config or secrets file and not in
@@ -44,7 +45,7 @@ func (e *env) openBody(file string) (*os.File, error) {
 		return nil, problem.Usagef("--body-file %s cannot be opened", "the path of a readable file", "check the path", problem.Clip(file))
 	}
 	got, err := f.Stat()
-	if err != nil || !got.Mode().IsRegular() || !os.SameFile(fi, got) {
+	if err != nil || !sameRegular(fi, got) {
 		_ = f.Close()
 		return nil, notRegularBody(file)
 	}

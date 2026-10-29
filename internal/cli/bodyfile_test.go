@@ -93,7 +93,8 @@ func TestBodyFileTakesARegularFileOnlyAndNeverBlocks(t *testing.T) {
 }
 
 // A regular file swapped for a FIFO between the check and the open is not opened blocking, and the
-// file opened is refused as not the one checked.
+// file opened is refused as not a regular file, even when the filesystem reuses the inode number
+// (the unit test of sameRegular pins that case deterministically).
 func TestBodyFileSwappedForAFIFOIsRefusedWithoutBlocking(t *testing.T) {
 	s, _ := notifySandbox(t)
 	path := write(t, filepath.Join(t.TempDir(), "body.txt"), "a body")
@@ -239,15 +240,15 @@ func TestSameRegularNeedsARegularFileThatIsTheSameFile(t *testing.T) {
 	cases := []struct {
 		name          string
 		before, after os.FileInfo
-		want          bool
+		same, want    bool
 	}{
-		{"the same regular file", info(reg), info(reg), true},
-		{"a different regular file", info(reg), info(other), false},
-		{"a FIFO in place of a regular file", info(reg), info(fifo), false},
-		{"a FIFO that is the same file (a reused inode) but not regular", info(fifo), info(fifo), false},
+		{"the same regular file", info(reg), info(reg), true, true},
+		{"a different regular file", info(reg), info(other), false, false},
+		{"a FIFO in place of a regular file", info(reg), info(fifo), false, false},
+		{"a FIFO that is the same file (a reused inode) but not regular", info(fifo), info(fifo), true, false},
 	}
 	for _, c := range cases {
-		expect(t, os.SameFile(c.before, c.after) == (c.name == "the same regular file" || c.name == "a FIFO that is the same file (a reused inode) but not regular"), "%s: the case does not hold the SameFile it claims", c.name)
+		expect(t, os.SameFile(c.before, c.after) == c.same, "%s: the case does not hold the SameFile it claims", c.name)
 		expect(t, sameRegular(c.before, c.after) == c.want, "%s: sameRegular = %v, want %v", c.name, !c.want, c.want)
 	}
 }
