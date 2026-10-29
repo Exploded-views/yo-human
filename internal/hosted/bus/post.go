@@ -56,6 +56,9 @@ func (b *Bus) checkDraft(p Principal, swarm string, d Draft) error {
 	if e := checkTo(p, v); e != nil {
 		return e
 	}
+	if e := checkUrgency(p, v.Urgency); e != nil {
+		return e
+	}
 	if v.Kind == KindApproval {
 		if err := b.l.Approvable(v.Action, v.PolicyTarget()); err != nil {
 			return asBusError(err)
@@ -83,6 +86,18 @@ func checkTo(p Principal, d Draft) *Error {
 		return invalid("to", `"human": a node writes only to the owner`)
 	case d.To != "human" && !ValidSwarm(d.To):
 		return invalid("to", `"human" or a crew's swarm name, which is never duet or human`)
+	}
+	return nil
+}
+
+// checkUrgency: the urgency is one of the three lanes, and Duet, which is the one deciding when
+// to interrupt, takes page or digest only. Missing is refused, never defaulted.
+func checkUrgency(p Principal, u Urgency) *Error {
+	switch {
+	case !slices.Contains(urgencies, u):
+		return invalid("urgency", "page, interrupt-when-good or digest")
+	case p.Kind == PrincipalDuet && u == UrgencyInterruptWhenGood:
+		return invalid("urgency", "page or digest: Duet decides when to interrupt")
 	}
 	return nil
 }
@@ -137,7 +152,7 @@ type hashDraft struct {
 	Link           string   `json:"link"`
 	RiskFlags      []string `json:"risk_flags"`
 	Untrusted      bool     `json:"untrusted"`
-	Urgency        Urgency  `json:"-"` // stub
+	Urgency        Urgency  `json:"urgency"`
 }
 
 // hashBytes is the encoding/json form of d's hashDraft. This is Go's encoding, not RFC 8785

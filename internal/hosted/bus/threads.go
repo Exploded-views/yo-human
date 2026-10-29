@@ -8,12 +8,10 @@ import (
 )
 
 // Reply adds a message to the thread of item threadID. The thread is the item's id. An item
-// the caller can't see and an item that doesn't exist give the same error.
+// the caller can't see and an item that doesn't exist give the same error. The urgency is the
+// poster's lane for the message, required like an item's.
 func (b *Bus) Reply(ctx context.Context, p Principal, threadID, body string, sev Severity, urg Urgency) (Message, error) {
-	if e := mayWrite(p); e != nil {
-		return Message{}, e
-	}
-	if e := checkBody(body, sev); e != nil {
+	if e := checkReply(p, body, sev, urg); e != nil {
 		return Message{}, e
 	}
 	var m Message
@@ -28,22 +26,38 @@ func (b *Bus) Reply(ctx context.Context, p Principal, threadID, body string, sev
 		if err := b.checkSwarmMessage(p, it.Swarm, body); err != nil {
 			return err
 		}
-		now := b.now().UTC()
-		m = Message{ID: NewID("msg"), ThreadID: it.ID, From: p.Name, FromKind: p.Kind, Body: body, Severity: sev, Created: now}
-		if err := x.InsertMessage(m); err != nil {
-			return err
-		}
-		seq, err := x.AppendEvent(Event{Swarm: it.Swarm, ItemID: it.ID, Type: EventMessageAdded, Created: now})
-		if err != nil {
-			return err
-		}
-		it.LastSeq, it.Updated = seq, now
-		return x.UpdateItem(it)
+		m, err = b.appendMessage(x, it, p, body, sev, urg)
+		return err
 	})
 	if err != nil {
 		return Message{}, mapStoreErr(err)
 	}
 	return m, nil
+}
+
+// checkReply is every check that needs nothing from the store.
+func checkReply(p Principal, body string, sev Severity, urg Urgency) *Error {
+	if e := mayWrite(p); e != nil {
+		return e
+	}
+	if e := checkBody(body, sev); e != nil {
+		return e
+	}
+	return checkUrgency(p, urg)
+}
+
+func (b *Bus) appendMessage(x Tx, it Item, p Principal, body string, sev Severity, urg Urgency) (Message, error) {
+	now := b.now().UTC()
+	m := Message{ID: NewID("msg"), ThreadID: it.ID, From: p.Name, FromKind: p.Kind, Body: body, Severity: sev, Urgency: urg, Created: now}
+	if err := x.InsertMessage(m); err != nil {
+		return Message{}, err
+	}
+	seq, err := x.AppendEvent(Event{Swarm: it.Swarm, ItemID: it.ID, Type: EventMessageAdded, Created: now})
+	if err != nil {
+		return Message{}, err
+	}
+	it.LastSeq, it.Updated = seq, now
+	return m, x.UpdateItem(it)
 }
 
 func checkBody(body string, sev Severity) *Error {

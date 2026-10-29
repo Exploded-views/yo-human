@@ -52,6 +52,7 @@ func validSHA(s string) bool { return shaRE.MatchString(s) }
 var (
 	kinds      = []Kind{KindApproval, KindQuestion, KindBlocker, KindFinished, KindFailed, KindNotice}
 	severities = []Severity{SeverityLow, SeverityNormal, SeverityHigh, SeverityCritical}
+	urgencies  = []Urgency{UrgencyPage, UrgencyInterruptWhenGood, UrgencyDigest}
 	actions    = []Action{ActionNone, ActionMerge, ActionRelease, ActionDeploy, ActionPublicSync,
 		ActionForcePush, ActionDelete, ActionSpend, ActionSecrets, ActionMoney, ActionOther}
 )
@@ -85,6 +86,8 @@ func (d *Draft) checkEnums(Limits) *Error {
 		return invalid("severity", "low, normal, high or critical")
 	case !slices.Contains(actions, d.Action):
 		return invalid("action", "none, other or an action category")
+	case !slices.Contains(urgencies, d.Urgency):
+		return invalid("urgency", "page, interrupt-when-good or digest")
 	case d.To != "human" && !ValidName(d.To):
 		return invalid("to", `"human" or a swarm name`)
 	}
