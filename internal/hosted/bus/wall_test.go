@@ -2,6 +2,7 @@ package bus_test
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -19,7 +20,17 @@ func typed(n string) bus.Draft {
 func walledRelease() bus.Draft {
 	return bus.Draft{
 		Kind: bus.KindApproval, Severity: bus.SeverityHigh, To: "human", Handle: "ob-12", Title: "ob-12 deploy-ready",
-		Action: bus.ActionRelease, Target: "alpha", Repo: "cn:alpha", Ref: "v1.2.3", PinnedCommit: strings.Repeat("0a", 20), Urgency: bus.UrgencyPage,
+		Action: bus.ActionRelease, Target: "prod", Repo: "cn:alpha", Ref: "v1.2.3", PinnedCommit: strings.Repeat("0a", 20), Urgency: bus.UrgencyPage,
+	}
+}
+
+// walledMerge is a walled merge approval for a pull request: a PR id as the ref, a branch as the
+// base (round 3: the lead's ruling of 2026-10-29).
+func walledMerge() bus.Draft {
+	return bus.Draft{
+		Kind: bus.KindApproval, Severity: bus.SeverityHigh, To: "human", Handle: "ob-13", Title: "ob-13 deploy-ready",
+		Action: bus.ActionMerge, Repo: "cn:alpha", Ref: "pr:42", BaseRef: "main", Target: "cn:alpha#42",
+		PinnedCommit: strings.Repeat("0a", 20), Urgency: bus.UrgencyPage,
 	}
 }
 
@@ -155,6 +166,89 @@ func TestWalledApprovalRefusesRealSlug(t *testing.T) {
 	r := e.post(t, walledNode, walledRelease())
 	if r.Item.Repo != "cn:alpha" || r.Item.Swarm != "client" {
 		t.Errorf("accepted item = %+v: the codename must be stored as posted", r.Item)
+	}
+	m := e.post(t, walledNode, walledMerge())
+	if m.Item.Repo != "cn:alpha" || m.Item.Ref != "pr:42" || m.Item.BaseRef != "main" || m.Item.Swarm != "client" {
+		t.Errorf("walled merge approval = %+v: the codename and the PR id must be stored as posted", m.Item)
+	}
+}
+
+// What the item was gated on at post time is what a later re-check sees (round 3, LOW-1).
+func TestStoredWalledItemKeepsItsPolicyTarget(t *testing.T) {
+	e := newEnvWalled(t, "client")
+	for _, d := range []bus.Draft{walledRelease(), walledMerge()} {
+		it := e.post(t, walledNode, d).Item
+		tg := it.PolicyTarget()
+		if tg.Repo != "cn/alpha" {
+			t.Errorf("%s: PolicyTarget repo = %q, want cn/alpha", d.Action, tg.Repo)
+		}
+		if err := e.l.Approvable(it.Action, tg); err != nil {
+			t.Errorf("%s: re-check on the stored item: %v", d.Action, err)
+		}
+	}
+	d := bus.Draft{Action: bus.ActionMerge, Repo: "o/r", Ref: "7", BaseRef: "main"}
+	if tg := d.PolicyTarget(); tg.Repo != "o/r" || tg.Ref != "main" {
+		t.Errorf("a plain slug changed: %+v", tg)
+	}
+}
+
+func TestWalledRefAndTargetRefusals(t *testing.T) {
+	e := newEnvWalled(t, "client")
+	refuse := func(name, field string, edit func(*bus.Draft)) {
+		t.Run(name, func(t *testing.T) {
+			d := walledRelease()
+			edit(&d)
+			_, err := e.b.Post(context.Background(), walledNode, d)
+			if be := errWithCode(t, err, bus.CodeInvalid); be.What != field {
+				t.Errorf("What = %q, want %q", be.What, field)
+			}
+		})
+	}
+	for _, c := range []struct{ name, v string }{
+		{"letters in a PR id", "pr:4a"}, {"seven digits", "pr:1234567"}, {"bare pr:", "pr:"}, {"a branch name", "feature/x"},
+		{"a URL", "https://github.com/o/r/pull/7"}, {"capital PR", "PR:42"}, {"pr with a space", "pr: 42"}, {"two PR ids", "pr:4,pr:5"},
+		{"a bare number", "42"}, {"a pr: tag", "pr:42x"}, {"release with a letter", "release/1.x"},
+	} {
+		refuse("ref "+c.name, "ref", func(d *bus.Draft) { d.Ref = c.v })
+	}
+	for _, c := range []struct{ name, v string }{
+		{"a PR id", "pr:42"}, {"a branch name", "feature/x"}, {"a tag", "v1.2.3"}, {"a URL", "https://github.com/o/r"}, {"a letter PR", "pr:4a"},
+	} {
+		refuse("base "+c.name, "base_ref", func(d *bus.Draft) { d.BaseRef = c.v })
+	}
+	for _, c := range []struct{ name, v string }{
+		{"a URL", "https://example.com/deploy"}, {"prose", "the client's site"}, {"slug with a number", "o/r#7"}, {"a slug", "o/r"},
+		{"capital codename", "cn:Alpha"}, {"seven-digit number", "cn:alpha#1234567"}, {"bare hash", "cn:alpha#"}, {"letters after hash", "cn:alpha#7a"},
+		{"a hyphenated token outside the list", "bigclient-payroll-outage"}, {"a bare codename word", "alpha"}, {"capital env", "Prod"},
+		{"env with a slash", "prod/x"}, {"env with a colon", "prod:x"}, {"env with a number", "prod#7"}, {"env with a trailing space", "prod "},
+	} {
+		refuse("target "+c.name, "target", func(d *bus.Draft) { d.Target = c.v })
+	}
+	refuse("a walled node's risk flag", "risk_flags", func(d *bus.Draft) { d.RiskFlags = []string{"touches-auth"} })
+	refuse("a walled node's hyphenated risk flag", "risk_flags", func(d *bus.Draft) { d.RiskFlags = []string{"acme-corp", "invoice-dispute"} })
+	if n := len(e.events(t)); n != 0 {
+		t.Errorf("%d events after refused posts", n)
+	}
+
+	into := bus.Draft{Kind: bus.KindNotice, Severity: bus.SeverityNormal, To: "client", Title: "go sl:12", Action: bus.ActionNone,
+		Urgency: bus.UrgencyDigest, RiskFlags: []string{"call-the-cfo"}}
+	_, err := e.b.Post(context.Background(), duet, into)
+	if be := errWithCode(t, err, bus.CodeInvalid); be.What != "risk_flags" {
+		t.Errorf("Duet's flag into a walled swarm: What = %q", be.What)
+	}
+	if n := len(e.events(t)); n != 0 {
+		t.Errorf("%d events after refused posts", n)
+	}
+
+	n := 20
+	for _, c := range []struct{ ref, base, target string }{
+		{"main", "", ""}, {"release/1.2.3", "", "prod"}, {"v1.2.3", "", "staging"}, {"pr:1", "main", "preview"},
+		{"pr:123456", "release/2", "dev"}, {"pr:0", "release/10.0", "cn:alpha"}, {"pr:42", "main", "cn:alpha#7"}, {"pr:42", "main", "cn:alpha#123456"},
+	} {
+		n++
+		d := typed(strconv.Itoa(n))
+		d.Ref, d.BaseRef, d.Target = c.ref, c.base, c.target
+		e.post(t, walledNode, d)
 	}
 }
 

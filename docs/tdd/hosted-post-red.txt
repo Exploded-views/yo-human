@@ -247,3 +247,41 @@ FAIL
 exit=1
 
 # Note: the SHA-256 digests in the failure output above were replaced with <64-hex> so the file passes the scrub (long-hex rule). Nothing else was edited.
+
+# H1 Task 5 RED, round 3, part 1 (walled refs, targets and risk flags; lead rulings 2026-10-29: pr:<1-6 digits> ref, base is main or release/<n>, target is prod|staging|preview|dev or cn:<name>[#N], no risk flags either way; also LOW-1 PolicyTarget maps cn: and LOW-2 CheckWalledMessage takes fromWalledNode), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestCheckWalledDraft (0.00s)
+    validate_wall_test.go:37: risk_flags edit: got <nil>
+    validate_wall_test.go:49: allowed draft {Kind:notice Severity:normal To:human Handle:ob-3 Title:ob-3 ack Summary: Detail: RequiredAction: Repo: Ref:pr:42 BaseRef:main Target: PinnedCommit: PinnedTree: Action:none Link: RiskFlags:[] Untrusted:false Urgency:digest}: invalid: ref (valid: empty, main, release/<n> or v<major>.<minor>.<patch>)
+--- FAIL: TestCheckWalledMessage (0.00s)
+    validate_wall_test.go:69: CheckWalledMessage("ob-3 blocked", fromWalledNode=true) = invalid: body (valid: exactly go sl:<n> or hold sl:<n>), want ok=true
+    validate_wall_test.go:69: CheckWalledMessage("ob-3 needs:none", fromWalledNode=true) = invalid: body (valid: exactly go sl:<n> or hold sl:<n>), want ok=true
+    validate_wall_test.go:69: CheckWalledMessage("go sl:3", fromWalledNode=true) = <nil>, want ok=false
+    validate_wall_test.go:69: CheckWalledMessage("go sl:3", fromWalledNode=false) = invalid: body (valid: ob-<n> then needs:owner, needs:none, ack, done, blocked, ci-red, deploy-ready or prod-down, optionally then sha256:<64 hex> bytes:<n>), want ok=true
+    validate_wall_test.go:69: CheckWalledMessage("hold sl:30", fromWalledNode=false) = invalid: body (valid: ob-<n> then needs:owner, needs:none, ack, done, blocked, ci-red, deploy-ready or prod-down, optionally then sha256:<64 hex> bytes:<n>), want ok=true
+    validate_wall_test.go:69: CheckWalledMessage("ob-3 blocked", fromWalledNode=false) = <nil>, want ok=false
+--- FAIL: TestWalledApprovalRefusesRealSlug (0.00s)
+    wall_test.go:170: Post: invalid: ref (valid: empty, main, release/<n> or v<major>.<minor>.<patch>)
+--- FAIL: TestStoredWalledItemKeepsItsPolicyTarget (0.00s)
+    wall_test.go:183: release: PolicyTarget repo = "cn:alpha", want cn/alpha
+    wall_test.go:186: release: re-check on the stored item: excluded_action: action (valid: a passkey target in the owner's policy)
+    wall_test.go:180: Post: invalid: ref (valid: empty, main, release/<n> or v<major>.<minor>.<patch>)
+--- FAIL: TestWalledRefAndTargetRefusals (0.01s)
+    --- FAIL: TestWalledRefAndTargetRefusals/base_a_tag (0.00s)
+        wall_test.go:202: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledRefAndTargetRefusals/target_seven-digit_number (0.00s)
+        wall_test.go:202: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledRefAndTargetRefusals/target_a_hyphenated_token_outside_the_list (0.00s)
+        wall_test.go:202: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledRefAndTargetRefusals/target_a_bare_codename_word (0.00s)
+        wall_test.go:202: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledRefAndTargetRefusals/a_walled_node's_risk_flag (0.00s)
+        wall_test.go:202: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledRefAndTargetRefusals/a_walled_node's_hyphenated_risk_flag (0.00s)
+        wall_test.go:202: err = <nil> (<nil>), want a *bus.Error with code invalid
+    wall_test.go:230: 6 events after refused posts
+    wall_test.go:236: err = <nil> (<nil>), want a *bus.Error with code invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.217s
+FAIL
+exit=1

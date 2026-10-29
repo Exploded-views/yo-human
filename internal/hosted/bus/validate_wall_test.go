@@ -6,8 +6,7 @@ import (
 )
 
 func TestCheckWalledDraft(t *testing.T) {
-	ok := Draft{Kind: KindNotice, Severity: SeverityNormal, To: "human", Handle: "ob-3", Title: "ob-3 ack", Action: ActionNone, Urgency: UrgencyDigest,
-		RiskFlags: []string{"touches-auth"}}
+	ok := Draft{Kind: KindNotice, Severity: SeverityNormal, To: "human", Handle: "ob-3", Title: "ob-3 ack", Action: ActionNone, Urgency: UrgencyDigest}
 	if err := CheckWalledDraft(ok); err != nil {
 		t.Fatalf("typed draft: %v", err)
 	}
@@ -27,6 +26,9 @@ func TestCheckWalledDraft(t *testing.T) {
 		{"ref", func(d *Draft) { d.Ref = "v1.2.3-rc1" }},
 		{"base_ref", func(d *Draft) { d.BaseRef = "develop" }},
 		{"target", func(d *Draft) { d.Target = "Prod" }},
+		{"risk_flags", func(d *Draft) { d.RiskFlags = []string{"touches-auth"} }},
+		{"ref", func(d *Draft) { d.Ref = "pr:1234567" }},
+		{"base_ref", func(d *Draft) { d.BaseRef = "pr:42" }},
 	} {
 		d := ok
 		c.edit(&d)
@@ -39,6 +41,7 @@ func TestCheckWalledDraft(t *testing.T) {
 		func(d *Draft) { d.Repo, d.Ref, d.BaseRef, d.Target = "cn:alpha-1", "main", "release/1.20.3", "prod" },
 		func(d *Draft) { d.Ref = "v10.0.1" },
 		func(d *Draft) { d.Target = "cn:alpha#7" },
+		func(d *Draft) { d.Ref, d.BaseRef = "pr:42", "main" },
 	} {
 		d := ok
 		edit(&d)
@@ -48,24 +51,26 @@ func TestCheckWalledDraft(t *testing.T) {
 	}
 }
 
+// The bool names the direction as the plan does: fromWalledNode is true for a body a walled
+// node wrote (the typed grammar) and false for a body going into the walled swarm (go or hold).
 func TestCheckWalledMessage(t *testing.T) {
 	for _, c := range []struct {
-		body       string
-		intoWalled bool
-		ok         bool
+		body           string
+		fromWalledNode bool
+		ok             bool
 	}{
-		{"ob-3 blocked", false, true}, {"ob-3 needs:none", false, true}, {"go sl:3", false, false},
-		{"ob-3 blocked ", false, false}, {"", false, false},
-		{"go sl:3", true, true}, {"hold sl:30", true, true}, {"ob-3 blocked", true, false},
-		{"go sl:3 ", true, false}, {"go sl:-3", true, false}, {"go sl:03x", true, false}, {"", true, false},
+		{"ob-3 blocked", true, true}, {"ob-3 needs:none", true, true}, {"go sl:3", true, false},
+		{"ob-3 blocked ", true, false}, {"", true, false},
+		{"go sl:3", false, true}, {"hold sl:30", false, true}, {"ob-3 blocked", false, false},
+		{"go sl:3 ", false, false}, {"go sl:-3", false, false}, {"go sl:03x", false, false}, {"", false, false},
 	} {
-		err := CheckWalledMessage(c.body, c.intoWalled)
+		err := CheckWalledMessage(c.body, c.fromWalledNode)
 		if c.ok != (err == nil) {
-			t.Errorf("CheckWalledMessage(%q, %v) = %v, want ok=%v", c.body, c.intoWalled, err, c.ok)
+			t.Errorf("CheckWalledMessage(%q, fromWalledNode=%v) = %v, want ok=%v", c.body, c.fromWalledNode, err, c.ok)
 		}
 		if err != nil {
 			if be, isBus := AsError(err); !isBus || be.Code != CodeInvalid || be.What != "body" {
-				t.Errorf("CheckWalledMessage(%q, %v) error = %+v", c.body, c.intoWalled, err)
+				t.Errorf("CheckWalledMessage(%q, %v) error = %+v", c.body, c.fromWalledNode, err)
 			}
 		}
 	}
