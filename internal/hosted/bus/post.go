@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"slices"
+	"strings"
 )
 
 // Post stores d for p: a new item, a revision of the item with the same (swarm, handle), or
@@ -45,6 +46,9 @@ func (b *Bus) checkDraft(p Principal, swarm string, d Draft) error {
 		return &Error{Code: CodeExcludedAction, What: "action", Valid: "an action that is not secrets or money",
 			Fix: "do not proceed; secrets and money never go through the bus"}
 	}
+	if e := checkRepoOwner(d.Repo); e != nil {
+		return e
+	}
 	if err := b.checkSwarmContent(p, swarm, d); err != nil {
 		return err
 	}
@@ -62,6 +66,16 @@ func (b *Bus) checkDraft(p Principal, swarm string, d Draft) error {
 		if err := b.l.Approvable(v.Action, v.PolicyTarget()); err != nil {
 			return asBusError(err)
 		}
+	}
+	return nil
+}
+
+// checkRepoOwner: the owner cn is reserved for the walled codenames (cn/<name> is how the policy
+// writes one), so no node, walled or not, may post a repo under it. It reads the repo as posted,
+// before the walled view maps a codename to cn/<name>; a walled codename is cn:<name>.
+func checkRepoOwner(repo string) *Error {
+	if owner, _, _ := strings.Cut(repo, "/"); strings.EqualFold(owner, "cn") {
+		return invalid("repo", "an owner/name slug whose owner is not cn: cn is reserved for walled codenames, which are cn:<name>")
 	}
 	return nil
 }
