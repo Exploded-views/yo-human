@@ -141,10 +141,19 @@ func TestNotifyWithAResultAndAConfigProblem(t *testing.T) {
 func TestNotifyWithAResultAndAStoreProblem(t *testing.T) {
 	s, fk := notifySandbox(t)
 	fk["phone"].SendFunc = func(_ context.Context, _ channel.Message, spec channel.SendSpec) (channel.Receipt, error) {
-		// the log the pipeline appends to becomes a directory, so the append fails
+		// The log the pipeline appends to becomes a directory, so the append fails and the send
+		// itself succeeds. Sends run concurrently and the journal channel may recreate log.jsonl
+		// between a remove and a mkdir, so retry until the directory is in place.
 		lp := filepath.Join(s.stateDir(), "log.jsonl")
-		_ = os.Remove(lp) // the journal fake may have logged first
-		return channel.Receipt{Instance: spec.Instance}, os.Mkdir(lp, 0o700)
+		var err error
+		for range 100 {
+			_ = os.RemoveAll(lp)
+			if err = os.Mkdir(lp, 0o700); err == nil {
+				return channel.Receipt{Instance: spec.Instance}, nil
+			}
+		}
+		t.Errorf("could not make log.jsonl a directory after 100 tries: %v", err)
+		return channel.Receipt{Instance: spec.Instance}, nil
 	}
 	r := s.notify("note")
 	expect(t, r.code == ExitStore && strings.HasPrefix(r.out, "RESULT "), "text: %+v; want the result, then exit 74", r)
