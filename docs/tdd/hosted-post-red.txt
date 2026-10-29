@@ -375,3 +375,20 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.045s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 4, item 2 (NIT-2 and choice 3: the wall's PR id grammar is pr:[1-9][0-9]{0,5}; pr:0 and leading zeros are refused with the grammar named), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestCheckWalledDraft (0.00s)
+    validate_wall_test.go:43: ref edit: got <nil>
+    validate_wall_test.go:43: ref edit: got <nil>
+    validate_wall_test.go:43: ref edit: got <nil>
+--- FAIL: TestWalledPRRefGrammarIsNamedInTheError (0.00s)
+    validate_wall_test.go:94: pr:0: error = <nil>
+    validate_wall_test.go:94: pr:01: error = <nil>
+    validate_wall_test.go:94: pr:000001: error = <nil>
+    validate_wall_test.go:94: pr:: error = invalid: ref (valid: empty, main, release/<n>, v<major>.<minor>.<patch> or pr:<n> (at most 6 digits))
+    validate_wall_test.go:94: pr:1234567: error = invalid: ref (valid: empty, main, release/<n>, v<major>.<minor>.<patch> or pr:<n> (at most 6 digits))
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.271s
+FAIL
+exit=1

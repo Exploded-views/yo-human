@@ -29,6 +29,9 @@ func TestCheckWalledDraft(t *testing.T) {
 		{"risk_flags", func(d *Draft) { d.RiskFlags = []string{"touches-auth"} }},
 		{"ref", func(d *Draft) { d.Action, d.Ref = ActionMerge, "pr:1234567" }},
 		{"ref", func(d *Draft) { d.Action, d.Ref = ActionMerge, "pr:4a" }},
+		{"ref", func(d *Draft) { d.Action, d.Ref = ActionMerge, "pr:0" }},
+		{"ref", func(d *Draft) { d.Action, d.Ref = ActionMerge, "pr:01" }},
+		{"ref", func(d *Draft) { d.Action, d.Ref = ActionMerge, "pr:000001" }},
 		{"base_ref", func(d *Draft) { d.BaseRef = "pr:42" }},
 		{"ref", func(d *Draft) { d.Ref = "pr:42" }}, // the action is none, not merge
 		{"ref", func(d *Draft) { d.Action, d.Ref = ActionRelease, "pr:42" }},
@@ -47,7 +50,6 @@ func TestCheckWalledDraft(t *testing.T) {
 		func(d *Draft) { d.Action, d.Ref, d.BaseRef = ActionMerge, "pr:42", "main" },
 		func(d *Draft) { d.Action, d.Ref, d.BaseRef = ActionMerge, "pr:1", "release/2" },
 		func(d *Draft) { d.Action, d.Ref = ActionMerge, "pr:123456" },
-		func(d *Draft) { d.Action, d.Ref = ActionMerge, "pr:0" },
 	} {
 		d := ok
 		edit(&d)
@@ -78,6 +80,23 @@ func TestCheckWalledMessage(t *testing.T) {
 			if be, isBus := AsError(err); !isBus || be.Code != CodeInvalid || be.What != "body" {
 				t.Errorf("CheckWalledMessage(%q, %v) error = %+v", c.body, c.fromWalledNode, err)
 			}
+		}
+	}
+}
+
+// A PR id is a number from 1 without a leading zero, and the error says so (round 4, NIT-2): the
+// wall accepts what Validate's PR number rule accepts.
+func TestWalledPRRefGrammarIsNamedInTheError(t *testing.T) {
+	for _, ref := range []string{"pr:0", "pr:01", "pr:000001", "pr:", "pr:1234567"} {
+		err := CheckWalledDraft(Draft{Handle: "ob-3", Title: "ob-3 ack", Action: ActionMerge, Ref: ref})
+		be, ok := AsError(err)
+		if !ok || be.What != "ref" || !strings.Contains(be.Valid, "no leading zero") {
+			t.Errorf("%s: error = %+v", ref, err)
+		}
+	}
+	for _, ref := range []string{"pr:1", "pr:9", "pr:10", "pr:100000", "pr:999999"} {
+		if err := CheckWalledDraft(Draft{Handle: "ob-3", Title: "ob-3 ack", Action: ActionMerge, Ref: ref}); err != nil {
+			t.Errorf("%s: %v", ref, err)
 		}
 	}
 }
