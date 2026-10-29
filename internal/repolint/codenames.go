@@ -14,18 +14,24 @@ type LineFinding struct {
 }
 
 var (
-	// A mapping entry: a codename (cn:<name>), a separator of punctuation or space (" ", "=", " -> ",
-	// `": "`) and an owner/name slug, with the rest of the line captured. The slug must follow the
-	// separator directly, so a line that merely mentions a codename and, later, an unrelated
-	// path such as release/1.2 is not an entry. A separator holding a closing quote and a comma
-	// is the next argument of a call or literal, not a map entry (isMappingLine).
-	codenameMapRE = regexp.MustCompile(`cn:[a-z][a-z0-9-]{0,39}([^A-Za-z0-9\n]{1,12})(.*)`)
-	slugRE        = regexp.MustCompile(`[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*`)
+	// A codename: cn:<name>. codenameTailRE is the codename with whatever slug-like characters
+	// follow it, removed before a line is searched for slugs, so a codename with a slash is no owner/name.
+	codenameRE     = regexp.MustCompile(`cn:[a-z][a-z0-9-]{0,39}`)
+	codenameTailRE = regexp.MustCompile(`cn:[A-Za-z0-9/._-]*`)
+	// An owner/name slug. It must start the line or follow a character that is not part of a path
+	// or host name, so the tail of a URL or of a longer path is not read as a slug.
+	slugRE = regexp.MustCompile(`(?:^|[^A-Za-z0-9._/-])([A-Za-z0-9][A-Za-z0-9_-]*/[A-Za-z0-9][A-Za-z0-9._-]*)`)
+	// A GitHub URL or scp-style address, which names a repository whatever else is on the line.
+	githubRE      = regexp.MustCompile(`github\.com[:/][A-Za-z0-9][A-Za-z0-9_-]*/[A-Za-z0-9][A-Za-z0-9._-]*`)
 	exampleSlugRE = regexp.MustCompile(`^example/[A-Za-z0-9][A-Za-z0-9._-]*$`)
+	// Slugs that are not repositories: a branch, a ref, and the policy's own cn/<name> form.
+	notARepoOwners = []string{"release/", "refs/", "cn/"}
 )
 
 // CodenameMapLines returns the lines of the named files (paths relative to root) shaped like an
-// entry of the codename map: cn:<name>, then an owner/name slug on the same line. The map lives
+// entry of the codename map: a codename (cn:<name>) and, anywhere on the same line and in either
+// order, an owner/name slug or a github.com URL. The slugs release/<n>, refs/<x> and cn/<x> are not
+// repositories and are ignored. The map lives
 // only on the walled node's own host; a real one must never be committed. The one allowed slug is
 // example/<name>, and only in a test file (_test.go) or under testdata/. Findings are in the
 // order of paths, then of lines.
@@ -47,23 +53,34 @@ func CodenameMapLines(root string, paths []string) ([]LineFinding, error) {
 }
 
 func isMappingLine(line string, fixture bool) bool {
-	for _, m := range codenameMapRE.FindAllStringSubmatch(line, -1) {
-		sep, rest := m[1], m[2]
-		nextArg := strings.Contains(sep, `",`) || strings.Contains(sep, "',")
-		if loc := slugRE.FindStringIndex(rest); loc == nil || loc[0] != 0 || nextArg {
+	if !codenameRE.MatchString(line) {
+		return false
+	}
+	if githubRE.MatchString(line) {
+		return true
+	}
+	for _, m := range slugRE.FindAllStringSubmatch(codenameTailRE.ReplaceAllString(line, " "), -1) {
+		slug := m[1]
+		if hasAnyPrefix(slug, notARepoOwners) || fixture && exampleSlugRE.MatchString(slug) {
 			continue
 		}
-		for _, slug := range slugRE.FindAllString(rest, -1) {
-			if !fixture || !exampleSlugRE.MatchString(slug) {
-				return true
-			}
+		return true
+	}
+	return false
+}
+
+func hasAnyPrefix(s string, prefixes []string) bool {
+	for _, p := range prefixes {
+		if strings.HasPrefix(s, p) {
+			return true
 		}
 	}
 	return false
 }
 
-// RepoFiles returns every file under root, relative and slash-separated, except those under
-// .git, .cache and dist (the ignored directories). The files git tracks are among them, so a test
+// RepoFiles returns every file under root, relative and slash-separated, except those under the
+// root's .git, .cache and dist directories (the ignored ones; the same names deeper down are
+// source). The files git tracks are among them, so a test
 // over RepoFiles can only see more than the tracked set; internal packages run no other program,
 // so it doesn't ask git.
 func RepoFiles(root string) ([]string, error) {
@@ -72,7 +89,7 @@ func RepoFiles(root string) ([]string, error) {
 		switch {
 		case err != nil:
 			return err
-		case d.IsDir() && path != "." && (d.Name() == ".git" || d.Name() == ".cache" || d.Name() == "dist"):
+		case d.IsDir() && (path == ".git" || path == ".cache" || path == "dist"):
 			return fs.SkipDir
 		case !d.IsDir():
 			files = append(files, path)
