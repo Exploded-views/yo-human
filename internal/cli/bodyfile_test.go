@@ -220,3 +220,34 @@ func TestBodyFileProjectRootDoesNotFollowTheProjectFilesLink(t *testing.T) {
 	r.fails(t, "a body beside the project file's target", ExitUsage, "outside the working directory and the project")
 	expect(t, len(fk["pager"].Sent) == 0, "a message went out")
 }
+
+// The post-open check needs the opened file to be a regular file AND the one that was checked.
+// A swapped-in FIFO may be handed the freed inode number of the file it replaced, so SameFile can
+// hold for it: the mode must be checked on its own. Real FileInfos make that deterministic: a FIFO
+// compared with itself is the same file by dev and ino, and is not regular.
+func TestSameRegularNeedsARegularFileThatIsTheSameFile(t *testing.T) {
+	dir := t.TempDir()
+	reg := write(t, filepath.Join(dir, "a.txt"), "a body")
+	other := write(t, filepath.Join(dir, "b.txt"), "another")
+	fifo := filepath.Join(dir, "fifo")
+	expect(t, syscall.Mkfifo(fifo, 0o600) == nil, "mkfifo")
+	info := func(path string) os.FileInfo {
+		fi, err := os.Stat(path)
+		expect(t, err == nil, "stat %s: %v", path, err)
+		return fi
+	}
+	cases := []struct {
+		name          string
+		before, after os.FileInfo
+		want          bool
+	}{
+		{"the same regular file", info(reg), info(reg), true},
+		{"a different regular file", info(reg), info(other), false},
+		{"a FIFO in place of a regular file", info(reg), info(fifo), false},
+		{"a FIFO that is the same file (a reused inode) but not regular", info(fifo), info(fifo), false},
+	}
+	for _, c := range cases {
+		expect(t, os.SameFile(c.before, c.after) == (c.name == "the same regular file" || c.name == "a FIFO that is the same file (a reused inode) but not regular"), "%s: the case does not hold the SameFile it claims", c.name)
+		expect(t, sameRegular(c.before, c.after) == c.want, "%s: sameRegular = %v, want %v", c.name, !c.want, c.want)
+	}
+}

@@ -16,6 +16,12 @@ const bodyFlags = os.O_RDONLY | syscall.O_NONBLOCK | syscall.O_NOCTTY
 // bodyOpenGap is a test seam: it runs between the stat of --body-file and its open. Nil in the binary.
 var bodyOpenGap func()
 
+// sameRegular is the check on the opened descriptor: the file is the one that was checked
+// before the open (same device and inode). STUB: no regular-file check yet.
+func sameRegular(before, after os.FileInfo) bool {
+	return os.SameFile(before, after)
+}
+
 // openBody opens --body-file once: a regular file that is not a config or secrets file and not in
 // the user config directory. Every decision is made on the opened descriptor's identity, never on
 // path text (a case-insensitive filesystem has many spellings of one path). A path that does not
