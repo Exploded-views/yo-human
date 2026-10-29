@@ -476,3 +476,20 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.281s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 5, item 2 (LOW-1: the codename scan matches only lowercase github.com; any <host>[:/]owner/name in any case, and a ~/a/b/c clone path, on a line with a codename must be flagged). Repo-wide count of lines the new host and home-path rules flag before any exclusion: 0, so no new exclusion is added; release/, refs/, cn/ and example/ in fixtures stay as before. 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/repolint/
+--- FAIL: TestCodenameMapLinesFindsAnyHostAndLocalClonePaths (0.00s)
+    codenames_test.go:86: home clone path: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: home path first: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: capitalised host: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: all capitals: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: enterprise host: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: enterprise host first: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: gitlab: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: bitbucket: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: azure devops: findings = [], <nil>; want [{f.txt 2}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.036s
+FAIL
+exit=1

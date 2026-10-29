@@ -64,6 +64,36 @@ func TestCodenameMapLinesFindsEveryPasteForm(t *testing.T) {
 	}
 }
 
+// Any host, in any case, and a local clone path (round 5, LOW-1). Built at run time like the rest.
+func TestCodenameMapLinesFindsAnyHostAndLocalClonePaths(t *testing.T) {
+	cn := "cn:" + "alpha"
+	for name, line := range map[string]string{
+		"capitalised host":      cn + " https://GitHub.com/acme/widgets",
+		"all capitals":          cn + " HTTPS://GITHUB.COM/ACME/WIDGETS",
+		"enterprise host":       cn + " https://git.example.com/acme/widgets",
+		"enterprise host first": "https://git.example.com/acme/widgets " + cn,
+		"gitlab":                cn + " https://gitlab.com/acme/widgets.git",
+		"bitbucket":             cn + " https://bitbucket.org/acme/widgets",
+		"azure devops":          cn + " https://dev.azure.com/acme/widgets",
+		"scp on another host":   cn + " git@gitlab.com:acme/widgets.git",
+		"home clone path":       cn + " ~/src/acme/widgets",
+		"home path first":       "~/src/acme/widgets " + cn,
+	} {
+		root := t.TempDir()
+		plant(t, root, "f.txt", "x\n"+line+"\n")
+		got, err := CodenameMapLines(root, []string{"f.txt"})
+		if want := []LineFinding{{"f.txt", 2}}; err != nil || !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: findings = %v, %v; want %v", name, got, err, want)
+		}
+	}
+	// No codename on the line: a URL alone is not a mapping.
+	root := t.TempDir()
+	plant(t, root, "g.txt", "https://git.example.com/acme/widgets\n~/src/acme/widgets\n")
+	if got, err := CodenameMapLines(root, []string{"g.txt"}); err != nil || len(got) != 0 {
+		t.Errorf("no codename: findings = %v, %v", got, err)
+	}
+}
+
 // A line holding a codename and only a ref, or the policy's cn/<name> form, is not an entry; in a
 // fixture example/<name> is allowed whichever side of the codename it is on.
 func TestCodenameMapLinesIgnoresRefsAndExamples(t *testing.T) {
