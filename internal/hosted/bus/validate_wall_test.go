@@ -44,6 +44,9 @@ func TestCheckWalledDraft(t *testing.T) {
 		func(d *Draft) { d.Ref = "v10.0.1" },
 		func(d *Draft) { d.Target = "cn:alpha#7" },
 		func(d *Draft) { d.Action, d.Ref, d.BaseRef = ActionMerge, "pr:42", "main" },
+		func(d *Draft) { d.Action, d.Ref, d.BaseRef = ActionMerge, "pr:1", "release/2" },
+		func(d *Draft) { d.Action, d.Ref = ActionMerge, "pr:123456" },
+		func(d *Draft) { d.Action, d.Ref = ActionMerge, "pr:0" },
 	} {
 		d := ok
 		edit(&d)

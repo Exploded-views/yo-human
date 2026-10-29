@@ -246,8 +246,8 @@ func TestWalledRefAndTargetRefusals(t *testing.T) {
 
 	n := 20
 	for _, c := range []struct{ ref, base, target string }{
-		{"main", "", ""}, {"release/1.2.3", "", "prod"}, {"v1.2.3", "", "staging"}, {"pr:1", "main", "preview"},
-		{"pr:123456", "release/2", "dev"}, {"pr:0", "release/10.0", "cn:alpha"}, {"pr:42", "main", "cn:alpha#7"}, {"pr:42", "main", "cn:alpha#123456"},
+		{"main", "", ""}, {"release/1.2.3", "", "prod"}, {"v1.2.3", "", "staging"}, {"main", "main", "preview"},
+		{"release/2", "release/2", "dev"}, {"v0.0.1", "release/10.0", "cn:alpha"}, {"main", "main", "cn:alpha#7"}, {"main", "main", "cn:alpha#123456"},
 	} {
 		n++
 		d := typed(strconv.Itoa(n))

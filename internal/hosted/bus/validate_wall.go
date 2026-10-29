@@ -1,6 +1,9 @@
 package bus
 
-import "regexp"
+import (
+	"regexp"
+	"strings"
+)
 
 // The client wall (protocol v1.2 section 10): a walled swarm exchanges typed lines only. These
 // are the grammars; the plan's "Global Constraints" names them.
@@ -44,6 +47,9 @@ func CheckWalledDraft(d Draft) error {
 		if !c.ok(c.v) {
 			return wallInvalid(c.field, c.valid)
 		}
+	}
+	if strings.HasPrefix(d.Ref, "pr:") && d.Action != ActionMerge {
+		return wallInvalid("ref", "a PR id, pr:<n>, only on a merge approval")
 	}
 	return checkNoFlags(d)
 }

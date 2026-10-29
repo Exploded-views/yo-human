@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"slices"
-	"strings"
 )
 
 // Post stores d for p: a new item, a revision of the item with the same (swarm, handle), or
@@ -67,14 +66,12 @@ func (b *Bus) checkDraft(p Principal, swarm string, d Draft) error {
 	return nil
 }
 
-// checkedView is the draft as Validate sees it. In a walled swarm the wall has already confirmed
-// that a repo is a codename, cn:<name>, and a ref may be a PR id, pr:<n>; Validate would refuse
-// the first as no owner/name slug and the second as no PR number, so it checks cn/<name> and <n>.
-// The item itself is stored as posted. The policy's mapping of a codename is in PolicyTarget.
+// checkedView is the draft as Validate sees it (asValidated). Only a walled swarm's drafts are
+// changed: the wall has already confirmed a repo is a codename, cn:<name>, and a merge's ref may
+// be a PR id, pr:<n>, which Validate would refuse as no owner/name slug and no PR number.
 func (b *Bus) checkedView(swarm string, d Draft) Draft {
 	if b.isWalled(swarm) {
-		d.Repo = codenameAsSlug(d.Repo)
-		d.Ref = strings.TrimPrefix(d.Ref, "pr:")
+		return asValidated(d)
 	}
 	return d
 }

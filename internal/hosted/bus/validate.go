@@ -264,7 +264,19 @@ func (d *Draft) checkActionShape(Limits) *Error {
 // looked up in the policy as cn/<name>, so a post and any later re-check of the stored item gate
 // on the same target.
 func (d *Draft) PolicyTarget() policy.Target {
-	return policy.TargetFor(string(d.Action), codenameAsSlug(d.Repo), d.Ref, d.BaseRef, d.Target)
+	n := asValidated(*d)
+	return policy.TargetFor(string(n.Action), n.Repo, n.Ref, n.BaseRef, n.Target)
+}
+
+// asValidated is d as Validate and the policy see it, the one normalisation for both: a walled
+// codename cn:<name> as cn/<name>, and a merge's PR id pr:<n> as the bare number. A PR id on
+// any other action is left alone (the wall refuses it). The stored item keeps what was posted.
+func asValidated(d Draft) Draft {
+	d.Repo = codenameAsSlug(d.Repo)
+	if d.Action == ActionMerge {
+		d.Ref = strings.TrimPrefix(d.Ref, "pr:")
+	}
+	return d
 }
 
 // codenameAsSlug is a walled codename, cn:<name>, as the owner/name shape the policy and
@@ -298,6 +310,3 @@ func (l Limits) Approvable(a Action, t policy.Target) error {
 		return &Error{Code: CodeExcludedAction, What: "action", Valid: "a passkey target in the owner's policy", Fix: "do not proceed; the owner's policy excludes this action here"}
 	}
 }
-
-// asValidated is a stub for the RED commit.
-func asValidated(d Draft) Draft { return d }
