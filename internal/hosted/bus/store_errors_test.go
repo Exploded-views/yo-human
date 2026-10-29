@@ -56,3 +56,13 @@ func containsAny(s string, subs ...string) bool {
 	}
 	return false
 }
+
+func TestAsBusErrorFallsBackToInternal(t *testing.T) {
+	if e := asBusError(errors.New("not a bus error")); e == nil || e.Code != CodeInternal {
+		t.Errorf("asBusError(plain) = %+v, want an internal error, never nil", e)
+	}
+	own := invalid("title", "x")
+	if e := asBusError(own); e != own {
+		t.Errorf("asBusError(bus error) = %+v", e)
+	}
+}

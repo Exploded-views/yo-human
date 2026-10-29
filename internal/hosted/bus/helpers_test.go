@@ -17,8 +17,10 @@ import (
 var t0 = time.Date(2026, 10, 28, 9, 30, 0, 0, time.UTC)
 
 type env struct {
-	b *bus.Bus
-	d *db.DB
+	b   *bus.Bus
+	d   *db.DB
+	l   bus.Limits
+	now func() time.Time
 }
 
 // newEnv is a Bus over a real database in a temp dir, with a clock that moves one second per
@@ -40,7 +42,7 @@ func newEnv(t *testing.T) *env {
 		LinkHosts: []string{"github.com"},
 		Policy:    policy.Policy{V: 1, Rules: []policy.Rule{{Action: "merge", Repo: "o/r", Ref: "main", Mode: policy.Passkey}}},
 	}
-	return &env{b: bus.New(d, now, l), d: d}
+	return &env{b: bus.New(d, now, l), d: d, l: l, now: now}
 }
 
 func node(name, swarm string) bus.Principal {

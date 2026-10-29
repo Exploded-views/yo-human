@@ -19,7 +19,7 @@ import (
 )
 
 // ErrNotFound is returned when an update names a row that does not exist.
-var ErrNotFound = errors.New("db: not found")
+var ErrNotFound = bus.ErrNotFound
 
 // timeLayout is fixed width, so stored times sort as strings. The zero time is stored as "".
 const timeLayout = "2006-01-02T15:04:05.000000000Z"

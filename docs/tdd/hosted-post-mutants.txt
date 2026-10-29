@@ -1,0 +1,197 @@
+# H1 Task 5 mutants, 2026-10-29T01:12:44Z, on the GREEN implementation; each applied by hand (script-applied string swap), vetted, run, reverted
+baseline internal/hosted/bus: exit=0
+
+## visible returns true for nodes
+internal/hosted/bus/scope.go: 'return p.Swarm != "" && it.Swarm == p.Swarm' -> 'return true'
+vet exit=0
+--- FAIL: TestNodeCannotTargetAnotherSwarm
+--- FAIL: TestVisibilityByKind
+--- FAIL: TestCrossSwarmIsIndistinguishableFromMissing
+suite exit=1
+
+## repost keeps the revision
+internal/hosted/bus/post.go: 'next.Draft, next.Revision, next.State = d, cur.Revision+1, StateOpen' -> 'next.Draft, next.Revision, next.State = d, cur.Revision, StateOpen'
+vet exit=0
+--- FAIL: TestRepostChangedBumpsRevisionAndVoids
+--- FAIL: TestReviseChangingKindBumpsRevision
+suite exit=1
+
+## From taken from the draft's text
+internal/hosted/bus/post.go: 'From: p.Name, FromKind: p.Kind, Revision: 1' -> 'From: d.Title, FromKind: p.Kind, Revision: 1'
+vet exit=0
+--- FAIL: TestStoreFailureIsInternalAndRollsBack
+--- FAIL: TestPostCreatesWithCredentialSwarm
+--- FAIL: TestFromComesFromCredential
+--- FAIL: TestRepostSameContentUnchanged
+--- FAIL: TestRepostEmptyAndNilFlagsAreTheSameContent
+--- FAIL: TestRepostChangedBumpsRevisionAndVoids
+--- FAIL: TestReviseWithoutApprovalDoesNotVoid
+--- FAIL: TestReviseOfAnsweredQuestionDoesNotVoid
+... and 2 more failing tests
+suite exit=1
+
+## node visibility ignores the swarm comparison (any node with a swarm sees all)
+internal/hosted/bus/scope.go: 'return p.Swarm != "" && it.Swarm == p.Swarm' -> 'return p.Swarm != ""'
+vet exit=0
+--- FAIL: TestNodeCannotTargetAnotherSwarm
+--- FAIL: TestVisibilityByKind
+--- FAIL: TestCrossSwarmIsIndistinguishableFromMissing
+suite exit=1
+
+## unknown principal kinds see everything
+internal/hosted/bus/scope.go: 'default:\n\t\treturn false' -> 'default:\n\t\treturn true'
+vet exit=0
+--- FAIL: TestVisibilityByKind
+suite exit=1
+
+## executor counted as an owner kind
+internal/hosted/bus/scope.go: 'case PrincipalDuet, PrincipalDesk, PrincipalPasskey:' -> 'case PrincipalDuet, PrincipalDesk, PrincipalPasskey, PrincipalExecutor:'
+vet exit=0
+--- FAIL: TestVisibilityByKind
+suite exit=1
+
+## desk dropped from the owner kinds
+internal/hosted/bus/scope.go: 'case PrincipalDuet, PrincipalDesk, PrincipalPasskey:' -> 'case PrincipalDuet, PrincipalPasskey:'
+vet exit=0
+--- FAIL: TestVisibilityByKind
+suite exit=1
+
+## Reply skips the visibility check
+internal/hosted/bus/threads.go: 'if !found || !b.visible(p, it) {' -> 'if !found {'
+vet exit=0
+--- FAIL: TestNodeCannotTargetAnotherSwarm
+--- FAIL: TestCrossSwarmIsIndistinguishableFromMissing
+suite exit=1
+
+## Reply answers a cross-swarm id with a different error
+internal/hosted/bus/threads.go: 'if !found || !b.visible(p, it) {\n\t\t\treturn notFoundErr()\n\t\t}' -> 'if !found {\n\t\t\treturn notFoundErr()\n\t\t}\n\t\tif !b.visible(p, it) {\n\t\t\treturn &Error{Code: CodeForbidden, What: "item", Valid: "your swarm\'s items", Fix: "none"}\n\t\t}'
+vet exit=0
+--- FAIL: TestNodeCannotTargetAnotherSwarm
+--- FAIL: TestCrossSwarmIsIndistinguishableFromMissing
+suite exit=1
+
+## Duet's item to the human goes to swarm 'human'
+internal/hosted/bus/post.go: 'case d.To == "human":\n\t\treturn "duet"' -> 'case d.To == "human":\n\t\treturn d.To'
+vet exit=0
+--- FAIL: TestFromComesFromCredential
+suite exit=1
+
+## node's item goes to the swarm in d.To
+internal/hosted/bus/post.go: 'case p.Kind == PrincipalNode:\n\t\treturn p.Swarm' -> 'case p.Kind == PrincipalNode:\n\t\treturn d.To'
+vet exit=0
+--- FAIL: TestStoreFailureIsInternalAndRollsBack
+--- FAIL: TestPostCreatesWithCredentialSwarm
+--- FAIL: TestNodeCannotTargetAnotherSwarm
+--- FAIL: TestRepostByAnotherAuthorRefused
+--- FAIL: TestHandleScopedPerSwarm
+--- FAIL: TestReplyAppendsMessageAndEvent
+suite exit=1
+
+## unchanged repost not detected
+internal/hosted/bus/post.go: 'if cur.ContentHash == hash {' -> 'if false {'
+vet exit=0
+--- FAIL: TestRepostSameContentUnchanged
+--- FAIL: TestRepostEmptyAndNilFlagsAreTheSameContent
+suite exit=1
+
+## approval_voided never appended
+internal/hosted/bus/post.go: 'if hadDecision && dec.Kind == RecordApproval {' -> 'if hadDecision && dec.Kind == RecordApproval && false {'
+vet exit=0
+--- FAIL: TestStoreFailureIsInternalAndRollsBack
+--- FAIL: TestRepostChangedBumpsRevisionAndVoids
+suite exit=1
+
+## approval_voided for any decision kind
+internal/hosted/bus/post.go: 'if hadDecision && dec.Kind == RecordApproval {' -> 'if hadDecision && dec.Kind != "" {'
+vet exit=0
+--- FAIL: TestReviseOfAnsweredQuestionDoesNotVoid
+suite exit=1
+
+## explicit secrets/money refusal dropped
+internal/hosted/bus/post.go: 'if d.Action == ActionSecrets || d.Action == ActionMoney {' -> 'if false {'
+vet exit=0
+--- FAIL: TestPostRefusesExcludedActions
+suite exit=1
+
+## approvability not checked
+internal/hosted/bus/post.go: 'if d.Kind == KindApproval {' -> 'if false {'
+vet exit=0
+--- FAIL: TestPostChecksApprovability
+suite exit=1
+
+## desk may post
+internal/hosted/bus/scope.go: 'case p.Kind == PrincipalDuet:' -> 'case p.Kind == PrincipalDuet || p.Kind == PrincipalDesk:'
+vet exit=0
+--- FAIL: TestPostRefusesNonPostingPrincipals
+--- FAIL: TestReplyValidatesAndChecksWhoMayReply
+suite exit=1
+
+## revise by another author allowed
+internal/hosted/bus/post.go: 'if cur.From != p.Name || cur.FromKind != p.Kind {' -> 'if false {'
+vet exit=0
+--- FAIL: TestRepostByAnotherAuthorRefused
+suite exit=1
+
+## validation skipped
+internal/hosted/bus/post.go: 'if err := d.Validate(b.l); err != nil {' -> 'if err := error(nil); err != nil {'
+vet exit=0
+--- FAIL: TestFromComesFromCredential
+--- FAIL: TestPostValidatesBeforeStoring
+suite exit=1
+
+## revise does not update LastSeq
+internal/hosted/bus/post.go: 'next.ContentHash, next.LastSeq, next.Updated = hash, last, now' -> 'next.ContentHash, next.LastSeq, next.Updated = hash, last-last+cur.LastSeq, now'
+vet exit=0
+--- FAIL: TestRepostChangedBumpsRevisionAndVoids
+suite exit=1
+
+## reply does not update LastSeq
+internal/hosted/bus/threads.go: 'it.LastSeq, it.Updated = seq, now' -> 'it.LastSeq, it.Updated = seq-seq+it.LastSeq, now'
+vet exit=0
+--- FAIL: TestReplyAppendsMessageAndEvent
+suite exit=1
+
+## item without a handle shares one handle
+internal/hosted/bus/post.go: 'it.Handle = it.ID' -> 'it.Handle = "-"'
+vet exit=0
+--- FAIL: TestPostWithoutHandleAlwaysCreates
+suite exit=1
+
+## hash ignores the handle
+internal/hosted/bus/post.go: 'raw, _ := json.Marshal(d)' -> 'd.Handle = ""\n\traw, _ := json.Marshal(d)'
+vet exit=0
+--- FAIL: TestContentHashIsSHA256OfCanonicalJSON
+suite exit=1
+
+## nil and empty flags hash differently
+internal/hosted/bus/post.go: 'if d.RiskFlags == nil {\n\t\td.RiskFlags = []string{}\n\t}' -> 'if false {\n\t\td.RiskFlags = []string{}\n\t}'
+vet exit=0
+--- FAIL: TestRepostEmptyAndNilFlagsAreTheSameContent
+--- FAIL: TestContentHashIsSHA256OfCanonicalJSON
+suite exit=1
+
+## store not-found mapped to internal
+internal/hosted/bus/scope.go: 'case errors.Is(err, ErrNotFound):\n\t\treturn notFoundErr()' -> 'case errors.Is(err, ErrNotFound):\n\t\treturn &Error{Code: CodeInternal, What: "the bus", Valid: "a retry", Fix: "retry"}'
+vet exit=0
+--- FAIL: TestStoreErrorsMapToBusErrors
+suite exit=1
+
+## store stale revision mapped to internal
+internal/hosted/bus/scope.go: 'return &Error{Code: CodeStaleRevision,' -> 'return &Error{Code: CodeInternal,'
+vet exit=0
+--- FAIL: TestStoreErrorsMapToBusErrors
+suite exit=1
+
+## reply event written to the caller's swarm
+internal/hosted/bus/threads.go: 'Event{Swarm: it.Swarm, ItemID: it.ID, Type: EventMessageAdded' -> 'Event{Swarm: p.Swarm, ItemID: it.ID, Type: EventMessageAdded'
+vet exit=0
+--- FAIL: TestReplyAppendsMessageAndEvent
+suite exit=1
+
+## reply body not trimmed before the empty check
+internal/hosted/bus/threads.go: 'case strings.TrimSpace(body) == "":' -> 'case body == "":'
+vet exit=0
+--- FAIL: TestReplyValidatesAndChecksWhoMayReply
+suite exit=1
+
+28 mutants, 0 survivors

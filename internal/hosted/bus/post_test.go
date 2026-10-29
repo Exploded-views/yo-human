@@ -136,6 +136,25 @@ func TestReviseWithoutApprovalDoesNotVoid(t *testing.T) {
 	}
 }
 
+func TestReviseOfAnsweredQuestionDoesNotVoid(t *testing.T) {
+	e := newEnv(t)
+	p := node("ci-1", "crew")
+	q := notice("q1")
+	q.Kind = bus.KindQuestion
+	it := e.post(t, p, q).Item
+	ans := bus.Record{ItemID: it.ID, Revision: 1, Kind: bus.RecordAnswer, ActorKind: bus.ActorAgent,
+		Text: "port 80", Source: "duet", By: "duet", HumanTS: t0, Recorded: t0}
+	if err := e.d.Tx(context.Background(), func(x bus.Tx) error { return x.InsertDecision(ans) }); err != nil {
+		t.Fatal(err)
+	}
+	q.Title = "Which port, really?"
+	r := e.post(t, p, q)
+	same(t, "revised", []any{r.Outcome, r.Item.State}, []any{bus.OutcomeRevised, bus.StateOpen})
+	if got := types(e.events(t)); !slices.Equal(got, []bus.EventType{bus.EventItemPosted, bus.EventItemRevised}) {
+		t.Errorf("events = %v: an answer is not an approval, nothing to void", got)
+	}
+}
+
 func TestReviseChangingKindBumpsRevision(t *testing.T) {
 	e := newEnv(t)
 	p := node("ci-1", "crew")
@@ -217,6 +236,11 @@ func TestPostRefusesExcludedActions(t *testing.T) {
 		d := mergeApproval("h-" + string(a))
 		d.Action, d.Repo, d.Ref, d.BaseRef, d.PinnedCommit = a, "", "", "", ""
 		_, err := e.b.Post(context.Background(), node("ci-1", "crew"), d)
+		wantCode(t, err, bus.CodeExcludedAction)
+		// Outright: not only when the item is an approval the policy would refuse.
+		q := notice("q-" + string(a))
+		q.Action = a
+		_, err = e.b.Post(context.Background(), duet, q)
 		wantCode(t, err, bus.CodeExcludedAction)
 	}
 	if n := len(e.events(t)); n != 0 {
