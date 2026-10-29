@@ -95,3 +95,44 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.202s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 2, part 2 (client wall: stubs CheckWalledDraft/CheckWalledMessage/checkSwarmMessage return nil, Limits.WalledSwarms unused), 2026-10-29T01:31:31Z
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestCheckWalledDraft (0.00s)
+    validate_wall_test.go:35: handle edit: got <nil>
+    validate_wall_test.go:35: handle edit: got <nil>
+    validate_wall_test.go:35: title edit: got <nil>
+    validate_wall_test.go:35: title edit: got <nil>
+    validate_wall_test.go:35: title edit: got <nil>
+    validate_wall_test.go:35: repo edit: got <nil>
+    validate_wall_test.go:35: repo edit: got <nil>
+    validate_wall_test.go:35: ref edit: got <nil>
+    validate_wall_test.go:35: ref edit: got <nil>
+    validate_wall_test.go:35: ref edit: got <nil>
+    validate_wall_test.go:35: base_ref edit: got <nil>
+    validate_wall_test.go:35: target edit: got <nil>
+--- FAIL: TestCheckWalledMessage (0.00s)
+    validate_wall_test.go:64: CheckWalledMessage("go sl:3", false) = <nil>, want ok=false
+    validate_wall_test.go:64: CheckWalledMessage("ob-3 blocked ", false) = <nil>, want ok=false
+    validate_wall_test.go:64: CheckWalledMessage("", false) = <nil>, want ok=false
+    validate_wall_test.go:64: CheckWalledMessage("ob-3 blocked", true) = <nil>, want ok=false
+    validate_wall_test.go:64: CheckWalledMessage("go sl:3 ", true) = <nil>, want ok=false
+    validate_wall_test.go:64: CheckWalledMessage("go sl:-3", true) = <nil>, want ok=false
+    validate_wall_test.go:64: CheckWalledMessage("go sl:03x", true) = <nil>, want ok=false
+    validate_wall_test.go:64: CheckWalledMessage("", true) = <nil>, want ok=false
+--- FAIL: TestWalledPostRefusesFreeText (0.04s)
+    wall_test.go:48: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestWalledRepostWithProseRefused (0.02s)
+    wall_test.go:71: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestWalledReplyRefusesFreeText (0.03s)
+    wall_test.go:84: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold (0.12s)
+    wall_test.go:103: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestWalledApprovalRefusesRealSlug (0.13s)
+    wall_test.go:148: code = excluded_action (action), want invalid
+--- FAIL: TestWalledListOnlyFromConfig (0.02s)
+    wall_test.go:206: err = <nil> (<nil>), want a *bus.Error with code invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.701s
+FAIL
+exit=1

@@ -25,7 +25,10 @@ type env struct {
 
 // newEnv is a Bus over a real database in a temp dir, with a clock that moves one second per
 // read and a policy that lets a merge to o/r main through as a passkey approval.
-func newEnv(t *testing.T) *env {
+func newEnv(t *testing.T) *env { return newEnvWalled(t) }
+
+// newEnvWalled is newEnv with the named swarms behind the client wall.
+func newEnvWalled(t *testing.T, walled ...string) *env {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), "data")
 	if err := os.Mkdir(dir, 0o700); err != nil {
@@ -40,7 +43,11 @@ func newEnv(t *testing.T) *env {
 	now := func() time.Time { n++; return t0.Add(time.Duration(n) * time.Second) }
 	l := bus.Limits{
 		LinkHosts: []string{"github.com"},
-		Policy:    policy.Policy{V: 1, Rules: []policy.Rule{{Action: "merge", Repo: "o/r", Ref: "main", Mode: policy.Passkey}}},
+		Policy: policy.Policy{V: 1, Rules: []policy.Rule{
+			{Action: "merge", Repo: "o/r", Ref: "main", Mode: policy.Passkey},
+			{Action: "release", Repo: "cn/alpha", Ref: "v*", Mode: policy.Passkey},
+		}},
+		WalledSwarms: walled,
 	}
 	return &env{b: bus.New(d, now, l), d: d, l: l, now: now}
 }

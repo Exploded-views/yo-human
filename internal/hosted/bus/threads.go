@@ -25,6 +25,9 @@ func (b *Bus) Reply(ctx context.Context, p Principal, threadID, body string, sev
 		if !found || !b.visible(p, it) {
 			return notFoundErr()
 		}
+		if err := b.checkSwarmMessage(p, it.Swarm, body); err != nil {
+			return err
+		}
 		now := b.now().UTC()
 		m = Message{ID: NewID("msg"), ThreadID: it.ID, From: p.Name, FromKind: p.Kind, Body: body, Severity: sev, Created: now}
 		if err := x.InsertMessage(m); err != nil {

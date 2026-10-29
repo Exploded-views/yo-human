@@ -65,3 +65,6 @@ func asBus(err error) bool {
 	_, ok := AsError(err)
 	return ok
 }
+
+// checkSwarmMessage is the message-side hook of the wall. (stub)
+func (b *Bus) checkSwarmMessage(p Principal, swarm, body string) error { return nil }

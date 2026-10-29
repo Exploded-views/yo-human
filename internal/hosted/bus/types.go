@@ -171,4 +171,7 @@ const (
 type Limits struct {
 	LinkHosts []string
 	Policy    policy.Policy
+	// WalledSwarms are the swarms behind the client wall (the deployment's YH_WALLED_SWARMS).
+	// New copies them once; nothing a caller sends can add or remove one.
+	WalledSwarms []string
 }
