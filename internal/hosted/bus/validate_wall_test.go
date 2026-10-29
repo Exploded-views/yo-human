@@ -29,6 +29,8 @@ func TestCheckWalledDraft(t *testing.T) {
 		{"risk_flags", func(d *Draft) { d.RiskFlags = []string{"touches-auth"} }},
 		{"ref", func(d *Draft) { d.Ref = "pr:1234567" }},
 		{"base_ref", func(d *Draft) { d.BaseRef = "pr:42" }},
+		{"ref", func(d *Draft) { d.Ref = "pr:42" }}, // the action is none, not merge
+		{"ref", func(d *Draft) { d.Action, d.Ref = ActionRelease, "pr:42" }},
 	} {
 		d := ok
 		c.edit(&d)
@@ -41,7 +43,7 @@ func TestCheckWalledDraft(t *testing.T) {
 		func(d *Draft) { d.Repo, d.Ref, d.BaseRef, d.Target = "cn:alpha-1", "main", "release/1.20.3", "prod" },
 		func(d *Draft) { d.Ref = "v10.0.1" },
 		func(d *Draft) { d.Target = "cn:alpha#7" },
-		func(d *Draft) { d.Ref, d.BaseRef = "pr:42", "main" },
+		func(d *Draft) { d.Action, d.Ref, d.BaseRef = ActionMerge, "pr:42", "main" },
 	} {
 		d := ok
 		edit(&d)

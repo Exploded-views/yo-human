@@ -311,3 +311,28 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.020s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 3, part 1b (coordinator ruling after the security review: a walled pr:<n> ref is valid for a merge only and is stripped for a merge only; checkedView and PolicyTarget share one normalisation, asValidated, a stub here), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestAsValidatedMapsCodenameAndMergePRID (0.00s)
+    normalise_test.go:13: merge = {Kind: Severity: To: Handle: Title: Summary: Detail: RequiredAction: Repo:cn:alpha Ref:pr:42 BaseRef:main Target: PinnedCommit: PinnedTree: Action:merge Link: RiskFlags:[] Untrusted:false Urgency:}
+--- FAIL: TestCheckedViewAndPolicyTargetUseTheSameNormalisation (0.00s)
+    normalise_test.go:25: walled view = {Kind: Severity: To: Handle: Title: Summary: Detail: RequiredAction: Repo:cn/alpha Ref:42 BaseRef:main Target: PinnedCommit: PinnedTree: Action:merge Link: RiskFlags:[] Untrusted:false Urgency:}, want {Kind: Severity: To: Handle: Title: Summary: Detail: RequiredAction: Repo:cn:alpha Ref:pr:42 BaseRef:main Target: PinnedCommit: PinnedTree: Action:merge Link: RiskFlags:[] Untrusted:false Urgency:}
+--- FAIL: TestCheckWalledDraft (0.00s)
+    validate_wall_test.go:39: ref edit: got <nil>
+    validate_wall_test.go:39: ref edit: got <nil>
+--- FAIL: TestWalledRefAndTargetRefusals (0.01s)
+    --- FAIL: TestWalledRefAndTargetRefusals/pr:_ref_on_a_release (0.00s)
+        wall_test.go:202: code = excluded_action (action), want invalid
+    --- FAIL: TestWalledRefAndTargetRefusals/pr:_ref_on_a_public-sync (0.00s)
+        wall_test.go:203: What = "pinned_tree", want "ref"
+    --- FAIL: TestWalledRefAndTargetRefusals/pr:_ref_on_a_deploy (0.00s)
+        wall_test.go:202: code = excluded_action (action), want invalid
+    --- FAIL: TestWalledRefAndTargetRefusals/pr:_ref_on_a_other (0.00s)
+        wall_test.go:203: What = "repo", want "ref"
+    --- FAIL: TestWalledRefAndTargetRefusals/pr:_ref_on_a_none (0.00s)
+        wall_test.go:202: code = not_approvable (action), want invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.215s
+FAIL
+exit=1

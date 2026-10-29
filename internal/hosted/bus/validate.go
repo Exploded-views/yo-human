@@ -298,3 +298,6 @@ func (l Limits) Approvable(a Action, t policy.Target) error {
 		return &Error{Code: CodeExcludedAction, What: "action", Valid: "a passkey target in the owner's policy", Fix: "do not proceed; the owner's policy excludes this action here"}
 	}
 }
+
+// asValidated is a stub for the RED commit.
+func asValidated(d Draft) Draft { return d }

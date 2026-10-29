@@ -211,6 +211,10 @@ func TestWalledRefAndTargetRefusals(t *testing.T) {
 	} {
 		refuse("ref "+c.name, "ref", func(d *bus.Draft) { d.Ref = c.v })
 	}
+	// A PR id is a ref for a merge only: for a release it would be gated as the tag 42.
+	for _, a := range []bus.Action{bus.ActionRelease, bus.ActionPublicSync, bus.ActionDeploy, bus.ActionOther, bus.ActionNone} {
+		refuse("pr: ref on a "+string(a), "ref", func(d *bus.Draft) { d.Action, d.Ref = a, "pr:42" })
+	}
 	for _, c := range []struct{ name, v string }{
 		{"a PR id", "pr:42"}, {"a branch name", "feature/x"}, {"a tag", "v1.2.3"}, {"a URL", "https://github.com/o/r"}, {"a letter PR", "pr:4a"},
 	} {
