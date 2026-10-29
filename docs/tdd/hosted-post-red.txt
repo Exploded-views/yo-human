@@ -411,3 +411,36 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.250s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 4, item 5 (L2: every digit field of the WALLED grammar is bounded: ob-N and sl:N ids are 1-9 then up to 5 more digits; bytes:N and each release/ number are 0 or 1-9 then up to 5 more (no leading zero); each semver part is 0 or 1-9 then up to 3 more. Unwalled digit fields are unchanged and are an accepted residual, by lead ruling 2026-10-29 (TestUnwalledDigitFieldsAreNotBounded passes before and after)), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestWalledDigitFieldsAreBounded (0.00s)
+    validate_wall_test.go:161: handle ob-N: one digit more is accepted
+    validate_wall_test.go:165: handle ob-N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:165: handle ob-N: zero or leading-zero case 1 is accepted
+    validate_wall_test.go:161: title ob-N: one digit more is accepted
+    validate_wall_test.go:165: title ob-N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:165: title ob-N: zero or leading-zero case 1 is accepted
+    validate_wall_test.go:161: title bytes:N: one digit more is accepted
+    validate_wall_test.go:165: title bytes:N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:161: message ob-N: one digit more is accepted
+    validate_wall_test.go:165: message ob-N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:165: message ob-N: zero or leading-zero case 1 is accepted
+    validate_wall_test.go:161: message bytes:N: one digit more is accepted
+    validate_wall_test.go:165: message bytes:N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:161: sl:N: one digit more is accepted
+    validate_wall_test.go:165: sl:N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:165: sl:N: zero or leading-zero case 1 is accepted
+    validate_wall_test.go:161: release/N: one digit more is accepted
+    validate_wall_test.go:165: release/N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:165: release/N: zero or leading-zero case 1 is accepted
+    validate_wall_test.go:161: release/N part: one digit more is accepted
+    validate_wall_test.go:161: base release/N: one digit more is accepted
+    validate_wall_test.go:165: base release/N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:161: semver major: one digit more is accepted
+    validate_wall_test.go:161: semver minor: one digit more is accepted
+    validate_wall_test.go:161: semver patch: one digit more is accepted
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.257s
+FAIL
+exit=1

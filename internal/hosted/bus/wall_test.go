@@ -350,3 +350,21 @@ func TestOwnerCNIsReservedEverywhere(t *testing.T) {
 }
 
 func withRepo(d bus.Draft, repo string) bus.Draft { d.Repo = repo; return d }
+
+// The digit bounds belong to the walled grammar only: an unwalled swarm takes the same long digit
+// fields as before. Unwalled digit fields are an accepted residual (lead ruling, 2026-10-29).
+func TestUnwalledDigitFieldsAreNotBounded(t *testing.T) {
+	e := newEnvWalled(t, "client")
+	n := node("ci-1", "crew")
+	long := strings.Repeat("9", 12)
+	d := notice("ob-" + long)
+	d.Title = "ob-" + long + " done sha256:" + strings.Repeat("a", 64) + " bytes:" + long
+	d.Ref, d.BaseRef = "release/"+long+"."+long, "release/"+long
+	e.post(t, n, d)
+	d2 := notice("v-1")
+	d2.Ref = "v" + long + "." + long + "." + long
+	it := e.post(t, n, d2).Item
+	if _, err := e.b.Reply(context.Background(), n, it.ID, "go sl:"+long, bus.SeverityNormal, bus.UrgencyDigest); err != nil {
+		t.Errorf("unwalled reply with a long sl:N: %v", err)
+	}
+}
