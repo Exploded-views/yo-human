@@ -2,14 +2,13 @@ package perf
 
 import (
 	"bytes"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 )
-
-type sampler func(dir string, items, n int) ([]time.Duration, error)
 
 var samplers = map[string]sampler{"post": PostIn, "revise": ReviseIn}
 
@@ -21,7 +20,7 @@ func TestSeedItemsIsTheBudgetLine(t *testing.T) {
 
 func TestSamplersTimeEachCall(t *testing.T) {
 	for name, fn := range samplers {
-		got, err := fn(t.TempDir(), 25, 4)
+		got, err := fn(filepath.Join(t.TempDir(), "data"), 25, 4) // db.Open makes the missing directory 0700
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
@@ -37,10 +36,13 @@ func TestSamplersTimeEachCall(t *testing.T) {
 }
 
 func TestSamplersReportSetupErrors(t *testing.T) {
-	// A directory under a path that doesn't exist can't be opened as a database directory.
-	bad := filepath.Join(t.TempDir(), "file-not-dir")
+	// A directory under a regular file can't be made.
+	file := filepath.Join(t.TempDir(), "a-file")
+	if err := os.WriteFile(file, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
 	for name, fn := range samplers {
-		if _, err := fn(filepath.Join(bad, "x", "y"), 5, 1); err == nil {
+		if _, err := fn(filepath.Join(file, "data"), 5, 1); err == nil {
 			t.Errorf("%s: no error for an unusable directory", name)
 		}
 	}
@@ -64,6 +66,16 @@ func TestRunPrintsOneTimingPerLine(t *testing.T) {
 				t.Errorf("%s: line %q is not a positive integer", kind, l)
 			}
 		}
+	}
+}
+
+func TestRunReportsAMeasurementFailure(t *testing.T) {
+	old := tmpRoot
+	tmpRoot = filepath.Join(t.TempDir(), "missing")
+	t.Cleanup(func() { tmpRoot = old })
+	var out, errOut bytes.Buffer
+	if code := Run([]string{"post", "1"}, &out, &errOut); code != 1 || out.Len() != 0 || !strings.Contains(errOut.String(), "perf:") {
+		t.Errorf("code %d, stdout %q, stderr %q", code, out.String(), errOut.String())
 	}
 }
 
