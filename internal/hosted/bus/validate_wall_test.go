@@ -192,3 +192,23 @@ func TestWalledReleaseHasAtMostThreeParts(t *testing.T) {
 		}
 	}
 }
+
+// The #N of a walled target is a PR id like pr:N: 1 to 6 digits, no zero, no leading zero (round 5,
+// NIT-1), so one number has one spelling.
+func TestWalledTargetPRNumberHasNoLeadingZero(t *testing.T) {
+	base := Draft{Handle: "ob-3", Title: "ob-3 ack"}
+	for _, v := range []string{"cn:alpha#1", "cn:alpha#42", "cn:alpha#999999"} {
+		d := base
+		d.Target = v
+		if err := CheckWalledDraft(d); err != nil {
+			t.Errorf("%s: %v", v, err)
+		}
+	}
+	for _, v := range []string{"cn:alpha#0", "cn:alpha#000042", "cn:alpha#042", "cn:alpha#1000000", "cn:alpha#"} {
+		d := base
+		d.Target = v
+		if be, ok := AsError(CheckWalledDraft(d)); !ok || be.What != "target" || !strings.Contains(be.Valid, "no leading zero") {
+			t.Errorf("%s: error = %+v", v, be)
+		}
+	}
+}

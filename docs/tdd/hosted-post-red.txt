@@ -463,3 +463,16 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.271s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 5, item 3 (NIT-1: the walled target's #N is the PR id pattern, #[1-9][0-9]{0,5}; #0 and leading zeros are refused), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestWalledTargetPRNumberHasNoLeadingZero (0.00s)
+    validate_wall_test.go:211: cn:alpha#0: error = <nil>
+    validate_wall_test.go:211: cn:alpha#000042: error = <nil>
+    validate_wall_test.go:211: cn:alpha#042: error = <nil>
+    validate_wall_test.go:211: cn:alpha#1000000: error = invalid: target (valid: empty, prod, staging, preview, dev or a codename: cn:<name> with an optional #<n> (at most 6 digits))
+    validate_wall_test.go:211: cn:alpha#: error = invalid: target (valid: empty, prod, staging, preview, dev or a codename: cn:<name> with an optional #<n> (at most 6 digits))
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.281s
+FAIL
+exit=1
