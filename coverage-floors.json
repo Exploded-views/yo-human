@@ -1,8 +1,7 @@
 {
   "exempt": {
     "github.com/Exploded-views/yo-human/cmd/yo-human": "one-line main that only calls cli.Run; the logic is covered in internal/cli",
-    "github.com/Exploded-views/yo-human/cmd/yo-human-hosted": "one-line main that only calls app.Run; the logic is covered in internal/hosted/app",
-    "github.com/Exploded-views/yo-human/internal/hosted/perf/cmd": "one-line main that only calls perf.Run; the logic is covered in internal/hosted/perf"
+    "github.com/Exploded-views/yo-human/cmd/yo-human-hosted": "one-line main that only calls app.Run; the logic is covered in internal/hosted/app"
   },
   "github.com/Exploded-views/yo-human/internal/cli": {
     "statements": 100.0
@@ -30,5 +29,8 @@
   },
   "github.com/Exploded-views/yo-human/internal/hosted/perf": {
     "statements": 91.4
+  },
+  "github.com/Exploded-views/yo-human/internal/hosted/perf/cmd": {
+    "statements": 100.0
   }
 }

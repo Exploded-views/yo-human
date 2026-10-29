@@ -11,6 +11,4 @@ import (
 // exit is os.Exit, a variable so a test can run main.
 var exit = os.Exit
 
-func main() {}
-
-var _ = perf.Run
+func main() { exit(perf.Run(os.Args[1:], os.Stdout, os.Stderr)) }
