@@ -7,15 +7,25 @@ import (
 
 // The client wall (protocol v1.2 section 10): a walled swarm exchanges typed lines only. These
 // are the grammars; the plan's "Global Constraints" names them.
+// The digit fields are bounded, because a long run of digits can carry text. An id (ob-N, sl:N) is
+// 1 to 6 digits starting 1-9; a count (bytes:N, a release number) is 0 or 1 to 6 digits starting
+// 1-9, with no leading zero; a semver part is the same with 1 to 4 digits. Only the walled grammar
+// is bounded: unwalled digit fields are an accepted residual (lead ruling, 2026-10-29).
+const (
+	wallID     = `[1-9][0-9]{0,5}`
+	wallCount  = `(?:0|[1-9][0-9]{0,5})`
+	wallSemver = `(?:0|[1-9][0-9]{0,3})`
+)
+
 var (
-	wallHandleRE   = regexp.MustCompile(`^ob-[0-9]+$`)
-	wallTitleRE    = regexp.MustCompile(`^ob-[0-9]+ (needs:(owner|none)|ack|done|blocked|ci-red|deploy-ready|prod-down)( sha256:[0-9a-f]{64} bytes:[0-9]+)?$`)
-	wallGoHoldRE   = regexp.MustCompile(`^(go|hold) sl:[0-9]+$`)
+	wallHandleRE   = regexp.MustCompile(`^ob-` + wallID + `$`)
+	wallTitleRE    = regexp.MustCompile(`^ob-` + wallID + ` (needs:(owner|none)|ack|done|blocked|ci-red|deploy-ready|prod-down)( sha256:[0-9a-f]{64} bytes:` + wallCount + `)?$`)
+	wallGoHoldRE   = regexp.MustCompile(`^(go|hold) sl:` + wallID + `$`)
 	wallCodenameRE = regexp.MustCompile(`^cn:[a-z][a-z0-9-]{0,39}$`)
 	// A ref is a branch the plan names, a semver tag or a PR id; a base is a branch only, so a PR id
 	// is never one. Neither is a branch name of the client's, a PR title or a URL.
-	wallRefRE  = regexp.MustCompile(`^(main|release/[0-9]+(\.[0-9]+)*|v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)|pr:[1-9][0-9]{0,5})$`)
-	wallBaseRE = regexp.MustCompile(`^(main|release/[0-9]+(\.[0-9]+)*)$`)
+	wallRefRE  = regexp.MustCompile(`^(main|release/` + wallCount + `(?:\.` + wallCount + `)*|v` + wallSemver + `\.` + wallSemver + `\.` + wallSemver + `|pr:` + wallID + `)$`)
+	wallBaseRE = regexp.MustCompile(`^(main|release/` + wallCount + `(?:\.` + wallCount + `)*)$`)
 	// A target is one of the fixed environments, or a codename with an optional PR number: never a
 	// slug, and never a token of the poster's choosing (that would be a channel).
 	wallTargetRE = regexp.MustCompile(`^(prod|staging|preview|dev|cn:[a-z][a-z0-9-]{0,39}(#[0-9]{1,6})?)$`)
