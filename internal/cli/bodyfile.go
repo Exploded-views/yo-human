@@ -19,7 +19,9 @@ var bodyOpenGap func()
 // openBody opens --body-file once: a regular file that is not a config or secrets file and not in
 // the user config directory. Every decision is made on the opened descriptor's identity, never on
 // path text (a case-insensitive filesystem has many spellings of one path). A path that does not
-// stat as a regular file is refused without being opened; the descriptor must be that same file.
+// stat as a regular file is refused without being opened; the descriptor must be a regular file
+// and that same file. Identity alone is not enough: a filesystem may hand a freed inode number to
+// the FIFO that replaced the file, so SameFile can hold for a swapped-in FIFO.
 func (e *env) openBody(file string) (*os.File, error) {
 	fi, err := os.Stat(file)
 	if err != nil {
@@ -36,7 +38,7 @@ func (e *env) openBody(file string) (*os.File, error) {
 		return nil, problem.Usagef("--body-file %s cannot be opened", "the path of a readable file", "check the path", problem.Clip(file))
 	}
 	got, err := f.Stat()
-	if err != nil || !os.SameFile(fi, got) {
+	if err != nil || !got.Mode().IsRegular() || !os.SameFile(fi, got) {
 		_ = f.Close()
 		return nil, notRegularBody(file)
 	}
