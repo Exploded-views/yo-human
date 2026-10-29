@@ -44,6 +44,9 @@ func AsError(err error) (*Error, bool) {
 	return nil, false
 }
 
+// Cause is the error behind an internal error, for the operator's log. (stub)
+func (e *Error) Cause() error { return nil }
+
 func invalid(what, valid string) *Error {
 	return &Error{Code: CodeInvalid, What: what, Valid: valid, Fix: "correct " + what + " and post again"}
 }

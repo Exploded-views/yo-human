@@ -56,6 +56,9 @@ var (
 		ActionForcePush, ActionDelete, ActionSpend, ActionSecrets, ActionMoney, ActionOther}
 )
 
+// ValidSwarm reports whether s may name a swarm. (stub)
+func ValidSwarm(s string) bool { return ValidName(s) }
+
 // ValidName reports whether s is a valid swarm or node name.
 func ValidName(s string) bool { return nameRE.MatchString(s) }
 

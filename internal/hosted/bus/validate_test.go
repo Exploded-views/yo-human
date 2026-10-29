@@ -57,6 +57,8 @@ func TestDraftValidation(t *testing.T) {
 		{"link off the allow-list", "link", func(d *Draft) { d.Link = "https://evil.example/x" }},
 		{"link host containing the allowed host", "link", func(d *Draft) { d.Link = "https://github.com.evil.example/x" }},
 		{"link host suffix without a dot", "link", func(d *Draft) { d.Link = "https://evilgithub.com/x" }},
+		{"link with invalid UTF-8", "link", func(d *Draft) { d.Link = "https://github.com/o/r/pull/\xff" }},
+		{"link with a bidi override", "link", func(d *Draft) { d.Link = "https://github.com/o/r/pull/" + string(rune(0x202e)) + "1" }},
 		{"link with userinfo", "link", func(d *Draft) { d.Link = "https://github.com" + "@evil.example/x" }},
 		{"link with userinfo on an allowed host", "link", func(d *Draft) { d.Link = "https://u" + "@github.com/x" }},
 		{"link of 2049 bytes", "link", func(d *Draft) { d.Link = "https://github.com/" + strings.Repeat("a", 2030) }},

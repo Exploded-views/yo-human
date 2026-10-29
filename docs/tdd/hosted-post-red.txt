@@ -57,3 +57,41 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.659s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 2, part 1 (review fixes: reserved swarms, link text, versioned hash, node To, Error cause; stubs: ValidSwarm = ValidName, Cause() = nil, empty hashDraft), 2026-10-29T01:27:38Z
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestHashBytesArePinned (0.00s)
+    hash_test.go:25: hash bytes =
+        
+        want
+        {"kind":"approval","severity":"high","to":"human","handle":"h","title":"T","summary":"S","detail":"D","required_action":"R","repo":"o/r","ref":"7","base_ref":"main","target":"o/r#7","pinned_commit":"c","pinned_tree":"t","action":"merge","link":"https://github.com/x","risk_flags":["a","b"],"untrusted":true}
+    hash_test.go:29: contentHash = 982583f848e4173d8531049986aad56c04fa0d388d1fad06d8ddac7f75af6b5e
+--- FAIL: TestHashDraftCoversEveryDraftField (0.00s)
+    hash_test.go:48: hashDraft fields [], want Draft's [Kind Severity To Handle Title Summary Detail RequiredAction Repo Ref BaseRef Target PinnedCommit PinnedTree Action Link RiskFlags Untrusted]
+--- FAIL: TestInternalErrorKeepsItsCause (0.00s)
+    store_errors_test.go:48: Cause() = internal: the bus (valid: a retry), want the store error
+--- FAIL: TestDraftValidation (0.00s)
+    --- FAIL: TestDraftValidation/link_with_invalid_UTF-8 (0.00s)
+        validate_test.go:145: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/link_with_a_bidi_override (0.00s)
+        validate_test.go:145: Validate = <nil>, want a bus error
+--- FAIL: TestNodeToMustBeHuman (0.01s)
+    post_test.go:62: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestPostRefusesNonPostingPrincipals (0.00s)
+    post_test.go:239: err = <nil> (<nil>), want a *bus.Error with code forbidden
+--- FAIL: TestContentHashIsVersionedSHA256OfHashDraft (0.00s)
+    post_test.go:302: hash = 189e637534e9f902bc64fd01f531f619dbed63ccff09176691296b89ac5c2a91, want v1:7da3be957cfe1738ffd28e4c3ea8d517a3fbc10fd4a751955fe7e2a49d6585aa
+--- FAIL: TestValidSwarmReservesDuetAndHuman (0.00s)
+    reserved_test.go:15: ValidSwarm("duet") = true, want false
+    reserved_test.go:15: ValidSwarm("human") = true, want false
+--- FAIL: TestNodeInSwarmDuetReachesNothing (0.00s)
+    reserved_test.go:31: err = <nil> (<nil>), want a *bus.Error with code forbidden
+--- FAIL: TestDuetCannotAddressReservedSwarms (0.01s)
+    reserved_test.go:48: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestVisibilityByKind (0.00s)
+    scope_test.go:38: a node in swarm "duet" sees an item in swarm "duet"
+    scope_test.go:38: a node in swarm "human" sees an item in swarm "human"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.202s
+FAIL
+exit=1

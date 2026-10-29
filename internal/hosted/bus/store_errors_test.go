@@ -39,6 +39,22 @@ func TestStoreErrorsMapToBusErrors(t *testing.T) {
 	}
 }
 
+// The cause of an internal error stays on the error for the operator's log; Error() and the
+// fields a caller sees never carry it.
+func TestInternalErrorKeepsItsCause(t *testing.T) {
+	cause := errors.New("disk /secret/path on fire")
+	got, _ := AsError(mapStoreErr(fmt.Errorf("wrapped: %w", cause)))
+	if got == nil || !errors.Is(got.Cause(), cause) {
+		t.Fatalf("Cause() = %v, want the store error", got)
+	}
+	if containsAny(got.Error(), "secret", "disk") {
+		t.Errorf("Error() prints the cause: %q", got.Error())
+	}
+	if e := notFoundErr(); e.Cause() != nil {
+		t.Errorf("a not_found error has a cause: %v", e.Cause())
+	}
+}
+
 func checkInternal(t *testing.T, name string, e *Error) {
 	t.Helper()
 	if e.What == "" || e.Fix == "" || containsAny(e.What+e.Valid+e.Fix, "secret", "disk") {

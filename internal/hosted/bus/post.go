@@ -81,6 +81,11 @@ func postSwarm(p Principal, d Draft) string {
 // struct fields in declaration order, so the bytes are deterministic; the field order of Draft
 // is therefore part of the hash and must not change. Nil risk flags encode as [], so nil and
 // empty are the same content.
+// hashBytes is the JSON the content hash covers. (stub)
+type hashDraft struct{}
+
+func hashBytes(d Draft) []byte { return nil }
+
 func contentHash(d Draft) string {
 	if d.RiskFlags == nil {
 		d.RiskFlags = []string{}

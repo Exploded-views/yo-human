@@ -51,16 +51,22 @@ func TestFromComesFromCredential(t *testing.T) {
 	wantCode(t, err, bus.CodeInvalid)
 }
 
-func TestNodeCannotTargetAnotherSwarm(t *testing.T) {
+// A node's To is read by nothing but the validator, so anything but "human" would be an item
+// that reaches no one while claiming to be addressed to someone.
+func TestNodeToMustBeHuman(t *testing.T) {
 	e := newEnv(t)
-	d := notice("h1")
-	d.To = "client"
-	it := e.post(t, node("ci-1", "crew"), d).Item
-	if it.Swarm != "crew" {
-		t.Fatalf("item went to swarm %q, want the credential's", it.Swarm)
+	for _, to := range []string{"client", "crew", "duet"} {
+		d := notice("h-" + to)
+		d.To = to
+		_, err := e.b.Post(context.Background(), node("ci-1", "crew"), d)
+		if be := errWithCode(t, err, bus.CodeInvalid); be.What != "to" {
+			t.Errorf("To %q: What = %q, want to", to, be.What)
+		}
 	}
-	_, err := e.b.Reply(context.Background(), node("ci-2", "client"), it.ID, "hi", bus.SeverityNormal)
-	wantCode(t, err, bus.CodeNotFound)
+	if n := len(e.events(t)); n != 0 {
+		t.Errorf("%d events after refused posts", n)
+	}
+	e.post(t, node("ci-1", "crew"), notice("ok"))
 }
 
 func TestRepostSameContentUnchanged(t *testing.T) {
@@ -185,6 +191,21 @@ func TestRepostByAnotherAuthorRefused(t *testing.T) {
 	}
 }
 
+// A node may be named "duet": the author check must compare the kind as well as the name.
+func TestRepostByNodeNamedDuetRefused(t *testing.T) {
+	e := newEnv(t)
+	d := notice("dh")
+	d.To = "crew"
+	first := e.post(t, duet, d).Item
+	d.Title = "Rewritten by a node named duet"
+	d.To = "human"
+	_, err := e.b.Post(context.Background(), node("duet", "crew"), d)
+	wantCode(t, err, bus.CodeForbidden)
+	if got, _ := e.stored(t, first.ID); got.Title != first.Title || got.Revision != 1 {
+		t.Errorf("item changed: %+v", got)
+	}
+}
+
 func TestHandleScopedPerSwarm(t *testing.T) {
 	e := newEnv(t)
 	a := e.post(t, node("ci-1", "crew"), notice("same"))
@@ -209,7 +230,10 @@ func TestPostRefusesNonPostingPrincipals(t *testing.T) {
 	for _, p := range []bus.Principal{
 		{Kind: bus.PrincipalDesk, Name: "desk"}, {Kind: bus.PrincipalPasskey, Name: "phone"},
 		{Kind: bus.PrincipalExecutor, Name: "exec"}, {Kind: bus.PrincipalDeskStart, Name: "start"}, {},
-		{Kind: bus.PrincipalNode, Name: "ci-1"}, // a node with no swarm
+		{Kind: bus.PrincipalNode, Name: "ci-1"},             // a node with no swarm
+		{Kind: bus.PrincipalNode, Swarm: "crew"},            // a node with no name
+		{Kind: bus.PrincipalNode, Name: "n", Swarm: "duet"}, // reserved swarm names
+		{Kind: bus.PrincipalNode, Name: "n", Swarm: "human"},
 	} {
 		_, err := e.b.Post(context.Background(), p, notice("h1"))
 		wantCode(t, err, bus.CodeForbidden)
@@ -265,16 +289,16 @@ func TestPostChecksApprovability(t *testing.T) {
 	e.post(t, p, mergeApproval("h3"))
 }
 
-func TestContentHashIsSHA256OfCanonicalJSON(t *testing.T) {
+func TestContentHashIsVersionedSHA256OfHashDraft(t *testing.T) {
 	e := newEnv(t)
 	d := notice("h")
 	d.Title = "T"
 	got := e.post(t, node("ci-1", "crew"), d).Item.ContentHash
-	const canon = `{"Kind":"notice","Severity":"normal","To":"human","Handle":"h","Title":"T","Summary":"","Detail":"",` +
-		`"RequiredAction":"","Repo":"","Ref":"","BaseRef":"","Target":"","PinnedCommit":"","PinnedTree":"",` +
-		`"Action":"none","Link":"","RiskFlags":[],"Untrusted":false}`
-	sum := sha256.Sum256([]byte(canon))
-	if want := hex.EncodeToString(sum[:]); got != want {
+	const body = `{"kind":"notice","severity":"normal","to":"human","handle":"h","title":"T","summary":"","detail":"",` +
+		`"required_action":"","repo":"","ref":"","base_ref":"","target":"","pinned_commit":"","pinned_tree":"",` +
+		`"action":"none","link":"","risk_flags":[],"untrusted":false}`
+	sum := sha256.Sum256([]byte(body))
+	if want := "v1:" + hex.EncodeToString(sum[:]); got != want {
 		t.Errorf("hash = %s, want %s", got, want)
 	}
 	d.Untrusted = true
