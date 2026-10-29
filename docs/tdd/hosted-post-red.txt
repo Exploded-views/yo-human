@@ -295,3 +295,19 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/tools/perf	0.192s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 3, part 3 (MED-2: TestNoCodenameMapInRepo and its probe; CodenameMapLines and TrackedFiles are stubs), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/repolint/
+--- FAIL: TestCodenameMapLinesFindsAPlantedMapping (0.00s)
+    codenames_test.go:38: findings = [], want [{notes.md 2} {conf/codenames 1} {conf/codenames 2} {x.json 1} {y.go 1}]
+--- FAIL: TestCodenameMapLinesAllowsExampleInFixtures (0.00s)
+    codenames_test.go:67: findings = [], want [{README.md 1} {pkg/mixed_test.go 1} {pkg/real_test.go 1}]
+--- FAIL: TestCodenameMapLinesReportsAnUnreadableFile (0.00s)
+    codenames_test.go:73: no error for a missing file
+--- FAIL: TestTrackedFilesNeedsAGitRepo (0.00s)
+    codenames_test.go:79: no error outside a git repository
+    codenames_test.go:83: TrackedFiles = 0 files, <nil>
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.020s
+FAIL
+exit=1
