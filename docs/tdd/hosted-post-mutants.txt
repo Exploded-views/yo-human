@@ -976,3 +976,155 @@ vet exit=0
 suite exit=1
 
 round 3 total: 29 distinct mutants run (28 scripted + 1 by hand); survivors: 1, the equivalent one above.
+
+######## round 4, FIRST RUN (head 075fb15): 20 mutants, 1 survivor ("a slug may follow a path character"), which drove item 1b (b712de6)
+
+baseline: exit=0
+
+## item 1: the either-order rule removed (slugs only after the codename)
+internal/repolint/codenames.go: 'codenameTailRE.ReplaceAllString(line, " ")' -> 'codenameTailRE.ReplaceAllString(line[codenameRE.FindStringIndex(line)[0]:], " ")'
+vet exit=0
+--- FAIL: TestCodenameMapLinesFindsEveryPasteForm
+suite exit=1
+
+## item 1: the github URL form not matched
+internal/repolint/codenames.go: 'if githubRE.MatchString(line) {' -> 'if false && githubRE.MatchString(line) {'
+vet exit=0
+--- FAIL: TestCodenameMapLinesFindsEveryPasteForm
+suite exit=1
+
+## item 1: release/ slugs flagged
+internal/repolint/codenames.go: '{"release/", "refs/", "cn/"}' -> '{"refs/", "cn/"}'
+vet exit=0
+--- FAIL: TestCodenameMapLinesIgnoresRefsAndExamples
+--- FAIL: TestCodenameMapLinesIgnoresWhatIsNotAMapping
+--- FAIL: TestNoCodenameMapInRepo
+suite exit=1
+
+## item 1: refs/ slugs flagged
+internal/repolint/codenames.go: '{"release/", "refs/", "cn/"}' -> '{"release/", "cn/"}'
+vet exit=0
+--- FAIL: TestCodenameMapLinesIgnoresRefsAndExamples
+suite exit=1
+
+## item 1: example/<name> allowed outside fixtures
+internal/repolint/codenames.go: 'fixture && exampleSlugRE.MatchString(slug)' -> 'exampleSlugRE.MatchString(slug)'
+vet exit=0
+--- FAIL: TestCodenameMapLinesAllowsExampleInFixtures
+suite exit=1
+
+## item 1: a slug may follow a path character (URL tails read as slugs)
+internal/repolint/codenames.go: '[^A-Za-z0-9._/-])([A-Za-z0-9]' -> '[^A-Za-z0-9._-])([A-Za-z0-9]'
+vet exit=0
+suite exit=0
+SURVIVED
+
+## item 1: the root-only skip made any-depth
+internal/repolint/codenames.go: 'path == ".git" || path == ".cache" || path == "dist"' -> 'd.Name() == ".git" || d.Name() == ".cache" || d.Name() == "dist"'
+vet exit=0
+--- FAIL: TestRepoFilesSkipsIgnoredDirectories
+suite exit=1
+
+## item 2: pr: back to [0-9]{1,6}
+internal/hosted/bus/validate_wall.go: 'pr:` + wallID' -> 'pr:[0-9]{1,6}` + ""'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledPRRefGrammarIsNamedInTheError
+suite exit=1
+
+## item 4: the owner check limited to walled nodes
+internal/hosted/bus/post.go: 'e := checkRepoOwner(d.Repo); e != nil {' -> 'e := checkRepoOwner(d.Repo); e != nil && b.isWalled(swarm) {'
+vet exit=0
+--- FAIL: TestOwnerCNIsReservedEverywhere
+suite exit=1
+
+## item 4: the owner check case-sensitive
+internal/hosted/bus/post.go: 'strings.EqualFold(owner, "cn")' -> 'owner == "cn"'
+vet exit=0
+--- FAIL: TestOwnerCNIsReservedEverywhere
+suite exit=1
+
+## item 4: the owner check a prefix match
+internal/hosted/bus/post.go: 'strings.EqualFold(owner, "cn")' -> 'strings.HasPrefix(strings.ToLower(owner), "cn")'
+vet exit=0
+--- FAIL: TestOwnerCNIsReservedEverywhere
+--- FAIL: TestStoredWalledItemKeepsItsPolicyTarget
+--- FAIL: TestWalledApprovalRefusesRealSlug
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## item 4: the owner check a suffix match
+internal/hosted/bus/post.go: 'strings.EqualFold(owner, "cn")' -> 'strings.HasSuffix(strings.ToLower(owner), "cn")'
+vet exit=0
+--- FAIL: TestOwnerCNIsReservedEverywhere
+suite exit=1
+
+## item 5: id bound loosened (ob-N, sl:N 7 digits)
+internal/hosted/bus/validate_wall.go: 'wallID     = `[1-9][0-9]{0,5}`' -> 'wallID     = `[1-9][0-9]{0,6}`'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledDigitFieldsAreBounded
+--- FAIL: TestWalledPRRefGrammarIsNamedInTheError
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## item 5: id leading zero allowed
+internal/hosted/bus/validate_wall.go: 'wallID     = `[1-9][0-9]{0,5}`' -> 'wallID     = `[0-9]{1,6}`'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledDigitFieldsAreBounded
+--- FAIL: TestWalledPRRefGrammarIsNamedInTheError
+suite exit=1
+
+## item 5: count bound loosened (bytes:N, release numbers)
+internal/hosted/bus/validate_wall.go: 'wallCount  = `(?:0|[1-9][0-9]{0,5})`' -> 'wallCount  = `(?:0|[1-9][0-9]{0,6})`'
+vet exit=0
+--- FAIL: TestWalledDigitFieldsAreBounded
+suite exit=1
+
+## item 5: count leading zero allowed
+internal/hosted/bus/validate_wall.go: 'wallCount  = `(?:0|[1-9][0-9]{0,5})`' -> 'wallCount  = `[0-9]{1,6}`'
+vet exit=0
+--- FAIL: TestWalledDigitFieldsAreBounded
+suite exit=1
+
+## item 5: count unbounded
+internal/hosted/bus/validate_wall.go: 'wallCount  = `(?:0|[1-9][0-9]{0,5})`' -> 'wallCount  = `[0-9]+`'
+vet exit=0
+--- FAIL: TestWalledDigitFieldsAreBounded
+suite exit=1
+
+## item 5: semver bound loosened
+internal/hosted/bus/validate_wall.go: 'wallSemver = `(?:0|[1-9][0-9]{0,3})`' -> 'wallSemver = `(?:0|[1-9][0-9]{0,4})`'
+vet exit=0
+--- FAIL: TestWalledDigitFieldsAreBounded
+suite exit=1
+
+## item 5: semver leading zero allowed
+internal/hosted/bus/validate_wall.go: 'wallSemver = `(?:0|[1-9][0-9]{0,3})`' -> 'wallSemver = `[0-9]{1,4}`'
+vet exit=0
+--- FAIL: TestWalledDigitFieldsAreBounded
+suite exit=1
+
+## item 5: the bound applied to an unwalled handle
+internal/hosted/bus/post.go: 'if e := checkRepoOwner(d.Repo); e != nil {' -> 'if strings.HasPrefix(d.Handle, "ob-") && !wallHandleRE.MatchString(d.Handle) {\n\t\treturn wallInvalid("handle", "x")\n\t}\n\tif e := checkRepoOwner(d.Repo); e != nil {'
+vet exit=0
+--- FAIL: TestUnwalledDigitFieldsAreNotBounded
+suite exit=1
+
+20 mutants, 1 survivors
+
+######## round 4, RERUN of the survivor at b712de6, through crew-heavy:
+
+baseline: exit=0
+
+## item 1: a slug may follow a path character (URL tails read as slugs)
+internal/repolint/codenames.go: '[^A-Za-z0-9._/-])([A-Za-z0-9]' -> '[^A-Za-z0-9._-])([A-Za-z0-9]'
+vet exit=0
+--- FAIL: TestCodenameMapLinesIgnoresRefsAndExamples
+suite exit=1
+
+1 mutants, 0 survivors
+
+round 4 total: 20 mutants, 0 survivors after item 1b.
+Note: "the PR id back to [0-9]{1,6}" is the mutant for item 2; "the bound applied to an unwalled handle" is the mutant for item 5 (unwalled unchanged); "the owner check limited to walled nodes" is item 4. Full race, lint and floors runs were withdrawn per ev-113; the PR CI on the exact head is the gate.
