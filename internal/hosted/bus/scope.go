@@ -62,7 +62,7 @@ func (b *Bus) checkSwarmMessage(p Principal, swarm, body string) error {
 	if !b.isWalled(swarm) {
 		return nil
 	}
-	return CheckWalledMessage(body, p.Kind == PrincipalDuet)
+	return CheckWalledMessage(body, p.Kind != PrincipalDuet) // every principal but Duet is held to a walled node's grammar
 }
 
 // mapStoreErr turns what a Store returns into a bus error. A bus error passes through; the

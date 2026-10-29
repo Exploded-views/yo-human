@@ -9,17 +9,22 @@ var (
 	wallTitleRE    = regexp.MustCompile(`^ob-[0-9]+ (needs:(owner|none)|ack|done|blocked|ci-red|deploy-ready|prod-down)( sha256:[0-9a-f]{64} bytes:[0-9]+)?$`)
 	wallGoHoldRE   = regexp.MustCompile(`^(go|hold) sl:[0-9]+$`)
 	wallCodenameRE = regexp.MustCompile(`^cn:[a-z][a-z0-9-]{0,39}$`)
-	wallRefRE      = regexp.MustCompile(`^(main|release/[0-9]+(\.[0-9]+)*|v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*))$`)
-	// A target is an environment name or a codename, optionally with a PR number: never a slug.
-	wallTargetRE = regexp.MustCompile(`^([a-z0-9][a-z0-9-]{0,62}|cn:[a-z][a-z0-9-]{0,39}(#[0-9]+)?)$`)
+	// A ref is a branch the plan names, a semver tag or a PR id; a base is a branch only, so a PR id
+	// is never one. Neither is a branch name of the client's, a PR title or a URL.
+	wallRefRE  = regexp.MustCompile(`^(main|release/[0-9]+(\.[0-9]+)*|v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)|pr:[0-9]{1,6})$`)
+	wallBaseRE = regexp.MustCompile(`^(main|release/[0-9]+(\.[0-9]+)*)$`)
+	// A target is one of the fixed environments, or a codename with an optional PR number: never a
+	// slug, and never a token of the poster's choosing (that would be a channel).
+	wallTargetRE = regexp.MustCompile(`^(prod|staging|preview|dev|cn:[a-z][a-z0-9-]{0,39}(#[0-9]{1,6})?)$`)
 )
 
 // CheckWalledDraft returns an invalid error naming the first field of d that is not a typed
 // line. It is the rule for what a walled swarm's node posts: the handle is ob-<n> (an empty
 // handle is refused, since the item id would replace it), the title is the typed grammar,
-// summary, detail, required action and link are empty, a repo is a codename (cn:<name>), refs
-// are main, release/<n> or v<semver>, and a target is an environment or a codename. Risk flags
-// stay: they are codes. It checks text only; Validate still decides shape and approvability.
+// summary, detail, required action and link are empty, a repo is a codename (cn:<name>), a ref
+// is main, release/<n>, v<semver> or pr:<n>, a base is main or release/<n>, a target is one of
+// prod, staging, preview and dev or a codename, and there are no risk flags (a free token is a
+// channel). It checks text only; Validate still decides shape and approvability.
 func CheckWalledDraft(d Draft) error {
 	for _, c := range []struct {
 		field, v, valid string
@@ -32,22 +37,30 @@ func CheckWalledDraft(d Draft) error {
 		{"required_action", d.RequiredAction, "empty", empty},
 		{"link", d.Link, "empty", empty},
 		{"repo", d.Repo, "empty or a codename: cn:<name>", orEmpty(wallCodenameRE.MatchString)},
-		{"ref", d.Ref, "empty, main, release/<n> or v<major>.<minor>.<patch>", orEmpty(wallRefRE.MatchString)},
-		{"base_ref", d.BaseRef, "empty, main, release/<n> or v<major>.<minor>.<patch>", orEmpty(wallRefRE.MatchString)},
-		{"target", d.Target, "empty, an environment name or a codename: cn:<name>", orEmpty(wallTargetRE.MatchString)},
+		{"ref", d.Ref, "empty, main, release/<n>, v<major>.<minor>.<patch> or pr:<n> (at most 6 digits)", orEmpty(wallRefRE.MatchString)},
+		{"base_ref", d.BaseRef, "empty, main or release/<n>", orEmpty(wallBaseRE.MatchString)},
+		{"target", d.Target, "empty, prod, staging, preview, dev or a codename: cn:<name> with an optional #<n> (at most 6 digits)", orEmpty(wallTargetRE.MatchString)},
 	} {
 		if !c.ok(c.v) {
 			return wallInvalid(c.field, c.valid)
 		}
 	}
+	return checkNoFlags(d)
+}
+
+// checkNoFlags: a walled item carries no risk flags, in either direction.
+func checkNoFlags(d Draft) error {
+	if len(d.RiskFlags) != 0 {
+		return wallInvalid("risk_flags", "empty: a walled item carries no risk flags")
+	}
 	return nil
 }
 
-// CheckWalledMessage checks a message body for a walled swarm. Into the swarm (intoWalled:
-// Duet's posts and replies) the only body is exactly "go sl:<n>" or "hold sl:<n>". From the
-// swarm (a walled node's reply) it is the typed title grammar.
-func CheckWalledMessage(body string, intoWalled bool) error {
-	if intoWalled {
+// CheckWalledMessage checks a message body in a walled swarm. fromWalledNode is true for a body a
+// walled node wrote, which must be the typed title grammar, and false for a body going into the
+// swarm (Duet's posts, replies and answers), which is exactly "go sl:<n>" or "hold sl:<n>".
+func CheckWalledMessage(body string, fromWalledNode bool) error {
+	if !fromWalledNode {
 		if !wallGoHoldRE.MatchString(body) {
 			return wallInvalid("body", "exactly go sl:<n> or hold sl:<n>")
 		}
@@ -74,7 +87,7 @@ func checkIntoWalledDraft(d Draft) error {
 			return wallInvalid(c.field, "empty: a walled swarm takes only go sl:<n> or hold sl:<n>")
 		}
 	}
-	return nil
+	return checkNoFlags(d)
 }
 
 func empty(s string) bool { return s == "" }

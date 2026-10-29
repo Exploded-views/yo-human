@@ -67,13 +67,14 @@ func (b *Bus) checkDraft(p Principal, swarm string, d Draft) error {
 	return nil
 }
 
-// checkedView is the draft as Validate and the policy see it. In a walled swarm the wall has
-// already confirmed that a repo is a codename, cn:<name>, which Validate would refuse as no
-// owner/name slug; it is checked, and looked up in the policy, as cn/<name>. The item itself is
-// stored with the codename as posted.
+// checkedView is the draft as Validate sees it. In a walled swarm the wall has already confirmed
+// that a repo is a codename, cn:<name>, and a ref may be a PR id, pr:<n>; Validate would refuse
+// the first as no owner/name slug and the second as no PR number, so it checks cn/<name> and <n>.
+// The item itself is stored as posted. The policy's mapping of a codename is in PolicyTarget.
 func (b *Bus) checkedView(swarm string, d Draft) Draft {
-	if b.isWalled(swarm) && wallCodenameRE.MatchString(d.Repo) {
-		d.Repo = "cn/" + strings.TrimPrefix(d.Repo, "cn:")
+	if b.isWalled(swarm) {
+		d.Repo = codenameAsSlug(d.Repo)
+		d.Ref = strings.TrimPrefix(d.Ref, "pr:")
 	}
 	return d
 }

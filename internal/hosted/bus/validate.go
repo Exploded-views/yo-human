@@ -260,9 +260,20 @@ func (d *Draft) checkActionShape(Limits) *Error {
 
 // PolicyTarget is the policy target of d, through the one mapping policy.TargetFor. For a merge
 // that is d.BaseRef, the poster's claim, which the bus can't verify; the executor's merge
-// wrapper (Task 10e) checks it against the PR's real base.
+// wrapper (Task 10e) checks it against the PR's real base. A walled codename, cn:<name>, is
+// looked up in the policy as cn/<name>, so a post and any later re-check of the stored item gate
+// on the same target.
 func (d *Draft) PolicyTarget() policy.Target {
-	return policy.TargetFor(string(d.Action), d.Repo, d.Ref, d.BaseRef, d.Target)
+	return policy.TargetFor(string(d.Action), codenameAsSlug(d.Repo), d.Ref, d.BaseRef, d.Target)
+}
+
+// codenameAsSlug is a walled codename, cn:<name>, as the owner/name shape the policy and
+// Validate know: cn/<name>. Anything else is returned as is.
+func codenameAsSlug(repo string) string {
+	if wallCodenameRE.MatchString(repo) {
+		return "cn/" + strings.TrimPrefix(repo, "cn:")
+	}
+	return repo
 }
 
 // Approvable returns nil only when action a on target t may be posted as an approval: the
