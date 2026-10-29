@@ -82,7 +82,7 @@ func PostIn(dir string, items, n int) ([]time.Duration, error) {
 		return nil, err
 	}
 	defer closeDB()
-	return timePosts(b, n, func(i int) bus.Draft { return perfDraft(fmt.Sprintf("perf-%d", i), "Build done") })
+	return timePosts(b, n, func(i int) bus.Draft { return perfDraft(fmt.Sprintf("perf-%d", i), "Build done") }, bus.OutcomeCreated)
 }
 
 // ReviseIn is Revise against a database of items items in dir.
@@ -95,16 +95,18 @@ func ReviseIn(dir string, items, n int) ([]time.Duration, error) {
 	if _, err := b.Post(context.Background(), perfNode, perfDraft("revise-me", "Build 0")); err != nil {
 		return nil, err
 	}
-	return timePosts(b, n, func(i int) bus.Draft { return perfDraft("revise-me", fmt.Sprintf("Build %d", i+1)) })
+	return timePosts(b, n, func(i int) bus.Draft { return perfDraft("revise-me", fmt.Sprintf("Build %d", i+1)) }, bus.OutcomeRevised)
 }
 
 // timePosts posts n drafts and returns how long each Post took.
-func timePosts(b *bus.Bus, n int, draft func(i int) bus.Draft) ([]time.Duration, error) {
+func timePosts(b *bus.Bus, n int, draft func(i int) bus.Draft, want bus.Outcome) ([]time.Duration, error) {
 	out := make([]time.Duration, 0, n)
 	for i := range n {
 		d := draft(i)
 		start := time.Now()
-		_, err := b.Post(context.Background(), perfNode, d)
+		res, err := b.Post(context.Background(), perfNode, d)
+		_ = res.Outcome // stub: not yet checked against want
+		_ = want
 		out = append(out, time.Since(start))
 		if err != nil {
 			return nil, err

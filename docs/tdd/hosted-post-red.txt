@@ -235,3 +235,13 @@ FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	0.037s
 ?   	github.com/Exploded-views/yo-human/internal/hosted/perf/cmd	[no test files]
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 2, part 4 follow-up (mutants 'post reuses one handle' and 'revise measures an unchanged repost' survived: timePosts takes the wanted outcome but doesn't check it yet), 2026-10-29T06:14:50Z
+$ go test -count=1 -timeout 300s ./internal/hosted/perf/
+--- FAIL: TestTimePostsRefusesTheWrongOutcome (0.00s)
+    perf_test.go:118: an unchanged repost was timed as a creation
+    perf_test.go:121: an unchanged repost was timed as a revision
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	0.967s
+FAIL
+exit=1

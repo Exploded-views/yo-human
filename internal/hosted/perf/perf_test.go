@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Exploded-views/yo-human/internal/hosted/bus"
 )
 
 var samplers = map[string]sampler{"post": PostIn, "revise": ReviseIn}
@@ -97,5 +99,25 @@ func TestSamplersOnTheRealSize(t *testing.T) {
 		if err != nil || len(got) != 2 {
 			t.Errorf("%s: %v, %d samples", name, err, len(got))
 		}
+	}
+}
+
+// A scenario that times the wrong operation measures nothing: every timed Post must have done
+// what the scenario says (created an item, or revised it).
+func TestTimePostsRefusesTheWrongOutcome(t *testing.T) {
+	b, closeDB, err := seeded(filepath.Join(t.TempDir(), "data"), 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeDB()
+	same := func(int) bus.Draft { return perfDraft("one-handle", "same content") }
+	if _, err := timePosts(b, 1, same, bus.OutcomeCreated); err != nil {
+		t.Fatalf("first post: %v", err)
+	}
+	if _, err := timePosts(b, 1, same, bus.OutcomeCreated); err == nil {
+		t.Error("an unchanged repost was timed as a creation")
+	}
+	if _, err := timePosts(b, 1, same, bus.OutcomeRevised); err == nil {
+		t.Error("an unchanged repost was timed as a revision")
 	}
 }
