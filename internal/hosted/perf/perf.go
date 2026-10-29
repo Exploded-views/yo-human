@@ -98,18 +98,20 @@ func ReviseIn(dir string, items, n int) ([]time.Duration, error) {
 	return timePosts(b, n, func(i int) bus.Draft { return perfDraft("revise-me", fmt.Sprintf("Build %d", i+1)) }, bus.OutcomeRevised)
 }
 
-// timePosts posts n drafts and returns how long each Post took.
+// timePosts posts n drafts and returns how long each Post took. Every post must have the wanted
+// outcome, or the timing is of some other operation and the run fails.
 func timePosts(b *bus.Bus, n int, draft func(i int) bus.Draft, want bus.Outcome) ([]time.Duration, error) {
 	out := make([]time.Duration, 0, n)
 	for i := range n {
 		d := draft(i)
 		start := time.Now()
 		res, err := b.Post(context.Background(), perfNode, d)
-		_ = res.Outcome // stub: not yet checked against want
-		_ = want
 		out = append(out, time.Since(start))
 		if err != nil {
 			return nil, err
+		}
+		if res.Outcome != want {
+			return nil, fmt.Errorf("a timed post was %s, want %s: the scenario measures the wrong operation", res.Outcome, want)
 		}
 	}
 	return out, nil
