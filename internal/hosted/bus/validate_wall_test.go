@@ -172,3 +172,23 @@ func TestWalledDigitFieldsAreBounded(t *testing.T) {
 		}
 	}
 }
+
+// A release name has at most three dotted parts, major.minor.patch (round 5, MED-1): without a cap
+// a ref or base_ref could carry a dozen numbers, which is text. The error names the grammar.
+func TestWalledReleaseHasAtMostThreeParts(t *testing.T) {
+	for _, v := range []string{"release/1", "release/1.2", "release/1.2.3", "release/0.0.0", "release/999999.999999.999999"} {
+		for _, d := range []Draft{{Handle: "ob-3", Title: "ob-3 ack", Ref: v}, {Handle: "ob-3", Title: "ob-3 ack", BaseRef: v}} {
+			if err := CheckWalledDraft(d); err != nil {
+				t.Errorf("%s: %v", v, err)
+			}
+		}
+	}
+	for _, v := range []string{"release/1.2.3.4", "release/1.2.3.4.5", "release/1.1.1.1.1.1.1.1.1.1.1.1.1"} {
+		for field, d := range map[string]Draft{"ref": {Handle: "ob-3", Title: "ob-3 ack", Ref: v}, "base_ref": {Handle: "ob-3", Title: "ob-3 ack", BaseRef: v}} {
+			be, ok := AsError(CheckWalledDraft(d))
+			if !ok || be.What != field || !strings.Contains(be.Valid, "at most 3 parts") {
+				t.Errorf("%s as %s: error = %+v, want %s naming the 3-part grammar", v, field, be, field)
+			}
+		}
+	}
+}

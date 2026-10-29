@@ -449,3 +449,17 @@ exit=1
 $ mutant: slugRE prefix class [^A-Za-z0-9._/-] -> [^A-Za-z0-9._-] ; go test ./internal/repolint/
 ok  	github.com/Exploded-views/yo-human/internal/repolint
 exit=0
+
+# H1 Task 5 RED, round 5, item 1 (MED-1: a walled release/ ref or base_ref has no cap on its dotted parts; it is release/N(.N){0,2}, at most 3 parts, and the error says so), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestWalledReleaseHasAtMostThreeParts (0.00s)
+    validate_wall_test.go:190: release/1.2.3.4 as ref: error = <nil>, want ref naming the 3-part grammar
+    validate_wall_test.go:190: release/1.2.3.4 as base_ref: error = <nil>, want base_ref naming the 3-part grammar
+    validate_wall_test.go:190: release/1.2.3.4.5 as base_ref: error = <nil>, want base_ref naming the 3-part grammar
+    validate_wall_test.go:190: release/1.2.3.4.5 as ref: error = <nil>, want ref naming the 3-part grammar
+    validate_wall_test.go:190: release/1.1.1.1.1.1.1.1.1.1.1.1.1 as ref: error = <nil>, want ref naming the 3-part grammar
+    validate_wall_test.go:190: release/1.1.1.1.1.1.1.1.1.1.1.1.1 as base_ref: error = <nil>, want base_ref naming the 3-part grammar
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.271s
+FAIL
+exit=1
