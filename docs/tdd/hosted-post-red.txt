@@ -444,3 +444,8 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.257s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 4, item 1b (survivor-driven: in the round 4 mutation run 'a slug may follow a path character' survived, suite exit=0, because no test had a codename next to a path such as the codename file's own /etc/... path; the test below adds it. See hosted-post-mutants.txt, round 4 first run.), 2026-10-29
+$ mutant: slugRE prefix class [^A-Za-z0-9._/-] -> [^A-Za-z0-9._-] ; go test ./internal/repolint/
+ok  	github.com/Exploded-views/yo-human/internal/repolint
+exit=0

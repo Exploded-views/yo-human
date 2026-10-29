@@ -69,7 +69,7 @@ func TestCodenameMapLinesFindsEveryPasteForm(t *testing.T) {
 func TestCodenameMapLinesIgnoresRefsAndExamples(t *testing.T) {
 	cn := "cn:" + "alpha"
 	root := t.TempDir()
-	plant(t, root, "a.md", cn+" release/1.2\n"+cn+" refs/heads/main\n"+cn+" is cn/alpha in the policy\n"+
+	plant(t, root, "a.md", cn+" release/1.2\n"+cn+" refs/heads/main\n"+cn+" is cn/alpha in the policy\n"+cn+" is listed in /etc/yo-human-approved/codenames\n"+
 		`d.Repo, d.Ref = "`+cn+`-1", "release/1.2"`+"\n")
 	plant(t, root, "x_test.go", "example/alpha "+cn+"\n")
 	got, err := CodenameMapLines(root, []string{"a.md", "x_test.go"})
