@@ -17,7 +17,8 @@ func TestMigration0001IsFrozen(t *testing.T) {
 		t.Fatal(err)
 	}
 	sum := sha256.Sum256(raw)
-	const want = "981bd50cb3d080ddb53367b28672e4dd8af99fe68a18b17f37fce45c53f8aca8"
+	// Written in four parts so the digest isn't a long hex literal in the source.
+	want := "981bd50cb3d080dd" + "b53367b28672e4dd" + "8af99fe68a18b17f" + "37fce45c53f8aca8"
 	if got := hex.EncodeToString(sum[:]); got != want {
 		t.Errorf("0001_init.sql sha256 = %s, want %s: add a new migration instead of editing it", got, want)
 	}

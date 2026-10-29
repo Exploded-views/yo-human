@@ -65,7 +65,7 @@ $ go test -count=1 -timeout 300s ./internal/hosted/bus/
         
         want
         {"kind":"approval","severity":"high","to":"human","handle":"h","title":"T","summary":"S","detail":"D","required_action":"R","repo":"o/r","ref":"7","base_ref":"main","target":"o/r#7","pinned_commit":"c","pinned_tree":"t","action":"merge","link":"https://github.com/x","risk_flags":["a","b"],"untrusted":true}
-    hash_test.go:29: contentHash = 982583f848e4173d8531049986aad56c04fa0d388d1fad06d8ddac7f75af6b5e
+    hash_test.go:29: contentHash = <64-hex>
 --- FAIL: TestHashDraftCoversEveryDraftField (0.00s)
     hash_test.go:48: hashDraft fields [], want Draft's [Kind Severity To Handle Title Summary Detail RequiredAction Repo Ref BaseRef Target PinnedCommit PinnedTree Action Link RiskFlags Untrusted]
 --- FAIL: TestInternalErrorKeepsItsCause (0.00s)
@@ -80,7 +80,7 @@ $ go test -count=1 -timeout 300s ./internal/hosted/bus/
 --- FAIL: TestPostRefusesNonPostingPrincipals (0.00s)
     post_test.go:239: err = <nil> (<nil>), want a *bus.Error with code forbidden
 --- FAIL: TestContentHashIsVersionedSHA256OfHashDraft (0.00s)
-    post_test.go:302: hash = 189e637534e9f902bc64fd01f531f619dbed63ccff09176691296b89ac5c2a91, want v1:7da3be957cfe1738ffd28e4c3ea8d517a3fbc10fd4a751955fe7e2a49d6585aa
+    post_test.go:302: hash = <64-hex>, want v1:<64-hex>
 --- FAIL: TestValidSwarmReservesDuetAndHuman (0.00s)
     reserved_test.go:15: ValidSwarm("duet") = true, want false
     reserved_test.go:15: ValidSwarm("human") = true, want false
@@ -144,7 +144,7 @@ $ go test -count=1 -timeout 300s ./internal/hosted/bus/ ./internal/hosted/db/
         {"kind":"approval","severity":"high","to":"human","handle":"h","title":"T","summary":"S","detail":"D","required_action":"R","repo":"o/r","ref":"7","base_ref":"main","target":"o/r#7","pinned_commit":"c","pinned_tree":"t","action":"merge","link":"https://github.com/x","risk_flags":["a","b"],"untrusted":true}
         want
         {"kind":"approval","severity":"high","to":"human","handle":"h","title":"T","summary":"S","detail":"D","required_action":"R","repo":"o/r","ref":"7","base_ref":"main","target":"o/r#7","pinned_commit":"c","pinned_tree":"t","action":"merge","link":"https://github.com/x","risk_flags":["a","b"],"untrusted":true,"urgency":"page"}
-    hash_test.go:29: contentHash = v1:1434e1d8928aeecd291811faa8707fa0142c9b1ab692b3c8c8ea66825c3d7e5e
+    hash_test.go:29: contentHash = v1:<64-hex>
 --- FAIL: TestDraftValidation (0.00s)
     --- FAIL: TestDraftValidation/no_urgency (0.00s)
         validate_test.go:148: Validate = <nil>, want a bus error
@@ -153,7 +153,7 @@ $ go test -count=1 -timeout 300s ./internal/hosted/bus/ ./internal/hosted/db/
     --- FAIL: TestDraftValidation/urgency_in_the_wrong_case (0.00s)
         validate_test.go:148: Validate = <nil>, want a bus error
 --- FAIL: TestContentHashIsVersionedSHA256OfHashDraft (0.20s)
-    post_test.go:303: hash = v1:7da3be957cfe1738ffd28e4c3ea8d517a3fbc10fd4a751955fe7e2a49d6585aa, want v1:75fe5e054e30d59a8742c341b1065e0f72cc6275435c10bfb890bdeabe026f58
+    post_test.go:303: hash = v1:<64-hex>, want v1:<64-hex>
 --- FAIL: TestPostWithoutUrgencyRefused (0.03s)
     urgency_test.go:21: err = <nil> (<nil>), want a *bus.Error with code invalid
 --- FAIL: TestReplyWithoutUrgencyRefused (0.02s)
@@ -245,3 +245,5 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	0.967s
 FAIL
 exit=1
+
+# Note: the SHA-256 digests in the failure output above were replaced with <64-hex> so the file passes the scrub (long-hex rule). Nothing else was edited.
