@@ -36,11 +36,33 @@ func mayWrite(p Principal) *Error {
 		Fix: "use a node credential to post to your swarm"}
 }
 
-// checkSwarmContent is the one place a swarm's content rules run, once, before anything is
-// stored. The client-wall rules will go here.
+// isWalled reports whether swarm is behind the client wall. The set comes from Limits at New.
+func (b *Bus) isWalled(swarm string) bool {
+	_, ok := b.walled[swarm]
+	return ok
+}
+
+// checkSwarmContent is the one place a swarm's content rules run for a post, once, before
+// anything is stored. For a walled swarm, Duet's post may only be go or hold, and a node's is
+// typed lines (CheckWalledDraft); any other swarm is unchecked.
 func (b *Bus) checkSwarmContent(p Principal, swarm string, d Draft) error {
-	_, _, _ = p, swarm, d
-	return nil
+	switch {
+	case !b.isWalled(swarm):
+		return nil
+	case p.Kind == PrincipalDuet:
+		return checkIntoWalledDraft(d)
+	}
+	return CheckWalledDraft(d)
+}
+
+// checkSwarmMessage is the same hook for a reply. Reply calls it after the visibility check,
+// with the item's own swarm, so a caller who can't see the item gets not_found before the wall
+// can say anything about it.
+func (b *Bus) checkSwarmMessage(p Principal, swarm, body string) error {
+	if !b.isWalled(swarm) {
+		return nil
+	}
+	return CheckWalledMessage(body, p.Kind == PrincipalDuet)
 }
 
 // mapStoreErr turns what a Store returns into a bus error. A bus error passes through; the
@@ -65,6 +87,3 @@ func asBus(err error) bool {
 	_, ok := AsError(err)
 	return ok
 }
-
-// checkSwarmMessage is the message-side hook of the wall. (stub)
-func (b *Bus) checkSwarmMessage(p Principal, swarm, body string) error { return nil }

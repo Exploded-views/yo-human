@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"slices"
+	"strings"
 )
 
 // Post stores d for p: a new item, a revision of the item with the same (swarm, handle), or
@@ -38,24 +39,40 @@ func (b *Bus) Post(ctx context.Context, p Principal, d Draft) (PostResult, error
 
 // checkDraft runs every check on a post before anything is stored: Task 3's validation, the
 // rules on what may be posted (secrets and money are never on the bus, and an approval must be
-// one the policy puts behind a passkey), then the swarm's content rules.
+// one the policy puts behind a passkey), and the swarm's content rules (the client wall), which
+// run first so a walled draft is judged as the wall sees it.
 func (b *Bus) checkDraft(p Principal, swarm string, d Draft) error {
 	if d.Action == ActionSecrets || d.Action == ActionMoney {
 		return &Error{Code: CodeExcludedAction, What: "action", Valid: "an action that is not secrets or money",
 			Fix: "do not proceed; secrets and money never go through the bus"}
 	}
-	if err := d.Validate(b.l); err != nil {
+	if err := b.checkSwarmContent(p, swarm, d); err != nil {
+		return err
+	}
+	v := b.checkedView(swarm, d)
+	if err := v.Validate(b.l); err != nil {
 		return asBusError(err)
 	}
-	if e := checkTo(p, d); e != nil {
+	if e := checkTo(p, v); e != nil {
 		return e
 	}
-	if d.Kind == KindApproval {
-		if err := b.l.Approvable(d.Action, d.PolicyTarget()); err != nil {
+	if v.Kind == KindApproval {
+		if err := b.l.Approvable(v.Action, v.PolicyTarget()); err != nil {
 			return asBusError(err)
 		}
 	}
-	return b.checkSwarmContent(p, swarm, d)
+	return nil
+}
+
+// checkedView is the draft as Validate and the policy see it. In a walled swarm the wall has
+// already confirmed that a repo is a codename, cn:<name>, which Validate would refuse as no
+// owner/name slug; it is checked, and looked up in the policy, as cn/<name>. The item itself is
+// stored with the codename as posted.
+func (b *Bus) checkedView(swarm string, d Draft) Draft {
+	if b.isWalled(swarm) && wallCodenameRE.MatchString(d.Repo) {
+		d.Repo = "cn/" + strings.TrimPrefix(d.Repo, "cn:")
+	}
+	return d
 }
 
 // checkTo: a node writes only to the owner, and Duet addresses the owner or a crew's swarm, never

@@ -7,14 +7,21 @@ import (
 
 // Bus is hosted mode's domain object: it owns the rules and reaches state only through Store.
 type Bus struct {
-	s   Store
-	now func() time.Time
-	l   Limits
+	s      Store
+	now    func() time.Time
+	l      Limits
+	walled map[string]struct{} // the walled swarms, set once by New and never written again
 }
 
-// New returns a Bus over s, reading time from now and checking drafts against l.
+// New returns a Bus over s, reading time from now and checking drafts against l. The walled
+// swarms come from l.WalledSwarms and are copied here: no later call can change them.
 func New(s Store, now func() time.Time, l Limits) *Bus {
-	return &Bus{s: s, now: now, l: l}
+	walled := make(map[string]struct{}, len(l.WalledSwarms))
+	for _, w := range l.WalledSwarms {
+		walled[w] = struct{}{}
+	}
+	l.WalledSwarms = nil // the set above is the only copy
+	return &Bus{s: s, now: now, l: l, walled: walled}
 }
 
 // The typed errors a Store returns when a write doesn't fit what is stored. internal/hosted/db
