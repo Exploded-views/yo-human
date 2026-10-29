@@ -313,3 +313,40 @@ func TestWalledListOnlyFromConfig(t *testing.T) {
 		t.Errorf("no config, no wall: %v", err)
 	}
 }
+
+// cn is the walled codename owner: a repo cn/<x> is refused from every node, walled or not, so an
+// unwalled crew can't post an approval gated by the policy rule that belongs to a codename (round 4,
+// L1). Owners that merely contain cn stay valid.
+func TestOwnerCNIsReservedEverywhere(t *testing.T) {
+	e := newEnvWalled(t, "client")
+	unwalledMerge := mergeApproval("m-1")
+	unwalledMerge.Repo = "cn/alpha"
+	unwalledMerge.Target = "cn/alpha#7"
+	for _, c := range []struct {
+		name string
+		p    bus.Principal
+		d    bus.Draft
+	}{
+		{"unwalled node, notice", node("ci-1", "crew"), withRepo(notice("n-1"), "cn/alpha")},
+		{"unwalled node, merge approval", node("ci-1", "crew"), unwalledMerge},
+		{"Duet to an unwalled swarm", duet, func() bus.Draft { d := withRepo(notice("n-3"), "cn/alpha"); d.To = "crew"; return d }()},
+		{"unwalled node, upper case", node("ci-1", "crew"), withRepo(notice("n-4"), "CN/alpha")},
+		{"walled node", walledNode, withRepo(typed("12"), "cn/alpha")},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			_, err := e.b.Post(context.Background(), c.p, c.d)
+			be := errWithCode(t, err, bus.CodeInvalid)
+			if be.What != "repo" || !strings.Contains(be.Valid, "reserved") || !strings.Contains(be.Valid, "cn") {
+				t.Errorf("error = %+v, want repo naming the reserved owner cn", be)
+			}
+		})
+	}
+	if n := len(e.events(t)); n != 0 {
+		t.Errorf("%d events after refused posts", n)
+	}
+	for i, repo := range []string{"cna/x", "xcn/y", "acn/cn"} {
+		e.post(t, node("ci-1", "crew"), withRepo(notice("ok-"+strconv.Itoa(i)), repo))
+	}
+}
+
+func withRepo(d bus.Draft, repo string) bus.Draft { d.Repo = repo; return d }

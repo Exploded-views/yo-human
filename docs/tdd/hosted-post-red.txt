@@ -392,3 +392,22 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.271s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 4, item 4 (L1: repo owner cn is reserved for every node, walled or not; cna/x and xcn/y stay valid), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestOwnerCNIsReservedEverywhere (0.01s)
+    --- FAIL: TestOwnerCNIsReservedEverywhere/unwalled_node,_notice (0.00s)
+        wall_test.go:338: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestOwnerCNIsReservedEverywhere/unwalled_node,_merge_approval (0.00s)
+        wall_test.go:338: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestOwnerCNIsReservedEverywhere/Duet_to_an_unwalled_swarm (0.00s)
+        wall_test.go:338: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestOwnerCNIsReservedEverywhere/unwalled_node,_upper_case (0.00s)
+        wall_test.go:338: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestOwnerCNIsReservedEverywhere/walled_node (0.00s)
+        wall_test.go:340: error = invalid: repo (valid: empty or a codename: cn:<name>), want repo naming the reserved owner cn
+    wall_test.go:345: 4 events after refused posts
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.250s
+FAIL
+exit=1
