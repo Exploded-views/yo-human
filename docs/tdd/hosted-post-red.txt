@@ -194,3 +194,44 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	2.954s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 2, part 4 (budget scenarios: Scenario.Sample dispatch and the thin helper main exist; the samplers, Run and hostedSample are stubs; perf-budgets.json has no hosted entries), 2026-10-29T01:39:09Z
+$ go test -count=1 -timeout 300s ./tools/perf/ ./internal/hosted/perf/...
+--- FAIL: TestHostedSampleReadsTheHelperOutput (0.00s)
+    hosted_test.go:33: got [], <nil>, want [1ms 2.5ms]
+--- FAIL: TestHostedSampleRefusesBadOutput (0.00s)
+    hosted_test.go:45: too many lines: no error, got []
+    hosted_test.go:45: too few lines: no error, got []
+    hosted_test.go:45: not a number: no error, got []
+    hosted_test.go:45: zero: no error, got []
+    hosted_test.go:45: negative: no error, got []
+    hosted_test.go:45: helper fails: no error, got []
+--- FAIL: TestHostedSampleNamesTheScenarioInItsError (0.00s)
+    hosted_test.go:53: error = <nil>, want one that names the scenario
+--- FAIL: TestBudgetsFileHasTheHostedScenarios (0.00s)
+    hosted_test.go:72: no budget for hosted-post
+    hosted_test.go:72: no budget for hosted-revise
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.829s
+--- FAIL: TestSamplersTimeEachCall (0.03s)
+    perf_test.go:29: post: 0 samples, want 4
+--- FAIL: TestSamplersReportSetupErrors (0.00s)
+    perf_test.go:44: post: no error for an unusable directory
+    perf_test.go:44: revise: no error for an unusable directory
+--- FAIL: TestRunPrintsOneTimingPerLine (0.00s)
+    perf_test.go:56: post: code 2, stderr ""
+--- FAIL: TestRunRefusesBadArguments (0.00s)
+    perf_test.go:74: Run([]) = 2, stdout "", stderr ""
+    perf_test.go:74: Run([post]) = 2, stdout "", stderr ""
+    perf_test.go:74: Run([post 0]) = 2, stdout "", stderr ""
+    perf_test.go:74: Run([post x]) = 2, stdout "", stderr ""
+    perf_test.go:74: Run([sleep 3]) = 2, stdout "", stderr ""
+    perf_test.go:74: Run([post 3 4]) = 2, stdout "", stderr ""
+--- FAIL: TestSamplersOnTheRealSize (0.00s)
+    perf_test.go:86: post: <nil>, 0 samples
+    perf_test.go:86: revise: <nil>, 0 samples
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	0.037s
+?   	github.com/Exploded-views/yo-human/internal/hosted/perf/cmd	[no test files]
+FAIL
+exit=1

@@ -13,14 +13,19 @@ import (
 	"time"
 )
 
-// Scenario is a named command whose wall time is budgeted.
+// Scenario is a named measurement whose p95 is budgeted: a command whose wall time is taken, or,
+// when Sample is set, a function that returns n timings itself (the hosted scenarios, which time
+// one call against a seeded database rather than a process start).
 type Scenario struct {
-	Name string
-	Argv []string
+	Name   string
+	Argv   []string
+	Sample func(n int) ([]time.Duration, error)
 }
 
 var scenarios = []Scenario{
-	{"version-startup", []string{"dist/yo-human", "version"}},
+	{Name: "version-startup", Argv: []string{"dist/yo-human", "version"}},
+	{Name: "hosted-post", Sample: hostedSample("post")},
+	{Name: "hosted-revise", Sample: hostedSample("revise")},
 }
 
 func main() {
@@ -72,6 +77,9 @@ func run(args []string, stdout, stderr io.Writer, scs []Scenario, ci bool) int {
 
 // measure runs the scenario n times and returns each run's wall time, start to Wait.
 func measure(s Scenario, n int) ([]time.Duration, error) {
+	if s.Sample != nil {
+		return s.Sample(n)
+	}
 	samples := make([]time.Duration, 0, n)
 	for range n {
 		cmd := exec.Command(s.Argv[0], s.Argv[1:]...) //nolint:gosec // argv comes from the scenarios slice

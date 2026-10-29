@@ -92,7 +92,7 @@ const okBudgets = `{"runs": 3, "ci_headroom": 2.0, "budgets": {"%s": {"p95_ms": 
 func budgetsFor(name string) string { return strings.Replace(okBudgets, "%s", name, 1) }
 
 func TestNonZeroExitOfScenarioIsError(t *testing.T) {
-	scs := []Scenario{{"boom", []string{"sh", "-c", "exit 3"}}}
+	scs := []Scenario{{Name: "boom", Argv: []string{"sh", "-c", "exit 3"}}}
 	code, _, stderr := runPerf(t, budgetsFor("boom"), scs, false)
 	if code != 2 || !strings.Contains(stderr, "boom") {
 		t.Errorf("exit %d, stderr %q; want exit 2 naming boom", code, stderr)
@@ -100,14 +100,14 @@ func TestNonZeroExitOfScenarioIsError(t *testing.T) {
 }
 
 func TestUnstartableScenarioIsError(t *testing.T) {
-	scs := []Scenario{{"gone", []string{"/nonexistent/yo-human"}}}
+	scs := []Scenario{{Name: "gone", Argv: []string{"/nonexistent/yo-human"}}}
 	if code, _, stderr := runPerf(t, budgetsFor("gone"), scs, false); code != 2 || !strings.Contains(stderr, "gone") {
 		t.Errorf("exit %d, stderr %q; want exit 2 naming gone", code, stderr)
 	}
 }
 
 func TestRunWithinBudgetExitsZeroAndPrints(t *testing.T) {
-	scs := []Scenario{{"ok", []string{"true"}}}
+	scs := []Scenario{{Name: "ok", Argv: []string{"true"}}}
 	code, stdout, _ := runPerf(t, budgetsFor("ok"), scs, false)
 	if code != 0 || !strings.Contains(stdout, "ok: p95 ") || !strings.Contains(stdout, "budget 5000ms") {
 		t.Errorf("exit %d, stdout %q; want 0 with p95 and budget printed", code, stdout)
@@ -116,7 +116,7 @@ func TestRunWithinBudgetExitsZeroAndPrints(t *testing.T) {
 
 func TestRunOverBudgetExitsOne(t *testing.T) {
 	body := `{"runs": 2, "ci_headroom": 2.0, "budgets": {"slow": {"p95_ms": 1}}}`
-	scs := []Scenario{{"slow", []string{"sleep", "0.05"}}}
+	scs := []Scenario{{Name: "slow", Argv: []string{"sleep", "0.05"}}}
 	code, stdout, _ := runPerf(t, body, scs, false)
 	if code != 1 || !strings.Contains(stdout, "slow: p95 ") || !strings.Contains(stdout, "> budget 1.0ms") {
 		t.Errorf("exit %d, stdout %q; want 1 with \"slow: p95 ... > budget 1.0ms\"", code, stdout)
@@ -199,7 +199,7 @@ func TestCheckBaseAllowsTighteningAndGrowth(t *testing.T) {
 }
 
 func TestRunBaseBudgets(t *testing.T) {
-	scs := []Scenario{{"ok", []string{"true"}}}
+	scs := []Scenario{{Name: "ok", Argv: []string{"true"}}}
 	dir := t.TempDir()
 	basePath := filepath.Join(dir, "base.json")
 	write := func(body string) {
@@ -226,5 +226,26 @@ func TestRunBaseBudgets(t *testing.T) {
 	write(`{`)
 	if code, _, _ := run1(basePath); code != 2 {
 		t.Errorf("malformed base: exit %d, want 2", code)
+	}
+}
+
+func TestSampleScenarioUsesItsSamples(t *testing.T) {
+	scs := []Scenario{{Name: "x", Sample: func(n int) ([]time.Duration, error) {
+		out := make([]time.Duration, n)
+		for i := range out {
+			out[i] = ms100(5)
+		}
+		return out, nil
+	}}}
+	code, out, _ := runPerf(t, `{"runs":3,"ci_headroom":2.0,"budgets":{"x":{"p95_ms":10}}}`, scs, false)
+	if code != 0 || !strings.Contains(out, "x: p95 5.0ms") {
+		t.Errorf("code %d, out %q", code, out)
+	}
+}
+
+func TestSampleScenarioErrorIsUsageError(t *testing.T) {
+	scs := []Scenario{{Name: "x", Sample: func(int) ([]time.Duration, error) { return nil, os.ErrClosed }}}
+	if code, _, errOut := runPerf(t, `{"runs":3,"ci_headroom":2.0,"budgets":{"x":{"p95_ms":10}}}`, scs, false); code != 2 || !strings.Contains(errOut, "x:") {
+		t.Errorf("code %d, stderr %q", code, errOut)
 	}
 }
