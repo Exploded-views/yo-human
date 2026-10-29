@@ -47,12 +47,27 @@ func (b *Bus) checkDraft(p Principal, swarm string, d Draft) error {
 	if err := d.Validate(b.l); err != nil {
 		return asBusError(err)
 	}
+	if e := checkTo(p, d); e != nil {
+		return e
+	}
 	if d.Kind == KindApproval {
 		if err := b.l.Approvable(d.Action, d.PolicyTarget()); err != nil {
 			return asBusError(err)
 		}
 	}
 	return b.checkSwarmContent(p, swarm, d)
+}
+
+// checkTo: a node writes only to the owner, and Duet addresses the owner or a crew's swarm, never
+// the reserved names. Validate has already checked the shape of To.
+func checkTo(p Principal, d Draft) *Error {
+	switch {
+	case p.Kind == PrincipalNode && d.To != "human":
+		return invalid("to", `"human": a node writes only to the owner`)
+	case d.To != "human" && !ValidSwarm(d.To):
+		return invalid("to", `"human" or a crew's swarm name, which is never duet or human`)
+	}
+	return nil
 }
 
 // asBusError is err as a bus error; Validate and Approvable only return those, so anything
@@ -82,17 +97,50 @@ func postSwarm(p Principal, d Draft) string {
 // is therefore part of the hash and must not change. Nil risk flags encode as [], so nil and
 // empty are the same content.
 // hashBytes is the JSON the content hash covers. (stub)
-type hashDraft struct{}
+// hashDraft is what the content hash covers: every content field of Draft, under a fixed JSON
+// name. It is a copy of Draft's fields so the hash doesn't depend on Draft's Go field names or
+// on a field added to Draft later. hashBytes converts a Draft to it, so a new Draft field stops the
+// build until it is added here, tag and all, and TestHashBytesArePinned pins the result.
+type hashDraft struct {
+	Kind           Kind     `json:"kind"`
+	Severity       Severity `json:"severity"`
+	To             string   `json:"to"`
+	Handle         string   `json:"handle"`
+	Title          string   `json:"title"`
+	Summary        string   `json:"summary"`
+	Detail         string   `json:"detail"`
+	RequiredAction string   `json:"required_action"`
+	Repo           string   `json:"repo"`
+	Ref            string   `json:"ref"`
+	BaseRef        string   `json:"base_ref"`
+	Target         string   `json:"target"`
+	PinnedCommit   string   `json:"pinned_commit"`
+	PinnedTree     string   `json:"pinned_tree"`
+	Action         Action   `json:"action"`
+	Link           string   `json:"link"`
+	RiskFlags      []string `json:"risk_flags"`
+	Untrusted      bool     `json:"untrusted"`
+}
 
-func hashBytes(d Draft) []byte { return nil }
-
-func contentHash(d Draft) string {
-	if d.RiskFlags == nil {
-		d.RiskFlags = []string{}
+// hashBytes is the encoding/json form of d's hashDraft. This is Go's encoding, not RFC 8785
+// canonical JSON: it is deterministic because the struct's field order is fixed, and it is
+// injective because every text field is valid UTF-8 (Validate) and encoding/json escapes it
+// reversibly. Nil risk flags encode as [], the same content as empty ones.
+func hashBytes(d Draft) []byte {
+	h := hashDraft(d) // a conversion: it stops compiling if Draft gains, loses or reorders a field
+	if h.RiskFlags == nil {
+		h.RiskFlags = []string{}
 	}
-	raw, _ := json.Marshal(d) // cannot fail: the fields are strings, a string slice and a bool
-	sum := sha256.Sum256(raw)
-	return hex.EncodeToString(sum[:])
+	raw, _ := json.Marshal(h) // cannot fail: the fields are strings, a string slice and a bool
+	return raw
+}
+
+// contentHash is "v1:" and the hex SHA-256 of hashBytes. The version lives in the stored text
+// itself because items.content_hash is a plain TEXT column with no place for a separate
+// version; a future hash format takes the prefix v2: and is compared only with its own kind.
+func contentHash(d Draft) string {
+	sum := sha256.Sum256(hashBytes(d))
+	return "v1:" + hex.EncodeToString(sum[:])
 }
 
 func (b *Bus) upsert(x Tx, p Principal, swarm string, d Draft, hash string) (PostResult, error) {
@@ -113,7 +161,7 @@ func (b *Bus) create(x Tx, p Principal, swarm string, d Draft, hash string) (Pos
 	it := Item{Draft: d, ID: NewID("itm"), Swarm: swarm, From: p.Name, FromKind: p.Kind, Revision: 1,
 		State: StateOpen, ContentHash: hash, Created: now, Updated: now}
 	if it.Handle == "" {
-		it.Handle = it.ID // an item without a handle is never matched by a repost
+		it.Handle = it.ID // unique; a repost matches it only if the author posts under the id
 	}
 	seq, err := x.AppendEvent(Event{Swarm: swarm, ItemID: it.ID, Type: EventItemPosted, Created: now})
 	if err != nil {

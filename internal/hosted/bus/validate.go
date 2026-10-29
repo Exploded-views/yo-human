@@ -56,8 +56,10 @@ var (
 		ActionForcePush, ActionDelete, ActionSpend, ActionSecrets, ActionMoney, ActionOther}
 )
 
-// ValidSwarm reports whether s may name a swarm. (stub)
-func ValidSwarm(s string) bool { return ValidName(s) }
+// ValidSwarm reports whether s may name a swarm: a valid name that is not "duet", where Duet's
+// items for the owner live, or "human", which addresses the owner. Node tokens and Duet's
+// crew addresses use it; ValidName alone would let a node claim Duet's private swarm.
+func ValidSwarm(s string) bool { return ValidName(s) && s != "duet" && s != "human" }
 
 // ValidName reports whether s is a valid swarm or node name.
 func ValidName(s string) bool { return nameRE.MatchString(s) }
@@ -156,19 +158,26 @@ func (d *Draft) checkLink(l Limits) *Error {
 	if d.Link == "" {
 		return nil
 	}
-	const valid = "an https link of at most 2048 bytes, with no userinfo, on an allow-listed host"
-	u, err := url.Parse(d.Link)
-	if len(d.Link) > MaxLink || err != nil || u.Scheme != "https" || u.User != nil || u.Opaque != "" {
+	const valid = "an https link of at most 2048 bytes, with no userinfo, on an allow-listed host, in valid UTF-8 with no control, format or separator characters"
+	if !utf8.ValidString(d.Link) || strings.ContainsFunc(d.Link, isRefusedRune) {
 		return invalid("link", valid)
 	}
+	u, err := url.Parse(d.Link)
+	if len(d.Link) > MaxLink || err != nil || u.Scheme != "https" || u.User != nil || u.Opaque != "" || !hostAllowed(u, l) {
+		return invalid("link", valid)
+	}
+	return nil
+}
+
+func hostAllowed(u *url.URL, l Limits) bool {
 	host := strings.ToLower(u.Hostname())
 	for _, h := range l.LinkHosts {
 		h = strings.ToLower(h)
 		if host == h || strings.HasSuffix(host, "."+h) {
-			return nil
+			return true
 		}
 	}
-	return invalid("link", valid)
+	return false
 }
 
 func (d *Draft) checkFlags(Limits) *Error {

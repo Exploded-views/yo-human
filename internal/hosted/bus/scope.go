@@ -3,14 +3,15 @@ package bus
 import "errors"
 
 // visible reports whether p may see it. The owner's kinds (duet, passkey and desk) see every
-// swarm; a node sees only its own; any other kind sees nothing. It switches on p.Kind and never
-// treats an empty Swarm as "all": the owner's credentials are recognised by kind alone.
+// swarm; a node sees only its own, and only if that is a valid swarm (not "duet" or "human");
+// any other kind sees nothing. It switches on p.Kind and never treats an empty Swarm as "all":
+// the owner's credentials are recognised by kind alone.
 func (b *Bus) visible(p Principal, it Item) bool {
 	switch p.Kind {
 	case PrincipalDuet, PrincipalDesk, PrincipalPasskey:
 		return true
 	case PrincipalNode:
-		return p.Swarm != "" && it.Swarm == p.Swarm
+		return ValidSwarm(p.Swarm) && it.Swarm == p.Swarm
 	default:
 		return false
 	}
@@ -28,7 +29,7 @@ func mayWrite(p Principal) *Error {
 	switch {
 	case p.Kind == PrincipalDuet:
 		return nil
-	case p.Kind == PrincipalNode && ValidName(p.Swarm) && p.Name != "":
+	case p.Kind == PrincipalNode && ValidSwarm(p.Swarm) && p.Name != "":
 		return nil
 	}
 	return &Error{Code: CodeForbidden, What: "credential", Valid: "a node credential or Duet's",
@@ -57,7 +58,7 @@ func mapStoreErr(err error) error {
 	case errors.Is(err, ErrStaleRevision):
 		return &Error{Code: CodeStaleRevision, What: "revision", Valid: "the item's current revision", Fix: "read the item and post again"}
 	}
-	return &Error{Code: CodeInternal, What: "the bus", Valid: "a retry", Fix: "try again; if it keeps failing, tell the owner"}
+	return &Error{Code: CodeInternal, What: "the bus", Valid: "a retry", Fix: "try again; if it keeps failing, tell the owner", cause: err}
 }
 
 func asBus(err error) bool {
