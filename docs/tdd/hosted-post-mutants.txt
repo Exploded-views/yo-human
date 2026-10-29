@@ -587,3 +587,392 @@ vet exit=0
 suite exit=1
 
 2 mutants, 0 survivors
+
+######## round 3, FIRST RUN (head 85d0cf0): the two pr: survivors that drove part 1c, and three mutants that did not compile
+
+baseline: exit=0
+
+## part 1: pr: digit count unbounded
+internal/hosted/bus/validate_wall.go: '|pr:[0-9]{1,6})$' -> '|pr:[0-9]+)$'
+vet exit=0
+suite exit=0
+SURVIVED
+
+## part 1: pr: accepting letters
+internal/hosted/bus/validate_wall.go: '|pr:[0-9]{1,6})$' -> '|pr:[0-9a-z]{1,6})$'
+vet exit=0
+suite exit=0
+SURVIVED
+
+## part 1: the target check skipped
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallTargetRE.MatchString)}' -> 'orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledApprovalRefusesRealSlug
+--- FAIL: TestWalledPostRefusesFreeText
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the env branch allows / and :
+internal/hosted/bus/validate_wall.go: '`^(prod|staging|preview|dev|cn:' -> '`^((prod|staging|preview|dev)[/:a-z0-9]*|cn:'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: #N unbounded
+internal/hosted/bus/validate_wall.go: '(#[0-9]{1,6})?)$' -> '(#[0-9]+)?)$'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: cn: target case-insensitive
+internal/hosted/bus/validate_wall.go: 'MustCompile(`^(prod|staging' -> 'MustCompile(`(?i)^(prod|staging'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the ref rule skipped for Ref
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallRefRE.MatchString)}' -> 'orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledApprovalRefusesRealSlug
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the ref rule skipped for BaseRef
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallBaseRE.MatchString)}' -> 'orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: pr:<n> accepted as a base
+internal/hosted/bus/validate_wall.go: '|release/[0-9]+(\\.[0-9]+)*)$`)' -> '|release/[0-9]+(\\.[0-9]+)*|pr:[0-9]{1,6})$`)'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+suite exit=1
+
+## part 1: BaseRef checked with the Ref rule (v<semver> as a base)
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallBaseRE.MatchString)}' -> 'orEmpty(wallRefRE.MatchString)}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the env list replaced by a token pattern
+internal/hosted/bus/validate_wall.go: '^(prod|staging|preview|dev|cn:' -> '^([a-z0-9][a-z0-9-]{0,62}|cn:'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: walled node risk flags allowed
+internal/hosted/bus/validate_wall.go: 'return checkNoFlags(d)' -> 'return nil'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: Duet-into-walled risk flags allowed
+internal/hosted/bus/validate_wall.go: 'return checkNoFlags(d)' -> 'return nil'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: risk flags allowed in both directions
+internal/hosted/bus/validate_wall.go: 'if len(d.RiskFlags) != 0 {' -> 'if false {'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1b: pr: accepted for any action
+internal/hosted/bus/validate_wall.go: 'strings.HasPrefix(d.Ref, "pr:") && d.Action != ActionMerge' -> 'false'
+vet exit=1
+(mutant does not compile)
+
+## part 1b: pr: stripped for any action
+internal/hosted/bus/validate.go: 'if d.Action == ActionMerge {\n\t\td.Ref' -> 'if true {\n\t\td.Ref'
+vet exit=0
+--- FAIL: TestAsValidatedMapsCodenameAndMergePRID
+suite exit=1
+
+## part 1b: pr: not stripped in checkedView
+internal/hosted/bus/post.go: 'return asValidated(d)' -> 'd.Repo = codenameAsSlug(d.Repo)\n\t\treturn d'
+vet exit=0
+--- FAIL: TestCheckedViewAndPolicyTargetUseTheSameNormalisation
+--- FAIL: TestStoredWalledItemKeepsItsPolicyTarget
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 1b: pr: not stripped in PolicyTarget (expected equivalent: a merge target is BaseRef)
+internal/hosted/bus/validate.go: 'n := asValidated(*d)' -> 'n := *d\n\tn.Repo = codenameAsSlug(n.Repo)'
+vet exit=0
+suite exit=0
+SURVIVED
+
+## part 1: PolicyTarget does not map the codename
+internal/hosted/bus/validate.go: 'd.Repo = codenameAsSlug(d.Repo)\n\tif d.Action' -> 'if d.Action'
+vet exit=0
+--- FAIL: TestAsValidatedMapsCodenameAndMergePRID
+--- FAIL: TestStoredWalledItemKeepsItsPolicyTarget
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 4: CheckWalledMessage direction flipped
+internal/hosted/bus/validate_wall.go: 'if !fromWalledNode {' -> 'if fromWalledNode {'
+vet exit=0
+--- FAIL: TestCheckWalledMessage
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+--- FAIL: TestWalledReplyRefusesFreeText
+suite exit=1
+
+## part 4: Reply passes the wrong direction
+internal/hosted/bus/scope.go: 'p.Kind != PrincipalDuet)' -> 'p.Kind == PrincipalDuet)'
+vet exit=0
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+--- FAIL: TestWalledReplyRefusesFreeText
+suite exit=1
+
+## part 3: example/<name> allowed outside fixtures
+internal/repolint/codenames.go: 'if !fixture || !exampleSlugRE' -> 'if !exampleSlugRE'
+vet exit=0
+--- FAIL: TestCodenameMapLinesAllowsExampleInFixtures
+suite exit=1
+
+## part 3: example/<name> never allowed
+internal/repolint/codenames.go: 'if !fixture || !exampleSlugRE.MatchString(slug)' -> 'if true'
+vet exit=1
+(mutant does not compile)
+
+## part 3: the slug need not follow the separator
+internal/repolint/codenames.go: 'loc[0] != 0' -> 'false'
+vet exit=0
+--- FAIL: TestCodenameMapLinesIgnoresWhatIsNotAMapping
+suite exit=1
+
+## part 3: a next-argument separator is a mapping
+internal/repolint/codenames.go: '|| nextArg' -> ''
+vet exit=1
+(mutant does not compile)
+
+## part 3: a mapping in a testdata dir is not looked at
+internal/repolint/codenames.go: 'strings.HasPrefix(p, "testdata/") ||' -> 'true ||'
+vet exit=0
+--- FAIL: TestCodenameMapLinesAllowsExampleInFixtures
+suite exit=1
+
+## part 3: RepoFiles skips testdata
+internal/repolint/codenames.go: 'd.Name() == "dist"' -> 'd.Name() == "dist" || d.Name() == "testdata"'
+vet exit=0
+--- FAIL: TestRepoFilesSkipsIgnoredDirectories
+suite exit=1
+
+## part 5: main exits 0
+internal/hosted/perf/cmd/main.go: 'exit(perf.Run(' -> 'exit(0*perf.Run('
+vet exit=0
+--- FAIL: TestMainExitsWithRunsCode
+suite exit=1
+
+28 mutants, 6 survivors
+
+######## round 3, the survivor "pr: not stripped in PolicyTarget" is equivalent: policy.TargetFor reads BaseRef for a merge and never reads Ref, so the stripped and unstripped PolicyTarget are equal for every draft. It stays as a recorded survivor; checkedView and PolicyTarget share asValidated (TestCheckedViewAndPolicyTargetUseTheSameNormalisation), so they cannot drift.
+
+######## round 3, SECOND RUN (head a7365b5, after part 1c); the mutant "example/<name> never allowed" did not compile in this script, so it was run by hand:
+
+baseline: exit=0
+
+## part 1: pr: digit count unbounded
+internal/hosted/bus/validate_wall.go: '|pr:[0-9]{1,6})$' -> '|pr:[0-9]+)$'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: pr: accepting letters
+internal/hosted/bus/validate_wall.go: '|pr:[0-9]{1,6})$' -> '|pr:[0-9a-z]{1,6})$'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+suite exit=1
+
+## part 1: the target check skipped
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallTargetRE.MatchString)}' -> 'orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledApprovalRefusesRealSlug
+--- FAIL: TestWalledPostRefusesFreeText
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the env branch allows / and :
+internal/hosted/bus/validate_wall.go: '`^(prod|staging|preview|dev|cn:' -> '`^((prod|staging|preview|dev)[/:a-z0-9]*|cn:'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: #N unbounded
+internal/hosted/bus/validate_wall.go: '(#[0-9]{1,6})?)$' -> '(#[0-9]+)?)$'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: cn: target case-insensitive
+internal/hosted/bus/validate_wall.go: 'MustCompile(`^(prod|staging' -> 'MustCompile(`(?i)^(prod|staging'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the ref rule skipped for Ref
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallRefRE.MatchString)}' -> 'orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledApprovalRefusesRealSlug
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the ref rule skipped for BaseRef
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallBaseRE.MatchString)}' -> 'orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: pr:<n> accepted as a base
+internal/hosted/bus/validate_wall.go: '|release/[0-9]+(\\.[0-9]+)*)$`)' -> '|release/[0-9]+(\\.[0-9]+)*|pr:[0-9]{1,6})$`)'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+suite exit=1
+
+## part 1: BaseRef checked with the Ref rule (v<semver> as a base)
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallBaseRE.MatchString)}' -> 'orEmpty(wallRefRE.MatchString)}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the env list replaced by a token pattern
+internal/hosted/bus/validate_wall.go: '^(prod|staging|preview|dev|cn:' -> '^([a-z0-9][a-z0-9-]{0,62}|cn:'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: walled node risk flags allowed
+internal/hosted/bus/validate_wall.go: 'return checkNoFlags(d)' -> 'return nil'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: Duet-into-walled risk flags allowed
+internal/hosted/bus/validate_wall.go: 'return checkNoFlags(d)' -> 'return nil'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: risk flags allowed in both directions
+internal/hosted/bus/validate_wall.go: 'if len(d.RiskFlags) != 0 {' -> 'if false {'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1b: pr: accepted for any action
+internal/hosted/bus/validate_wall.go: 'strings.HasPrefix(d.Ref, "pr:") && d.Action != ActionMerge' -> 'strings.HasPrefix(d.Ref, "pr:") && false'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+suite exit=1
+
+## part 1b: pr: stripped for any action
+internal/hosted/bus/validate.go: 'if d.Action == ActionMerge {\n\t\td.Ref' -> 'if true {\n\t\td.Ref'
+vet exit=0
+--- FAIL: TestAsValidatedMapsCodenameAndMergePRID
+suite exit=1
+
+## part 1b: pr: not stripped in checkedView
+internal/hosted/bus/post.go: 'return asValidated(d)' -> 'd.Repo = codenameAsSlug(d.Repo)\n\t\treturn d'
+vet exit=0
+--- FAIL: TestCheckedViewAndPolicyTargetUseTheSameNormalisation
+--- FAIL: TestStoredWalledItemKeepsItsPolicyTarget
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 1b: pr: not stripped in PolicyTarget (expected equivalent: a merge target is BaseRef)
+internal/hosted/bus/validate.go: 'n := asValidated(*d)' -> 'n := *d\n\tn.Repo = codenameAsSlug(n.Repo)'
+vet exit=0
+suite exit=0
+SURVIVED
+
+## part 1: PolicyTarget does not map the codename
+internal/hosted/bus/validate.go: 'd.Repo = codenameAsSlug(d.Repo)\n\tif d.Action' -> 'if d.Action'
+vet exit=0
+--- FAIL: TestAsValidatedMapsCodenameAndMergePRID
+--- FAIL: TestStoredWalledItemKeepsItsPolicyTarget
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 4: CheckWalledMessage direction flipped
+internal/hosted/bus/validate_wall.go: 'if !fromWalledNode {' -> 'if fromWalledNode {'
+vet exit=0
+--- FAIL: TestCheckWalledMessage
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+--- FAIL: TestWalledReplyRefusesFreeText
+suite exit=1
+
+## part 4: Reply passes the wrong direction
+internal/hosted/bus/scope.go: 'p.Kind != PrincipalDuet)' -> 'p.Kind == PrincipalDuet)'
+vet exit=0
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+--- FAIL: TestWalledReplyRefusesFreeText
+suite exit=1
+
+## part 3: example/<name> allowed outside fixtures
+internal/repolint/codenames.go: 'if !fixture || !exampleSlugRE' -> 'if !exampleSlugRE'
+vet exit=0
+--- FAIL: TestCodenameMapLinesAllowsExampleInFixtures
+suite exit=1
+
+## part 3: example/<name> never allowed
+internal/repolint/codenames.go: 'if !fixture || !exampleSlugRE.MatchString(slug)' -> 'if !fixture || true'
+vet exit=1
+(mutant does not compile)
+
+## part 3: the slug need not follow the separator
+internal/repolint/codenames.go: 'loc[0] != 0' -> 'false'
+vet exit=0
+--- FAIL: TestCodenameMapLinesIgnoresWhatIsNotAMapping
+suite exit=1
+
+## part 3: a next-argument separator is a mapping
+internal/repolint/codenames.go: 'loc[0] != 0 || nextArg' -> 'loc[0] != 0 || (nextArg && false)'
+vet exit=0
+--- FAIL: TestCodenameMapLinesIgnoresWhatIsNotAMapping
+suite exit=1
+
+## part 3: a mapping in a testdata dir is not looked at
+internal/repolint/codenames.go: 'strings.HasPrefix(p, "testdata/") ||' -> 'true ||'
+vet exit=0
+--- FAIL: TestCodenameMapLinesAllowsExampleInFixtures
+suite exit=1
+
+## part 3: RepoFiles skips testdata
+internal/repolint/codenames.go: 'd.Name() == "dist"' -> 'd.Name() == "dist" || d.Name() == "testdata"'
+vet exit=0
+--- FAIL: TestRepoFilesSkipsIgnoredDirectories
+suite exit=1
+
+## part 5: main exits 0
+internal/hosted/perf/cmd/main.go: 'exit(perf.Run(' -> 'exit(0*perf.Run('
+vet exit=0
+--- FAIL: TestMainExitsWithRunsCode
+suite exit=1
+
+28 mutants, 2 survivors
+
+## part 3: example/<name> never allowed (by hand, in a throwaway worktree)
+internal/repolint/codenames.go: exampleSlugRE `^example/` -> `^examplX/`
+vet exit=0
+--- FAIL: TestCodenameMapLinesAllowsExampleInFixtures
+suite exit=1
+
+round 3 total: 29 distinct mutants run (28 scripted + 1 by hand); survivors: 1, the equivalent one above.
