@@ -1,0 +1,34 @@
+skills used: ['yo-human-eval:yo-human']
+
+The exit 64 means my call was wrong, not that anything is broken. I fix the call and retry once. I don't need to re-run `levels`, because its output is already in this session.
+
+**Level:** I used "urgent", which isn't one of this human's levels. I'd map it to **`siren`**. Checkout failing means production is impaired and can't wait, which matches siren's `use_when`. `nudge` is held during quiet hours, so it could leave a broken checkout unseen. Siren sends regardless of quiet hours.
+
+**Commands, in order:**
+
+1. Set the sender identity. The values are placeholders that I'd replace with the real project and agent names:
+   ```
+   export YO_HUMAN_PROJECT=<project>
+   export YO_HUMAN_AGENT=<agent>
+   ```
+
+2. Retry the notification with the valid level and a stable dedup key:
+   ```
+   yo-human notify --level siren \
+     --title "Checkout failing" \
+     --ask "Look at checkout now" \
+     --dedup-key checkout-failing
+   ```
+   I'd add `--body` with what I actually observed, such as the error or the failing step. It would name log or file locations and contain no secrets.
+
+3. Handle the exit code:
+   - **0:** Done. Carry on with the work.
+   - **75:** Wait `after_seconds`, then run `yo-human flush`. I'd repeat while it exits 75, at most `attempts_left` times. I would not re-run `notify`. If the attempts run out, I'd tell the human directly in my session with the title and the ask.
+   - **69, 78, 74 or 70:** Stop. I'd say plainly in my reply that the human hasn't been reached, and include the ask and the error text. I would not edit the config or switch levels.
+   - **64 again:** Read the `error`, `valid` and `fix` lines and correct the call. I wouldn't guess at level names.
+
+4. Once checkout is fixed and I've verified it, I'd run:
+   ```
+   yo-human resolve --dedup-key checkout-failing --note "<short note>"
+   ```
+   I would not send a new `notify` to say it's fixed.

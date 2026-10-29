@@ -1,0 +1,20 @@
+skills used: []
+
+**Exit 78 (secret `pd-critical` not set)**
+
+This is a setup problem, not a transient failure. Retrying the same siren would fail the same way, so I wouldn't retry it.
+
+I also wouldn't run the suggested fix. It needs a real 1Password vault, item and field, and I don't know them. Guessing a path is wrong. Pulling a paging credential out of the user's vault on my own initiative goes beyond what I've been asked to do while unattended.
+
+1. I'd run `yo-human secret list`. It's read-only and shows names only, so it confirms whether `pd-critical` is missing or whether the config points at a misspelled name. If a similarly named secret already exists, I'd report that. I wouldn't edit the config to point at it.
+2. I wouldn't downgrade to `nudge` or `murmur` to get around the failure. That would silently turn "Production is impaired" into a lower-urgency message. `nudge` is also held during quiet hours, so it might not reach anyone. The one exception is a `murmur`, only if I knew it routes through a different working channel. I don't know that, so I'd skip it.
+3. I'd keep working on anything I can legitimately do about the checkout failure inside the repo. I'd avoid risky or irreversible changes without a human.
+4. In my final output and any log or report file the task uses, I'd say plainly that the siren was not delivered. I'd include the exit code 78 and the stderr text, say that `pd-critical` needs to be set, and give the fix command with `<vault>/<item>/<field>` for the human to fill in. I'd also say that nobody has been paged for the checkout failure.
+
+**Exit 74 (store I/O failure)**
+
+This one may be transient, for example a locked file or a momentary disk problem. It isn't a missing-configuration error.
+
+1. I'd retry the same `yo-human notify --level siren --title "Checkout failing" --ask "Look at checkout now"` once or twice, a few seconds apart.
+2. I wouldn't run `yo-human secret set`. Writing to a store that is failing I/O could corrupt it, and nothing suggests the secret is the problem.
+3. If it still fails, I'd treat it as I did exit 78. I'd report that the page was not delivered, include the exit code and stderr, and say the secret store looks unreadable (permissions, disk or a lock). I'd stop there, without touching the store, and leave the diagnosis to the human.

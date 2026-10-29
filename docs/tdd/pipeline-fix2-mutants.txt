@@ -1,0 +1,35 @@
+# Mutation checks for M1 task 5 fix round 2 (internal/core and internal/store). Each mutant is applied to the GREEN code, then 'go test -race -count=1 -timeout 90s ./internal/core ./internal/store' is run; output filtered to ok/FAIL/--- FAIL/panic lines.
+== baseline
+ok  	github.com/Exploded-views/yo-human/internal/core	8.861s
+ok  	github.com/Exploded-views/yo-human/internal/store	6.041s
+== mutant: freshness trusts the caller's Created
+--- FAIL: TestFreshnessIgnoresTheCallersCreatedTime (0.03s)
+--- FAIL: TestNotifyStampsTheEnqueueTime (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.808s
+ok  	github.com/Exploded-views/yo-human/internal/store	5.930s
+FAIL
+== mutant: enqueue time not stamped
+--- FAIL: TestNotifyStampsTheEnqueueTime (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.878s
+ok  	github.com/Exploded-views/yo-human/internal/store	5.818s
+FAIL
+== mutant: Release ignores the caller's clock
+ok  	github.com/Exploded-views/yo-human/internal/core	8.992s
+--- FAIL: TestReleaseKeepsAttemptsAndIsDueNow (0.07s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	4.990s
+FAIL
+== mutant: config fix always claims the dead letter
+--- FAIL: TestConfigProblemDoesNotClaimADeadLetterThatFailed (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.818s
+ok  	github.com/Exploded-views/yo-human/internal/store	5.977s
+FAIL
+== mutant: dead-letter outcome always assumed
+--- FAIL: TestConfigProblemDoesNotClaimADeadLetterThatFailed (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	8.073s
+ok  	github.com/Exploded-views/yo-human/internal/store	6.149s
+FAIL

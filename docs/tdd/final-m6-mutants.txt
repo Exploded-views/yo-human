@@ -1,0 +1,179 @@
+KILLED  a bound store still blocks
+  internal/store/incidents.go: 'if s.ctx == nil {\n\t\tif err := lockExclusive(f)' -> 'if true {\n\t\tif err := lockExclusive(f)'
+  --- FAIL: TestALockWaitEndsWithTheContext (3.05s)
+      lockwait_test.go:49: still waiting for the lock 3s after a 150ms deadline
+  --- FAIL: TestAKeyedNotifyBehindAHeldLockIsQueuedForAFlush (5.04s)
+      lockwait_test.go:78: still waiting for the incident lock 5s after the deadline
+  --- FAIL: TestADeferredMessageWhoseIncidentCannotBeReadIsKept (5.12s)
+      lockwait_test.go:106: still waiting for the incident lock 5s after the deadline
+  --- FAIL: TestADeferredMessageWaitsWhileTheLockIsStillHeld (5.02s)
+      lockwait_test.go:146: still waiting for the incident lock 5s after the deadline
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  a busy lock counts as taken
+  internal/store/lock_unix.go: 'return true, nil' -> 'return false, nil'
+  --- FAIL: TestALockWaitEndsWithTheContext (0.05s)
+      lockwait_test.go:46: WithIncidents = <nil>; want the busy lock as a Queued problem
+  --- FAIL: TestRepeatsFromSeparateStoreHandlesPageOnce (0.75s)
+      generation_test.go:106: sent 19 times, want once
+  --- FAIL: TestReopenDuringResolveKeepsTheNewMessage (0.31s)
+      generation_test.go:130: incident open=false gen=1, notify "suppressed" []; want the reopened incident paged
+      generation_test.go:133: sent [t Resolved: t]; the new message must go out
+  --- FAIL: TestFlushClaimingDuringResolveDoesNotPage (0.33s)
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  Within does not bind the context
+  internal/store/store.go: 'c.ctx = ctx' -> '_ = ctx'
+  --- FAIL: TestALockWaitEndsWithTheContext (3.08s)
+      lockwait_test.go:49: still waiting for the lock 3s after a 150ms deadline
+  --- FAIL: TestAKeyedNotifyBehindAHeldLockIsQueuedForAFlush (5.03s)
+      lockwait_test.go:78: still waiting for the incident lock 5s after the deadline
+  --- FAIL: TestADeferredMessageWhoseIncidentCannotBeReadIsKept (5.02s)
+      lockwait_test.go:106: still waiting for the incident lock 5s after the deadline
+  --- FAIL: TestADeferredMessageWaitsWhileTheLockIsStillHeld (5.03s)
+      lockwait_test.go:146: still waiting for the incident lock 5s after the deadline
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  the pipeline is not bound to the call's deadline
+  internal/core/pipeline.go: 'q.d.Store = p.d.Store.Within(ctx)' -> '_ = ctx'
+  --- FAIL: TestAKeyedNotifyBehindAHeldLockIsQueuedForAFlush (5.03s)
+      lockwait_test.go:78: still waiting for the incident lock 5s after the deadline
+  --- FAIL: TestADeferredMessageWhoseIncidentCannotBeReadIsKept (5.04s)
+      lockwait_test.go:106: still waiting for the incident lock 5s after the deadline
+  --- FAIL: TestADeferredMessageWaitsWhileTheLockIsStillHeld (5.02s)
+      lockwait_test.go:146: still waiting for the incident lock 5s after the deadline
+  --- FAIL: TestAResolveStopsAMessageWaitingForItsIncidentCheck (5.03s)
+      lockwait_test.go:162: still waiting for the incident lock 5s after the deadline
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  a busy admission is not deferred
+  internal/core/pipeline.go: 'if store.IsBusy(err) {\n\t\treturn p.deferAdmission(m, plan)\n\t}' -> ''
+  --- FAIL: TestAKeyedNotifyBehindAHeldLockIsQueuedForAFlush (0.23s)
+      lockwait_test.go:78: Notify: another yo-human process held the incident lock past this call's deadline
+  --- FAIL: TestADeferredMessageWhoseIncidentCannotBeReadIsKept (0.23s)
+      lockwait_test.go:106: Notify: another yo-human process held the incident lock past this call's deadline
+  --- FAIL: TestADeferredMessageWaitsWhileTheLockIsStillHeld (0.24s)
+      lockwait_test.go:146: Notify: another yo-human process held the incident lock past this call's deadline
+  --- FAIL: TestAResolveStopsAMessageWaitingForItsIncidentCheck (0.23s)
+      lockwait_test.go:162: Notify: another yo-human process held the incident lock past this call's deadline
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  a deferred message is not pinned
+  internal/core/admit.go: 's.Pinned, s.Fingerprint = true, p.fingerprint(s.Instance)' -> 's.Pinned = false'
+  --- FAIL: TestReopenDuringResolveKeepsTheNewMessage (0.56s)
+      generation_test.go:133: sent [t Resolved: t again]; the new message must go out
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  the deferral has no next
+  internal/core/admit.go: 'res := Result{Status: StatusQueued, ID: m.ID, Next: p.next(m.Level)}' -> 'res := Result{Status: StatusQueued, ID: m.ID}'
+  --- FAIL: TestReopenDuringResolveKeepsTheNewMessage (0.49s)
+      generation_test.go:133: sent [t Resolved: t again]; the new message must go out
+  --- FAIL: TestAKeyedNotifyBehindAHeldLockIsQueuedForAFlush (0.24s)
+      lockwait_test.go:80: Notify = {Status:queued ID:M001 Channels:[{Channel:a Status:queued Error:waiting for its incident check: another yo-human process holds the incident lock ProviderID: Scheduled:false attempts:0 config:false buried:false parked:false unbuilt:false level: retryAt:{wall:0 ext:0 
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  a deferred message is not tied to its incident
+  internal/core/admit.go: 'IncidentKey: incidentID(m), Data: data}' -> 'Data: data}'
+  --- FAIL: TestAResolveStopsAMessageWaitingForItsIncidentCheck (0.41s)
+      lockwait_test.go:165: resolve = {Status:noop ID:M002 Channels:[] Next:<nil> Warnings:[]}; want resolved, the waiting message cancelled
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  a still-busy admission spends nothing but is lost
+  internal/core/admit.go: 'return res, errors.Join(err, b.p.d.Store.Release(c, b.now))' -> 'return res, errors.Join(err, b.p.d.Store.Complete(c))'
+  --- FAIL: TestADeferredMessageWaitsWhileTheLockIsStillHeld (0.46s)
+      lockwait_test.go:154: queue []; want the message waiting, no attempt spent
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  admitted sends not reported
+  internal/core/admit.go: 'b.more = append(b.more, results...)' -> '_ = results'
+  --- FAIL: TestReopenDuringResolveKeepsTheNewMessage (0.53s)
+      generation_test.go:133: sent [t Resolved: t again]; the new message must go out
+  --- FAIL: TestAKeyedNotifyBehindAHeldLockIsQueuedForAFlush (0.34s)
+      lockwait_test.go:83: flush = {Status:ok ID: Channels:[] Next:<nil> Warnings:[]}, sent 1; want the message admitted and sent once
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  a waiting message is fresh to the backlog
+  internal/core/flush.go: 'if pl.Kind == kindCancel || pl.Kind == kindAdmit {' -> 'if pl.Kind == kindCancel {'
+  --- FAIL: TestAKeyedNotifyBehindAHeldLockIsQueuedForAFlush (0.25s)
+      lockwait_test.go:83: flush = {Status:ok ID: Channels:[] Next:<nil> Warnings:[]}, sent 0; want the message admitted and sent once
+  --- FAIL: TestADeferredMessageWhoseIncidentCannotBeReadIsKept (0.24s)
+      lockwait_test.go:117: Flush error <nil>, sent 0; want a store problem and nothing sent
+      lockwait_test.go:120: in flight 0; want the message kept for recovery
+  --- FAIL: TestADeferredMessageWaitsWhileTheLockIsStillHeld (0.26s)
+      lockwait_test.go:151: Flush = {Status:ok ID: Channels:[] Next:<nil> Warnings:[]}, <nil>; want it still waiting, queued, with a next step
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  EntryInstances ignores the plan
+  internal/core/admit.go: 'if json.Unmarshal(pd.Data, &pl) != nil || pl.Kind != kindAdmit {' -> 'if true {'
+  --- FAIL: TestEntryInstancesOfAWaitingMessageAreItsLevels (0.25s)
+      lockwait_test.go:182: EntryInstances = [_admit]; want the level's a and b
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  recovery waits for the lock
+  internal/core/pipeline.go: 'stop() // a lock that is not free at once is not waited for' -> 'defer stop()'
+  --- FAIL: TestReopenDuringResolveKeepsTheNewMessage (0.48s)
+      generation_test.go:133: sent [t Resolved: t again]; the new message must go out
+  --- FAIL: TestRecoveryBehindAHeldLockIsPostponed (5.05s)
+      lockwait_test.go:206: still waiting for the incident lock 5s after the deadline
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  a busy recovery fails the call
+  internal/core/pipeline.go: 'if store.IsBusy(err) {\n\t\treturn nil\n\t}\n\treturn err' -> 'return err'
+  --- FAIL: TestRecoveryBehindAHeldLockIsPostponed (0.04s)
+      lockwait_test.go:208: Notify = {Status: ID: Channels:[] Next:<nil> Warnings:[]}, another yo-human process held the incident lock past this call's deadline; want delivered, the recovery postponed
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  no next from a Queued problem
+  internal/core/pipeline.go: 'res.Next = p.next(level)\n\t\t\treturn' -> 'return'
+  --- FAIL: TestReopenDuringResolveKeepsTheNewMessage (0.48s)
+      generation_test.go:133: sent [t Resolved: t again]; the new message must go out
+  --- FAIL: TestAFlushBehindAHeldLockSaysToFlushAgain (0.31s)
+      lockwait_test.go:240: Flush = {Status:ok ID: Channels:[] Next:<nil> Warnings:[]}, another yo-human process held the incident lock past this call's deadline; want the busy lock reported, with a flush as the next step
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+BUILD-FAILED  a resolve of no incident stops nothing waiting
+  internal/core/resolve.go: 'if gone, cerr = b.p.d.Store.CancelIncident(key); cerr != nil {\n\t\t\t\tb.fail(cerr)\n\t\t\t}\n\t\t\treturn nil\n\t\t}' -> 'return nil\n\t\t}'
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+BUILD-FAILED  the cli store is not bounded
+  internal/cli/runtime.go: 'return c, st.Within(ctx), nil' -> 'return c, st, nil'
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  a busy resolve has no retry step
+  internal/cli/resolve.go: 'if res.Status == "" && store.IsBusy(err) {' -> 'if false {'
+  --- FAIL: TestAResolveBehindAHeldLockSaysToRunItAgain (0.35s)
+      lockwait_test.go:44: resolve: {code:75 out: err:error: another yo-human process held the incident lock past this call's deadline
+      lockwait_test.go:45: stdout = "", want it to contain "next: yo-human resolve --dedup-key 'disk 7' in "
+  --- FAIL: TestAPageResolveBehindAHeldLockSaysToRunItAgain (0.29s)
+      lockwait_test.go:58: page --resolve: {code:75 out:{"version":1,"error":{"what":"another yo-human process held the incident lock past this call's deadline","valid":"an incident lock that comes free within the deadline","fix":"run the next step; if this keeps happening, tell the human: a yo-human 
+  --- FAIL: TestAResolveBehindAHeldLockKeepsItsConfig (0.28s)
+      lockwait_test.go:79: stdout = "", want it to contain "next: yo-human resolve --dedup-key k --project p --note 'fixed it' --config $TMPDIR/TestAResolveBehindAHeldLockKeepsItsConfig1247653698/001/.config/yo-human/003/c.yaml in "
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  the retry step drops --config
+  internal/cli/resolve.go: 'again += " --config " + problem.ShellQuote(e.configPath())' -> '_ = again'
+  --- FAIL: TestAResolveBehindAHeldLockKeepsItsConfig (0.30s)
+      lockwait_test.go:79: stdout = "RESULT queued <ULID>\nnext: yo-human resolve --dedup-key k --project p --note 'fixed it' in 5s, 5 attempts left, then tell the human in your session\n", want it to contain "next: yo-human resolve --dedup-key k --project p --note 'fixed it' --config $TMPDIR/TestARes
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  status fails behind a busy lock
+  internal/cli/status.go: 'if store.IsBusy(err) { // the incidents are read last: the rest of the snapshot stands' -> 'if false { // the incidents are read last: the rest of the snapshot stands'
+  --- FAIL: TestReopenDuringResolveKeepsTheNewMessage (0.51s)
+      generation_test.go:133: sent [t Resolved: t again]; the new message must go out
+  --- FAIL: TestStatusBehindAHeldLockWarnsAndShowsTheQueue (0.25s)
+      lockwait_test.go:68: status: {code:75 out: err:error: another yo-human process held the incident lock past this call's deadline
+      lockwait_test.go:69: stderr = "error: another yo-human process held the incident lock past this call's deadline\nvalid: an incident lock that comes free within the deadline\nfix: run the next step; if this keeps happening, tell the human: a yo-human process may be stopped or hung\n", want it to 
+  [go test -count=1 -timeout 120s ./internal/store ./internal/core ./internal/cli exit 1]
+
+KILLED  a resolve of no incident stops nothing waiting (rerun compilable)
+  internal/core/resolve.go: 'if gone, cerr = b.p.d.Store.CancelIncident(key); cerr != nil {\n\t\t\t\tb.fail(cerr)\n\t\t\t}\n\t\t\treturn nil\n\t\t}' -> '_ = cerr\n\t\t\treturn nil\n\t\t}'
+  --- FAIL: TestAResolveStopsAMessageWaitingForItsIncidentCheck (0.28s)
+      lockwait_test.go:165: resolve = {Status:noop ID:M002 Channels:[] Next:<nil> Warnings:[]}; want resolved, the waiting message cancelled
+  [go test -count=1 -timeout 120s ./internal/core exit 1]
+
+KILLED  the cli store is not bounded (rerun compilable)
+  internal/cli/runtime.go: 'return c, st.Within(ctx), nil' -> '_ = ctx\n\treturn c, st, nil'
+  --- FAIL: TestAResolveBehindAHeldLockSaysToRunItAgain (5.13s)
+      lockwait_test.go:42: resolve still waiting for the incident lock 5s after its 200ms deadline
+  [go test -count=1 -timeout 120s ./internal/cli exit 1]
+

@@ -1,0 +1,13 @@
+{
+ "must": [
+  true,
+  true,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  false
+ ],
+ "note": "Runs levels first and uses a <chosen-level> placeholder, but the send command shows only --level and a message, with no --title or --ask.",
+ "pass": false
+}

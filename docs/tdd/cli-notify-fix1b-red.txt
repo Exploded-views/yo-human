@@ -1,0 +1,21 @@
+# what this is: task 11 fix round 1b (RED), against the type-only check: an entry is sent to a same-name, same-type channel with other settings or secret names; an entry with no fingerprint is sent; no fingerprint is recorded
+# command: go test -count=1 -timeout 300s ./internal/core ./internal/cli
+--- FAIL: TestAnEntryIsNeverSentWhereTheChannelNowPointsElsewhere (0.03s)
+    unbuilt_test.go:101: no settings: the entry was sent to a channel that points elsewhere
+    unbuilt_test.go:103: result [{Channel:b Status:sent Error: ProviderID: Scheduled:false attempts:2 config:false buried:false}]; want one queued entry whose reason contains "now points somewhere else than when this message was queued"
+--- FAIL: TestAnEntryWithNoFingerprintIsParked (0.02s)
+    unbuilt_test.go:125: flush = {Status:ok ID: Channels:[{Channel:b Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false}] Next:<nil>}, <nil>; want the entry parked
+--- FAIL: TestAQueuedEntryRecordsItsDestinationAndConfigPath (0.05s)
+    unbuilt_test.go:150: queued payload = {"message":{"id":"X1","level":"page","title":"t","ask":"","body":"","link":"","project":"","agent":"","dedup_key":"","actions":null,"created":"2026-10-30T12:00:00Z","resolved":false},"generation":0,"enqueued":"2026-10-30T12:00:00Z","instance":"b","type":"fake","config":"/work/my dir/proj.yaml","interruption":"active"} ({ /work/my dir/proj.yaml}); want a 64-digit destination fingerprint and the config path recorded
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	17.233s
+--- FAIL: TestFlushNeverSendsAnEntryToAnotherServerOfTheSameName (0.15s)
+    round1_test.go:220: flush = "RESULT ok\nphone: sent\n", want it to contain "phone: queued"
+    round1_test.go:220: flush = "RESULT ok\nphone: sent\n", want it to contain "now points somewhere else than when this message was queued"
+    round1_test.go:221: the message went to another server or was buried (sent 1)
+    round1_test.go:222: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "reason: "
+    round1_test.go:222: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "points somewhere else"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	12.044s
+FAIL
+# exit code: 1

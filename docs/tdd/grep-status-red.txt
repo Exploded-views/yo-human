@@ -1,0 +1,21 @@
+EV item 4, against 796fa2f: a script that counts matches with grep -c (or || true) cannot tell "nothing matched" (exit 1) from "grep failed" (exit 2). With a grep that fails, nohooks says the binary holds no hook name and exits 0; leakcheck calls an unreadable eval output clean.
+
+$ sh scripts/grep_status_test.sh
+ok   nohooks: a clean binary
+ok   nohooks: a hook name
+FAIL nohooks: grep fails: exit 0, want 2
+    grep: cannot read
+    grep: cannot read
+    scripts/nohooks.sh: line 14: [: : integer expression expected
+    scripts/nohooks.sh: line 18: [: : integer expression expected
+    nohooks: $TMPDIR/tmp.<RAND>/clean.bin holds no test-only hook name
+ok   leakcheck: clean output
+ok   leakcheck: a leak
+FAIL leakcheck: an unreadable output: exit 0, want 2
+    grep: $TMPDIR/tmp.<RAND>/evals/c.txt: Permission denied
+    grep: $TMPDIR/tmp.<RAND>/evals/c.txt: Permission denied
+    grep: $TMPDIR/tmp.<RAND>/evals/c.txt: Permission denied
+    leakcheck: clean
+grep_status_test: 2 case(s) failed
+[exit 1]
+

@@ -1,0 +1,29 @@
+skills used: ['yo-human-eval:yo-human']
+
+The level is `nudge`. The human should look within the hour and production isn't impaired, so `siren` would be too loud. `murmur` is too quiet. `nudge` has `quiet_hours: hold`, so during quiet hours the message waits until they end. That is intended.
+
+I'd run these in order. This is a dry run, so I haven't run any of them.
+
+1. I already have the level list from `yo-human levels --json`, so I wouldn't run it again.
+
+2. Send the notification. I would set the project and agent env vars so the message says who sent it. I'm using placeholder values here and would use the real project name:
+
+```
+YO_HUMAN_PROJECT=<project> YO_HUMAN_AGENT=<agent> yo-human notify --level nudge \
+  --title "Nightly backup job failed twice" \
+  --ask "Please look at the nightly backup job within the hour. I could not fix it, and it needs your attention." \
+  --body "The nightly backup job failed on two consecutive runs. I could not resolve it. See the job logs for the error." \
+  --dedup-key nightly-backup-failed
+```
+
+   - The dedup key is stable and names the problem, so repeats at the same level are suppressed. It also lets me `resolve` it later.
+   - `--ask` is required at this level.
+   - The body holds no secrets. If I had a log path, I'd name it there.
+
+3. Handle the exit code:
+   - **0** (`delivered`, `partial`, `held` or `suppressed`): done.
+   - **75** (`queued`): wait `next.after_seconds`, then run `next.do` exactly as printed, usually `yo-human flush`. I'd do this at most as many times as the first `attempts_left`. I'd stop at the first exit 0 with `sent`, or at exit 69. If the attempts run out, I'd tell the human directly in my session with the title and ask. I would not re-run `notify` or change the key.
+   - **64:** fix the call from the `error`, `valid` and `fix` lines, then rerun.
+   - **69, 74, 78 or 70:** stop. I'd tell the human in my session, quoting the error text, and not retry or switch levels.
+
+4. If the backup is later fixed and verified, I'd run `yo-human resolve --dedup-key nightly-backup-failed --note "Backup fixed"`. I wouldn't send a new `notify` to say it's fixed.

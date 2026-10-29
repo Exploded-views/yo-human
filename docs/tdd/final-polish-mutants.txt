@@ -1,0 +1,94 @@
+KILLED  1: an expired resolve's queued cancel has no next
+  internal/core/resolve.go: "p.withNext(&res, err, inc.Level) // an expired incident's cancel may be queued" -> ''
+  --- FAIL: TestAnExpiredResolveWithAQueuedCancelSaysToFlush (0.09s)
+      prune_test.go:26: next = <nil>; want yo-human flush
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  2: nothing is pruned
+  internal/core/prune.go: 'delete(incs, id)' -> '_ = id'
+  --- FAIL: TestAClosedRecordIsPrunedAfterIncidentTTL (0.15s)
+      prune_test.go:42: a closed record older than incident_ttl was kept
+  --- FAIL: TestAStaleNoteNeverResolvesTheKeysNextIncident (0.16s)
+      prune_test.go:89: the closed record of k was not pruned
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  2: a record an entry needs is pruned
+  internal/core/prune.go: 'if err == nil && !inUse[id] {' -> 'if err == nil && len(inUse) >= 0 {'
+  --- FAIL: TestAClosedRecordAWaitingMessageNeedsIsKept (0.35s)
+      prune_test.go:68: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 2; want the waiting message dropped, 
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  2: a failed listing prunes anyway
+  internal/core/prune.go: 'if err == nil && !inUse[id] {' -> 'if (err == nil || err != nil) && !inUse[id] {'
+  --- FAIL: TestNothingIsPrunedWhenTheEntriesCannotBeListed (0.27s)
+      prune_test.go:148: a closed record was pruned though the entries could not be listed
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  2: a record younger than incident_ttl is pruned
+  internal/core/prune.go: 'if !inc.Open && now.Sub(inc.Updated) > p.d.Config.IncidentTTL {' -> 'if !inc.Open {'
+  --- FAIL: TestAClosedRecordIsPrunedAfterIncidentTTL (0.07s)
+      prune_test.go:37: a closed record younger than incident_ttl was pruned
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  2: an open incident is pruned
+  internal/core/prune.go: 'if !inc.Open && now.Sub(inc.Updated) > p.d.Config.IncidentTTL {' -> 'if now.Sub(inc.Updated) > p.d.Config.IncidentTTL {'
+  --- FAIL: TestAnExpiredGenerationsCancelRunsAfterTheNewPage (0.10s)
+      expired_cancel_test.go:50: queue []; want the cut-short cancel kept for a retry
+  --- FAIL: TestAnExpiredGenerationsRefusedCancelDoesNotFailADeliveredPage (0.09s)
+      expired_cancel_test.go:64: warnings []; want the refused cancel as one warning
+  --- FAIL: TestAnExpiredGenerationsCancelThatCannotBeKeptIsAStoreError (0.09s)
+      expired_cancel_test.go:85: Notify = "delivered", <nil>; want delivered, with the store failure as the error
+      expired_cancel_test.go:88: warnings []; want the cancel itself as a warning
+  --- FAIL: TestExpiredGenerationsHeldSendIsCancelled (0.12s)
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  2: a waiting message is not in use
+  internal/store/queue.go: 'if w.IncidentKey != "" {\n\t\t\t\tout[w.IncidentKey] = true' -> 'if w.IncidentKey != "" && !isAdmit(w.Key) {\n\t\t\t\tout[w.IncidentKey] = true'
+  --- FAIL: TestAClosedRecordAWaitingMessageNeedsIsKept (0.38s)
+      prune_test.go:68: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 2; want the waiting message dropped, 
+  --- FAIL: TestIncidentsInUse (0.12s)
+      followup_test.go:59: IncidentsInUse = map[claimed:true], <nil>; want waiting and claimed only
+  [go test -count=1 -timeout 300s ./internal/core ./internal/store exit 1]
+
+KILLED  HIGH: a reopened key restarts at its old generation + 1
+  internal/core/repeat.go: 'gen, prev := st.NewGeneration(), ""' -> 'gen, prev := 1, ""\n\t\tif old := incs[id]; old != nil {\n\t\t\tgen = old.Generation + 1\n\t\t}'
+  --- FAIL: TestAStaleNoteNeverResolvesTheKeysNextIncident (0.24s)
+      prune_test.go:98: a stale resolve note was sent for the reopened incident: {ID:M002 Level:page Title:Resolved: t Ask: Body: Link: Project: Agent: DedupKey:k Actions:[] Created:2026-10-30 12:00:00 +0000 UTC Resolved:true}
+  [go test -count=1 -timeout 300s ./internal/core ./internal/store exit 1]
+
+KILLED  HIGH: the counter is not kept in the file
+  internal/store/incidents.go: 'NextGeneration int                  `json:"next_generation"`' -> 'NextGeneration int                  `json:"-"`'
+  --- FAIL: TestResolveDeadLettersACancelTheProviderRefused (0.10s)
+      cancel_dead_test.go:44: resolve = , <nil>; want resolved, the failed cancel reported as dead
+  --- FAIL: TestResolveRetriesACancelThatFailedForNow (0.09s)
+      cancel_dead_test.go:62: resolve = , <nil>; want the failed cancel reported and queued for a retry
+  --- FAIL: TestALateScheduledSendWhoseCancelIsRefusedIsDeadLettered (0.09s)
+      cancel_dead_test.go:118: dead letter []; a scheduled page that landed after the resolve and could not be cancelled must be visible
+  --- FAIL: TestALateResolveNoteIsPinnedToTheDestinationTheSendWentThrough (0.10s)
+      cancel_dead_test.go:136: queue [], <nil>; want the note parked, with the reason
+  [go test -count=1 -timeout 300s ./internal/core ./internal/store exit 1]
+
+KILLED  HIGH: the counter is not moved past the incidents
+  internal/store/incidents.go: 'st.NextGeneration = max(st.NextGeneration, inc.Generation+1)' -> '_ = inc'
+  --- FAIL: TestStateReadsTheOlderFileAndKeepsTheCounterAhead (0.01s)
+      state_test.go:54: older file: &{NextGeneration:1 Incidents:map[k:0x2a9f2fe781c0 n:0x2a9f2fe782a0]}, <nil>; want k at 4, next 5
+  [go test -count=1 -timeout 300s ./internal/core ./internal/store exit 1]
+
+KILLED  MEDIUM: one pass, queue then inflight
+  internal/store/queue.go: '[]string{"inflight", "queue", "inflight"}' -> '[]string{"queue", "inflight"}'
+  --- FAIL: TestOneInUsePassSeesAnEntryMovedOnce (0.04s)
+      inuse_gap_test.go:55: inUsePass = map[], <nil>; want inc
+  [go test -count=1 -timeout 300s ./internal/core ./internal/store exit 1]
+
+KILLED  MEDIUM: no second pass
+  internal/store/queue.go: 'if maps.Equal(prev, cur) {' -> 'if maps.Equal(prev, cur) || len(cur) >= 0 {'
+  --- FAIL: TestIncidentsInUseWithoutAStableAnswerFails (0.08s)
+      inuse_gap_test.go:45: IncidentsInUse = map[inc1:true inc2:true inc3:true inc4:true], nil; want an error when no two passes agree
+  [go test -count=1 -timeout 300s ./internal/core ./internal/store exit 1]
+
+KILLED  MEDIUM: an unstable answer is used
+  internal/store/queue.go: 'return nil, errUnstable' -> 'return prev, nil'
+  --- FAIL: TestIncidentsInUseWithoutAStableAnswerFails (0.24s)
+      inuse_gap_test.go:45: IncidentsInUse = map[inc1:true inc10:true inc11:true inc12:true inc13:true inc2:true inc3:true inc4:true inc5:true inc6:true inc7:true inc8:true inc9:true], nil; want an error when no two passes agree
+  [go test -count=1 -timeout 300s ./internal/core ./internal/store exit 1]
+

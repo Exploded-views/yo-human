@@ -1,0 +1,17 @@
+$ go test -count=1 ./internal/cli -run InsideTheProject
+--- FAIL: TestBodyFileStaysInsideTheProject (0.13s)
+    bodyfile_test.go:193: --body-file $TMPDIR/TestBodyFileStaysInsideTheProject660438479/001/.ssh/id_ed25519: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "--body-file" on stderr
+    bodyfile_test.go:194: fix = "", want it to contain "copy the text into the project"
+    bodyfile_test.go:194: fix = "", want it to contain "--body -"
+    bodyfile_test.go:193: --body-file $TMPDIR/TestBodyFileStaysInsideTheProject660438479/002/notes.txt: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "--body-file" on stderr
+    bodyfile_test.go:194: fix = "", want it to contain "copy the text into the project"
+    bodyfile_test.go:194: fix = "", want it to contain "--body -"
+    bodyfile_test.go:193: --body-file ../003/x.txt: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "--body-file" on stderr
+    bodyfile_test.go:194: fix = "", want it to contain "copy the text into the project"
+    bodyfile_test.go:194: fix = "", want it to contain "--body -"
+    bodyfile_test.go:196: a message went out
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.144s
+FAIL
+[exit 1]
+

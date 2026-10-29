@@ -1,0 +1,60 @@
+$ go test -count=1 ./internal/core -run 'Namespaced|IncidentKeyIs'
+--- FAIL: TestIncidentsAreNamespacedByProject (0.06s)
+    namespace_test.go:31: beta's first page of the same key = suppressed, want delivered: it is beta's own incident
+--- FAIL: TestIncidentKeyIsUnambiguous (0.00s)
+    namespace_test.go:59: two different (project, key) pairs share an incident key
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.069s
+FAIL
+[exit 1]
+
+$ go test -count=1 ./internal/cli -run 'CallersProject|RandomSuffix'
+--- FAIL: TestResolveOnlySeesTheCallersProject (0.25s)
+    namespace_test.go:17: beta resolving alpha's key: {code:0 out:RESULT resolved <ULID>
+        pager: sent
+        phone: sent
+         err:}; want noop
+    namespace_test.go:22: resolve --project alpha: {code:64 out: err:error: resolve was given a flag it does not know, or a flag with no value (the text is not echoed)
+        valid: yo-human resolve --dedup-key <key> [--note <text>]
+        fix: check the spelling of each flag against the valid line
+        }
+--- FAIL: TestStatusShowsTheCallersProjectUnlessAll (0.22s)
+    namespace_test.go:45: status as alpha = [/alpha-key /beta-key]
+    namespace_test.go:36: status [--project beta]: {code:64 out:{"version":1,"error":{"what":"status takes no arguments","valid":"yo-human status","fix":"run `yo-human status` on its own"}}
+         err:}
+    namespace_test.go:47: status --project beta = []
+    namespace_test.go:36: status [--all]: {code:64 out:{"version":1,"error":{"what":"status takes no arguments","valid":"yo-human status","fix":"run `yo-human status` on its own"}}
+         err:}
+    namespace_test.go:49: status --all = []
+--- FAIL: TestPageDefaultKeyHasARandomSuffix (0.17s)
+    namespace_test.go:63: default key "orch-20261030T120000Z", want orch-<UTC time>-<4 hex>
+    namespace_test.go:63: default key "orch-20261030T120000Z", want orch-<UTC time>-<4 hex>
+    namespace_test.go:65: two pages in the same second share a key
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.649s
+FAIL
+[exit 1]
+
+$ go test -tags e2e -count=1 ./test/e2e -run Namespaced
+--- FAIL: TestIncidentsAreNamespacedByProjectAndPagerDutyKeepsTheKey (0.22s)
+    namespace_test.go:15: yo-human notify --level urgent --title Disk full --ask Free space --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    namespace_test.go:17: yo-human resolve --dedup-key disk-7 -> exit 0
+        RESULT resolved <ULID>
+        pager: sent
+        bell: sent
+        phone: sent
+    namespace_test.go:17: RESULT resolved, want noop
+        stdout:
+        RESULT resolved <ULID>
+        pager: sent
+        bell: sent
+        phone: sent
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	0.567s
+FAIL
+[exit 1]
+

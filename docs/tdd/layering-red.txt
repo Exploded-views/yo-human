@@ -1,0 +1,90 @@
+M1 layering pass, against 955f5d4 with internal/channel/registry.New declared as a stub that returns an empty registry: the registry holds none of the four types, so the second test, that each call builds a fresh map, finds no ntfy either. Raw output with the exit code.
+
+$ go test ./internal/channel/registry/
+--- FAIL: TestNewHoldsTheFourTypes (0.00s)
+    registry_test.go:22: registry = [], want bark log ntfy pagerduty
+--- FAIL: TestNewBuildsAFreshMapEachCall (0.00s)
+    registry_test.go:30: deleting from one registry changed the next one
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/registry	0.008s
+FAIL
+[exit 1]
+
+=== core state API (M1 layering pass), against 293d607 with internal/core/state.go and snapshot.go declared as stubs: OpenState opens the store, and every other call does nothing and returns zero values (Pipeline's store is an empty handle). The cli is not yet moved onto them. TestOpenStateCreatesAPrivateDirAndRefusesAnOpenOne passes: OpenState is the one call the stub keeps real, since every other test needs a state to call.
+
+$ go test ./internal/core -run 'State|OpenState'
+--- FAIL: TestStateReached (0.02s)
+    state_read_test.go:52: Reached(open, 1h0m0s) = [], <nil>; want [{a true} {b false} {c false}]
+    state_read_test.go:52: Reached(open, 1h0m0.000000001s) = [], <nil>; want [{c false}]
+--- FAIL: TestStateSnapshot (0.08s)
+    state_read_test.go:91: queue =
+        []
+        want
+        [{M1 a send p1 2 2026-10-30 11:59:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC not built} {M2 b note p2 0 0001-01-01 00:00:00 +0000 UTC 2026-10-30 13:00:00 +0000 UTC } {M3 c cancel  0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC } {M4 _admit admit p1 0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC }]
+    state_read_test.go:95: dead = []; want M6 on e, unreadable, with its reason and time
+    state_read_test.go:98: inflight = 0; want 1
+    state_read_test.go:102: incidents = []; want only {Key:live Project:p1 Level:page Generation:2 Opened:2026-10-30 11:00:00 +0000 UTC LastSent:2026-10-30 11:00:00 +0000 UTC Latest:disk} (one at the TTL is open, one past it or closed is not)
+--- FAIL: TestStateSnapshotStopsAtTheFirstFailure (0.01s)
+    state_read_test.go:137: snapshot over an unreadable dead letter = {Queue:[] Dead:[] Inflight:0 Incidents:[]}, <nil>; want the queue and the error
+--- FAIL: TestStateTrustRecordsAPathAndHash (0.00s)
+    state_test.go:54: Trusted(/p/.yo-human.yaml, aa) = false, <nil>; want true
+--- FAIL: TestStateAuditAppendsALogLine (0.00s)
+    state_test.go:69: open $TMPDIR/TestStateAuditAppendsALogLine1954988137/001/state/log.jsonl: no such file or directory
+--- FAIL: TestStateWithinGivesUpOnAHeldLock (0.01s)
+    state_test.go:84: Reached behind a held lock = <nil>; want a busy lock
+--- FAIL: TestStatePipelineWorksOnTheState (0.00s)
+    state_test.go:97: cannot list : open : no such file or directory
+--- FAIL: TestStateDueInstancesNamesEachInstanceOnceSorted (0.04s)
+    state_test.go:118: DueInstances = [], <nil>; want a b (c is not due)
+    state_test.go:128: DueInstances over an unreadable queue = []; want the error
+--- FAIL: TestStateRecoverRequeuesAStrandedSend (0.03s)
+    state_test.go:139: queued 0, inflight 1 after Recover; want the stranded send queued again
+--- FAIL: TestStateCreateFileNeverReplaces (0.00s)
+    state_test.go:149: a second CreateFile = <nil>; want fs.ErrExist
+    state_test.go:153: CreateFile wrote nothing: stat $TMPDIR/TestStateCreateFileNeverReplaces1118925479/001/config.yaml: no such file or directory
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.205s
+FAIL
+[exit 1]
+
+=== the e2e repolint check (M1 layering pass), against ad9103d with internal/repolint.E2EOnly declared as a stub that finds nothing. internal-no-network is to skip *_e2e.go files, so a repository check must hold them to the test binary: every *_e2e.go carries exactly //go:build e2e, every file that builds only under e2e is named *_e2e.go, and no production file imports a package that exists only under e2e. The probe: an untagged x_e2e.go importing net/http must fail, and the same file tagged must pass. Raw output with the exit code.
+
+$ go test ./internal/repolint
+--- FAIL: TestE2EOnlyFindsEachBreak (0.00s)
+    e2etag_test.go:54: E2EOnly =
+        []
+        want
+        [named/hook.go e2e-name untagged/x_e2e.go e2e-constraint user/user.go e2e-import wrongtag/x_e2e.go e2e-constraint]
+--- FAIL: TestE2EOnlyProbe (0.00s)
+    e2etag_test.go:73: untagged x_e2e.go: [], <nil>; want one e2e-constraint finding
+--- FAIL: TestE2EOnlyNeedsAModule (0.00s)
+    e2etag_test.go:83: a root with no go.mod passed; want an error
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.029s
+FAIL
+[exit 1]
+
+=== the registry's exported API (M1 layering pass, from the #64 review), against 81739e1 with the gap in place: ntfy exports type Client = http.Client and the registry re-exports it, as type Client = ntfy.Client and var HTTP = &ntfy.Client{}. depguard passes this, because the registry imports no net/http, but it hands the cli an *http.Client. The new TestRegistryExposesOnlyChannelTypes must fail. Raw output with the exit code. Folded: the test and the code it guards (which needs no change at 81739e1, since no such alias exists in M1) are one commit.
+
+$ go test ./internal/channel/registry/ -run ExposesOnly
+--- FAIL: TestRegistryExposesOnlyChannelTypes (1.70s)
+    api_test.go:32: registry exports the type Client; it may export only functions and values of internal/channel types
+    api_test.go:36: registry.HTTP exposes github.com/Exploded-views/yo-human/internal/channel/ntfy.Client, which is not an internal/channel type
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/registry	1.713s
+FAIL
+[exit 1]
+
+=== L3 (M1 final review): the registry API test and interfaces; RED at 6d624e0
+$ go test ./internal/channel/registry/ -count=1
+--- FAIL: TestForeignTypesRejectsInterfaces (0.84s)
+    api_test.go:145: Empty: flagged false, want true
+    api_test.go:145: Field: flagged false, want true
+    api_test.go:145: Kinds: flagged false, want true
+    api_test.go:145: Param: flagged false, want true
+    api_test.go:145: Result: flagged false, want true
+    api_test.go:145: Slice: flagged false, want true
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/registry	4.515s
+FAIL
+exit=1

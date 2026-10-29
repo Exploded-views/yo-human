@@ -1,0 +1,13 @@
+{
+ "must": [
+  true,
+  true,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  false
+ ],
+ "note": "Runs levels first and uses a placeholder level, but the send command is vague, with no --title or --ask flags (only --level and a positional message).",
+ "pass": false
+}

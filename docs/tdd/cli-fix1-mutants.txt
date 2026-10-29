@@ -1,0 +1,334 @@
+# what this is: task 10 fix round 1 mutants: layer kinds and the project log rule, joined findings, exclusive write, no-follow log, the --json contract, trust display and no-file trust, terminal stdin; each run has a 300s timeout
+# test command: go test -count=1 -timeout 120s ./internal/cli/ ./internal/config/ ./internal/store/ ./internal/channel/logch/ (timeout 300s per run)
+## baseline
+ok  	github.com/Exploded-views/yo-human/internal/cli	0.294s
+ok  	github.com/Exploded-views/yo-human/internal/config	0.171s
+ok  	github.com/Exploded-views/yo-human/internal/store	2.235s
+ok  	github.com/Exploded-views/yo-human/internal/channel/logch	0.016s
+exit=0
+
+## project log check inverted
+# in internal/config/containment.go: 'c.OriginLayer["channels."+name] != LayerProject' => 'c.OriginLayer["channels."+name] == LayerProject'
+--- FAIL: TestGlobalFlagsComeFromAnywhere (0.01s)
+--- FAIL: TestStarterPassesCheckAndHoldsNoSecretValues (0.02s)
+--- FAIL: TestConfigCheckReportsOrigins (0.00s)
+--- FAIL: TestConfigCheckMissingSecretsAreWarningsNotErrors (0.00s)
+--- FAIL: TestConfigCheckAppliesEachChannelsOwnValidation (0.00s)
+--- FAIL: TestConfigCheckLooseSecretsFileExits78 (0.00s)
+exit=1 (killed)
+
+## project layer labelled user
+# in internal/config/load.go: 'appendLayer(layers, l, LayerProject)' => 'appendLayer(layers, l, LayerUser)'
+--- FAIL: TestConfigCheckRefusesALogChannelFromAProjectFile (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.315s
+--- FAIL: TestProjectLayerMayNotSetALogPath (0.00s)
+--- FAIL: TestProjectLayerIsRecognisedWhateverTheFileIsCalled (0.00s)
+--- FAIL: TestOriginLayerRecordsTheKindOfEachLayer (0.00s)
+exit=1 (killed)
+
+## explicit layer labelled project
+# in internal/config/load.go: 'appendLayer(layers, l, LayerExplicit)' => 'appendLayer(layers, l, LayerProject)'
+--- FAIL: TestGlobalFlagsComeFromAnywhere (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.288s
+--- FAIL: TestNonProjectLayersMayDefineLogChannels (0.01s)
+--- FAIL: TestOriginLayerRecordsTheKindOfEachLayer (0.00s)
+FAIL
+exit=1 (killed)
+
+## user layer labelled project
+# in internal/config/load.go: '{p.System, LayerSystem}, {user, LayerUser}' => '{p.System, LayerSystem}, {user, LayerProject}'
+--- FAIL: TestStarterPassesCheckAndHoldsNoSecretValues (0.03s)
+--- FAIL: TestConfigCheckReportsOrigins (0.00s)
+--- FAIL: TestConfigCheckMissingSecretsAreWarningsNotErrors (0.00s)
+--- FAIL: TestConfigCheckAppliesEachChannelsOwnValidation (0.00s)
+--- FAIL: TestConfigCheckLooseSecretsFileExits78 (0.00s)
+--- FAIL: TestConfigCheckPrintsCapabilityWarningsAsWarnings (0.00s)
+exit=1 (killed)
+
+## kind lost in merge (channels)
+# in internal/config/merge.go: '\t\t\t\tkinds["channels."+name] = l.kind\n' => ''
+--- FAIL: TestConfigCheckRefusesALogChannelFromAProjectFile (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.320s
+--- FAIL: TestProjectLayerMayNotSetALogPath (0.00s)
+--- FAIL: TestProjectLayerIsRecognisedWhateverTheFileIsCalled (0.00s)
+--- FAIL: TestNonProjectLayersMayDefineLogChannels (0.01s)
+exit=1 (killed)
+
+## only log type is checked, any type is
+# in internal/config/containment.go: 'ci.Type != "log" ||' => 'false ||'
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL	github.com/Exploded-views/yo-human/internal/config [build failed]
+FAIL
+exit=1 (killed)
+
+## Load returns only the first finding
+# in internal/config/load.go: 'return nil, notices, errors.Join(faults...)' => 'return nil, notices, faults[0]'
+--- FAIL: TestConfigCheckReportsEveryStructureErrorNotJustTheFirst (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.289s
+--- FAIL: TestLoadReturnsEveryFindingJoined (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.169s
+exit=1 (killed)
+
+## warning notice loses its problem
+# in internal/config/load.go: ', Problem: f}' => '}'
+--- FAIL: TestConfigCheckJSONCarriesWarningsAndLeavesStderrEmpty (0.00s)
+--- FAIL: TestLevelsJSONCarriesNoticesAndWarnings (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.289s
+--- FAIL: TestWarningNoticesCarryTheirProblem (0.01s)
+FAIL
+exit=1 (killed)
+
+## exclusive write replaces
+# in internal/store/atomic.go: 'os.Link(tmp, path)' => 'os.Rename(tmp, path)'
+--- FAIL: TestConfigInitWritesStarterAndRefusesOverwrite (0.03s)
+--- FAIL: TestConfigInitNeverReplacesAnythingAtThePath (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.324s
+--- FAIL: TestWriteFileExclusiveCreatesOnceAndNeverReplaces (0.03s)
+FAIL
+exit=1 (killed)
+
+## exclusive write hides ErrExist
+# in internal/store/atomic.go: 'if errors.Is(err, fs.ErrExist) {\n\t\t\treturn fmt.Errorf("%s: %w", path, fs.ErrExist)' => 'if errors.Is(err, fs.ErrExist) {\n\t\t\treturn fmt.Errorf("%s", path)'
+--- FAIL: TestConfigInitWritesStarterAndRefusesOverwrite (0.03s)
+--- FAIL: TestConfigInitNeverReplacesAnythingAtThePath (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.299s
+--- FAIL: TestWriteFileExclusiveCreatesOnceAndNeverReplaces (0.01s)
+FAIL
+exit=1 (killed)
+
+## log follows symlinks
+# in internal/channel/logch/open_unix.go: 'syscall.O_NOFOLLOW | syscall.O_NONBLOCK' => 'syscall.O_NONBLOCK'
+--- FAIL: TestLogRefusesASymlinkAndLeavesTheTargetAlone (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/logch	0.014s
+FAIL
+exit=1 (killed)
+
+## log blocks on a FIFO
+# in internal/channel/logch/open_unix.go: 'syscall.O_NOFOLLOW | syscall.O_NONBLOCK' => 'syscall.O_NOFOLLOW'
+panic: test timed out after 2m0s
+FAIL	github.com/Exploded-views/yo-human/internal/channel/logch	120.019s
+FAIL
+exit=1 (killed)
+
+## log accepts a non-regular file
+# in internal/channel/logch/logch.go: 'err != nil || !fi.Mode().IsRegular()' => 'err != nil'
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL	github.com/Exploded-views/yo-human/internal/channel/logch [build failed]
+FAIL
+exit=1 (killed)
+
+## log symlink error transient
+# in internal/channel/logch/logch.go: 'errors.Is(err, syscall.ELOOP) ||' => 'false ||'
+--- FAIL: TestLogRefusesASymlinkAndLeavesTheTargetAlone (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/logch	0.023s
+FAIL
+exit=1 (killed)
+
+## log directory error transient
+# in internal/channel/logch/logch.go: 'errors.Is(err, syscall.EISDIR) ||' => 'false ||'
+--- FAIL: TestLogRefusesWhatIsNotARegularFile (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/logch	0.014s
+FAIL
+exit=1 (killed)
+
+## fail JSON goes to stderr
+# in internal/cli/cli.go: 'return writeFailure(e.stdout, flatten(err), true, e.notes, e.warns)' => 'return writeFailure(e.stderr, flatten(err), true, e.notes, e.warns)'
+--- FAIL: TestErrorFormatJSON (0.00s)
+--- FAIL: TestFailJSONPutsTheErrorObjectOnStdout (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.321s
+FAIL
+exit=1 (killed)
+
+## fail JSON drops warnings
+# in internal/cli/cli.go: 'return writeFailure(e.stdout, flatten(err), true, e.notes, e.warns)' => 'return writeFailure(e.stdout, flatten(err), true, e.notes, nil)'
+--- FAIL: TestFailJSONPutsTheErrorObjectOnStdout (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.290s
+FAIL
+exit=1 (killed)
+
+## finish JSON drops the problems
+# in internal/cli/cli.go: 'writeJSONResult(e.stdout, *r, ps, e.notes, e.warns)' => 'writeJSONResult(e.stdout, *r, nil, e.notes, e.warns)'
+--- FAIL: TestFinishJSONPutsProblemsInTheResultObject (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.298s
+FAIL
+exit=1 (killed)
+
+## finish JSON exits with the result
+# in internal/cli/cli.go: '\t\tif len(ps) > 0 {\n\t\t\treturn exitForProblem(ps[0])\n\t\t}\n' => '\t\tif len(ps) > 99 {\n\t\t\treturn exitForProblem(ps[0])\n\t\t}\n'
+--- FAIL: TestFinishJSONPutsProblemsInTheResultObject (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.342s
+FAIL
+exit=1 (killed)
+
+## ok JSON drops notices
+# in internal/cli/cli.go: '\t\t\tfields["notices"] = e.notes\n' => '\t\t\t_ = e.notes\n'
+--- FAIL: TestLevelsJSONCarriesNoticesAndWarnings (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.309s
+FAIL
+exit=1 (killed)
+
+## ok JSON drops warnings
+# in internal/cli/cli.go: '\t\t\tfields["warnings"] = toJSONList(e.warns)\n' => '\t\t\t_ = e.warns\n'
+--- FAIL: TestLevelsJSONCarriesNoticesAndWarnings (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.297s
+FAIL
+exit=1 (killed)
+
+## JSON mode still prints notes to stderr
+# in internal/cli/cli.go: 'func (e *env) note(notes []string) {\n\te.notes = append(e.notes, notes...)\n\tif !e.asJSON {' => 'func (e *env) note(notes []string) {\n\te.notes = append(e.notes, notes...)\n\tif true {'
+--- FAIL: TestLevelsJSONCarriesNoticesAndWarnings (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.293s
+FAIL
+exit=1 (killed)
+
+## JSON mode still prints warnings to stderr
+# in internal/cli/cli.go: '\te.warns = append(e.warns, warns...)\n\tif !e.asJSON {' => '\te.warns = append(e.warns, warns...)\n\tif true {'
+--- FAIL: TestConfigCheckJSONCarriesWarningsAndLeavesStderrEmpty (0.00s)
+--- FAIL: TestLevelsJSONCarriesNoticesAndWarnings (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.315s
+FAIL
+exit=1 (killed)
+
+## warnings never reach the list
+# in internal/cli/cli.go: '\t\t\twarns = append(warns, n.Problem)' => '\t\t\tnotes = append(notes, n.Text)'
+--- FAIL: TestConfigCheckJSONCarriesWarningsAndLeavesStderrEmpty (0.00s)
+--- FAIL: TestLevelsJSONCarriesNoticesAndWarnings (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.306s
+FAIL
+exit=1 (killed)
+
+## unknown command echoed
+# in internal/cli/cli.go: 'problem.Usagef("unknown command", "commands: "+strings.Join(sortedNames(commands), ", "),\n\t\t\t"run one of them; `yo-human` with no arguments prints the usage"))' => 'problem.Usagef("unknown command "+rest[0], "commands: "+strings.Join(sortedNames(commands), ", "),\n\t\t\t"run one of them; `yo-human` with no arguments prints the usage"))'
+--- FAIL: TestErrorFormat (0.00s)
+--- FAIL: TestErrorFormatJSON (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.310s
+FAIL
+exit=1 (killed)
+
+## nil channels left null
+# in internal/cli/output.go: '\tif r.Channels == nil {\n\t\tr.Channels = []core.ChannelResult{}\n\t}\n' => ''
+--- FAIL: TestWriteResultJSONNormalisesNilChannels (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.307s
+FAIL
+exit=1 (killed)
+
+## check warnings list null when clean
+# in internal/cli/configcmd.go: 'append([]jsonProblem{}, toJSONList(e.warns)...)' => 'toJSONList(e.warns)'
+--- FAIL: TestConfigCheckJSONWarningsIsAnEmptyArrayWhenClean (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.313s
+FAIL
+exit=1 (killed)
+
+## init overwrites
+# in internal/cli/configcmd.go: 'store.WriteFileExclusive(path' => 'store.WriteFileAtomic(path'
+--- FAIL: TestConfigInitWritesStarterAndRefusesOverwrite (0.03s)
+--- FAIL: TestConfigInitNeverReplacesAnythingAtThePath (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.314s
+FAIL
+exit=1 (killed)
+
+## secret set accepts a terminal
+# in internal/cli/secretcmd.go: 'fi.Mode()&os.ModeCharDevice != 0' => 'fi.Mode()&os.ModeCharDevice == 99'
+--- FAIL: TestSecretSetRefusesATerminal (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.291s
+FAIL
+exit=1 (killed)
+
+## trust shows a literal in a secret field
+# in internal/cli/trustcmd.go: '\t\treturn literalNote\n' => '\t\treturn strconv.Quote(fmt.Sprint(v))\n'
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL
+exit=1 (killed)
+
+## trust accepts a URL with no host
+# in internal/cli/trustcmd.go: 'err != nil || u.Scheme == "" || u.Host == ""' => 'err != nil'
+--- FAIL: TestConfigTrustShowsWhatTheFileWouldDo (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.314s
+FAIL
+exit=1 (killed)
+
+## trust shows the whole URL
+# in internal/cli/trustcmd.go: 'out := strconv.Quote(u.Scheme + "://" + u.Host + u.EscapedPath())' => 'out := strconv.Quote(s)'
+--- FAIL: TestConfigTrustShowsWhatTheFileWouldDo (0.01s)
+--- FAIL: TestConfigTrustJSONHoldsTheSameDisplay (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.311s
+FAIL
+exit=1 (killed)
+
+## trust does not shell-quote a path
+# in internal/cli/trustcmd.go: '\t\treturn problem.ShellQuote(s)' => '\t\treturn s'
+--- FAIL: TestConfigTrustShowsALogPathAimedAtAStartupFile (0.01s)
+--- FAIL: TestConfigTrustJSONHoldsTheSameDisplay (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.300s
+FAIL
+exit=1 (killed)
+
+## trust shows unknown-type settings
+# in internal/cli/trustcmd.go: 'if key != "type" && known {' => 'if key != "type" {'
+--- FAIL: TestConfigTrustShowsWhatTheFileWouldDo (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.295s
+FAIL
+exit=1 (killed)
+
+## trust drops the level routing
+# in internal/cli/trustcmd.go: '\t\tv.Levels = append(v.Levels, lv)' => '\t\t_ = lv'
+--- FAIL: TestConfigTrustShowsWhatTheFileWouldDo (0.01s)
+--- FAIL: TestConfigTrustJSONHoldsTheSameDisplay (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.305s
+FAIL
+exit=1 (killed)
+
+## trust drops the channel type line
+# in internal/cli/trustcmd.go: 'out = append(out, "channel "+q+" has type "+strconv.Quote(c.Type))' => '_ = q'
+--- FAIL: TestConfigTrustShowsWhatTheFileWouldDo (0.01s)
+--- FAIL: TestConfigTrustShowsALogPathAimedAtAStartupFile (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.307s
+FAIL
+exit=1 (killed)
+
+## trust with no file does nothing special
+# in internal/cli/trustcmd.go: 'else if arg = config.ProjectFile(e.paths().Cwd); arg == "" {' => 'else if arg = ".yo-human.yaml"; arg == "" {'
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL
+exit=1 (killed)
+
+## trust JSON drops the view
+# in internal/cli/trustcmd.go: '"channels": view.Channels, "levels": view.Levels}' => '"channels": []string{}, "levels": []string{}}'
+--- FAIL: TestConfigTrustJSONHoldsTheSameDisplay (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.295s
+FAIL
+exit=1 (killed)
+
+# survivors: none

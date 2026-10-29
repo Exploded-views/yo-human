@@ -1,0 +1,57 @@
+KILLED  replaced sends are cancelled before the page
+  internal/core/pipeline.go: 'b := &batch{p: p, now: now}\n\tif len(adm.plan) == 0 {' -> 'b := &batch{p: p, now: now}\n\tearly := b.cancelAside(ctx, adm.cancel)\n\tadm.cancel = nil\n\tdefer func() { _ = early }()\n\tif len(adm.plan) == 0 {'
+  --- FAIL: TestAnExpiredGenerationsCancelRunsAfterTheNewPage (0.40s)
+      expired_cancel_test.go:46: Notify = "queued", <nil>; want delivered: the page goes out before the old generation's cancel
+      expired_cancel_test.go:49: queue [ cancel]; want the cut-short cancel kept for a retry
+  --- FAIL: TestAnExpiredGenerationsRefusedCancelDoesNotFailADeliveredPage (0.19s)
+      expired_cancel_test.go:63: warnings []; want the refused cancel as one warning
+  --- FAIL: TestAnExpiredGenerationsCancelThatCannotBeKeptIsAStoreError (0.13s)
+      expired_cancel_test.go:87: warnings []; want the cancel itself as a warning
+  --- FAIL: TestExpiredGenerationsCancelFailureIsReported (0.13s)
+  [go test -count=1 ./internal/core ./internal/store exit 1]
+
+KILLED  a failed cancel fails the page
+  internal/core/resolve.go: 'if pr, ok := problem.As(e); ok && pr.Kind != problem.Store {' -> 'if pr, ok := problem.As(e); ok && pr.Kind == problem. Internal {'
+  --- FAIL: TestAnExpiredGenerationsCancelRunsAfterTheNewPage (0.37s)
+      expired_cancel_test.go:46: Notify = "delivered", the scheduled send on n could not be cancelled: context deadline exceeded; want delivered: the page goes out before the old generation's cancel
+  --- FAIL: TestAnExpiredGenerationsRefusedCancelDoesNotFailADeliveredPage (0.16s)
+      expired_cancel_test.go:60: Notify = "delivered", the scheduled send on n could not be cancelled: provider refused; want delivered with no error
+  --- FAIL: TestAnExpiredGenerationsCancelThatCannotBeKeptIsAStoreError (0.16s)
+      expired_cancel_test.go:84: Notify = "delivered", the scheduled send on n could not be cancelled: provider refused
+      expired_cancel_test.go:87: warnings []; want the cancel itself as a warning
+  --- FAIL: TestExpiredGenerationsCancelFailureIsReported (0.12s)
+  [go test -count=1 ./internal/core ./internal/store exit 1]
+
+KILLED  a store failure becomes a warning
+  internal/core/resolve.go: 'if pr, ok := problem.As(e); ok && pr.Kind != problem.Store {' -> 'if _, ok := problem.As(e); ok {'
+  --- FAIL: TestAnExpiredGenerationsCancelThatCannotBeKeptIsAStoreError (0.15s)
+      expired_cancel_test.go:84: Notify = "delivered", <nil>; want delivered, with the store failure as the error
+      expired_cancel_test.go:87: warnings [the scheduled send on n could not be cancelled: provider refused cannot replace $TMPDIR/TestAnExpiredGenerationsCancelThatCannotBeKeptIsAStoreError1119505651/001/state/queue/N003.n.json: rename $TMPDIR/TestAnExpiredGenerationsCancelThatCannotBeKeptIsAStoreErr
+  [go test -count=1 ./internal/core ./internal/store exit 1]
+
+KILLED  warnings dropped
+  internal/core/pipeline.go: 'res.Warnings = b.cancelAside(ctx, adm.cancel)' -> '_ = b.cancelAside(ctx, adm.cancel)'
+  --- FAIL: TestAnExpiredGenerationsRefusedCancelDoesNotFailADeliveredPage (0.15s)
+      expired_cancel_test.go:63: warnings []; want the refused cancel as one warning
+  --- FAIL: TestAnExpiredGenerationsCancelThatCannotBeKeptIsAStoreError (0.15s)
+      expired_cancel_test.go:87: warnings []; want the cancel itself as a warning
+  --- FAIL: TestExpiredGenerationsCancelFailureIsReported (0.12s)
+      landing_test.go:280: err <nil> warnings [] status "held"; the new page still goes out, and the failed cancel is a warning
+  --- FAIL: TestExpiredGenerationsChannelGoneIsReported (0.10s)
+      landing_test.go:288: a held send on a channel no longer configured went unreported
+  [go test -count=1 ./internal/core ./internal/store exit 1]
+
+KILLED  joined errors not split
+  internal/core/resolve.go: 'if !errors.As(err, &joined) {' -> 'if true || !errors.As(err, &joined) {'
+  --- FAIL: TestAnExpiredGenerationsCancelThatCannotBeKeptIsAStoreError (0.16s)
+      expired_cancel_test.go:84: Notify = "delivered", <nil>; want delivered, with the store failure as the error
+  [go test -count=1 ./internal/core ./internal/store exit 1]
+
+KILLED  the cli drops the result's warnings
+  internal/cli/runtime.go: 'for _, w := range res.Warnings {\n\t\te.warn(flatten(w))\n\t}' -> ''
+  --- FAIL: TestAReplacedSendThatCannotBeCancelledIsAWarning (0.12s)
+      cancelwarn_test.go:53: stderr = "", want it to contain "warning: a scheduled send on phone could not be cancelled yet"
+  --- FAIL: TestAReplacedSendThatCannotBeCancelledIsAWarningInJSON (0.11s)
+      cancelwarn_test.go:67: warnings []; want the cancel
+  [go test -count=1 ./internal/cli -run AReplacedSend exit 1]
+

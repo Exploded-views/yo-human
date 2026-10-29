@@ -1,0 +1,25 @@
+skills used: []
+
+**Next step (in order):**
+
+1. **Wait about 60 seconds.** Don't retry early, and don't re-send the notification. The item is already queued and the journal copy was sent. A fresh `notify` would duplicate it. (If I ever did need to re-notify, I'd reuse `--dedup-key checkout-FAKE`.)
+
+2. **Run the printed next step:**
+   ```
+   yo-human flush --config '/home/user/project/.yo-human.yaml'
+   ```
+   I'd take the exact command from the `next.do` JSON field and not rebuild it myself.
+
+3. **Read the result.**
+   - If it exits 0 and reports the phone delivery as sent, I'm done. I'd carry on with the task, and I'd keep working on the checkout issue if that's in scope.
+   - If it exits non-zero again (like 75, still queued), I'd wait for the interval it prints, which is 60s unless it says otherwise. Then I'd run the same flush again.
+
+**If it keeps failing:**
+
+- The output allows 5 attempts. I'd keep flushing, one per printed interval, and count them. I wouldn't loop faster or go past the limit.
+- After the attempts run out, the printed instruction is to **tell the human in my session**. I'd stop retrying and put a plain message at the top of my response or final output:
+
+  > "Checkout is failing (siren-level alert). I tried to page you via yo-human. The journal entry was sent, but the phone push stayed queued because the ntfy server was unreachable. I retried flush 5 times without success. Please look at checkout now, and check the ntfy server."
+
+- I'd also not downgrade the level to `nudge` or `murmur` to get a message through. That would change what the alert means. Nudge is held during quiet hours, and siren is the level that fits a production outage.
+- I'd keep the failure details (the exit code and the "ntfy server could not be reached" line) so the human can see why the phone never got the page.

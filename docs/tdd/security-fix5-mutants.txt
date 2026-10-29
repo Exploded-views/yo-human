@@ -1,0 +1,114 @@
+KILLED  a top-level key drops from the renderers
+  internal/cli/trustview.go: '"quiet_hours", "shim", "channels"' -> '"shim", "channels"'
+  --- FAIL: TestConfigTrustShowsEverySetting (0.01s)
+      trustview_test.go:52: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsEverySetting3392981383/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nshim {\"agent\":\"ghost\",\"default\":{\"ask\":\"nothing to do\",\"level\":\"page\"},\"low\":{\"ask\":\"x\",\"level\":\"page\"}}\nversion 1\nchannel \"
+  --- FAIL: TestEverySchemaPropertyHasARenderer (0.00s)
+      trustview_test.go:104: top-level "quiet_hours" has no renderer
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  a level key drops from the renderers
+  internal/cli/trustview.go: '"retry", "reminder", "send"}' -> '"retry", "send"}'
+  --- FAIL: TestConfigTrustShowsEverySetting (0.01s)
+      trustview_test.go:52: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsEverySetting2240620236/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"default\
+  --- FAIL: TestEverySchemaPropertyHasARenderer (0.00s)
+      trustview_test.go:109: level field "reminder" has no renderer
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  a send key drops from the renderers
+  internal/cli/trustview.go: '"interruption", "options"}' -> '"interruption"}'
+  --- FAIL: TestEverySchemaPropertyHasARenderer (0.00s)
+      trustview_test.go:114: send field "options" has no renderer
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  unrendered top keys are not listed
+  internal/cli/trustview.go: 'v.AlsoSets = append(v.AlsoSets, esc(key))' -> '_ = key'
+  --- FAIL: TestConfigTrustListsWhatItDoesNotRender (0.01s)
+      trustview_test.go:84: trust display = "trusting \"$TMPDIR/TestConfigTrustListsWhatItDoesNotRender3739093428/001/proj/.yo-human.yaml\"\nversion 1\nlevel \"page\" use_when \"x\"\nlevel \"page\" sends to \"a\" (passive)\nalso sets (not shown; read the file): levels[0].loudness, levels[0].send[0].via\nTrust this file? Type yes to confirm: \nRESULT o
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  unrendered level keys are not listed
+  internal/cli/trustview.go: 'v.AlsoSets = append(v.AlsoSets, fmt.Sprintf("levels[%d].%s", i, esc(key)))' -> '_ = i'
+  --- FAIL: TestConfigTrustListsWhatItDoesNotRender (0.01s)
+      trustview_test.go:84: trust display = "trusting \"$TMPDIR/TestConfigTrustListsWhatItDoesNotRender3223252651/001/proj/.yo-human.yaml\"\nversion 1\nlevel \"page\" use_when \"x\"\nlevel \"page\" sends to \"a\" (passive)\nalso sets (not shown; read the file): colour, levels[0].send[0].via\nTrust this file? Type yes to confirm: \nRESULT ok\ntrusting 
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  unrendered send keys are not listed
+  internal/cli/trustview.go: 'v.AlsoSets = append(v.AlsoSets, fmt.Sprintf("levels[%d].send[%d].%s", i, j, esc(key)))' -> '_ = j'
+  --- FAIL: TestConfigTrustListsWhatItDoesNotRender (0.01s)
+      trustview_test.go:84: trust display = "trusting \"$TMPDIR/TestConfigTrustListsWhatItDoesNotRender3309779918/001/proj/.yo-human.yaml\"\nversion 1\nlevel \"page\" use_when \"x\"\nlevel \"page\" sends to \"a\" (passive)\nalso sets (not shown; read the file): colour, levels[0].loudness\nTrust this file? Type yes to confirm: \nRESULT ok\ntrusting \"/
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  settings are not shown
+  internal/cli/trustview.go: 'out = append(out, s.Key+" "+s.Value)' -> '_ = s'
+  --- FAIL: TestConfigTrustShowsEverySetting (0.01s)
+      trustview_test.go:52: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsEverySetting2099794977/001/proj/.yo-human.yaml\"\nchannel \"pager\" has type \"ntfy\"\nchannel \"pager\" server \"https://events.xn--pagerdty-tnj.com/v2\" (non-ASCII host shown as punycode)\nchannel \"pager\" topic uses secret \"ntfy-topic\"\nlevel \"page\" use_when \"
+      trustview_test.go:52: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsEverySetting2099794977/001/proj/.yo-human.yaml\"\nchannel \"pager\" has type \"ntfy\"\nchannel \"pager\" server \"https://events.xn--pagerdty-tnj.com/v2\" (non-ASCII host shown as punycode)\nchannel \"pager\" topic uses secret \"ntfy-topic\"\nlevel \"page\" use_when \"
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  level fields are not shown
+  internal/cli/trustview.go: 'out = append(out, q+" "+key+" "+l.Fields[key])' -> '_ = key'
+  --- FAIL: TestConfigTrustShowsEverySetting (0.01s)
+      trustview_test.go:52: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsEverySetting2548780744/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"default\
+      trustview_test.go:52: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsEverySetting2548780744/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"default\
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  send options are not shown
+  internal/cli/trustview.go: 'parts[i] += " options " + s.Options' -> '_ = s'
+  --- FAIL: TestConfigTrustShowsEverySetting (0.01s)
+      trustview_test.go:52: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsEverySetting383198779/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"default\"
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  replaced channels are not flagged
+  internal/cli/trustview.go: 'if _, ok := userChans[name]; ok {' -> 'if _, ok := userChans[name]; ok && false {'
+  --- FAIL: TestConfigTrustFlagsWhatItReplaces (0.02s)
+      trustview_test.go:74: trust display = "trusting \"$TMPDIR/TestConfigTrustFlagsWhatItReplaces1306114359/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"defaul
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  a replaced ladder is not flagged
+  internal/cli/trustview.go: 'if _, ok := doc["levels"]; ok && user["levels"] != nil {' -> 'if _, ok := doc["levels"]; ok && user["levels"] == nil {'
+  --- FAIL: TestConfigTrustFlagsWhatItReplaces (0.02s)
+      trustview_test.go:74: trust display = "trusting \"$TMPDIR/TestConfigTrustFlagsWhatItReplaces118692689/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"default
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  replacements are not printed
+  internal/cli/trustview.go: 'out = append(out, v.Replaces...)' -> ''
+  --- FAIL: TestConfigTrustFlagsWhatItReplaces (0.02s)
+      trustview_test.go:74: trust display = "trusting \"$TMPDIR/TestConfigTrustFlagsWhatItReplaces752739450/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"default
+      trustview_test.go:74: trust display = "trusting \"$TMPDIR/TestConfigTrustFlagsWhatItReplaces752739450/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"default
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  the host is not punycode
+  internal/cli/trustview.go: 'host, puny := asciiHost(u.Host)' -> 'host, puny := u.Host, false'
+  --- FAIL: TestConfigTrustShowsHostsAsPunycode (0.01s)
+      trustview_test.go:64: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsHostsAsPunycode3922304488/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"defau
+      trustview_test.go:65: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsHostsAsPunycode3922304488/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"defau
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  the punycode note is missing
+  internal/cli/trustview.go: 'if puny {
+		out += " (non-ASCII host shown as punycode)"' -> 'if puny && false {
+		out += " (non-ASCII host shown as punycode)"'
+  --- FAIL: TestConfigTrustShowsHostsAsPunycode (0.01s)
+      trustview_test.go:64: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsHostsAsPunycode1008158560/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"defau
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  labels are not lower-cased
+  internal/cli/punycode.go: 'punycode(strings.ToLower(l))' -> 'punycode(l)'
+  --- FAIL: TestPunycode (0.00s)
+      punycode_test.go:19: asciiHost = "events.xn--PagerDty-tnj.com:443", true
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  bias adapts without damping
+  internal/cli/punycode.go: 'delta /= pcDamp' -> 'delta /= 2'
+  --- FAIL: TestPunycode (0.00s)
+      punycode_test.go:15: punycode("例え") = "r8jkjo", want "r8jz45g"
+      punycode_test.go:15: punycode("ασδ") = "mxaga8b", want "mxag8b"
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+
+KILLED  the user's ladder is never read
+  internal/cli/trustcmd.go: 'describe(doc, e.userDoc())' -> 'describe(doc, nil)'
+  --- FAIL: TestConfigTrustFlagsWhatItReplaces (0.02s)
+      trustview_test.go:74: trust display = "trusting \"$TMPDIR/TestConfigTrustFlagsWhatItReplaces951245096/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"default
+      trustview_test.go:74: trust display = "trusting \"$TMPDIR/TestConfigTrustFlagsWhatItReplaces951245096/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"default
+  [go test -count=1 ./internal/cli -run 'Trust|SchemaProperty|Punycode|Forge' exit 1]
+

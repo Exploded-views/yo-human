@@ -1,0 +1,243 @@
+# what this is: task 14 mutation checks for the setup-page lint (CheckSetupPage): 20 mutants, all killed, each mutated line with its raw failing output (home path redacted)
+# test command: go test -count=1 -timeout 120s ./internal/repolint (the whole package, so a mutant that breaks only the repo-pages test is also seen)
+# first pass: 21 mutants, 3 survived. (1) dropping the export/declare/local prefix from the reassignment regexp: equivalent, because the name is already preceded by whitespace, so the prefix group was removed from the code and its mutant dropped. (2) the usage scan starting at the top of the page instead of after the Inputs section, so a $NAME in the Inputs prose counted as a use: got TestSetupPageInputUsedOnlyInItsOwnSection. (3) headings inside code fences counted: got a fenced "## Notes" ahead of "## Inputs" in TestSetupPageHeadingsInsideFencesIgnored. The 20 below are the re-run against the final code and tests.
+
+## first heading check dropped
+# in internal/repolint/setupdocs.go: 'strings.TrimSpace(c.lines[h[0]].text) != inputsHeading' => 'false'
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/inputs_not_first (0.00s)
+        setupdocs_test.go:70: rules = "already-set-second", want "inputs-first" (findings [{Path:bad.md Lines:0 Line:7 Rule:already-set-second Msg:the second ## heading must be "## Already set"}])
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.015s
+FAIL
+exit=1
+
+## no-heading case dropped
+# in internal/repolint/setupdocs.go: 'len(h) == 0 || ' => ''
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/no_h2_at_all (0.00s)
+panic: runtime error: index out of range [0] with length 0 [recovered, repanicked]
+
+goroutine 10 [running]:
+testing.tRunner.func1.2({0x10123a690, 0x11d6277d2198})
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2125 +0x1a0
+testing.tRunner.func1()
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2128 +0x2c8
+panic({0x10123a690?, 0x11d6277d2198?})
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/runtime/panic.go:859 +0x120
+github.com/Exploded-views/yo-human/internal/repolint.(*pageCheck).headings(0x11d6275965b8)
+	<home>/code/yo-human-m1/internal/repolint/setupdocs.go:95 +0x680
+github.com/Exploded-views/yo-human/internal/repolint.CheckSetupPage({0x1010cb414, 0x6}, {0x1010cf397?, 0xb?, 0x1010cf397?})
+	<home>/code/yo-human-m1/internal/repolint/setupdocs.go:43 +0x68
+github.com/Exploded-views/yo-human/internal/repolint.TestSetupPageRules.func1(0x11d627684fc8)
+	<home>/code/yo-human-m1/internal/repolint/setupdocs_test.go:68 +0x1bc
+testing.tRunner(0x11d627684fc8, 0x11d6275e8500)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2195 +0xc4
+created by testing.(*T).Run in goroutine 8
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2260 +0x3b8
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.015s
+FAIL
+exit=1
+
+## second heading check dropped
+# in internal/repolint/setupdocs.go: 'strings.TrimSpace(c.lines[h[1]].text) != alreadySetHeading' => 'false'
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/already_set_not_second (0.00s)
+        setupdocs_test.go:70: rules = "", want "already-set-second" (findings [])
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.015s
+FAIL
+exit=1
+
+## bullet regexp: uppercase not required
+# in internal/repolint/setupdocs.go: '([A-Z][A-Z0-9_]*)' => '([A-Za-z][A-Za-z0-9_]*)'
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/bullet_shape (0.00s)
+        setupdocs_test.go:70: rules = "input-unused", want "input-format" (findings [{Path:bad.md Lines:0 Line:5 Rule:input-unused Msg:topic_name is declared under Inputs but never used later as $topic_name}])
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.015s
+FAIL
+exit=1
+
+## bullet regexp: placeholder brackets not required
+# in internal/repolint/setupdocs.go: '<[^>]+>' => '.+'
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/bullet_without_placeholder (0.00s)
+        setupdocs_test.go:70: rules = "", want "input-format" (findings [])
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.015s
+FAIL
+exit=1
+
+## bullet regexp: description not required
+# in internal/repolint/setupdocs.go: '` — .+")' => '`")'
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/bullet_without_description (0.00s)
+        setupdocs_test.go:70: rules = "", want "input-format" (findings [])
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.015s
+FAIL
+exit=1
+
+## unused input not reported
+# in internal/repolint/setupdocs.go: 'if !used {' => 'if false {'
+FAIL	github.com/Exploded-views/yo-human/internal/repolint [build failed]
+FAIL
+# github.com/Exploded-views/yo-human/internal/repolint [github.com/Exploded-views/yo-human/internal/repolint.test]
+internal/repolint/setupdocs.go:146:3: declared and not used: used
+exit=1
+
+## use matches prefix names
+# in internal/repolint/setupdocs.go: '`\\$\\{?` + name + `\\b`' => '`\\$\\{?` + name'
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/unused_input,_similar_name (0.00s)
+        setupdocs_test.go:70: rules = "", want "input-unused" (findings [])
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.016s
+FAIL
+exit=1
+
+## reassignment not reported
+# in internal/repolint/setupdocs.go: 'if assign.MatchString(l.text) {' => 'if false {'
+FAIL	github.com/Exploded-views/yo-human/internal/repolint [build failed]
+FAIL
+# github.com/Exploded-views/yo-human/internal/repolint [github.com/Exploded-views/yo-human/internal/repolint.test]
+internal/repolint/setupdocs.go:145:3: declared and not used: assign
+exit=1
+
+## usage scan starts at the top
+# in internal/repolint/setupdocs.go: 'range c.lines[from:]' => 'range c.lines'
+--- FAIL: TestSetupPageInputUsedOnlyInItsOwnSection (0.00s)
+    setupdocs_test.go:93: rules = "", want input-unused
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.016s
+FAIL
+exit=1
+
+## tilde: fence language ignored (all fenced)
+# in internal/repolint/setupdocs.go: 'l.fenced && shellLangs[l.lang] && ' => 'l.fenced && '
+--- FAIL: TestSetupPageTildeOutsideShellIsFine (0.00s)
+    setupdocs_test.go:84: tilde in prose and yaml: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ in a shell block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.016s
+FAIL
+exit=1
+
+## tilde: yaml counts as shell
+# in internal/repolint/setupdocs.go: '"": true, "sh": true' => '"": true, "yaml": true, "sh": true'
+--- FAIL: TestSetupPageTildeOutsideShellIsFine (0.00s)
+    setupdocs_test.go:84: tilde in prose and yaml: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ in a shell block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.017s
+FAIL
+exit=1
+
+## tilde: unlabelled blocks skipped
+# in internal/repolint/setupdocs.go: '"": true, "sh"' => '"sh"'
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/tilde_in_an_unlabelled_block (0.00s)
+        setupdocs_test.go:70: rules = "", want "tilde-home" (findings [])
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.016s
+FAIL
+exit=1
+
+## tilde never reported
+# in internal/repolint/setupdocs.go: 'strings.Contains(l.text, "~/")' => 'false'
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/tilde_in_a_shell_block (0.00s)
+        setupdocs_test.go:70: rules = "", want "tilde-home" (findings [])
+    --- FAIL: TestSetupPageRules/tilde_in_an_unlabelled_block (0.00s)
+        setupdocs_test.go:70: rules = "", want "tilde-home" (findings [])
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.015s
+FAIL
+exit=1
+
+## op line not checked
+# in internal/repolint/setupdocs.go: 'if !secretSet.MatchString(joined) {' => 'if false {'
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/op_without_a_pipe (0.00s)
+        setupdocs_test.go:70: rules = "", want "op-unpiped" (findings [])
+    --- FAIL: TestSetupPageRules/op_piped_elsewhere (0.00s)
+        setupdocs_test.go:70: rules = "", want "op-unpiped" (findings [])
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.016s
+FAIL
+exit=1
+
+## pipe target not checked
+# in internal/repolint/setupdocs.go: '\\|\\s*yo-human secret set\\s+\\S' => '\\|\\s*\\S'
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/op_piped_elsewhere (0.00s)
+        setupdocs_test.go:70: rules = "", want "op-unpiped" (findings [])
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.016s
+FAIL
+exit=1
+
+## continuation ignored
+# in internal/repolint/setupdocs.go: 'strings.HasSuffix(strings.TrimRight(c.lines[j].text, " \\t"), `\\`) && j+1 < len(c.lines)' => 'false'
+--- FAIL: TestSetupPageOpContinuation (0.00s)
+    setupdocs_test.go:101: continued pipe: [{Path:p.md Lines:0 Line:15 Rule:op-unpiped Msg:an op:// line must pipe into `yo-human secret set <name>`: a secret never reaches a variable or a screen}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.016s
+FAIL
+exit=1
+
+## fenced headings counted
+# in internal/repolint/setupdocs.go: 'if !l.fenced && strings.HasPrefix(l.text, "## ")' => 'if strings.HasPrefix(l.text, "## ")'
+--- FAIL: TestSetupPageHeadingsInsideFencesIgnored (0.00s)
+    setupdocs_test.go:108: heading inside a fence: [{Path:p.md Lines:0 Line:4 Rule:inputs-first Msg:the first ## heading must be "## Inputs"}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.017s
+FAIL
+exit=1
+
+## fence close not tracked
+# in internal/repolint/setupdocs.go: 'inFence = !inFence' => 'inFence = true'
+--- FAIL: TestSetupPageTildeOutsideShellIsFine (0.00s)
+    setupdocs_test.go:84: tilde in prose and yaml: [{Path:p.md Lines:0 Line:19 Rule:tilde-home Msg:no ~/ in a shell block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files} {Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ in a shell block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+--- FAIL: TestSetupPageHeadingsInsideFencesIgnored (0.00s)
+    setupdocs_test.go:108: heading inside a fence: [{Path:p.md Lines:0 Line:1 Rule:inputs-first Msg:the first ## heading must be "## Inputs"}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.016s
+FAIL
+exit=1
+
+## findings lose the page name
+# in internal/repolint/setupdocs.go: 'Path: c.name,' => ''
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/inputs_not_first (0.00s)
+        setupdocs_test.go:74: finding {Path: Lines:0 Line:3 Rule:inputs-first Msg:the first ## heading must be "## Inputs"}: want the page name, a line number and a message
+    --- FAIL: TestSetupPageRules/no_h2_at_all (0.00s)
+        setupdocs_test.go:74: finding {Path: Lines:0 Line:1 Rule:inputs-first Msg:the first ## heading must be "## Inputs"}: want the page name, a line number and a message
+    --- FAIL: TestSetupPageRules/bullet_shape (0.00s)
+        setupdocs_test.go:74: finding {Path: Lines:0 Line:5 Rule:input-format Msg:an Inputs bullet must look like: - `NAME="<placeholder>"` — what it is}: want the page name, a line number and a message
+    --- FAIL: TestSetupPageRules/bullet_without_placeholder (0.00s)
+        setupdocs_test.go:74: finding {Path: Lines:0 Line:6 Rule:input-format Msg:an Inputs bullet must look like: - `NAME="<placeholder>"` — what it is}: want the page name, a line number and a message
+    --- FAIL: TestSetupPageRules/bullet_without_description (0.00s)
+        setupdocs_test.go:74: finding {Path: Lines:0 Line:5 Rule:input-format Msg:an Inputs bullet must look like: - `NAME="<placeholder>"` — what it is}: want the page name, a line number and a message
+    --- FAIL: TestSetupPageRules/already_set_not_second (0.00s)
+        setupdocs_test.go:74: finding {Path: Lines:0 Line:8 Rule:already-set-second Msg:the second ## heading must be "## Already set"}: want the page name, a line number and a message
+    --- FAIL: TestSetupPageRules/unused_input (0.00s)
+        setupdocs_test.go:74: finding {Path: Lines:0 Line:6 Rule:input-unused Msg:SERVER_URL is declared under Inputs but never used later as $SERVER_URL}: want the page name, a line number and a message
+    --- FAIL: TestSetupPageRules/unused_input,_similar_name (0.00s)
+        setupdocs_test.go:74: finding {Path: Lines:0 Line:5 Rule:input-unused Msg:TOPIC_NAME is declared under Inputs but never used later as $TOPIC_NAME}: want the page name, a line number and a message
+    --- FAIL: TestSetupPageRules/assigned_again (0.00s)
+        setupdocs_test.go:74: finding {Path: Lines:0 Line:16 Rule:input-reassigned Msg:SERVER_URL is an input: use $SERVER_URL, do not assign it again}: want the page name, a line number and a message
+    --- FAIL: TestSetupPageRules/exported_again (0.00s)
+        setupdocs_test.go:74: finding {Path: Lines:0 Line:16 Rule:input-reassigned Msg:TOPIC_NAME is an input: use $TOPIC_NAME, do not assign it again}: want the page name, a line number and a message
+    --- FAIL: TestSetupPageRules/tilde_in_a_shell_block (0.00s)
+        setupdocs_test.go:74: finding {Path: Lines:0 Line:16 Rule:tilde-home Msg:no ~/ in a shell block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}: want the page name, a line number and a message
+    --- FAIL: TestSetupPageRules/tilde_in_an_unlabelled_block (0.00s)
+        setupdocs_test.go:74: finding {Path: Lines:0 Line:16 Rule:tilde-home Msg:no ~/ in a shell block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}: want the page name, a line number and a message
+    --- FAIL: TestSetupPageRules/op_without_a_pipe (0.00s)
+        setupdocs_test.go:74: finding {Path: Lines:0 Line:15 Rule:op-unpiped Msg:an op:// line must pipe into `yo-human secret set <name>`: a secret never reaches a variable or a screen}: want the page name, a line number and a message
+    --- FAIL: TestSetupPageRules/op_piped_elsewhere (0.00s)
+        setupdocs_test.go:74: finding {Path: Lines:0 Line:15 Rule:op-unpiped Msg:an op:// line must pipe into `yo-human secret set <name>`: a secret never reaches a variable or a screen}: want the page name, a line number and a message
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.016s
+FAIL
+exit=1
+

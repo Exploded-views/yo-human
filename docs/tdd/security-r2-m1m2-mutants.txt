@@ -1,0 +1,96 @@
+# First pass (11 mutants): three ProviderKey mutants survived; the test gained a key-less call and two long projects that share their kept prefix, then they were rerun.
+
+KILLED  the provider sees the bare key
+  internal/core/deliver.go: 'm.DedupKey = ProviderKey(m.Project, m.DedupKey) // the provider sees the project's key, never the bare one' -> ''
+  --- FAIL: TestIncidentsAreNamespacedByProject (0.16s)
+      namespace_test.go:38: no message reached the channel with dedup key "alpha/disk-7"; keys seen: map[disk-7:true]
+      namespace_test.go:38: no message reached the channel with dedup key "beta/disk-7"; keys seen: map[disk-7:true]
+  [go test -count=1 ./internal/core -run 'Namespaced|ProviderKey|AProjects' exit 1]
+
+KILLED  resolve sends the bare key
+  internal/core/deliver.go: 'ch.Resolve(ctx, m.DedupKey, m)' -> 'ch.Resolve(ctx, pl.Message.DedupKey, m)'
+  --- FAIL: TestIncidentsAreNamespacedByProject (0.14s)
+      namespace_test.go:43: resolved keys = [disk-7], want [beta/disk-7], beta's key only
+  [go test -count=1 ./internal/core -run 'Namespaced|ProviderKey|AProjects' exit 1]
+
+KILLED  no length limit
+  internal/core/pipeline.go: 'if k := project + "/" + key; len(k) <= maxProviderKey {' -> 'if k := project + "/" + key; len(k) > 0 {'
+  --- FAIL: TestProviderKeyStaysWithin255Bytes (0.00s)
+      namespace_test.go:83: ProviderKey = "alpha/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", "beta/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  [go test -count=1 ./internal/core -run 'Namespaced|ProviderKey|AProjects' exit 1]
+
+SURVIVED the hash ignores the project
+  internal/core/pipeline.go: 'sum := sha256.Sum256([]byte(project + "\x00" + key))' -> 'sum := sha256.Sum256([]byte(key))'
+  [go test -count=1 ./internal/core -run 'Namespaced|ProviderKey|AProjects' exit 0]
+
+SURVIVED the prefix is not trimmed to fit
+  internal/core/pipeline.go: 'for len(string(prefix)) > maxProviderKey-1-2*sha256.Size {' -> 'for len(string(prefix)) > maxProviderKey {'
+  [go test -count=1 ./internal/core -run 'Namespaced|ProviderKey|AProjects' exit 0]
+
+SURVIVED an empty key gets a project
+  internal/core/pipeline.go: 'if project == "" || key == "" {' -> 'if project == "" {'
+  [go test -count=1 ./internal/core -run 'Namespaced|ProviderKey|AProjects' ./internal/core exit 0]
+
+KILLED  another project is allowed
+  internal/cli/input.go: 'env != "" && flag != "" && flag != env {' -> 'env != "" && flag != "" && flag == "\x00" {'
+  --- FAIL: TestAnotherProjectIsOutOfReachWhenTheProjectIsSet (0.23s)
+      namespace_test.go:48: resolve --project victim --dedup-key db-1: code=0 out="RESULT resolved <ULID>\npager: cancelled\nphone: cancelled\n" err=""; want exit 64, no stdout and "YO_HUMAN_PROJECT" on stderr
+      namespace_test.go:49: fix = "", want it to contain "run it from that project"
+  [go test -count=1 ./internal/cli -run 'CallersProject|OutOfReach|UnlessAll|Defaults|Page|Resolve' exit 1]
+
+KILLED  the flag is refused even with no env
+  internal/cli/input.go: 'env != "" && flag != "" && flag != env {' -> 'flag != "" && flag != env {'
+  --- FAIL: TestResolveOnlySeesTheCallersProject (0.18s)
+      namespace_test.go:26: resolve --project alpha with no YO_HUMAN_PROJECT: {code:64 out: err:error: --project names another project than YO_HUMAN_PROJECT
+          valid: this project's incidents only, while YO_HUMAN_PROJECT names it
+  --- FAIL: TestStatusShowsTheCallersProjectUnlessAll (0.03s)
+      namespace_test.go:69: status [--project beta]: {code:64 out:{"version":1,"error":{"what":"--project names another project than YO_HUMAN_PROJECT","valid":"this project's incidents only, while YO_HUMAN_PROJECT names it","fix":"run it from that project; an agent reaches only its own project's incidents"}}
+           err:}
+  --- FAIL: TestDefaultsFromEnv (0.10s)
+      notify_input_test.go:122: source = ["unknown/unknown" "billing/reviewer" "billing/reviewer"]; want unknown, then the environment, then the flags
+  [go test -count=1 ./internal/cli -run 'CallersProject|OutOfReach|UnlessAll|Defaults|Page|Resolve' exit 1]
+
+KILLED  status --all is allowed under the env
+  internal/cli/status.go: 'if err == nil && *all && os.Getenv("YO_HUMAN_PROJECT") != "" {' -> 'if err == nil && *all && os.Getenv("YO_HUMAN_PROJECT") == "\x00" {'
+  --- FAIL: TestAnotherProjectIsOutOfReachWhenTheProjectIsSet (0.13s)
+      namespace_test.go:48: status --all: code=0 out="RESULT ok\nqueued: 2\nheld: 0\ndead: 0\ninflight: 0\nincidents: 1\nqueued <ULID> pager attempts=1 next=<TIME> kind=send\nqueued <ULID> phone attempts=1 next=<TIME> kind=send\nincident db-1 project=victim level=page generation=1 last_sent=<TIME> latest: t\n" err=""; 
+      namespace_test.go:49: fix = "", want it to contain "run it from that project"
+  [go test -count=1 ./internal/cli -run 'CallersProject|OutOfReach|UnlessAll|Defaults|Page|Resolve' exit 1]
+
+KILLED  e2e: another project is allowed
+  internal/cli/input.go: 'env != "" && flag != "" && flag != env {' -> 'env != "" && flag != "" && flag == "\x00" {'
+  --- FAIL: TestAnotherProjectIsOutOfReach (0.26s)
+      namespace_test.go:36: yo-human notify --level urgent --title Disk full --ask Free space --dedup-key db-1 -> exit 0
+          RESULT delivered <ULID>
+  [go test -tags e2e -count=1 ./test/e2e -run 'OutOfReach|Namespaced' exit 1]
+
+KILLED  e2e: the provider sees the bare key
+  internal/core/deliver.go: 'm.DedupKey = ProviderKey(m.Project, m.DedupKey) // the provider sees the project's key, never the bare one' -> ''
+  --- FAIL: TestIncidentsAreNamespacedByProjectAtPagerDutyToo (0.24s)
+      namespace_test.go:16: yo-human notify --level urgent --title Disk full --ask Free space --dedup-key disk-7 -> exit 0
+          RESULT delivered <ULID>
+  --- FAIL: TestPageShimTriggerAndResolve (0.29s)
+      shim_trust_test.go:15: yo-human page Disk is full on build-7 df says 100% disk-7 -> exit 0
+          RESULT delivered <ULID>
+  [go test -tags e2e -count=1 ./test/e2e -run 'Namespaced|Shim' exit 1]
+
+# Second pass
+
+KILLED  the hash ignores the project
+  internal/core/pipeline.go: 'sum := sha256.Sum256([]byte(project + "\x00" + key))' -> 'sum := sha256.Sum256([]byte(key))'
+  --- FAIL: TestProviderKeyStaysWithin255Bytes (0.00s)
+      namespace_test.go:100: long-project keys "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀/<hex>" (253 bytes) and "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀/<hex>" (253 bytes); want two different valid keys of at most 255 bytes
+  [go test -count=1 ./internal/core -run 'Namespaced|ProviderKey|AProjects' exit 1]
+
+KILLED  the prefix is not trimmed to fit
+  internal/core/pipeline.go: 'for len(string(prefix)) > maxProviderKey-1-2*sha256.Size {' -> 'for len(string(prefix)) > maxProviderKey {'
+  --- FAIL: TestProviderKeyStaysWithin255Bytes (0.00s)
+      namespace_test.go:100: long-project keys "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀a/<hex>" (318 bytes) and "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀b/<hex>" (318 bytes); want two different valid keys of at most 255 bytes
+  [go test -count=1 ./internal/core -run 'Namespaced|ProviderKey|AProjects' exit 1]
+
+KILLED  an empty key gets a project
+  internal/core/pipeline.go: 'if project == "" || key == "" {' -> 'if project == "" {'
+  --- FAIL: TestProviderKeyStaysWithin255Bytes (0.00s)
+      namespace_test.go:93: ProviderKey with no key = "alpha/", want none: a message with no key is not an incident
+  [go test -count=1 ./internal/core -run 'Namespaced|ProviderKey|AProjects' ./internal/core exit 1]
+

@@ -1,0 +1,29 @@
+# Task 6 mutation checks: baseline `go test -race -count=1 ./internal/core` passes (ok, 11.2s). Each mutant applied to a clean tree, the suite run, the tree restored.
+# Mutants 1-4 are from the first run; 5-16 from a rerun with -timeout 90s; two mutants that first failed to compile (lost claim, reached) were rewritten and rerun (last two lines).
+# The first line of each shows the failing tests (first three).
+MUTANT lock released between check and record: KILLED ['--- FAIL: TestConcurrentRepeatsPageOnce (0.87s)']
+MUTANT reminder never honoured: KILLED ['--- FAIL: TestReminderSendsAgainWhenDue (0.07s)', '--- FAIL: TestDecide (0.00s)']
+MUTANT resolve does not cancel queued: KILLED [TestResolveReportsACancelIncidentFailure, TestNotifyResolvedMidCallReportsResolved, TestResolveCancelsPending]
+MUTANT resolve does not cancel scheduled: KILLED ['--- FAIL: TestResolveReportsACancelThatFailed (0.06s)', '--- FAIL: TestRequeueFailuresAreReported (0.07s)']
+MUTANT notes go to every channel: KILLED ['--- FAIL: TestRequeueFailuresAreReported (0.07s)']
+MUTANT requeue ignores a resolved incident: KILLED ['--- FAIL: TestResolveWhileSendInflightDropsTheRetry (0.14s)']
+VOID MUTANT lost claim always skipped: build failed (the mutant did not compile, so it proves nothing); rewritten below
+MUTANT update goes to every channel: KILLED ['--- FAIL: TestChangedRepeatUpdatesOnlyNativeDedup (0.12s)', '--- FAIL: TestChangedRepeatWithoutNativeDedupIsRecordedOnly (0.10s)']
+MUTANT ttl ignored: KILLED ['--- FAIL: TestBacklogEntryTakenByAnotherProcessIsSkipped (0.07s)', '--- FAIL: TestExpiredIncidentSendsAsNew (0.04s)', '--- FAIL: TestALaterReceiptReplacesTheEarlierOne (0.15s)']
+MUTANT raise does not update rank: KILLED ['--- FAIL: TestLouderRepeatSendsAndRaises (0.10s)']
+VOID MUTANT reached not recorded: build failed (the mutant did not compile, so it proves nothing); rewritten below
+MUTANT notes always active: KILLED ['--- FAIL: TestResolveNativeAndNotes (0.22s)']
+MUTANT note queued as part of the incident: KILLED ['--- FAIL: TestResolveQueuesANoteThatFailed (0.08s)']
+MUTANT hash ignores actions: KILLED ['--- FAIL: TestContentHash (0.00s)']
+MUTANT resolved incident reachable again by reached: KILLED ['--- FAIL: TestSendLandingAfterResolveIsNotRecorded (0.07s)']
+MUTANT resolve noop check dropped: KILLED ['--- FAIL: TestResolveUnknownIsNoop (0.10s)']
+MUTANT suppress still sends: KILLED ['--- FAIL: TestSuppressedSendsNothing (0.07s)', '--- FAIL: TestSameLevelRepeatIsSuppressed (0.08s)', '--- FAIL: TestSuppressedStillDrainsTheBacklog (0.16s)']
+0
+# rewritten (compiling) versions:
+MUTANT lost claim always skipped: KILLED [TestNotifyResolvedMidCallReportsResolved]
+MUTANT reached never recorded: KILLED [TestReachedComesFromReceipts, TestAQueuedSendIsRecordedWhenItLands, TestALaterReceiptReplacesTheEarlierOne]
+
+# -count=20 run of the timing and concurrency tests
+$ go test -race -count=20 -run "Concurrent|Resolve|Inflight|Mid|Claim|Landing|Reminder|Expired|Suppress" ./internal/core 2>&1
+ok  	github.com/Exploded-views/yo-human/internal/core	103.148s
+exit=0

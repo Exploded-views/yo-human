@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "required": ["device_key"],
+  "properties": {
+    "server": {"type": "string", "pattern": "^https://[^/]", "description": "the Bark server base URL, https only; default https://api.day.app"},
+    "device_key": {"type": "object", "required": ["secret"], "properties": {"secret": {"type": "string"}}, "additionalProperties": false}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,76 @@
+# what this is: task 10 fix round 1, lower layers, against stubs (ProjectFile and WriteFileExclusive do nothing; Notice.Problem never set) and the old code (no log path containment, first Load finding only, log follows symlinks and opens a FIFO, which blocks until the 30s test timeout) (RED)
+# command: go test -count=1 -timeout 30s ./internal/config ./internal/store ./internal/channel/logch
+--- FAIL: TestProjectLogPathMustStayInsideTheProject (0.01s)
+    containment_test.go:50: error = <nil>, want a *problem.Problem
+--- FAIL: TestLoadReturnsEveryFindingJoined (0.00s)
+    containment_test.go:88: err = "$TMPDIR/TestLoadReturnsEveryFindingJoined1313546802/001/c.yaml" is not valid YAML or JSON at line 4; want a join of every finding
+--- FAIL: TestWarningNoticesCarryTheirProblem (0.00s)
+    containment_test.go:100: notices = [{Text:warning: level "only" sends critical to channel "n", whose type quiet cannot do critical (use a channel of a type that can (logonly, pager), or lower the interruption) Problem:<nil>}], err <nil>; want one warning notice carrying its problem
+--- FAIL: TestProjectFileFindsTheNearestAncestorResolved (0.00s)
+    containment_test.go:117: ProjectFile(/private$TMPDIR/TestProjectFileFindsTheNearestAncestorResolved665617780/001/a/b) = "", want "/private$TMPDIR/TestProjectFileFindsTheNearestAncestorResolved665617780/001/a/.yo-human.json"
+    containment_test.go:117: ProjectFile($TMPDIR/TestProjectFileFindsTheNearestAncestorResolved665617780/002/link) = "", want "/private$TMPDIR/TestProjectFileFindsTheNearestAncestorResolved665617780/001/a/.yo-human.json"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.088s
+--- FAIL: TestWriteFileExclusiveCreatesOnceAndNeverReplaces (0.00s)
+    atomic_test.go:76: stat <nil>, stat $TMPDIR/TestWriteFileExclusiveCreatesOnceAndNeverReplaces848438613/001/c.yaml: no such file or directory; want mode 0600
+--- FAIL: TestWriteFileExclusiveReportsAStoreProblemWhereItCannotWrite (0.00s)
+    atomic_test.go:94: err = <nil>, want a Store problem
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.412s
+--- FAIL: TestLogRefusesASymlinkAndLeavesTheTargetAlone (0.00s)
+    logch_unix_test.go:34: err = <nil> (kind 0), want a permanent error
+    logch_unix_test.go:37: the symlink target now holds "original\n{\"time\":\"2026-10-26T13:54:39.163719Z\",\"instance\":\"local\",\"interruption\":\"passive\",\"message\":{\"id\":\"01A\",\"level\":\"\",\"title\":\"\",\"ask\":\"\",\"body\":\"\",\"link\":\"\",\"project\":\"\",\"agent\":\"\",\"dedup_key\":\"\",\"actions\":null,\"created\":\"0001-01-01T00:00:00Z\",\"resolved\":false}}\n"
+panic: test timed out after 30s
+	running tests:
+		TestLogRefusesWhatIsNotARegularFile (30s)
+
+goroutine 15 [running]:
+testing.(*M).startAlarm.func1()
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2961 +0x2c4
+created by time.goFunc
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/time/sleep.go:182 +0x38
+
+goroutine 1 [chan receive]:
+testing.(*T).Run(0x1bf5a7960008, {0x102a84613?, 0x1bf5a799aa88?}, 0x102cdbe28)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2268 +0x3cc
+testing.runTests.func1(0x1bf5a7960008)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2744 +0x38
+testing.tRunner(0x1bf5a7960008, 0x1bf5a799abb8)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2195 +0xc4
+testing.runTests({0x102a83fb3, 0x22}, {0x102a89e2e, 0x39}, 0x1bf5a78a61b0, {0x102d31920, 0x9, 0x9}, {0x1bf5a799ac58?, 0x1bf5a79262e0?, ...})
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2742 +0x400
+testing.(*M).Run(0x1bf5a791a320)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2602 +0x578
+main.main()
+	_testmain.go:64 +0x80
+
+goroutine 14 [syscall]:
+syscall.syscalln(0x1028fcd60, {0x1bf5a796d8a0, 0x3, 0x3})
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/runtime/sys_darwin.go:27 +0x20
+syscall.syscall(0x1bf5a7918bd0?, 0x67?, 0x103?, 0x1bf5a79787e0?)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/syscall/syscall_darwin.go:384 +0x24
+syscall.Open({0x1bf5a7918bd0?, 0x100?}, 0x1000209, 0x180)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/syscall/zsyscall_darwin_arm64.go:1162 +0x70
+os.open(...)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/os/file_open_unix.go:15
+os.openFileNolog.func1(...)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/os/file_unix.go:261
+os.ignoringEINTR(...)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/os/file_posix.go:263
+os.openFileNolog({0x1bf5a7918bd0, 0x67}, 0x209, 0x180)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/os/file_unix.go:260 +0xd8
+os.OpenFile({0x1bf5a7918bd0, 0x67}, 0x209, 0x180)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/os/file.go:412 +0x40
+github.com/Exploded-views/yo-human/internal/channel/logch.(*logChannel).Send(0x1bf5a78bedc0, {0x102cdb358?, 0x102d607c0?}, {{0x102a7935c, 0x3}, {0x0, 0x0}, {0x0, 0x0}, {0x0, ...}, ...}, ...)
+	<worktree>/internal/channel/logch/logch.go:75 +0x294
+github.com/Exploded-views/yo-human/internal/channel/logch_test.send(...)
+	<worktree>/internal/channel/logch/logch_unix_test.go:16
+github.com/Exploded-views/yo-human/internal/channel/logch_test.TestLogRefusesWhatIsNotARegularFile(0x1bf5a7961d48)
+	<worktree>/internal/channel/logch/logch_unix_test.go:48 +0x2ac
+testing.tRunner(0x1bf5a7961d48, 0x102cdbe28)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2195 +0xc4
+created by testing.(*T).Run in goroutine 1
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2260 +0x3b8
+FAIL	github.com/Exploded-views/yo-human/internal/channel/logch	30.015s
+FAIL
+# exit code: 1

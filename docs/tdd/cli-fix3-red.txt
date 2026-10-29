@@ -1,0 +1,26 @@
+# what this is: task 10 fix round 3 against the round-2 code: any control character in a value (a block scalar or a tab) is refused, map[any]any is not scanned, the trust view omits use_when, oneLine leaves BiDi/format/separator characters (RED)
+# command: go test -count=1 -timeout 120s ./internal/cli
+--- FAIL: TestConfigTrustAllowsNewlinesAndTabsInValues (0.00s)
+    forge_test.go:69: newline in value: code=78 out="" err="error: \"/private$TMPDIR/TestConfigTrustAllowsNewlinesAndTabsInValues2069405878/001/p/.yo-human.yaml\" holds a control character in a key or a value (it is not shown)\nvalid: keys and text without control characters, which could forge or erase lines on a terminal\nfix: remove the control characters from /private$TMPDIR/TestConfigTrustAllowsNewlinesAndTabsInValues2069405878/001/p/.yo-human.yaml, then run `yo-human config trust` again\n"; want exit 0 and RESULT ok
+    forge_test.go:69: newline in interruption: code=78 out="" err="error: \"/private$TMPDIR/TestConfigTrustAllowsNewlinesAndTabsInValues2069405878/003/p/.yo-human.yaml\" holds a control character in a key or a value (it is not shown)\nvalid: keys and text without control characters, which could forge or erase lines on a terminal\nfix: remove the control characters from /private$TMPDIR/TestConfigTrustAllowsNewlinesAndTabsInValues2069405878/003/p/.yo-human.yaml, then run `yo-human config trust` again\n"; want exit 0 and RESULT ok
+    forge_test.go:78: block scalar and tab: code=78 out="" err="error: \"/private$TMPDIR/TestConfigTrustAllowsNewlinesAndTabsInValues2069405878/005/p/.yo-human.yaml\" holds a control character in a key or a value (it is not shown)\nvalid: keys and text without control characters, which could forge or erase lines on a terminal\nfix: remove the control characters from /private$TMPDIR/TestConfigTrustAllowsNewlinesAndTabsInValues2069405878/005/p/.yo-human.yaml, then run `yo-human config trust` again\n"; want exit 0 and RESULT ok
+    forge_test.go:79: trust output = "", want it to contain "level \"page\" use_when \"Production is down.\\nWake the human.\\n\""
+    forge_test.go:79: trust output = "", want it to contain "channel \"office\" tag \"a\\tb\""
+--- FAIL: TestConfigTrustScansMappingsWithMixedKeyTypes (0.01s)
+    forge_test.go:87: mixed keys: code=0 out="RESULT ok\ntrusting \"/private$TMPDIR/TestConfigTrustScansMappingsWithMixedKeyTypes4169779530/001/p/.yo-human.yaml\"\nchannel \"office\" has type \"\"\nchannel \"office\" settings are not shown (unknown channel type)\ntrusted; a change to the file un-trusts it until you run this again\n" err=""; want exit 78, no stdout and "control character" on stderr
+--- FAIL: TestHoldsControl (0.00s)
+    forge_test.go:108: tab in value: holdsControl = true, want false
+    forge_test.go:108: mixed keys: holdsControl = false, want true
+    forge_test.go:108: mixed, bad value: holdsControl = false, want true
+    forge_test.go:108: newline in value: holdsControl = true, want false
+--- FAIL: TestOneLineNeutralisesFormatAndSeparatorCharacters (0.00s)
+    forge_test.go:114: oneLine = "a\u202eb\u200dc\u2028d\u2029e f\u00adg", want every one of them replaced by a space
+    forge_test.go:118: levels output "RESULT ok\nnote (ask optional, quiet hours send): FYI \u202eevil\npage (ask required, quiet hours send): production is down\n" holds a BiDi override
+    forge_test.go:121: problem text "error: bad \u202e text\nvalid: v\nfix: f\n" holds a BiDi override
+--- FAIL: TestDescribeEscapesEveryFileDerivedString (0.00s)
+    forge_test.go:134: text view: "channel \"odd\" has type \"x\\n\\x1b[2A\\x1b[2K\\r\\u009b\"\nchannel \"odd\" settings are not shown (unknown channel type)\nchannel \"x\\n\\x1b[2A\\x1b[2K\\r\\u009b\" has type \"ntfy\"\nchannel \"x\\n\\x1b[2A\\x1b[2K\\r\\u009b\" path $'x\\012\\033[2A\\033[2K\\015\\302\\233'\nchannel \"x\\n\\x1b[2A\\x1b[2K\\r\\u009b\" x\\n\\x1b[2A\\x1b[2K\\r\\u009b \"vx\\n\\x1b[2A\\x1b[2K\\r\\u009b\"\nlevel \"x\\n\\x1b[2A\\x1b[2K\\r\\u009b\" sends to \"x\\n\\x1b[2A\\x1b[2K\\r\\u009b\" (x\\n\\x1b[2A\\x1b[2K\\r\\u009b)" (6 lines)
+    forge_test.go:135: json view: "{\"channels\":[{\"name\":\"odd\",\"type\":\"x\\\\n\\\\x1b[2A\\\\x1b[2K\\\\r\\\\u009b\",\"settings\":{\"settings\":\"are not shown (unknown channel type)\"}},{\"name\":\"x\\\\n\\\\x1b[2A\\\\x1b[2K\\\\r\\\\u009b\",\"type\":\"ntfy\",\"settings\":{\"path\":\"$'x\\\\012\\\\033[2A\\\\033[2K\\\\015\\\\302\\\\233'\",\"x\\\\n\\\\x1b[2A\\\\x1b[2K\\\\r\\\\u009b\":\"\\\"vx\\\\n\\\\x1b[2A\\\\x1b[2K\\\\r\\\\u009b\\\"\"}}],\"levels\":[{\"name\":\"x\\\\n\\\\x1b[2A\\\\x1b[2K\\\\r\\\\u009b\",\"sends\":[{\"channel\":\"x\\\\n\\\\x1b[2A\\\\x1b[2K\\\\r\\\\u009b\",\"interruption\":\"x\\\\n\\\\x1b[2A\\\\x1b[2K\\\\r\\\\u009b\"}]}]}"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.281s
+FAIL
+# exit code: 1

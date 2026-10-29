@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "The reply reruns notify with --level siren and unchanged title and ask, and does not blame the tool, keep the bad level, or give up.",
+ "pass": true
+}

@@ -1,0 +1,12 @@
+{
+ "must": [
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false
+ ],
+ "note": "The reply treats phone: sent as delivered, runs no further flush or notify, keeps the dedup key for a later resolve, and does not report a failure to the human.",
+ "pass": true
+}

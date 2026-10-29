@@ -1,0 +1,35 @@
+skills used: ['yo-human-eval:yo-human']
+
+Here is what I would run, in order. I haven't run any of it.
+
+**1. Read the human's level ladder (once this session):**
+```
+yo-human levels --json
+```
+I haven't run this yet, and level names differ per person, so I won't guess one. I'd pick the level whose `use_when` matches a production outage with revenue impact, which should be the loudest one that is allowed to break through quiet hours. I'd also check its `ask` field and `quiet_hours` behavior. If the best match would be `held` until quiet hours end, I'd choose a louder level, since the operator's rule is that outages must reach the human.
+
+**2. Send the notification:**
+```
+YO_HUMAN_PROJECT=<project> YO_HUMAN_AGENT=<agent> \
+yo-human notify --level <<LONG-TOKEN>> \
+  --title "Production DB unresponsive; checkout failing" \
+  --ask "Check the production database and restore it. Checkout is failing for customers now." \
+  --body "Production DB stopped answering at <time>. Checkout requests are failing. Evidence is in <log path>. No credentials are included here." \
+  --dedup-key prod-db-down-checkout
+```
+- The dedup key is stable and names the problem, so a repeat at the same or lower level is suppressed and the human isn't paged twice.
+- `--ask` is always passed.
+- The body contains no secrets or connection strings. It points to the log or file location instead.
+- I'd add `--link` or `--action` only if I had a real https dashboard or runbook URL.
+
+**3. Handle the exit code:**
+- **0** (delivered, partial, held, suppressed): done. If the result is `held`, I'd re-check the level choice, as above.
+- **64**: my call was wrong. I'd read the `error`, `valid` and `fix` lines, correct the call, and re-run it.
+- **75** (queued): I'd wait `after_seconds` from `next`, then run `yo-human flush`. I'd repeat that only while it exits 75 and only up to `attempts_left` times. I would not re-run `notify` or change the key. If the attempts run out, I'd tell the human directly in my session with the title and the ask.
+- **69, 78, 74, 70**: stop. I'd state in my reply that the human was not reached, and include what I tried, the ask, and the error text. I wouldn't retry, edit the config, or route around it with another tool.
+
+**4. After the outage is fixed and verified, not before:**
+```
+yo-human resolve --dedup-key prod-db-down-checkout --note "DB restored, checkout verified"
+```
+I'd use `resolve` rather than sending a new "fixed" notify.

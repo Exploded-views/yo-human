@@ -1,0 +1,77 @@
+KILLED  the system config is not read
+  internal/cli/trustlayers.go: 'add(p.System, "system config", false)' -> ''
+  --- FAIL: TestConfigTrustFlagsWhatItReplacesInEveryLowerLayer (0.01s)
+      trustview_test.go:144: trust display = "trusting \"$TMPDIR/TestConfigTrustFlagsWhatItReplacesInEveryLowerLayer4148756745/001/proj/.yo-human.yaml\"\nversion 1\nchannel \"bench\" has type \"ntfy\"\nchannel \"bench\" server \"https://ntfy.example.org\"\nchannel \"desk\" has type \"ntfy\"\nchannel \"desk\" server \"https://ntfy.example.org\"\nchanne
+  [go test -count=1 ./internal/cli -run 'ConfigTrust|Trust' exit 1]
+
+KILLED  the user config is not read
+  internal/cli/trustlayers.go: 'add(filepath.Join(p.UserDir, "config.yaml"), "user config", false)' -> ''
+  --- FAIL: TestConfigTrustFlagsWhatItReplaces (0.02s)
+      trustview_test.go:74: trust display = "trusting \"$TMPDIR/TestConfigTrustFlagsWhatItReplaces4292605799/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"defaul
+      trustview_test.go:74: trust display = "trusting \"$TMPDIR/TestConfigTrustFlagsWhatItReplaces4292605799/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"defaul
+  --- FAIL: TestConfigTrustShowsWhereEachSecretGoes (0.01s)
+      trustview_test.go:156: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsWhereEachSecretGoes3838898621/001/proj/.yo-human.yaml\"\nversion 1\nchannel \"leak\" has type \"ntfy\"\nchannel \"leak\" server \"https://ntfy.sh\"\nchannel \"leak\" topic uses secret \"pd-critical\"\nchannel \"same\" has type \"ntfy\"\nchannel \"same\" server \"https
+  [go test -count=1 ./internal/cli -run 'ConfigTrust|Trust' exit 1]
+
+KILLED  the --config file is not read
+  internal/cli/trustlayers.go: 'add(p.Explicit, "--config file", true)' -> '_ = p'
+  --- FAIL: TestConfigTrustFlagsWhatItReplacesInEveryLowerLayer (0.02s)
+      trustview_test.go:144: trust display = "trusting \"$TMPDIR/TestConfigTrustFlagsWhatItReplacesInEveryLowerLayer3867943521/001/proj/.yo-human.yaml\"\nversion 1\nchannel \"bench\" has type \"ntfy\"\nchannel \"bench\" server \"https://ntfy.example.org\"\nchannel \"desk\" has type \"ntfy\"\nchannel \"desk\" server \"https://ntfy.example.org\"\nchanne
+  [go test -count=1 ./internal/cli -run 'ConfigTrust|Trust' exit 1]
+
+SURVIVED a --config file anywhere counts
+  internal/cli/trustlayers.go: 'if p.Explicit != "" && inDir(p.Explicit, p.UserDir) {' -> 'if p.Explicit != "" {'
+  [go test -count=1 ./internal/cli -run 'ConfigTrust|Trust' exit 0]
+
+KILLED  a closer layer is said to be replaced
+  internal/cli/trustlayers.go: 'case ok && l.closer:' -> 'case ok && l.closer && false:'
+  --- FAIL: TestConfigTrustFlagsWhatItReplacesInEveryLowerLayer (0.01s)
+      trustview_test.go:144: trust display = "trusting \"$TMPDIR/TestConfigTrustFlagsWhatItReplacesInEveryLowerLayer2751055681/001/proj/.yo-human.yaml\"\nversion 1\nchannel \"bench\" has type \"ntfy\"\nchannel \"bench\" server \"https://ntfy.example.org\"\nchannel \"desk\" has type \"ntfy\"\nchannel \"desk\" server \"https://ntfy.example.org\"\nchanne
+  [go test -count=1 ./internal/cli -run 'ConfigTrust|Trust' exit 1]
+
+KILLED  the ladder is not flagged
+  internal/cli/trustlayers.go: 'if ladder && l.doc["levels"] != nil && !l.closer {' -> 'if ladder && l.doc["levels"] == nil && !l.closer {'
+  --- FAIL: TestConfigTrustFlagsWhatItReplaces (0.02s)
+      trustview_test.go:74: trust display = "trusting \"$TMPDIR/TestConfigTrustFlagsWhatItReplaces824632792/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\"days\":[\"mon\",\"sun\"],\"from\":\"00:01\",\"to\":\"00:00\"}]}\nshim {\"agent\":\"ghost\",\"default
+  [go test -count=1 ./internal/cli -run 'ConfigTrust|Trust' exit 1]
+
+KILLED  no comparison with the human's route
+  internal/cli/trustlayers.go: 'if t, ok := theirs[secret]; ok && t != routes[secret] {' -> 'if t, ok := theirs[secret]; ok && false {'
+  --- FAIL: TestConfigTrustShowsWhereEachSecretGoes (0.01s)
+      trustview_test.go:156: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsWhereEachSecretGoes564674190/001/proj/.yo-human.yaml\"\nversion 1\nchannel \"leak\" has type \"ntfy\"\nchannel \"leak\" server \"https://ntfy.sh\"\nchannel \"leak\" topic uses secret \"pd-critical\"\nchannel \"same\" has type \"ntfy\"\nchannel \"same\" server \"https:
+  [go test -count=1 ./internal/cli -run 'ConfigTrust|Trust' exit 1]
+
+KILLED  the comparison shown even when equal
+  internal/cli/trustlayers.go: 'if t, ok := theirs[secret]; ok && t != routes[secret] {' -> 'if t, ok := theirs[secret]; ok {'
+  --- FAIL: TestConfigTrustShowsWhereEachSecretGoes (0.01s)
+      trustview_test.go:159: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsWhereEachSecretGoes2500787233/001/proj/.yo-human.yaml\"\nversion 1\nchannel \"leak\" has type \"ntfy\"\nchannel \"leak\" server \"https://ntfy.sh\"\nchannel \"leak\" topic uses secret \"pd-critical\"\nchannel \"same\" has type \"ntfy\"\nchannel \"same\" server \"https
+  [go test -count=1 ./internal/cli -run 'ConfigTrust|Trust' exit 1]
+
+BUILD   the host is never read
+  internal/cli/trustlayers.go: 'if !ok || (key != "server" && !strings.HasSuffix(key, "url")) {' -> 'if true {'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  internal/cli/trustlayers.go:129:6: declared and not used: ok
+  [go test -count=1 ./internal/cli -run 'ConfigTrust|Trust' exit 1]
+
+KILLED  secret routes are not printed
+  internal/cli/trustview.go: 'out = append(out, v.Secrets...)' -> ''
+  --- FAIL: TestConfigTrustShowsWhereEachSecretGoes (0.01s)
+      trustview_test.go:156: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsWhereEachSecretGoes2543575375/001/proj/.yo-human.yaml\"\nversion 1\nchannel \"leak\" has type \"ntfy\"\nchannel \"leak\" server \"https://ntfy.sh\"\nchannel \"leak\" topic uses secret \"pd-critical\"\nchannel \"same\" has type \"ntfy\"\nchannel \"same\" server \"https
+      trustview_test.go:156: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsWhereEachSecretGoes2543575375/001/proj/.yo-human.yaml\"\nversion 1\nchannel \"leak\" has type \"ntfy\"\nchannel \"leak\" server \"https://ntfy.sh\"\nchannel \"leak\" topic uses secret \"pd-critical\"\nchannel \"same\" has type \"ntfy\"\nchannel \"same\" server \"https
+  [go test -count=1 ./internal/cli -run 'ConfigTrust|Trust' exit 1]
+
+# Second pass: the test now also trusts with a --config file outside the user directory (no 'shares its name' line); the host mutant rerun in a form that compiles.
+
+KILLED  a --config file anywhere counts
+  internal/cli/trustlayers.go: 'if p.Explicit != "" && inDir(p.Explicit, p.UserDir) {' -> 'if p.Explicit != "" {'
+  --- FAIL: TestConfigTrustFlagsWhatItReplacesInEveryLowerLayer (0.02s)
+      trustview_test.go:149: trust display with a --config file outside the user directory = "trusting \"$TMPDIR/TestConfigTrustFlagsWhatItReplacesInEveryLowerLayer1756789839/001/proj/.yo-human.yaml\"\nversion 1\nchannel \"bench\" has type \"ntfy\"\nchannel \"bench\" server \"https://ntfy.example.org\"\nchannel \"desk\" has type \"ntfy\"\nchannel \"de
+  [go test -count=1 ./internal/cli -run 'ConfigTrust|Trust' exit 1]
+
+KILLED  the host is never read (compilable)
+  internal/cli/trustlayers.go: 'if !ok || (key != "server" && !strings.HasSuffix(key, "url")) {' -> 'if true || !ok || (key != "server" && !strings.HasSuffix(key, "url")) {'
+  --- FAIL: TestConfigTrustShowsWhereEachSecretGoes (0.01s)
+      trustview_test.go:160: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsWhereEachSecretGoes1236391413/001/proj/.yo-human.yaml\"\nversion 1\nchannel \"leak\" has type \"ntfy\"\nchannel \"leak\" server \"https://ntfy.sh\"\nchannel \"leak\" topic uses secret \"pd-critical\"\nchannel \"same\" has type \"ntfy\"\nchannel \"same\" server \"https
+      trustview_test.go:160: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsWhereEachSecretGoes1236391413/001/proj/.yo-human.yaml\"\nversion 1\nchannel \"leak\" has type \"ntfy\"\nchannel \"leak\" server \"https://ntfy.sh\"\nchannel \"leak\" topic uses secret \"pd-critical\"\nchannel \"same\" has type \"ntfy\"\nchannel \"same\" server \"https
+  [go test -count=1 ./internal/cli -run 'ConfigTrust|Trust' exit 1]
+

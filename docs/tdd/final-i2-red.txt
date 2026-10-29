@@ -1,0 +1,42 @@
+$ go test -count=1 ./internal/core -run APlannedChannelThatIsNotBuilt
+--- FAIL: TestAPlannedChannelThatIsNotBuiltIsSkipped (0.03s)
+    unbuilt_test.go:175: Notify = {Status:partial ID:Z001 Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false level:page retryAt:{wall:0 ext:0 loc:<nil>}} {Channel:b Status:queued Error:channel b was not built by this command; the entry stays queued ProviderID: Scheduled:false attempts:0 config:false buried:false parked:true level: retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> Warnings:[]}, <nil>; want a sent, b skipped, partial
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.046s
+FAIL
+[exit 1]
+
+$ go test -count=1 ./internal/cli -run ALevel
+--- FAIL: TestALevelSendsThroughEveryChannelThatBuilds (0.03s)
+    besteffort_test.go:28: page: {code:78 out: err:error: secret "pd-critical", used by channels.pager.routing_key, is not set
+        valid: a name listed by `yo-human secret list`
+        fix: tell the human to run, in their own terminal: op read "op://<vault>/<item>/<field>" | yo-human secret set pd-critical
+        }; want the result, then exit 78
+    besteffort_test.go:29: stdout = "", want it to contain "phone: sent"
+    besteffort_test.go:29: stdout = "", want it to contain "pager: skipped"
+    besteffort_test.go:31: phone sent 0, pager 0; want the phone paged
+--- FAIL: TestALevelWithNoChannelThatBuildsFails (0.03s)
+    besteffort_test.go:44: object {Status: Channels:[] Errors:[]}; want failed, the pager skipped and its problem
+--- FAIL: TestALevelWithAQueuedChannelAndOneThatCannotBuildSaysToRetry (0.03s)
+    besteffort_test.go:55: page: {code:78 out: err:error: secret "pd-critical", used by channels.pager.routing_key, is not set
+        valid: a name listed by `yo-human secret list`
+        fix: tell the human to run, in their own terminal: op read "op://<vault>/<item>/<field>" | yo-human secret set pd-critical
+        }; want queued with a next step, exit 75
+    besteffort_test.go:56: stderr = "error: secret \"pd-critical\", used by channels.pager.routing_key, is not set\nvalid: a name listed by `yo-human secret list`\nfix: tell the human to run, in their own terminal: op read \"op://<vault>/<item>/<field>\" | yo-human secret set pd-critical\n", want it to contain "warning: "
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.142s
+FAIL
+[exit 1]
+
+$ go test -tags e2e -count=1 ./test/e2e -run OneMissingSecret
+--- FAIL: TestOneMissingSecretDoesNotSilenceTheLevel (0.02s)
+    delivery_test.go:217: yo-human notify --level urgent --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 78
+        error: secret "pd-key", used by channels.pager.routing_key, is not set
+        valid: a name listed by `yo-human secret list`
+        fix: tell the human to run, in their own terminal: op read "op://<vault>/<item>/<field>" | yo-human secret set pd-key
+    delivery_test.go:218: first stdout line "" is not a RESULT line
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	0.400s
+FAIL
+[exit 1]
+

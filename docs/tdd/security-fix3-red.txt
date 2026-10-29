@@ -1,0 +1,54 @@
+$ go test -count=1 ./internal/config -run 'CheckedIsTheFileRead|SwappedAfter'
+--- FAIL: TestExplicitFileCheckedIsTheFileRead (0.00s)
+    explicit_test.go:160: loaded "hostile" from a group-writable file swapped after the read; want it refused
+--- FAIL: TestExplicitFileSwappedAfterTheOpenIsRefused (0.00s)
+    explicit_test.go:175: error = <nil>, want a *problem.Problem
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.016s
+FAIL
+[exit 1]
+
+$ go test -count=1 ./internal/cli -run 'Noninteractive|NoFlagOr|BypassIsNamed'
+--- FAIL: TestConfigTrustNoninteractiveNeedsNoTerminalAndIsAudited (0.00s)
+    humanonly_test.go:206: noninteractive trust with no terminal: code=64 out="" err="error: config trust changes what yo-human trusts, so only the human may run it, at their own terminal, and this process has none\nvalid: the human running yo-human config trust in their own terminal, where they type yes to confirm\nfix: stop and ask the human to run `yo-human config trust` in their terminal; never run it for them\n"; want exit 0 and RESULT ok
+    humanonly_test.go:207: stdout = "", want it to contain "trusting"
+    humanonly_test.go:207: stdout = "", want it to contain ".yo-human.yaml"
+    humanonly_test.go:208: log.jsonl has no trust line with noninteractive and path="$TMPDIR/TestConfigTrustNoninteractiveNeedsNoTerminalAndIsAudited2316993153/002/.yo-human.yaml": []
+    humanonly_test.go:210: check after a noninteractive trust = "RESULT ok\nconfig ok: 3 channels, 2 levels\nchannels.journal <- $TMPDIR/TestConfigTrustNoninteractiveNeedsNoTerminalAndIsAudited2316993153/001/.config/yo-human/config.yaml\nchannels.pager <- $TMPDIR/TestConfigTrustNoninteractiveNeedsNoTerminalAndIsAudited2316993153/001/.config/yo-human/config.yaml\nchannels.phone <- $TMPDIR/TestConfigTrustNoninteractiveNeedsNoTerminalAndIsAudited2316993153/001/.config/yo-human/config.yaml\nlevels <- $TMPDIR/TestConfigTrustNoninteractiveNeedsNoTerminalAndIsAudited2316993153/001/.config/yo-human/config.yaml\nversion <- $TMPDIR/TestConfigTrustNoninteractiveNeedsNoTerminalAndIsAudited2316993153/001/.config/yo-human/config.yaml\n", want it to contain "deadline <- "
+--- FAIL: TestSecretSetNoninteractiveNeedsNoTerminalAndIsAuditedWithoutTheValue (0.00s)
+    humanonly_test.go:217: noninteractive secret set with no terminal: code=64 out="" err="error: secret set pd-critical changes what yo-human trusts, so only the human may run it, at their own terminal, and this process has none\nvalid: the human running yo-human secret set pd-critical in their own terminal, where they type yes to confirm\nfix: stop and ask the human to run `yo-human secret set pd-critical` in their terminal; never run it for them\n"; want exit 0 and RESULT ok
+    humanonly_test.go:219: secrets file = "", want it to contain "pd-critical: FAKE-SCRIPTED-VALUE"
+    humanonly_test.go:220: log.jsonl has no secret-set line with noninteractive and name="pd-critical": []
+--- FAIL: TestNoFlagOrOtherValueSkipsTheTerminal (0.03s)
+    humanonly_test.go:233: trust --yes with no terminal: {code:0 out:RESULT ok
+        trusting "$TMPDIR/TestNoFlagOrOtherValueSkipsTheTerminal3471895862/002/.yo-human.yaml"
+        trusted; a change to the file un-trusts it until you run this again
+         err:}; want exit 64
+    humanonly_test.go:235: secret set --yes with no terminal: {code:0 out:RESULT ok
+        stored secret pd-critical
+         err:}; want exit 64
+    humanonly_test.go:241: a secret was stored: <nil>
+--- FAIL: TestTheBypassIsNamedOnlyWhereItIsRead (0.00s)
+    humanonly_test.go:259: ../../internal/cli/cli.go:31 names the bypass outside the line that reads it: config trust [--yes] [<file>]    the human trusts a project file, at their terminal (--yes: their own scripts)
+    humanonly_test.go:259: ../../internal/cli/cli.go:32 names the bypass outside the line that reads it: secret set <name> [--yes]        the human stores a secret from stdin, at their terminal (--yes: their own scripts)
+    humanonly_test.go:265: usage = "usage: yo-human [--json] [--config <file>] <command>\n\ncommands:\n  version                          print the version\n  levels                           the configured levels, quietest first\n  notify --level <name> --title <text> [--ask <text>] [flags]\n                                   send a message at a level; the other flags are in the error a bad call prints\n  resolve --dedup-key <key>        close an incident\n  page [--low] <summary> [details] [dedup-key] | page [--low] --resolve <dedup-key>\n                                   the drop-in for the old paging script, mapped by the config's shim: block\n  flush                            send whatever is queued and due\n  status                           the queue, the dead letter and the open incidents\n  channel test <instance>          send one test message through one channel\n  config init|check|schema         write, validate or print the schema of a config\n  config trust [--yes] [<file>]    the human trusts a project file, at their terminal (--yes: their own scripts)\n  secret set <name> [--yes]        the human stores a secret from stdin, at their terminal (--yes: their own scripts)\n  secret list                      list secret names and sizes\n", must not contain "--yes"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.050s
+FAIL
+[exit 1]
+
+$ go test -tags e2e -count=1 ./test/e2e -run 'Noninteractive'
+--- FAIL: TestNoninteractiveIsForScriptsAndIsAudited (0.03s)
+    humanonly_test.go:153: yo-human secret set pd-script --yes -> exit 0
+        RESULT ok
+        stored secret pd-script
+    humanonly_test.go:153: exit code 0, want 64
+        stdout:
+        RESULT ok
+        stored secret pd-script
+        stderr:
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	0.381s
+FAIL
+[exit 1]
+

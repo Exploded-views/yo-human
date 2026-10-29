@@ -1,0 +1,63 @@
+KILLED  any value of the variable skips the terminal
+  internal/cli/tty.go: 'return os.Getenv("YO_HUMAN_NONINTERACTIVE") == "1"' -> 'return os.Getenv("YO_HUMAN_NONINTERACTIVE") != ""'
+  --- FAIL: TestNoFlagOrOtherValueSkipsTheTerminal (0.03s)
+      humanonly_test.go:238: YO_HUMAN_NONINTERACTIVE=true: code=0 out="RESULT ok\nstored secret pd-critical\n" err=""; want exit 64, no stdout and "error: " on stderr
+      humanonly_test.go:238: YO_HUMAN_NONINTERACTIVE=true stderr = "", want it to contain "ask the human to run"
+  [go test -count=1 ./internal/cli -run 'Noninteractive|NoFlagOr|HumansTerminal' exit 1]
+
+KILLED  the variable is ignored
+  internal/cli/tty.go: 'return os.Getenv("YO_HUMAN_NONINTERACTIVE") == "1"' -> 'return false'
+  --- FAIL: TestConfigTrustNoninteractiveNeedsNoTerminalAndIsAudited (0.00s)
+      humanonly_test.go:206: noninteractive trust with no terminal: code=64 out="" err="error: config trust changes what yo-human trusts, so only the human may run it, at their own terminal, and this process has none\nvalid: the human running yo-human config trust in their own terminal, where they type yes to confirm\nfix: stop and ask the human to run `yo-human config trust` in their terminal; neve
+      humanonly_test.go:207: stdout = "", want it to contain "trusting"
+  --- FAIL: TestSecretSetNoninteractiveNeedsNoTerminalAndIsAuditedWithoutTheValue (0.00s)
+      humanonly_test.go:217: noninteractive secret set with no terminal: code=64 out="" err="error: secret set pd-critical changes what yo-human trusts, so only the human may run it, at their own terminal, and this process has none\nvalid: the human running yo-human secret set pd-critical in their own terminal, where they type yes to confirm\nfix: stop and ask the human to run `yo-human secret set p
+      humanonly_test.go:219: secrets file = "", want it to contain "pd-critical: FAKE-SCRIPTED-VALUE"
+  [go test -count=1 ./internal/cli -run 'Noninteractive|NoFlagOr' exit 1]
+
+KILLED  a noninteractive run is not audited
+  internal/cli/tty.go: 'return audit(event, record)' -> 'return nil'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  [go test -count=1 ./internal/cli -run 'Noninteractive' exit 1]
+
+KILLED  the refusal names the variable
+  internal/cli/tty.go: 'never run it for them"' -> 'never run it for them (or set YO_HUMAN_NONINTERACTIVE=1)"'
+  --- FAIL: TestConfigTrustNeedsTheHumansTerminal (0.00s)
+      humanonly_test.go:55: trust with no terminal stderr = "error: config trust changes what yo-human trusts, so only the human may run it, at their own terminal, and this process has none\nvalid: the human running yo-human config trust in their own terminal, where they type yes to confirm\nfix: stop and ask the human to run `yo-human config trust` in their terminal; never run it for them (or set Y
+  --- FAIL: TestSecretSetNeedsTheHumansTerminal (0.00s)
+      humanonly_test.go:88: secret set with no terminal stderr = "error: secret set pd-critical changes what yo-human trusts, so only the human may run it, at their own terminal, and this process has none\nvalid: the human running yo-human secret set pd-critical in their own terminal, where they type yes to confirm\nfix: stop and ask the human to run `yo-human secret set pd-critical` in their termin
+  --- FAIL: TestNoFlagOrOtherValueSkipsTheTerminal (0.00s)
+      humanonly_test.go:238: YO_HUMAN_NONINTERACTIVE=true stderr = "error: secret set pd-critical changes what yo-human trusts, so only the human may run it, at their own terminal, and this process has none\nvalid: the human running yo-human secret set pd-critical in their own terminal, where they type yes to confirm\nfix: stop and ask the human to run `yo-human secret set pd-critical` in their term
+      humanonly_test.go:238: YO_HUMAN_NONINTERACTIVE=yes stderr = "error: secret set pd-critical changes what yo-human trusts, so only the human may run it, at their own terminal, and this process has none\nvalid: the human running yo-human secret set pd-critical in their own terminal, where they type yes to confirm\nfix: stop and ask the human to run `yo-human secret set pd-critical` in their termi
+  --- FAIL: TestTheBypassIsNamedOnlyWhereItIsRead (0.00s)
+      humanonly_test.go:258: ../../internal/cli/tty.go:29 names the bypass outside the line that reads it: "stop and ask the human to run `yo-human "+command+"` in their terminal; never run it for them (or set YO_HUMAN_NONINTERACTIVE=1)", command)
+  [go test -count=1 ./internal/cli -run 'HumansTerminal|NoFlagOr|BypassIsNamed' exit 1]
+
+SURVIVED the explicit file's bytes come from a second open of the path
+  internal/config/private.go: 'data, err := readOpen(f)' -> 'data, err := readCapped(p.Explicit)'
+  [go test -count=1 ./internal/config exit 0]
+
+KILLED  the path is not checked to still name the opened file
+  internal/config/private.go: 'err != nil || !os.SameFile(fi, now)' -> 'err != nil'
+  FAIL	github.com/Exploded-views/yo-human/internal/config [build failed]
+  [go test -count=1 ./internal/config exit 1]
+
+SURVIVED ownership judged from a stat of the path, not the descriptor
+  internal/config/private.go: 'usersOwn(fi, filepath.Dir(real))' -> 'usersOwn(func() os.FileInfo { s, _ := os.Stat(real); return s }(), filepath.Dir(real))'
+  [go test -count=1 ./internal/config exit 0]
+
+KILLED  the directory is not checked
+  internal/config/private.go: 'return err == nil && private(fi) && private(d)' -> 'return err == nil && private(fi)'
+  FAIL	github.com/Exploded-views/yo-human/internal/config [build failed]
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  e2e: the variable is ignored
+  internal/cli/tty.go: 'return os.Getenv("YO_HUMAN_NONINTERACTIVE") == "1"' -> 'return false'
+  --- FAIL: TestNoninteractiveIsForScriptsAndIsAudited (0.02s)
+      humanonly_test.go:153: yo-human secret set pd-script --yes -> exit 64
+          error: secret set takes one name and reads the value from stdin; a value is never accepted as an argument
+  [go test -tags e2e -count=1 ./test/e2e -run 'Noninteractive' exit 1]
+
+# The two survivors are masked by the identity check: a file swapped at the path after the open fails os.SameFile(descriptor, stat of the resolved path) and is refused before its bytes or mode are used, so re-reading or re-stating the path can only differ if an attacker swaps the file away and back again inside the window. Reading and judging through the descriptor closes that double swap too; no single-swap test can tell the two apart, so they are recorded as equivalent under the identity check rather than killed.
+
+# Erratum (added in the fix4 round): entries above whose output is only "[build failed]" did not compile, so they were not killed by a test. The mutation runner now marks them BUILD. Each was rerun as a compilable mutant (or, where the code was replaced since, on the code that replaced it) in security-fix4-mutants.txt, "Reruns" section.

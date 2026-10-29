@@ -1,0 +1,12 @@
+{
+ "must": [
+  true,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  false
+ ],
+ "note": "The reply treats the page as delivered and stops running yo-human commands, but it does not say it keeps the dedup key for a later resolve and instead says to use a new key for any new notification; it writes a session note about the successful send, not a failure.",
+ "pass": false
+}

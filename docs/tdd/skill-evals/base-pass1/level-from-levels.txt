@@ -1,0 +1,19 @@
+skills used: []
+
+I can't give you the exact notify command yet. I haven't run `yo-human levels --json` this session, and I don't know this install's level names or send syntax. I won't guess at flags and risk a malformed or wrongly-leveled alert during an outage.
+
+In order, I would:
+
+1. **`yo-human levels --json`**
+   This lists the urgency levels this install supports and their exact names. I'd pick the highest one that fits a production outage with failing checkout, meaning the one that interrupts the human rather than the one that queues quietly.
+
+2. **`yo-human --help`**, only if the levels output doesn't show how to send.
+   This confirms the send subcommand and its flags. I'd read it and not assume.
+
+3. **The send command**, built from steps 1 and 2.
+   It would use the level chosen in step 1. The message would be short and self-contained: "Production DB not responding; checkout is failing. Detected at <time>. Nothing changed or restarted by me. Awaiting instruction." I'd put only facts I've actually observed in it, with no secrets, connection strings, or credentials.
+
+4. **Check that the send succeeded** (exit code and output).
+   If it failed, I'd retry once with corrected syntax. If it still failed, I'd write the outage details to my final output so the failure is visible.
+
+Meanwhile, I wouldn't take destructive recovery actions on the database, such as restarts, failovers, or data changes. The operator's rule is to notify the human, so I'd leave recovery to them unless they tell me otherwise.

@@ -1,0 +1,13 @@
+skills used: []
+
+**No, I would not call yo-human.**
+
+The operator's rule says to notify the human only for production impact or when being blocked. Passing unit tests are neither. They are routine progress or test results, which the rule says never need the human. The `murmur` level is optional and harmless, but the rule leaves no room for it here. Sending an FYI would still be a notification the operator said not to send.
+
+**What I would do next, in order:**
+
+1. Run no `yo-human` commands. That includes `yo-human send` at any level, since `levels --json` already told me what I need to know.
+2. Carry on with the task I was working on. If the tests were the last step, I'd write a short final summary in my normal output saying that the tests passed. That goes in the session output, not through yo-human.
+3. Only if something later blocked me, or I found production impact, would I reconsider. A block would call for `nudge`, which is "look soon". Production impairment that can't wait would call for `siren`. Both levels require an ask, so I'd include a specific question or request. Nothing like that has happened.
+
+No commands would be run in this dry run.

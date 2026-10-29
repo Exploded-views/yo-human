@@ -1,0 +1,118 @@
+# First pass (14 mutants): 3 survived. The stat before the open refuses a FIFO, so O_NONBLOCK only matters if the file is swapped between the two; and the hard-link scan of the user directory caught every symlinked path the tests used. Two tests were added (a FIFO swapped in through the bodyOpenGap seam, and a link to a file in a subdirectory of the user config directory), then the survivors were rerun with a third mutant for the open-descriptor check.
+
+KILLED  a non-regular body is opened
+  internal/cli/bodyfile.go: 'if !fi.Mode().IsRegular() {
+		return nil, notRegularBody(file)
+	}
+	if e.inUserConfig' -> 'if false {
+		return nil, notRegularBody(file)
+	}
+	if e.inUserConfig'
+  --- FAIL: TestBodyFileTakesARegularFileOnlyAndNeverBlocks (0.07s)
+      bodyfile_test.go:82: --body-file $TMPDIR/TestBodyFileTakesARegularFileOnlyAndNeverBlocks3924584256/003/fifo: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "not a regular file" on stderr
+      bodyfile_test.go:82: --body-file /dev/null: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "not a regular file" on stderr
+  [go test -count=1 ./internal/cli -run 'BodyFile' -timeout 60s exit 1]
+
+SURVIVED the body is opened blocking
+  internal/cli/bodyfile.go: 'const bodyFlags = os.O_RDONLY | syscall.O_NONBLOCK | syscall.O_NOCTTY' -> 'const bodyFlags = os.O_RDONLY | syscall.O_NOCTTY'
+  [go test -count=1 ./internal/cli -run 'BodyFile' -timeout 60s exit 0]
+
+KILLED  the user config directory is not checked
+  internal/cli/bodyfile.go: 'if e.inUserConfig(file, fi) {' -> 'if false {'
+  --- FAIL: TestBodyFileRefusesTheUserConfigDirectory (0.14s)
+      bodyfile_test.go:25: --body-file $TMPDIR/TestBodyFileRefusesTheUserConfigDirectory3563716522/001/.config/yo-human/secrets.yaml: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err="warning: the message held the value of secret ntfy-topic, pd-critical; it was replaced with REDACTED before it was queued\nvalid: a messa
+      bodyfile_test.go:26: stderr = "warning: the message held the value of secret ntfy-topic, pd-critical; it was replaced with REDACTED before it was queued\nvalid: a message that says where a secret is, never its value\nfix: never put a secret in a message; tell the human which secret was exposed so they can rotate it\n", want it to contain "user config directory"
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 1]
+
+KILLED  a hard link to the secrets file passes
+  internal/cli/bodyfile.go: 'if other, err := os.Stat(filepath.Join(dir, ent.Name())); err == nil && os.SameFile(fi, other) {' -> 'if other, err := os.Stat(filepath.Join(dir, ent.Name())); err == nil && false && os.SameFile(fi, other) {'
+  --- FAIL: TestBodyFileRefusesTheUserConfigDirectory (0.05s)
+      bodyfile_test.go:25: --body-file $TMPDIR/TestBodyFileRefusesTheUserConfigDirectory3490519074/001/hard.txt: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err="warning: the message held the value of secret ntfy-topic, pd-critical; it was replaced with REDACTED before it was queued\nvalid: a message that says where a 
+      bodyfile_test.go:26: stderr = "warning: the message held the value of secret ntfy-topic, pd-critical; it was replaced with REDACTED before it was queued\nvalid: a message that says where a secret is, never its value\nfix: never put a secret in a message; tell the human which secret was exposed so they can rotate it\n", want it to contain "user config directory"
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 1]
+
+SURVIVED the path is not resolved
+  internal/cli/bodyfile.go: 'if real, err := filepath.EvalSymlinks(abs); err == nil {' -> 'if real := abs; true {'
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 0]
+
+KILLED  containment accepts .. paths
+  internal/cli/bodyfile.go: 'rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))' -> '!filepath.IsAbs(rel)'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 1]
+
+KILLED  no redaction
+  internal/cli/redact.go: '*f, hit = strings.ReplaceAll(*f, v, redacted), true' -> 'hit = true'
+  --- FAIL: TestStoredSecretValuesAreRedactedBeforeEnqueue (0.23s)
+      bodyfile_test.go:45: phone message = "token FAKE-PD-CRITICAL\nrotate FAKE-PD-CRITICAL\nthe key is FAKE-PD-CRITICAL\nhttps://example.com/x?k=FAKE-PD-CRITICAL\nk-FAKE-PD-CRITICAL\np-FAKE-PD-CRITICAL\na-FAKE-PD-CRITICAL\nFAKE-PD-CRITICAL\nhttps://example.com/a?FAKE-PD-CRITICAL", must not contain "FAKE-PD-CRITICAL"
+      bodyfile_test.go:45: pager message = "token FAKE-PD-CRITICAL\nrotate FAKE-PD-CRITICAL\nthe key is FAKE-PD-CRITICAL\nhttps://example.com/x?k=FAKE-PD-CRITICAL\nk-FAKE-PD-CRITICAL\np-FAKE-PD-CRITICAL\na-FAKE-PD-CRITICAL\nFAKE-PD-CRITICAL\nhttps://example.com/a?FAKE-PD-CRITICAL", must not contain "FAKE-PD-CRITICAL"
+  [go test -count=1 ./internal/cli -run 'Redacted' exit 1]
+
+KILLED  the body field is not redacted
+  internal/cli/redact.go: 'fields := []*string{&m.Title, &m.Ask, &m.Body,' -> 'fields := []*string{&m.Title, &m.Ask,'
+  --- FAIL: TestStoredSecretValuesAreRedactedBeforeEnqueue (0.23s)
+      bodyfile_test.go:45: phone message = "token REDACTED\nrotate REDACTED\nthe key is FAKE-PD-CRITICAL\nhttps://example.com/x?k=REDACTED\nk-REDACTED\np-REDACTED\na-REDACTED\nREDACTED\nhttps://example.com/a?REDACTED", must not contain "FAKE-PD-CRITICAL"
+      bodyfile_test.go:45: pager message = "token REDACTED\nrotate REDACTED\nthe key is FAKE-PD-CRITICAL\nhttps://example.com/x?k=REDACTED\nk-REDACTED\np-REDACTED\na-REDACTED\nREDACTED\nhttps://example.com/a?REDACTED", must not contain "FAKE-PD-CRITICAL"
+  [go test -count=1 ./internal/cli -run 'Redacted' exit 1]
+
+KILLED  action labels and URLs are not redacted
+  internal/cli/redact.go: 'fields = append(fields, &m.Actions[i].Label, &m.Actions[i].URL)' -> '_ = i'
+  --- FAIL: TestStoredSecretValuesAreRedactedBeforeEnqueue (0.24s)
+      bodyfile_test.go:45: phone message = "token REDACTED\nrotate REDACTED\nthe key is REDACTED\nhttps://example.com/x?k=REDACTED\nk-REDACTED\np-REDACTED\na-REDACTED\nFAKE-PD-CRITICAL\nhttps://example.com/a?FAKE-PD-CRITICAL", must not contain "FAKE-PD-CRITICAL"
+      bodyfile_test.go:45: pager message = "token REDACTED\nrotate REDACTED\nthe key is REDACTED\nhttps://example.com/x?k=REDACTED\nk-REDACTED\np-REDACTED\na-REDACTED\nFAKE-PD-CRITICAL\nhttps://example.com/a?FAKE-PD-CRITICAL", must not contain "FAKE-PD-CRITICAL"
+  [go test -count=1 ./internal/cli -run 'Redacted' exit 1]
+
+KILLED  no warning
+  internal/cli/redact.go: 'if len(found) > 0 {' -> 'if false {'
+  --- FAIL: TestStoredSecretValuesAreRedactedBeforeEnqueue (0.22s)
+      bodyfile_test.go:41: stderr = "", want it to contain "warning: "
+      bodyfile_test.go:41: stderr = "", want it to contain "pd-critical"
+  [go test -count=1 ./internal/cli -run 'Redacted' exit 1]
+
+KILLED  the resolve note is not redacted
+  internal/cli/resolve.go: 'if text != "" {
+		if err := e.redact(&text)' -> 'if false {
+		if err := e.redact(&text)'
+  --- FAIL: TestStoredSecretValuesAreRedactedBeforeEnqueue (0.23s)
+      bodyfile_test.go:58: resolve note = "Resolved: t\n\nrotated FAKE-PD-CRITICAL\n\nplain\n\n", must not contain "FAKE-PD-CRITICAL"
+  [go test -count=1 ./internal/cli -run 'Redacted' exit 1]
+
+KILLED  notify does not redact
+  internal/cli/notify.go: 'if err := e.redact(messageFields(&call.msg)...); err != nil {' -> 'if err := e.redact(); err != nil {'
+  --- FAIL: TestStoredSecretValuesAreRedactedBeforeEnqueue (0.27s)
+      bodyfile_test.go:41: stderr = "", want it to contain "warning: "
+      bodyfile_test.go:41: stderr = "", want it to contain "pd-critical"
+  [go test -count=1 ./internal/cli -run 'Redacted' exit 1]
+
+KILLED  e2e: no redaction
+  internal/cli/redact.go: '*f, hit = strings.ReplaceAll(*f, v, redacted), true' -> 'hit = true'
+  --- FAIL: TestASecretValueInAMessageIsRedacted (0.05s)
+      bodyfile_test.go:50: yo-human notify --level note --title Disk is full on build-7 --ask Free some space --project proj --agent tester --body the routing key is ROUTINGKEY-FAKE-ONE -> exit 0
+          RESULT delivered <ULID>
+  [go test -tags e2e -count=1 ./test/e2e -run 'BodyFile|IsRedacted' exit 1]
+
+SURVIVED e2e: the body is opened blocking
+  internal/cli/bodyfile.go: 'const bodyFlags = os.O_RDONLY | syscall.O_NONBLOCK | syscall.O_NOCTTY' -> 'const bodyFlags = os.O_RDONLY | syscall.O_NOCTTY'
+  [go test -tags e2e -count=1 ./test/e2e -run 'BodyFile|IsRedacted' exit 0]
+
+# Second pass, after the added tests
+
+KILLED  the body is opened blocking
+  internal/cli/bodyfile.go: 'const bodyFlags = os.O_RDONLY | syscall.O_NONBLOCK | syscall.O_NOCTTY' -> 'const bodyFlags = os.O_RDONLY | syscall.O_NOCTTY'
+  --- FAIL: TestBodyFileSwappedForAFIFOIsRefusedWithoutBlocking (5.02s)
+      bodyfile_test.go:109: the open of a swapped-in FIFO blocked
+  [go test -count=1 ./internal/cli -run 'BodyFile' -timeout 120s exit 1]
+
+KILLED  the path is not resolved
+  internal/cli/bodyfile.go: 'if real, err := filepath.EvalSymlinks(abs); err == nil {' -> 'if real := abs; true {'
+  --- FAIL: TestBodyFileRefusesTheUserConfigDirectory (0.05s)
+      bodyfile_test.go:28: --body-file $TMPDIR/TestBodyFileRefusesTheUserConfigDirectory139769225/004/deep.txt: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "--body-file" on stderr
+      bodyfile_test.go:29: stderr = "", want it to contain "user config directory"
+  [go test -count=1 ./internal/cli -run 'BodyFile' -timeout 120s exit 1]
+
+KILLED  the opened file is not compared with the checked one
+  internal/cli/bodyfile.go: 'err != nil || !os.SameFile(fi, got)' -> 'err != nil'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  [go test -count=1 ./internal/cli -run 'BodyFile' -timeout 120s exit 1]
+
+
+# Erratum (added in the fix4 round): entries above whose output is only "[build failed]" did not compile, so they were not killed by a test. The mutation runner now marks them BUILD. Each was rerun as a compilable mutant (or, where the code was replaced since, on the code that replaced it) in security-fix4-mutants.txt, "Reruns" section.

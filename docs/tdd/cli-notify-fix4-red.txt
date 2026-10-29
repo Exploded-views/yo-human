@@ -1,0 +1,27 @@
+# what this is: task 11 fix round 4 (RED): ntfy treats a 404 on a cancel as success (an old server or a proxy that does not route DELETE answers 404, and the scheduled page then fires silently); a cancel that fails during resolve, or for a send that lands after the resolve, is reported but never reaches the dead letter (status cannot show it) or the retry queue; a late-landing send's resolve note is not pinned to the destination that send went through
+# command: go test -count=1 -timeout 250s ./internal/core ./internal/cli ./internal/channel/ntfy
+--- FAIL: TestResolveDeadLettersACancelTheProviderRefused (0.09s)
+    cancel_dead_test.go:44: dead letter []; want the refused cancel kept there, so status shows the human may still be paged
+--- FAIL: TestResolveRetriesACancelThatFailedForNow (0.08s)
+    cancel_dead_test.go:56: resolve = phone:dead:provider refused;, provider refused; want the failed cancel reported and queued for a retry
+--- FAIL: TestALateScheduledSendWhoseCancelIsRefusedIsDeadLettered (0.07s)
+    cancel_dead_test.go:109: dead letter []; a scheduled page that landed after the resolve and could not be cancelled must be visible
+--- FAIL: TestALateResolveNoteIsPinnedToTheDestinationTheSendWentThrough (0.12s)
+    cancel_dead_test.go:119: notes sent 1; the late page went through one.example, its note must not go to two.example
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	20.838s
+--- FAIL: TestResolveAndStatusShowACancelTheProviderRefused (0.19s)
+    round4_test.go:47: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "dead: 1"
+    round4_test.go:47: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "kind=cancel"
+    round4_test.go:47: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "needs v2.16 or later"
+    round4_test.go:47: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "the human may still be paged"
+    round4_test.go:48: status --json = "{\"dead\":[],\"held\":[],\"incidents\":[],\"inflight\":0,\"queued\":[],\"status\":\"ok\",\"version\":1}\n", want it to contain "\"kind\":\"cancel\""
+    round4_test.go:48: status --json = "{\"dead\":[],\"held\":[],\"incidents\":[],\"inflight\":0,\"queued\":[],\"status\":\"ok\",\"version\":1}\n", want it to contain "the human may still be paged"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	14.473s
+--- FAIL: TestCancelThatAnswers404IsPermanentAndSaysThePageMayStillFire (0.01s)
+    ntfy_test.go:333: cancel answered 404: err <nil>; want a permanent error (an old server or a proxy may not route DELETE)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.152s
+FAIL
+# exit: 1

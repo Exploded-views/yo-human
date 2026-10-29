@@ -1,0 +1,10 @@
+skills used: []
+
+The page went out, so I'd run no more notify or flush commands.
+
+- **Delivery:** `RESULT ok` and `phone: sent` mean the siren reached the human's phone. A second `notify` would only page them again. I wouldn't reuse `checkout-FAKE`, and I wouldn't send a lower-level follow-up.
+- **Session message:** The "tell the human in your session" fallback only applies once retries run out, and they didn't. I'd still put one plain line in my session output: "Sent a siren, 'Checkout failing' (dedup key checkout-FAKE), and it was delivered to the phone."
+- **Next steps:** I'd go back to the task I was doing. If I could do anything useful about checkout and it was in scope, I'd do that. I wouldn't wait on a reply, since I'm unattended.
+- **If the problem clears:** I'd run `yo-human resolve` for that dedup key, but only after checking the yo-human skill for its exact syntax. I won't guess the flags. I'd resolve only if I had verified that checkout works again.
+
+Commands run right now: none.

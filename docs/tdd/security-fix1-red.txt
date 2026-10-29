@@ -1,0 +1,168 @@
+$ go test -count=1 ./internal/config -run 'Explicit|UntrustedProjectNotice'
+--- FAIL: TestExplicitFileOutsideTheUserDirNeedsTrust (0.00s)
+    explicit_test.go:52: error = <nil>, want a *problem.Problem
+--- FAIL: TestExplicitFileOutsideTheUserDirMayNotDefineALogChannel (0.00s)
+    explicit_test.go:71: error = <nil>, want a *problem.Problem
+--- FAIL: TestExplicitFileInTheUserDirWritableByOthersNeedsTrust (0.00s)
+    explicit_test.go:101: error = <nil>, want a *problem.Problem
+--- FAIL: TestExplicitLinkFromTheUserDirToOutsideNeedsTrust (0.00s)
+    explicit_test.go:114: error = <nil>, want a *problem.Problem
+--- FAIL: TestUntrustedProjectNoticeTellsTheHuman (0.00s)
+    explicit_test.go:129: notice = "ignoring the project config \"$TMPDIR/TestUntrustedProjectNoticeTellsTheHuman432750641/001/cwd/.yo-human.yaml\": it is not trusted, or has changed since it was; read it, then run `yo-human config trust $TMPDIR/TestUntrustedProjectNoticeTellsTheHuman432750641/001/cwd/.yo-human.yaml`"; want it to tell the human to run config trust in their own terminal
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.020s
+FAIL
+[exit 1]
+
+$ go test -count=1 ./internal/cli -run 'HumansTerminal|AsksOnTheTerminal|FromThePipe|CallerCannot|WithYes|YesAppears'
+--- FAIL: TestConfigTrustNeedsTheHumansTerminal (0.02s)
+    humanonly_test.go:55: trust with no terminal: code=0 out="RESULT ok\ntrusting \"$TMPDIR/TestConfigTrustNeedsTheHumansTerminal4246144630/002/.yo-human.yaml\"\ntrusted; a change to the file un-trusts it until you run this again\n" err=""; want exit 64, no stdout and "error: " on stderr
+    humanonly_test.go:55: trust with no terminal stderr = "", want it to contain "ask the human to run"
+    humanonly_test.go:55: trust with no terminal stderr = "", want it to contain "in their terminal"
+    humanonly_test.go:55: trust with no terminal stderr = "", want it to contain "yo-human config trust"
+    humanonly_test.go:57: trust.json written without the human: <nil>
+    humanonly_test.go:59: check after a refused trust = "warning: secret \"pd-critical\", used by channels.pager.routing_key, is not set\nvalid: a name listed by `yo-human secret list`\nfix: op read \"op://<vault>/<item>/<field>\" | yo-human secret set pd-critical\nwarning: secret \"ntfy-topic\", used by channels.phone.topic, is not set\nvalid: a name listed by `yo-human secret list`\nfix: op read \"op://<vault>/<item>/<field>\" | yo-human secret set ntfy-topic\n", want it to contain "ignoring the project config"
+--- FAIL: TestConfigTrustAsksOnTheTerminal (0.02s)
+    humanonly_test.go:69: trust answered no: code=0 out="RESULT ok\ntrusting \"$TMPDIR/TestConfigTrustAsksOnTheTerminal194107190/002/.yo-human.yaml\"\ntrusted; a change to the file un-trusts it until you run this again\n" err=""; want exit 64, no stdout and "did not confirm" on stderr
+    humanonly_test.go:70: terminal = "", want it to contain "deadline \"7s\""
+    humanonly_test.go:70: terminal = "", want it to contain "Type yes"
+    humanonly_test.go:72: check after no = "warning: secret \"pd-critical\", used by channels.pager.routing_key, is not set\nvalid: a name listed by `yo-human secret list`\nfix: op read \"op://<vault>/<item>/<field>\" | yo-human secret set pd-critical\nwarning: secret \"ntfy-topic\", used by channels.phone.topic, is not set\nvalid: a name listed by `yo-human secret list`\nfix: op read \"op://<vault>/<item>/<field>\" | yo-human secret set ntfy-topic\n", want it to contain "ignoring the project config"
+    humanonly_test.go:77: terminal = "", want it to contain "Type yes"
+--- FAIL: TestSecretSetNeedsTheHumansTerminal (0.01s)
+    humanonly_test.go:88: secret set with no terminal: code=0 out="RESULT ok\nstored secret pd-critical\n" err=""; want exit 64, no stdout and "error: " on stderr
+    humanonly_test.go:88: secret set with no terminal stderr = "", want it to contain "ask the human to run"
+    humanonly_test.go:88: secret set with no terminal stderr = "", want it to contain "in their terminal"
+    humanonly_test.go:88: secret set with no terminal stderr = "", want it to contain "yo-human secret set"
+    humanonly_test.go:90: secrets file written without the human: <nil>
+--- FAIL: TestSecretSetTakesTheValueFromThePipeAndTheYesFromTheTerminal (0.02s)
+    humanonly_test.go:109: terminal = "", want it to contain "pd-critical"
+    humanonly_test.go:109: terminal = "", want it to contain "Type yes"
+    humanonly_test.go:112: answer "nope\n": code=0 err="" stored=true; want stored=false
+    humanonly_test.go:109: terminal = "", want it to contain "pd-critical"
+    humanonly_test.go:109: terminal = "", want it to contain "Type yes"
+--- FAIL: TestExplicitConfigFromTheCallerCannotExfiltrateASecret (0.06s)
+    humanonly_test.go:131: notify under a hostile --config: code=0 out="RESULT delivered <ULID>\nx: sent\n" err=""; want exit 78, no stdout and "not trusted" on stderr
+    humanonly_test.go:134: notify under a hostile YO_HUMAN_CONFIG: code=0 out="RESULT delivered <ULID>\nx: sent\n" err=""; want exit 78, no stdout and "not trusted" on stderr
+    humanonly_test.go:136: the hostile channel was sent 2 messages
+    humanonly_test.go:138: a flush under the hostile --config a next.do could name: code=0 out="RESULT ok\n" err=""; want exit 78, no stdout and "not trusted" on stderr
+--- FAIL: TestExplicitConfigFromTheCallerCannotAppendToAFile (0.06s)
+    humanonly_test.go:163: notify under a trusted --config with a log channel: code=0 out="RESULT delivered <ULID>\nj: sent\nphone: sent\n" err=""; want exit 78, no stdout and "log channel" on stderr
+    humanonly_test.go:165: the log channel wrote $TMPDIR/TestExplicitConfigFromTheCallerCannotAppendToAFile810393053/001/.zshrc: <nil>
+--- FAIL: TestConfigTrustWithYesNeedsNoTerminalAndIsAudited (0.00s)
+    humanonly_test.go:203: trust --yes with no terminal: code=64 out="" err="error: config trust takes at most one file\nvalid: yo-human config trust [<path to .yo-human.yaml or .yo-human.json>]\nfix: read the file, then run `yo-human config trust ./.yo-human.yaml`\n"; want exit 0 and RESULT ok
+    humanonly_test.go:204: stdout = "", want it to contain "deadline \"7s\""
+    humanonly_test.go:205: log.jsonl has no trust line with noninteractive and path="$TMPDIR/TestConfigTrustWithYesNeedsNoTerminalAndIsAudited1758822357/002/.yo-human.yaml": []
+    humanonly_test.go:207: check after trust --yes = "RESULT ok\nconfig ok: 3 channels, 2 levels\nchannels.journal <- $TMPDIR/TestConfigTrustWithYesNeedsNoTerminalAndIsAudited1758822357/001/.config/yo-human/config.yaml\nchannels.pager <- $TMPDIR/TestConfigTrustWithYesNeedsNoTerminalAndIsAudited1758822357/001/.config/yo-human/config.yaml\nchannels.phone <- $TMPDIR/TestConfigTrustWithYesNeedsNoTerminalAndIsAudited1758822357/001/.config/yo-human/config.yaml\nlevels <- $TMPDIR/TestConfigTrustWithYesNeedsNoTerminalAndIsAudited1758822357/001/.config/yo-human/config.yaml\nversion <- $TMPDIR/TestConfigTrustWithYesNeedsNoTerminalAndIsAudited1758822357/001/.config/yo-human/config.yaml\n", want it to contain "deadline <- "
+--- FAIL: TestSecretSetWithYesNeedsNoTerminalAndIsAuditedWithoutTheValue (0.00s)
+    humanonly_test.go:213: secret set --yes with no terminal: code=64 out="" err="error: secret set takes one name and reads the value from stdin; a value is never accepted as an argument\nvalid: yo-human secret set <name>, with the value piped in: op read \"op://<vault>/<item>/<field>\" | yo-human secret set <name>\nfix: remove the extra arguments and pipe the value in on stdin\n"; want exit 0 and RESULT ok
+    humanonly_test.go:215: secrets file = "", want it to contain "pd-critical: FAKE-SCRIPTED-VALUE"
+    humanonly_test.go:216: log.jsonl has no secret-set line with noninteractive and name="pd-critical": []
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.209s
+FAIL
+[exit 1]
+
+$ go test -tags e2e -count=1 ./test/e2e -run 'Caller|HumanOnly|FromAPipe|YesIsFor|UntrustedProject'
+--- FAIL: TestCallerConfigCannotExfiltrateASecret (0.04s)
+    humanonly_test.go:68: yo-human --config $TMPDIR/TestCallerConfigCannotExfiltrateASecret3080243570/001/work/hostile.yaml notify --level x --title t -> exit 0
+        RESULT delivered <ULID>
+        x: sent
+    humanonly_test.go:69: exit code 0, want 78
+        stdout:
+        RESULT delivered <ULID>
+        x: sent
+        stderr:
+--- FAIL: TestCallerConfigCannotAppendToAShellStartupFile (0.06s)
+    humanonly_test.go:92: yo-human config trust $TMPDIR/TestCallerConfigCannotAppendToAShellStartupFile3011069441/001/work/hostile.yaml -> exit 0
+        RESULT ok
+        trusting "$TMPDIR/TestCallerConfigCannotAppendToAShellStartupFile3011069441/001/work/hostile.yaml"
+        channel "j" has type "log"
+        channel "j" path $TMPDIR/TestCallerConfigCannotAppendToAShellStartupFile3011069441/001$HOME
+        level "x" use_when "anything"
+        level "x" sends to "j" (active), "phone" (active)
+        trusted; a change to the file un-trusts it until you run this again
+    humanonly_test.go:94: yo-human --config $TMPDIR/TestCallerConfigCannotAppendToAShellStartupFile3011069441/001/work/hostile.yaml notify --level x --title x $(touch pwned) y -> exit 0
+        RESULT delivered <ULID>
+        j: sent
+        phone: sent
+    humanonly_test.go:94: exit code 0, want 78
+        stdout:
+        RESULT delivered <ULID>
+        j: sent
+        phone: sent
+        stderr:
+--- FAIL: TestHumanOnlyCommandsRefuseWithoutATerminal (0.02s)
+    humanonly_test.go:111: yo-human config trust $TMPDIR/TestHumanOnlyCommandsRefuseWithoutATerminal3769280857/001/work/.yo-human.yaml -> exit 0
+        RESULT ok
+        trusting "$TMPDIR/TestHumanOnlyCommandsRefuseWithoutATerminal3769280857/001/work/.yo-human.yaml"
+        trusted; a change to the file un-trusts it until you run this again
+    humanonly_test.go:111: exit code 0, want 64
+        stdout:
+        RESULT ok
+        trusting "$TMPDIR/TestHumanOnlyCommandsRefuseWithoutATerminal3769280857/001/work/.yo-human.yaml"
+        trusted; a change to the file un-trusts it until you run this again
+        stderr:
+--- FAIL: TestSecretSetFromAPipeConfirmsOnTheTerminal (0.05s)
+    humanonly_test.go:130: yo-human secret set pd-other -> exit 0
+        RESULT ok
+        stored secret pd-other
+    humanonly_test.go:133: terminal transcript:
+        yes
+    humanonly_test.go:135: yo-human secret list -> exit 0
+        RESULT ok
+        bark-key 16 bytes
+        ntfy-token 14 bytes
+        ntfy-topic 14 bytes
+        pd-key 19 bytes
+        pd-other 19 bytes
+    humanonly_test.go:138: yo-human secret set pd-other -> exit 0
+        RESULT ok
+        stored secret pd-other
+    humanonly_test.go:139: exit code 0, want 64
+        stdout:
+        RESULT ok
+        stored secret pd-other
+        stderr:
+--- FAIL: TestYesIsForScriptsAndIsAudited (0.01s)
+    humanonly_test.go:152: yo-human secret set pd-script --yes -> exit 64
+        error: secret set takes one name and reads the value from stdin; a value is never accepted as an argument
+        valid: yo-human secret set <name>, with the value piped in: op read "op://<vault>/<item>/<field>" | yo-human secret set <name>
+        fix: remove the extra arguments and pipe the value in on stdin
+    humanonly_test.go:152: exit code 64, want 0
+        stdout:
+        stderr:
+        error: secret set takes one name and reads the value from stdin; a value is never accepted as an argument
+        valid: yo-human secret set <name>, with the value piped in: op read "op://<vault>/<item>/<field>" | yo-human secret set <name>
+        fix: remove the extra arguments and pipe the value in on stdin
+--- FAIL: TestUntrustedProjectConfigIsIgnoredUntilTrusted (0.15s)
+    shim_trust_test.go:65: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+        notice: ignoring the project config "$TMPDIR/TestUntrustedProjectConfigIsIgnoredUntilTrusted2201943687/001/work/.yo-human.yaml": it is not trusted, or has changed since it was; read it, then run `yo-human config trust $TMPDIR/TestUntrustedProjectConfigIsIgnoredUntilTrusted2201943687/001/work/.yo-human.yaml`
+    shim_trust_test.go:74: yo-human config trust $TMPDIR/TestUntrustedProjectConfigIsIgnoredUntilTrusted2201943687/001/work/.yo-human.yaml -> exit 0
+        RESULT ok
+        trusting "$TMPDIR/TestUntrustedProjectConfigIsIgnoredUntilTrusted2201943687/001/work/.yo-human.yaml"
+        channel "evil" has type "ntfy"
+        channel "evil" server "https://127.0.0.1:<port>"
+        channel "evil" topic uses secret "ntfy-topic"
+        level "page" use_when "Needs a human soon."
+        level "page" sends to "evil" (active)
+        trusted; a change to the file un-trusts it until you run this again
+    shim_trust_test.go:77: the human sees what they trust before typing yes:
+        yes
+    shim_trust_test.go:79: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester -> exit 0
+        RESULT delivered <ULID>
+        evil: sent
+    shim_trust_test.go:86: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+        notice: ignoring the project config "$TMPDIR/TestUntrustedProjectConfigIsIgnoredUntilTrusted2201943687/001/work/.yo-human.yaml": it is not trusted, or has changed since it was; read it, then run `yo-human config trust $TMPDIR/TestUntrustedProjectConfigIsIgnoredUntilTrusted2201943687/001/work/.yo-human.yaml`
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	1.196s
+FAIL
+[exit 1]
+

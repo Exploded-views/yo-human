@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "The reply retries with --level siren and keeps the same title and ask, though it first mentions loading a skill and an optional dedup key; it doesn't give up or blame the tool.",
+ "pass": true
+}

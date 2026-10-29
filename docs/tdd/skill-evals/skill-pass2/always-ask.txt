@@ -1,0 +1,32 @@
+skills used: ['yo-human-eval:yo-human']
+
+Level choice: **nudge**. The human should look within the hour and nothing is on fire. Production isn't impaired, so siren doesn't fit, and murmur is too quiet because something is needed. Nudge's `quiet_hours` is `hold`. If it's quiet hours, the message waits until they end, and that's intended. A nightly job failing doesn't justify waking them.
+
+I already have the levels output, so I wouldn't re-run `levels`. In order, I'd run:
+
+1. Set the sender identity (project name is a placeholder):
+   ```
+   export YO_HUMAN_PROJECT="<this repo name>" YO_HUMAN_AGENT="claude-code"
+   ```
+
+2. Send the notification. The dedup key names the problem and has no timestamp:
+   ```
+   yo-human notify --level nudge \
+     --title "Nightly backup job failed twice" \
+     --ask "Please look at the nightly backup job within the hour. It failed on two runs and I can't fix it from here." \
+     --body "The nightly backup job failed on two consecutive attempts. I could not resolve it. Check the job's logs for the error." \
+     --dedup-key nightly-backup-failed
+   ```
+   I'd include no secrets in the arguments or body. If the logs held credentials, I'd only name the file.
+
+3. Handle the exit code:
+   - **0** (delivered, held or suppressed): done. I'd carry on.
+   - **64:** I'd read the `error`, `valid` and `fix` lines, correct the call and re-run it.
+   - **75 (queued):** I'd wait `after_seconds`, then run `yo-human flush`. I'd repeat while it exits 75, up to `attempts_left` times. I wouldn't re-run `notify` or change the key. If the attempts run out, I'd tell the human in my session with the title and the ask.
+   - **69, 74, 78, 70:** I'd stop. I wouldn't retry, change levels or edit the config. I'd tell the human in my session what I tried, the ask and the error text.
+
+4. If the backup is later fixed and verified, I'd run:
+   ```
+   yo-human resolve --dedup-key nightly-backup-failed --note "Backup job fixed and verified"
+   ```
+   I wouldn't send a new `notify` to say it's fixed.

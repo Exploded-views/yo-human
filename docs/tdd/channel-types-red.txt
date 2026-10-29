@@ -1,0 +1,60 @@
+--- FAIL: TestProblemError (0.00s)
+    problem_test.go:15: Error() = "", want it to contain the formatted what
+    problem_test.go:18: fields = 
+--- FAIL: TestKinds (0.00s)
+    problem_test.go:35: config: Kind = 0, want 1
+    problem_test.go:35: store: Kind = 0, want 2
+    problem_test.go:35: internal: Kind = 0, want 3
+--- FAIL: TestAsFindsWrappedProblem (0.00s)
+    problem_test.go:48: As = , false; want the original problem
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/problem	0.007s
+--- FAIL: TestKindOf (0.00s)
+    channel_test.go:28: permanent: KindOf = 0, want 1
+    channel_test.go:28: config: KindOf = 0, want 2
+    channel_test.go:28: permanent through %w: KindOf = 0, want 1
+    channel_test.go:28: config through two %w: KindOf = 0, want 2
+--- FAIL: TestParseInterruption (0.00s)
+    channel_test.go:53: ParseInterruption("passive") = "", <nil>
+    channel_test.go:53: ParseInterruption("active") = "", <nil>
+    channel_test.go:53: ParseInterruption("time-sensitive") = "", <nil>
+    channel_test.go:53: ParseInterruption("critical") = "", <nil>
+    channel_test.go:58: ParseInterruption(loud) did not fail
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel	0.009s
+--- FAIL: TestFakeRecordsAndScripts (0.00s)
+    fake_test.go:29: receipt instance = "", want the spec's
+    fake_test.go:32: not recorded: [] []
+    fake_test.go:41: scripted error = <nil>
+    fake_test.go:44: a failed send is still recorded; Sent = 0
+    fake_test.go:48: Resolve: <nil> []
+    fake_test.go:52: Cancel: <nil> []
+--- FAIL: TestFakeIsConcurrentSafe (0.00s)
+    fake_test.go:70: recorded 0/0/0, want 50 each
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/channeltest	0.007s
+--- FAIL: TestLogAppendsOneLinePerSend (0.00s)
+    logch_test.go:36: open $TMPDIR/TestLogAppendsOneLinePerSend3093686656/001/yo.log: no such file or directory
+--- FAIL: TestLogMissingPathIsConfigError (0.00s)
+    logch_test.go:76: nil: err = <nil> (kind 0), want a ConfigError
+    logch_test.go:76: absent: err = <nil> (kind 0), want a ConfigError
+    logch_test.go:76: empty: err = <nil> (kind 0), want a ConfigError
+    logch_test.go:76: not a string: err = <nil> (kind 0), want a ConfigError
+--- FAIL: TestLogUnwritablePathIsAnError (0.00s)
+    logch_test.go:84: send to an unwritable path succeeded
+--- FAIL: TestLogCapabilities (0.00s)
+    logch_test.go:95: interruption passive not supported
+    logch_test.go:95: interruption active not supported
+    logch_test.go:95: interruption time-sensitive not supported
+    logch_test.go:95: interruption critical not supported
+    logch_test.go:99: capabilities = {Interruptions:map[] Markdown:false Link:false MaxActions:0 Subtitle:false NativeDedup:false Resolve:false Schedule:false ReachesHuman:false MaxTitle:0 MaxBody:0}
+--- FAIL: TestLogValidateAndUnsupported (0.00s)
+    logch_test.go:115: Validate(bogus) = <nil>, want a ConfigError
+    logch_test.go:118: Resolve = <nil>, want permanent
+    logch_test.go:121: Cancel = <nil>, want permanent
+--- FAIL: TestLogCanceledContext (0.00s)
+    logch_test.go:130: send with a canceled context succeeded
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/logch	0.009s
+FAIL
+exit=1

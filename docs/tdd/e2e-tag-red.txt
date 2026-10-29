@@ -20,3 +20,16 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.010s
 FAIL
 exit=1
+
+=== M1 merge (yo-human#59): one e2e check. M1 e2etag.go rules ported onto E2EOnly; RED at 4571b03
+$ go test ./internal/repolint/ -run TestE2EOnly -count=1
+--- FAIL: TestE2EOnlyFixtures (0.00s)
+    e2e_test.go:48: E2EOnly =
+        [{andneg/x_e2e.go an _e2e.go file must carry //go:build e2e} {andnotor/x_e2e.go an _e2e.go file must carry //go:build e2e} {andor/x_e2e.go an _e2e.go file must carry //go:build e2e} {blockcomment/x_e2e.go an _e2e.go file must carry //go:build e2e} {negos/x_e2e.go an _e2e.go file must carry //go:build e2e} {negpurego/x_e2e.go an _e2e.go file must carry //go:build e2e} {orchain/x_e2e.go an _e2e.go file must carry //go:build e2e} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {user2/user.go imports example.com/m/e2eonly, which builds only with the e2e tag} {wrongtag/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+        want
+        [{andneg/x_e2e.go an _e2e.go file must carry //go:build e2e} {andnotor/x_e2e.go an _e2e.go file must carry //go:build e2e} {andor/x_e2e.go an _e2e.go file must carry //go:build e2e} {blockcomment/x_e2e.go an _e2e.go file must carry //go:build e2e} {hooks/hooks.go a file that builds only with the e2e tag must be named *_e2e.go} {linuxe2e/hook.go a file that builds only with the e2e tag must be named *_e2e.go} {named/hook.go a file that builds only with the e2e tag must be named *_e2e.go} {negos/x_e2e.go an _e2e.go file must carry //go:build e2e} {negpurego/x_e2e.go an _e2e.go file must carry //go:build e2e} {orchain/x_e2e.go an _e2e.go file must carry //go:build e2e} {prod/prod.go imports example.com/m/hooks, which builds only with the e2e tag} {untagged/x_e2e.go an _e2e.go file must carry //go:build e2e} {user2/user.go imports example.com/m/e2eonly, which builds only with the e2e tag} {wrongtag/x_e2e.go an _e2e.go file must carry //go:build e2e} {wrongtag/y_e2e.go an _e2e.go file must carry //go:build e2e}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.018s
+FAIL
+exit=1
+(missing: hooks/hooks.go, linuxe2e/hook.go and named/hook.go, the e2e-name cases; the rest of the ported fixtures already pass)

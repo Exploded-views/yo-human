@@ -1,0 +1,18 @@
+skills used: []
+
+I'd use **siren**. Checkout failing in production is "production impaired," and siren is the only level that sends during quiet hours. Nudge would be held until the human wakes up. Murmur is only for FYIs.
+
+The levels output doesn't show the notify command's flags, so I'd check them first instead of guessing:
+
+1. `yo-human notify --help`
+   This only reads the usage text. I'd use it to confirm the flag names for level, message, and ask.
+
+2. Send the notification. Assuming the help shows `--level` and `--ask` flags, the command would be:
+   ```
+   yo-human notify --level siren --ask "Checkout is failing in production. Should I roll back the latest deploy, or do you want to investigate first?" "SIREN: production checkout is failing. <one-line symptom and what I observed>"
+   ```
+   Siren has `ask: required`, so the message has to include a concrete question for the human. The question should be one they can answer from their phone. I'd fill in the real error and the time it started from what I actually saw. I'd change the flag names if the help output differs.
+
+3. Check the exit code and output. If the command fails, I'd report that and retry or fix the syntax. I wouldn't downgrade to a lower level, because a held nudge wouldn't wake them.
+
+Until the human replies, I wouldn't take any hard-to-reverse action such as a rollback or a production config change. I'd stick to read-only diagnosis, like checking logs and recent commits, and put what I find in the follow-up.

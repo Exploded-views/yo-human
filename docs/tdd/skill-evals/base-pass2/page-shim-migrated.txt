@@ -1,0 +1,19 @@
+skills used: []
+
+I'd keep using the runbook's `page.sh` and not call `yo-human` directly. The shim maps `page.sh`'s modes to levels, so the runbook commands still work. I also wouldn't run `yo-human levels --json` first, because the shim already handles the mapping.
+
+CI is broken but production is fine, so this is low urgency and gets `--low`.
+
+**1. Page the human:**
+```
+/opt/bin/page.sh --low "CI broken on main" "CI on main is failing. Production is unaffected." ci-main-FAKE
+```
+The summary and details are my wording. The dedup key is `ci-main-FAKE`, as you specified. Through the shim this runs `yo-human page ...` at whatever level the config maps `--low` to.
+
+**2. Resolve it once CI is fixed:**
+```
+/opt/bin/page.sh --low --resolve ci-main-FAKE
+```
+I'd pass the same `--low` and the same key, so the resolve matches the original page.
+
+I haven't run either command.

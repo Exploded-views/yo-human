@@ -1,0 +1,13 @@
+skills used: []
+
+I would run no more commands for this notification.
+
+- **The page went out.** `yo-human flush` exited 0 with `RESULT ok` and `phone: sent`, so the siren was delivered. I would not re-send it or start a second notify, because that would page the human twice. If I did need to notify about this issue again, I would reuse the dedup key `checkout-FAKE`.
+- **No fallback is needed.** The instruction to "tell the human in your session" applied only if the retries ran out. They didn't.
+- **I would not run `yo-human resolve`.** Checkout is still failing and nothing has fixed it. Resolving would tell the human the problem is over when it isn't.
+
+I would then go back to my task and write a short note in the session: "Sent a siren, `checkout-FAKE`, 'Checkout failing'. It was delivered to the phone after one retry via flush."
+
+If I later fix checkout or confirm it has recovered, I would run `yo-human resolve` with the `checkout-FAKE` key. I would check the skill or `yo-human resolve --help` first for the exact syntax.
+
+I wouldn't invoke the `yo-human-eval:yo-human` skill now, because the call recipe is already done and nothing is failing.

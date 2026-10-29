@@ -1,0 +1,194 @@
+# what this is: task 11 fix round 2 mutants: queued cancels (entry, kind, provider id, destination, staleness, freshness), Reached destinations, resolve notes pinned to their destination, the unconfigured-channel rule, and what the resolve problems promise; each run is bounded by a 300s timeout
+# test command: go test -count=1 -timeout 150s <package> (timeout 300s per run); the failing lines of each run are kept as printed
+# The "late resolve note" mutant (pinning in the in-flight landing path) was removed with the code it mutated: within one call the pipeline's config is fixed, so pinning there changed nothing.
+## baseline
+ok  	github.com/Exploded-views/yo-human/internal/cli	7.234s
+exit=0
+ok  	github.com/Exploded-views/yo-human/internal/core	14.541s
+exit=0
+
+## an unconfigured but built channel is sent
+# in internal/core/deliver.go: "	case !configured:\n" => "	case !configured && !built:\n"
+--- FAIL: TestAnEntryForAnUnconfiguredButBuiltChannelIsParked (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	14.885s
+FAIL
+exit=1 (killed)
+
+## a queued cancel is sent as a message
+# in internal/core/deliver.go: "	if pl.Kind == kindCancel {\n		return b.cancelQueued" => "	if false {\n		return b.cancelQueued"
+--- FAIL: TestResolveQueuesTheCancelOfAScheduledSendItCannotReach (0.10s)
+--- FAIL: TestAQueuedCancelRunsOnlyThroughTheSameDestination (0.12s)
+--- FAIL: TestAQueuedCancelSurvivesTheIncidentReopening (0.14s)
+--- FAIL: TestAQueuedCancelThatFailsPermanentlyGoesToTheDeadLetter (0.09s)
+--- FAIL: TestAQueuedCancelThatFailsTransientlyIsRetried (0.10s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	14.712s
+FAIL
+exit=1 (killed)
+
+## a queued cancel forgets the provider id
+# in internal/core/cancel.go: "ProviderID: h.ProviderID})" => "ProviderID: ""})"
+--- FAIL: TestResolveQueuesTheCancelOfAScheduledSendItCannotReach (0.10s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	14.092s
+FAIL
+exit=1 (killed)
+
+## a queued cancel forgets its destination
+# in internal/core/cancel.go: "Fingerprint: h.Fingerprint, Config:" => "Fingerprint: "", Config:"
+--- FAIL: TestResolveQueuesTheCancelOfAScheduledSendItCannotReach (0.08s)
+--- FAIL: TestAQueuedCancelRunsOnlyThroughTheSameDestination (0.09s)
+--- FAIL: TestAQueuedCancelSurvivesTheIncidentReopening (0.16s)
+--- FAIL: TestAQueuedCancelThatFailsPermanentlyGoesToTheDeadLetter (0.10s)
+--- FAIL: TestAQueuedCancelThatFailsTransientlyIsRetried (0.12s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	13.755s
+FAIL
+exit=1 (killed)
+
+## a queued cancel belongs to its incident and is dropped as stale
+# in internal/core/cancel.go: "Message: channel.Message{ID: p.d.NewID()}" => "Message: channel.Message{ID: p.d.NewID(), DedupKey: "disk"}"
+--- FAIL: TestResolveQueuesTheCancelOfAScheduledSendItCannotReach (0.07s)
+--- FAIL: TestAQueuedCancelRunsOnlyThroughTheSameDestination (0.07s)
+--- FAIL: TestAQueuedCancelSurvivesTheIncidentReopening (0.10s)
+--- FAIL: TestAQueuedCancelThatFailsPermanentlyGoesToTheDeadLetter (0.08s)
+--- FAIL: TestAQueuedCancelThatFailsTransientlyIsRetried (0.09s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	14.110s
+FAIL
+exit=1 (killed)
+
+## a cancelled entry stays in flight
+# in internal/core/cancel.go: "	return b.finish(c, pl, res, b.p.d.Store.Complete(c))" => "	return b.finish(c, pl, res, nil)"
+--- FAIL: TestResolveQueuesTheCancelOfAScheduledSendItCannotReach (0.09s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	15.137s
+FAIL
+exit=1 (killed)
+
+## a fresh cancel is left to a caller that is not there
+# in internal/core/flush.go: "	if pl.Kind == kindCancel { // no caller" => "	if false { // no caller"
+--- FAIL: TestResolveQueuesTheCancelOfAScheduledSendItCannotReach (0.06s)
+--- FAIL: TestAQueuedCancelRunsOnlyThroughTheSameDestination (0.06s)
+--- FAIL: TestAQueuedCancelSurvivesTheIncidentReopening (0.11s)
+--- FAIL: TestAQueuedCancelThatFailsPermanentlyGoesToTheDeadLetter (0.07s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	13.941s
+FAIL
+exit=1 (killed)
+
+## a send with no recorded destination is cancelled directly
+# in internal/core/resolve.go: "built && h.Fingerprint != "" && h.Fingerprint == b.p.fingerprint(h.Instance)" => "built && h.Fingerprint == b.p.fingerprint(h.Instance)"
+--- FAIL: TestAScheduledSendIsNotCancelledThroughAnotherDestination (0.15s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	14.812s
+FAIL
+exit=1 (killed)
+
+## a send is cancelled through a channel pointing elsewhere
+# in internal/core/resolve.go: "built && h.Fingerprint != "" && h.Fingerprint == b.p.fingerprint(h.Instance)" => "built && h.Fingerprint != """
+--- FAIL: TestAScheduledSendIsNotCancelledThroughAnotherDestination (0.16s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	14.700s
+FAIL
+exit=1 (killed)
+
+## a resolve note goes to whatever the instance is now
+# in internal/core/resolve.go: "Interruption: b.p.quietest(r.Instance), Pinned: true, Fingerprint: r.Fingerprint}" => "Interruption: b.p.quietest(r.Instance)}"
+--- FAIL: TestAResolveNoteWaitsForTheSameDestination (0.14s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	13.724s
+FAIL
+exit=1 (killed)
+
+## a repeat delivery does not refresh the destination
+# in internal/core/repeat.go: "		rs[i].Fingerprint = fingerprint\n" => ""
+--- FAIL: TestADeliveryRefreshesTheRecordedDestination (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	15.015s
+FAIL
+exit=1 (killed)
+
+## a new reach records no destination
+# in internal/core/repeat.go: "Delivered: !res.Scheduled, Fingerprint: fingerprint}" => "Delivered: !res.Scheduled}"
+--- FAIL: TestAnIncidentRecordsWhereEachChannelPointed (0.04s)
+--- FAIL: TestResolveQueuesTheCancelOfAScheduledSendItCannotReach (0.08s)
+--- FAIL: TestAQueuedCancelRunsOnlyThroughTheSameDestination (0.09s)
+--- FAIL: TestAQueuedCancelSurvivesTheIncidentReopening (0.14s)
+--- FAIL: TestAResolveNoteWaitsForTheSameDestination (0.13s)
+--- FAIL: TestAQueuedCancelThatFailsPermanentlyGoesToTheDeadLetter (0.09s)
+--- FAIL: TestAQueuedCancelThatFailsTransientlyIsRetried (0.11s)
+--- FAIL: TestOldGenerationDeliveredLandingIsNotedOnTheNewResolve (0.16s)
+--- FAIL: TestExpiredGenerationsHeldSendIsCancelled (0.11s)
+--- FAIL: TestExpiredGenerationsCancelFailureIsReported (0.08s)
+--- FAIL: TestResolveReportsACancelThatFailed (0.07s)
+--- FAIL: TestResolveQueuesANoteThatFailed (0.10s)
+--- FAIL: TestResolveCancelsPending (0.08s)
+--- FAIL: TestResolveCancelsWhatAChannelHolds (0.09s)
+--- FAIL: TestResolveNativeAndNotes (0.35s)
+--- FAIL: TestResolveUnknownIsNoop (0.10s)
+--- FAIL: TestResolveSendsWhatIsDue (0.15s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	13.484s
+FAIL
+exit=1 (killed)
+
+## a replaced generation cancels without its destination
+# in internal/core/repeat.go: "r.Fingerprint, inc.Generation})" => """, inc.Generation})"
+--- FAIL: TestResolveQueuesTheCancelOfAScheduledSendItCannotReach (0.08s)
+--- FAIL: TestAQueuedCancelRunsOnlyThroughTheSameDestination (0.10s)
+--- FAIL: TestAQueuedCancelSurvivesTheIncidentReopening (0.17s)
+--- FAIL: TestAQueuedCancelThatFailsPermanentlyGoesToTheDeadLetter (0.09s)
+--- FAIL: TestAQueuedCancelThatFailsTransientlyIsRetried (0.11s)
+--- FAIL: TestResolveCancelsAHeldPageAfterALouderOneWasDelivered (0.17s)
+--- FAIL: TestResolveCancelsAndNotesWhenDeliveredThenScheduled (0.17s)
+--- FAIL: TestResolveCancelsEveryHeldSendOnAnInstance (0.14s)
+--- FAIL: TestExpiredGenerationsHeldSendIsCancelled (0.13s)
+--- FAIL: TestExpiredGenerationsCancelFailureIsReported (0.10s)
+--- FAIL: TestExpiredGenerationsEveryHeldSendIsCancelled (0.20s)
+--- FAIL: TestResolveReportsACancelThatFailed (0.09s)
+--- FAIL: TestResolveCancelsPending (0.10s)
+--- FAIL: TestResolveCancelsWhatAChannelHolds (0.11s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	15.176s
+FAIL
+exit=1 (killed)
+
+## a note is promised to a channel that only holds a scheduled send
+# in internal/cli/resolve.go: "delivered[r.Instance] = r.Delivered" => "delivered[r.Instance] = true"
+--- FAIL: TestNoNoteIsPromisedToAChannelThatOnlyHoldsAScheduledSend (0.13s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	7.715s
+FAIL
+exit=1 (killed)
+
+## a note is promised to a removed channel that delivered nothing
+# in internal/cli/resolve.go: "	if delivered {\n		return problem.Configf("channel %s is no longer" => "	if true {\n		return problem.Configf("channel %s is no longer"
+--- FAIL: TestResolveQueuesTheCancelWhenTheChannelWasRemovedAndRestored (0.15s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	7.529s
+FAIL
+exit=1 (killed)
+
+## a note is promised to an unbuildable channel that delivered nothing
+# in internal/cli/resolve.go: "	if !delivered {\n		return []error{err}" => "	if false {\n		return []error{err}"
+--- FAIL: TestNoNoteIsPromisedToAChannelThatOnlyHoldsAScheduledSend (0.13s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	7.155s
+FAIL
+exit=1 (killed)
+
+## resolve reaches nothing
+# in internal/cli/resolve.go: "	return inc.Reached, nil\n" => "	return nil, nil\n"
+--- FAIL: TestResolveClosesTheIncidentAndNotesWhereItReached (0.19s)
+--- FAIL: TestResolveCancelsWhatIsStillQueued (0.14s)
+--- FAIL: TestResolveStillCancelsWhenAReachedChannelCannotBeBuilt (0.21s)
+--- FAIL: TestResolveStillCancelsWhenAReachedChannelIsNoLongerConfigured (0.18s)
+--- FAIL: TestResolveQueuesTheCancelWhenTheChannelWasRemovedAndRestored (0.13s)
+--- FAIL: TestARemovedChannelsResolveNoteIsSentOnlyWhenRestoredIdentically (0.22s)
+--- FAIL: TestNoNoteIsPromisedToAChannelThatOnlyHoldsAScheduledSend (0.12s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	7.191s
+FAIL
+exit=1 (killed)

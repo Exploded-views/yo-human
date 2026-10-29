@@ -1,0 +1,8 @@
+$ go test -count=1 ./internal/store -run EnqueueRefuses|RetryAfterEnqueue
+--- FAIL: TestEnqueueRefusesAKeyAlreadyQueued (0.02s)
+    enqueue_excl_test.go:17: Enqueue twice = <nil>; want a refusal naming the key
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	0.053s
+FAIL
+[exit 1]
+

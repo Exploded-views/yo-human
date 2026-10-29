@@ -1,0 +1,14 @@
+$ go test -count=1 ./internal/cli -run 64Characters
+--- FAIL: TestProjectAndAgentAreAtMost64Characters (0.15s)
+    sourcecap_test.go:20: notify with 65 characters: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "64 characters" on stderr
+    sourcecap_test.go:20: notify with 65 characters: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "64 characters" on stderr
+    sourcecap_test.go:20: resolve with 65 characters: code=0 out="RESULT noop <ULID>\n" err=""; want exit 64, no stdout and "64 characters" on stderr
+    sourcecap_test.go:20: status with 65 characters: code=0 out="RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n" err=""; want exit 64, no stdout and "64 characters" on stderr
+    sourcecap_test.go:24: YO_HUMAN_PROJECT with 65 characters: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "64 characters" on stderr
+    sourcecap_test.go:24: YO_HUMAN_AGENT with 65 characters: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "64 characters" on stderr
+    sourcecap_test.go:27: a message went out
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.162s
+FAIL
+[exit 1]
+

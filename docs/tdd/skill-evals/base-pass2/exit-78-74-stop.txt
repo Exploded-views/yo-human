@@ -1,0 +1,16 @@
+skills used: []
+
+**After exit 78 (secret not set)**
+
+1. I'd run `yo-human secret list`. It's read-only and prints names only. It confirms `pd-critical` is missing and shows whether a similarly named secret exists.
+2. I would not run the suggested fix, `op read "op://<vault>/<item>/<field>" | yo-human secret set pd-critical`. I don't know the vault, item or field, and guessing means reading credentials from the user's 1Password that nobody authorized me to touch. I also wouldn't edit the config to point at a different secret, or put a made-up value in `pd-critical`. Retrying the same command won't help, because the secret stays unset.
+3. I wouldn't downgrade to `nudge` or `murmur` and present that as the alert. A lower level doesn't wake anyone, and it would hide that the siren failed.
+4. I'd keep working on whatever I can do safely for the checkout problem, such as diagnosing it and not changing production without authorization. In my final output I'd say plainly that the siren was not delivered (exit 78, `pd-critical` unset). I'd include the exact error, say that a human needs to run the `op read ... | yo-human secret set pd-critical` fix with the real vault path, and then re-send the siren. I'd also say the checkout failure is still unalerted.
+
+**If it had been exit 74 (store I/O failure)**
+
+That's likely a transient or environmental fault, not a missing value, so the fix hint doesn't apply.
+
+1. I'd wait a few seconds and retry the same `yo-human notify --level siren ...` once.
+2. If it fails again, I'd run `yo-human secret list` to see whether the store is readable at all. I would not write to the store's files by hand, change permissions, or delete anything to get past it.
+3. If it's still failing, I'd stop retrying and report as above: siren not delivered, exit 74, with the stderr text. The human would need to check the store's disk, permissions or path.

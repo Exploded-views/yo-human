@@ -1,0 +1,12 @@
+# what this is: go test ./tools/perf/ against Scenario fields that exist but are ignored (Env and Setup do nothing) (RED)
+# command: go test -count=1 ./tools/perf/
+--- FAIL: TestSetupRunsOnceIntoATempDirTheTimedCommandSees (0.01s)
+    budget_test.go:246: exit 2, stdout "", stderr "perf: fixture: exit status 1\n"; want 0 (the command saw the fixture)
+--- FAIL: TestEnvAppliesOnTopOfTheParentEnvironment (0.01s)
+    budget_test.go:264: exit 2, stdout "", stderr "perf: env: exit status 1\n"; want 0
+--- FAIL: TestSetupFailureIsAnErrorNamingTheScenario (0.01s)
+    budget_test.go:272: exit 0, stderr ""; want exit 2 naming badsetup and the cause
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.177s
+FAIL
+# exit code: 1

@@ -1,0 +1,62 @@
+KILLED  explicit init is not gated
+  internal/cli/configcmd.go: 'return approve(noninteractive(), "config init",' -> 'return nil
+	return approve(noninteractive(), "config init",'
+  --- FAIL: TestConfigInitAtAnExplicitPathNeedsTheHuman (0.02s)
+      initgate_test.go:19: config init --config: code=0 out="RESULT ok\nwrote the starter config to $TMPDIR/TestConfigInitAtAnExplicitPathNeedsTheHuman2424959499/001/mine.yaml\nnext: run `yo-human config check`; it lists the secrets the human sets with `yo-human secret set <name>` in their own terminal\n" err=""; want exit 64, no stdout and "error: " on stder
+      initgate_test.go:19: config init --config stderr = "", want it to contain "ask the human to run"
+  --- FAIL: TestConfigInitAtAnExplicitPathNoninteractiveIsAudited (0.01s)
+      initgate_test.go:38: log.jsonl has no config-init line with noninteractive and path="$TMPDIR/TestConfigInitAtAnExplicitPathNoninteractiveIsAudited1560002737/001/mine.yaml": []
+  [go test -count=1 ./internal/cli -run 'InitAt|SwappedForAFIFO|StarterSays|ConfigInit|ConfigTrust' -timeout 120s exit 1]
+
+KILLED  explicit init is always noninteractive
+  internal/cli/configcmd.go: 'approve(noninteractive(), "config init"' -> 'approve(true, "config init"'
+  --- FAIL: TestConfigInitAtAnExplicitPathNeedsTheHuman (0.02s)
+      initgate_test.go:19: config init --config: code=0 out="RESULT ok\nwrote the starter config to $TMPDIR/TestConfigInitAtAnExplicitPathNeedsTheHuman1444316050/001/mine.yaml\nnext: run `yo-human config check`; it lists the secrets the human sets with `yo-human secret set <name>` in their own terminal\n" err=""; want exit 64, no stdout and "error: " on stder
+      initgate_test.go:19: config init --config stderr = "", want it to contain "ask the human to run"
+  [go test -count=1 ./internal/cli -run 'InitAt|SwappedForAFIFO|StarterSays|ConfigInit|ConfigTrust' -timeout 120s exit 1]
+
+KILLED  explicit init needs no existing directory
+  internal/cli/configcmd.go: 'if fi, err := os.Stat(filepath.Dir(path)); err != nil || !fi.IsDir() {' -> 'if fi, err := os.Stat(filepath.Dir(path)); err != nil && fi != nil {'
+  --- FAIL: TestConfigInitStoreFailures (0.00s)
+      config_test.go:73: parent is a file: code=74 out="" err="error: cannot write $TMPDIR/TestConfigInitStoreFailures3818056717/001/blocker/sub/c.yaml: open $TMPDIR/TestConfigInitStoreFailures3818056717/001/blocker/sub/.tmp-c.yaml-4017554241: not a directory\nvalid: a writable state directory\nfix: check the permissio
+  --- FAIL: TestConfigInitAtAnExplicitPathCreatesNoDirectory (0.00s)
+      initgate_test.go:45: init into a missing directory: code=74 out="" err="error: cannot write $TMPDIR/TestConfigInitAtAnExplicitPathCreatesNoDirectory3036475739/001/new/dir/mine.yaml: open $TMPDIR/TestConfigInitAtAnExplicitPathCreatesNoDirectory3036475739/001/new/dir/.tmp-mine.yaml-2550674035: no such file or direc
+  [go test -count=1 ./internal/cli -run 'InitAt|SwappedForAFIFO|StarterSays|ConfigInit|ConfigTrust' -timeout 120s exit 1]
+
+KILLED  the default path is gated too
+  internal/cli/configcmd.go: '} else if err := initExplicit(path); err != nil {' -> '}
+	if err := initExplicit(path); err != nil {'
+  --- FAIL: TestConfigInitAtTheDefaultPathNeedsNoTerminal (0.00s)
+      initgate_test.go:54: init at the default path: code=64 out="" err="error: config init changes what yo-human trusts, so only the human may run it, at their own terminal, and this process has none\nvalid: the human running yo-human config init in their own terminal, where they type yes to confirm\nfix: stop and ask the human to run `yo-human config init` in their terminal; never run it for them\
+      initgate_test.go:56: init did not write the user config: stat $TMPDIR/TestConfigInitAtTheDefaultPathNeedsNoTerminal3168489266/001/.config/yo-human/config.yaml: no such file or directory
+  [go test -count=1 ./internal/cli -run 'InitAt|SwappedForAFIFO|StarterSays|ConfigInit|ConfigTrust' -timeout 120s exit 1]
+
+BUILD   trust opens blocking
+  internal/cli/trustcmd.go: 'f, _, err := config.OpenRegular(path)' -> 'f, err := os.Open(path)'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  internal/cli/trustcmd.go:88:12: undefined: os
+  [go test -count=1 ./internal/cli -run 'InitAt|SwappedForAFIFO|StarterSays|ConfigInit|ConfigTrust' -timeout 120s exit 1]
+
+KILLED  the starter loses its note
+  internal/cli/starter.go: '# human stores the value, in their own terminal, with:' -> '# human stores the value with:'
+  --- FAIL: TestTheStarterSaysTheHumanSetsSecrets (0.00s)
+      initgate_test.go:81: starter = "# yo-human starter config. A starting point: edit the channels and the levels to suit you.\n# Run \"yo-human config check\" after any change. \"yo-human config schema\" prints every setting.\n#\n# No secret value belongs in this file. A secret field names a secret ({ secret: <name> }); the\n# human stores the value with:\n#   op read \"op://<vault>/<item>/<field
+  [go test -count=1 ./internal/cli -run 'InitAt|SwappedForAFIFO|StarterSays|ConfigInit|ConfigTrust' -timeout 120s exit 1]
+
+# The 'trust opens blocking' mutant above did not compile (trustcmd.go no longer imports os); its compilable form replaces config.OpenRegular with a plain blocking open:
+
+KILLED  trust opens blocking, with no regular-file check (compilable)
+  internal/config/open.go: 'func OpenRegular(path string) (*os.File, os.FileInfo, error) { return openRegular(path) }' -> 'func OpenRegular(path string) (*os.File, os.FileInfo, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	fi, _ := f.Stat()
+	return f, fi, nil
+}'
+  --- FAIL: TestConfigTrustOfAFileSwappedForAFIFODoesNotHang (5.01s)
+      initgate_test.go:75: config trust blocked on a FIFO
+  --- FAIL: TestConfigTrustRefusals (0.01s)
+      trust_test.go:208: a directory: code=78 out="" err="error: cannot read \"$TMPDIR/TestConfigTrustRefusals1165368421/001\", or it is larger than 1 MiB\nvalid: a YAML or JSON file of a few kilobytes\nfix: shrink or fix $TMPDIR/TestConfigTrustRefusals1165368421/001\n"; want exit 64, no stdout and "is 
+  [go test -count=1 ./internal/cli -run 'SwappedForAFIFO|ConfigTrust' -timeout 60s exit 1]
+

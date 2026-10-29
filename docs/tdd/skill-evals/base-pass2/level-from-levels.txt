@@ -1,0 +1,19 @@
+skills used: []
+
+Here's what I'd do, in order. I'd run the first command before anything else.
+
+1. **`yo-human levels --json`**
+   I haven't run it this session, so I don't know which urgency levels are configured or what they're called. I'd read the output and pick the highest level that fits a production outage with checkout failing. I wouldn't guess a level name.
+
+2. **`yo-human --help`**, only if the `levels` output doesn't show how to send a message.
+   I don't know the send syntax and won't make it up.
+
+3. **The send command**, using the syntax from step 1 or 2 and the level I chose. It would look something like `yo-human <send-subcommand> --level <chosen-level> "<message>"`. That form is a placeholder, not verified, and I'd fix the real flags once I've seen the CLI's own output.
+
+   The message would be short and self-contained, because nobody is watching this session:
+   > Production DB is not responding; checkout is failing. Detected at <time>. I have made no changes to the DB or infrastructure. Awaiting your direction.
+
+4. **Check the exit code and output of the send command.**
+   If it fails, I'd retry once. If it still fails, I'd try the next-highest level or channel that `levels` showed. I'd report the failure honestly rather than assume the human was notified.
+
+I wouldn't try to fix the database or restart anything on my own. My task is to get the human's attention, and remediation is theirs to authorize.

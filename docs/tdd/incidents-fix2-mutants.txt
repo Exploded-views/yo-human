@@ -1,0 +1,11 @@
+# Task 6 fix round 2 mutation checks (baseline passes; -timeout 60s per run, tree restored after each)
+MUTANT older generation's held send not cancelled: KILLED ['TestOldGenerationHeldSendLandingIsCancelledWhileTheNewOneIsOpen']
+MUTANT held send of a closed incident not cancelled: KILLED ['TestScheduledSendLandingAfterResolveIsCancelled']
+MUTANT older delivered landing not recorded on the open generation: KILLED ['TestOldGenerationDeliveredLandingIsNotedOnTheNewResolve']
+MUTANT late note tied to the old generation: KILLED ['TestOldGenerationDeliveredLandingIsNotedAtOnceWhileTheNewOneIsClosed']
+MUTANT expiry cause not recorded: KILLED ['TestExpiredIncidentsQueuedRetryIsDropped']
+MUTANT reopen cause always expired: KILLED ['TestStaleInflightSendIsNotRequeuedIntoTheReopenedIncident']
+MUTANT resolved cause misnamed: KILLED ['TestFlushClaimingDuringResolveDoesNotPage']
+
+$ go test -race -count=20 -run "Concurrent|Separate|Reopen|Flush|Stale|Late|Landing|Resolve|Generation|Inflight|Expired|Mid|Held" ./internal/core
+ok  	github.com/Exploded-views/yo-human/internal/core	117.760s

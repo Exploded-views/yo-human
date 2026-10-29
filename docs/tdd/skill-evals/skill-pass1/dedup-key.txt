@@ -1,0 +1,26 @@
+skills used: ['yo-human-eval:yo-human']
+
+**Level:** `nudge`. A build host at 95% needs a human within the hour, but production isn't impaired, so `siren` would be wrong. `murmur` would be too quiet, because the disk has stayed full and someone has to free space. `nudge` is held during quiet hours, which is fine for this.
+
+**Command for this pass** (I haven't run it, per the dry run):
+
+```
+YO_HUMAN_PROJECT=<this repo> YO_HUMAN_AGENT=<this agent> yo-human notify --level nudge \
+  --title "Build host disk 95% full" \
+  --ask "Free up space on the build host (clear old build artifacts or caches) or expand the disk before it fills and builds start failing." \
+  --body "Disk usage was 95% on the last two checks and is still 95%. I re-check every minute and will resolve this alert once usage drops." \
+  --dedup-key disk-full-build-host
+```
+
+The body has no secrets. The dedup key is stable and names the problem, not a timestamp.
+
+**Handling the exit code:**
+- **0** (delivered, held, or suppressed): carry on. If the earlier check already sent this alert, this call is just suppressed.
+- **75:** wait `after_seconds`, then run `yo-human flush`. Repeat while it exits 75, up to `attempts_left` times. I won't re-run `notify` or change the key. If the attempts run out, I tell the human in my session with the title and ask.
+- **64:** fix the call using the `error`/`valid`/`fix` lines and run it again.
+- **69, 74, 78, 70:** stop. I won't retry or edit config. I tell the human in my session what I tried to send, the ask, and the error text.
+
+**Later passes of the loop:**
+1. **Disk still at or around 95%:** I send nothing new. The alert is already out, and a repeat at the same level is suppressed anyway. I keep re-checking each minute. I never use a new key and never put a timestamp or counter in it.
+2. **Disk gets worse** (for example, builds start failing or it hits 100% and production is affected): I run `notify` again with `--level siren` and the same `--dedup-key disk-full-build-host`. A louder repeat goes through.
+3. **Disk falls below the threshold and I've verified it:** I run `yo-human resolve --dedup-key disk-full-build-host --note "Disk usage back to normal"`. That cancels anything still queued and tells the human it's over. I don't send a separate "fixed" notify. If `resolve` exits 69, I tell the human in my session that they may still be paged for something already fixed.

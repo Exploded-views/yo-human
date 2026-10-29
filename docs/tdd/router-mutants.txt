@@ -1,0 +1,42 @@
+# Mutation checks for internal/core (task 4). Each mutant is applied to the GREEN code, then 'go test ./internal/core' is run; output filtered to ok/FAIL/--- FAIL lines.
+# First run: 'compare times in UTC' (now.UTC()) survived; TestQuietEastOfUTC was added, after which it fails. Final run below.
+== baseline
+ok  	github.com/Exploded-views/yo-human/internal/core	(cached)
+== mutant: compare times in UTC (now.UTC())
+--- FAIL: TestQuietEastOfUTC (0.00s)
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.010s
+== mutant: window built in UTC
+--- FAIL: TestQuietWindowAcrossMidnightAndDST (0.00s)
+--- FAIL: TestQuietEndIsInTheConfiguredLocation (0.00s)
+--- FAIL: TestQuietDaysFilter (0.00s)
+--- FAIL: TestQuietDayIsTheDayTheWindowStarts (0.00s)
+--- FAIL: TestQuietEastOfUTC (0.00s)
+--- FAIL: TestPlanHoldInQuietHours (0.00s)
+== mutant: To<=From is an empty window
+--- FAIL: TestQuietWindowAcrossMidnightAndDST (0.00s)
+--- FAIL: TestQuietEndIsInTheConfiguredLocation (0.00s)
+--- FAIL: TestQuietDayIsTheDayTheWindowStarts (0.00s)
+--- FAIL: TestQuietLaterEndingWindowWins (0.00s)
+--- FAIL: TestPlanHoldInQuietHours (0.00s)
+== mutant: yesterday not checked
+--- FAIL: TestQuietWindowAcrossMidnightAndDST (0.00s)
+--- FAIL: TestQuietDayIsTheDayTheWindowStarts (0.00s)
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.010s
+== mutant: first window wins, not latest end
+--- FAIL: TestQuietLaterEndingWindowWins (0.00s)
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.010s
+== mutant: empty Days means never
+--- FAIL: TestQuietWindowAcrossMidnightAndDST (0.00s)
+--- FAIL: TestQuietEndIsInTheConfiguredLocation (0.00s)
+--- FAIL: TestQuietLaterEndingWindowWins (0.00s)
+--- FAIL: TestPlanHoldInQuietHours (0.00s)
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.010s
+== mutant: hold flag ignored
+--- FAIL: TestPlanSendLevelIgnoresQuietHours (0.00s)
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.010s
+== mutant: Schedule capability ignored
+--- FAIL: TestPlanHoldInQuietHours (0.00s)
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.010s
+== mutant: options dropped
+--- FAIL: TestPlanFansOutEverySend (0.00s)
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.010s

@@ -1,0 +1,312 @@
+# what this is: task 11 fix round 1 mutants: parked entries (type, config path, reasons), resolve past unbuildable channels, status flushing, echo caps, ask and label limits, channel test; each run is bounded by a 300s timeout
+# test command: go test -count=1 -timeout 150s <package> (timeout 300s per run); the failing lines of each run are kept as printed
+## baseline
+ok  	github.com/Exploded-views/yo-human/internal/cli	6.642s
+exit=0
+ok  	github.com/Exploded-views/yo-human/internal/core	13.627s
+exit=0
+ok  	github.com/Exploded-views/yo-human/internal/problem	0.372s
+exit=0
+ok  	github.com/Exploded-views/yo-human/internal/store	2.195s
+exit=0
+
+## an entry is sent to a channel that points elsewhere
+# in internal/core/deliver.go: "case configured && pl.Fingerprint != fingerprintOf(inst):" => "case configured && pl.Fingerprint != fingerprintOf(inst) && false:"
+--- FAIL: TestAnEntryIsNeverSentWhereTheChannelNowPointsElsewhere (0.03s)
+--- FAIL: TestAnEntryWithNoFingerprintIsParked (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	13.850s
+FAIL
+exit=1 (killed)
+
+## an unconfigured channel is not recognised
+# in internal/core/deliver.go: "case !configured && (!built || pl.Fingerprint != ""):" => "case false:"
+--- FAIL: TestEntryForAChannelThisConfigDoesNotNameIsParked (0.03s)
+--- FAIL: TestAnEntryForAChannelNotInTheConfigInForceStaysQueued (0.04s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	13.876s
+FAIL
+exit=1 (killed)
+
+## an unbuilt channel is not recognised
+# in internal/core/deliver.go: "	case !built:\n		return "channel "" => "	case false:\n		return "channel ""
+panic: runtime error: invalid memory address or nil pointer dereference
+FAIL	github.com/Exploded-views/yo-human/internal/core	13.279s
+FAIL
+exit=1 (killed)
+
+## a stranded entry is buried
+# in internal/core/deliver.go: "return res, b.p.d.Store.Park(c, b.now, why)" => "return res, b.p.d.Store.Dead(c, why)"
+--- FAIL: TestEntryForAChannelThisConfigDoesNotNameIsParked (0.03s)
+--- FAIL: TestAnEntryForAChannelNotBuiltStaysQueued (0.04s)
+--- FAIL: TestAnEntryForAChannelNotInTheConfigInForceStaysQueued (0.04s)
+--- FAIL: TestAnEntryIsNeverSentWhereTheChannelNowPointsElsewhere (0.19s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	13.826s
+FAIL
+exit=1 (killed)
+
+## the destination fingerprint is not recorded
+# in internal/core/pipeline.go: "Fingerprint: p.fingerprint(s.Instance), Config:" => "Fingerprint: "", Config:"
+--- FAIL: TestAnEntryForAChannelNotBuiltStaysQueued (0.04s)
+--- FAIL: TestAnEntryForAChannelNotInTheConfigInForceStaysQueued (0.04s)
+--- FAIL: TestAnEntryIsNeverSentWhereTheChannelNowPointsElsewhere (0.16s)
+--- FAIL: TestAnEntryIsSentWhenTheChannelIsUnchanged (0.04s)
+--- FAIL: TestAQueuedEntryRecordsItsDestinationAndConfigPath (0.05s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	14.136s
+FAIL
+exit=1 (killed)
+
+## the fingerprint ignores the channel type
+# in internal/core/pipeline.go: "}{ci.Type, ci.Settings})" => "}{"", ci.Settings})"
+--- FAIL: TestAnEntryIsNeverSentWhereTheChannelNowPointsElsewhere (0.11s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	13.498s
+FAIL
+exit=1 (killed)
+
+## the fingerprint ignores the settings
+# in internal/core/pipeline.go: "}{ci.Type, ci.Settings})" => "}{ci.Type, nil})"
+--- FAIL: TestAnEntryIsNeverSentWhereTheChannelNowPointsElsewhere (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	13.844s
+FAIL
+exit=1 (killed)
+
+## the config path is not recorded
+# in internal/core/pipeline.go: "Config: p.d.ConfigPath, Interruption" => "Config: "", Interruption"
+--- FAIL: TestAQueuedEntryRecordsItsDestinationAndConfigPath (0.05s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	14.219s
+FAIL
+exit=1 (killed)
+
+## next.do never names the config
+# in internal/core/pipeline.go: "if p.d.ConfigPath != "" {" => "if false {"
+--- FAIL: TestAQueuedEntryRecordsItsDestinationAndConfigPath (0.05s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	14.491s
+FAIL
+exit=1 (killed)
+
+## next.do does not quote the config path
+# in internal/core/pipeline.go: "problem.ShellQuote(p.d.ConfigPath)" => "p.d.ConfigPath"
+--- FAIL: TestAQueuedEntryRecordsItsDestinationAndConfigPath (0.05s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	13.905s
+FAIL
+exit=1 (killed)
+
+## an unknown level is echoed whole
+# in internal/core/router.go: "problem.Clip(level))" => "level)"
+--- FAIL: TestPlanUnknownLevelEchoesAtMostSixtyFourCharacters (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	13.918s
+FAIL
+exit=1 (killed)
+
+## Park forgets the reason
+# in internal/store/queue.go: "p.NextAttempt, p.Reason = now, reason" => "p.NextAttempt, p.Reason = now, """
+--- FAIL: TestParkKeepsAttemptsAndRecordsWhy (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.468s
+FAIL
+exit=1 (killed)
+
+## Release keeps the reason
+# in internal/store/queue.go: "	p.NextAttempt, p.Reason = now, ""\n	return s.requeueClaimed(c, p)\n}\n\n// Park" => "	p.NextAttempt = now\n	return s.requeueClaimed(c, p)\n}\n\n// Park"
+--- FAIL: TestReleaseAndRetryClearTheReason (0.05s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.260s
+FAIL
+exit=1 (killed)
+
+## Retry keeps the reason
+# in internal/store/queue.go: "p.NextAttempt, p.Reason = next, """ => "p.NextAttempt = next"
+--- FAIL: TestReleaseAndRetryClearTheReason (0.05s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.295s
+FAIL
+exit=1 (killed)
+
+## a queued reason is not read back
+# in internal/store/queue.go: "DeliverAt: w.DeliverAt, Reason: w.Reason}" => "DeliverAt: w.DeliverAt}"
+--- FAIL: TestParkKeepsAttemptsAndRecordsWhy (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.388s
+FAIL
+exit=1 (killed)
+
+## a queued reason is not written
+# in internal/store/queue.go: "DeliverAt: p.DeliverAt, Reason: p.Reason}" => "DeliverAt: p.DeliverAt}"
+--- FAIL: TestParkKeepsAttemptsAndRecordsWhy (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.395s
+FAIL
+exit=1 (killed)
+
+## Clip keeps 65 characters
+# in internal/problem/problem.go: "const maxEcho = 64" => "const maxEcho = 65"
+--- FAIL: TestClipCapsUserTextAtSixtyFourRunes (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/problem	0.358s
+FAIL
+exit=1 (killed)
+
+## Clip keeps control characters
+# in internal/problem/problem.go: "		if unicode.IsControl(r) {\n			return ' '" => "		if false {\n			return ' '"
+--- FAIL: TestClipCapsUserTextAtSixtyFourRunes (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/problem	0.365s
+FAIL
+exit=1 (killed)
+
+## a removed reached channel is not reported
+# in internal/cli/resolve.go: "if _, ok := cfg.Channels[name]; ok {" => "if true {"
+--- FAIL: TestResolveStillCancelsWhenAReachedChannelIsNoLongerConfigured (0.18s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.069s
+FAIL
+exit=1 (killed)
+
+## a reached channel failure does not mention the resolve note
+# in internal/cli/resolve.go: "	if !reached {\n		return []error{err}" => "	if true {\n		return []error{err}"
+--- FAIL: TestResolveStillCancelsWhenAReachedChannelCannotBeBuilt (0.21s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.551s
+FAIL
+exit=1 (killed)
+
+## a reached channel failure is reported as backlog
+# in internal/cli/resolve.go: "slices.Contains(present, name)" => "slices.Contains(present, name) && false"
+--- FAIL: TestResolveStillCancelsWhenAReachedChannelCannotBeBuilt (0.27s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	7.378s
+FAIL
+exit=1 (killed)
+
+## an entry of another config is a build failure
+# in internal/cli/runtime.go: "if _, configured := cfg.Channels[name]; !configured {" => "if false {"
+--- FAIL: TestFlushUnderAnotherConfigParksEntriesInsteadOfBurying (0.13s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.309s
+FAIL
+exit=1 (killed)
+
+## optional channels are not built
+# in internal/cli/runtime.go: "setOf(due, optional)" => "setOf(due)"
+--- FAIL: TestResolveClosesTheIncidentAndNotesWhereItReached (0.19s)
+--- FAIL: TestResolveCancelsWhatIsStillQueued (0.15s)
+--- FAIL: TestResolveStillCancelsWhenAReachedChannelCannotBeBuilt (0.22s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.636s
+FAIL
+exit=1 (killed)
+
+## the config path stays relative
+# in internal/cli/runtime.go: "if abs, err := filepath.Abs(p); p != "" && err == nil {" => "if abs, err := filepath.Abs(p); false && p != "" && err == nil {"
+--- FAIL: TestNextFlushNamesTheConfigByAnAbsolutePath (0.05s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.802s
+FAIL
+exit=1 (killed)
+
+## status does not flush
+# in internal/cli/status.go: "	e.flushWarn(ctx, e.pipeline(cfg, st, chans))\n" => "	_, _ = ctx, chans\n"
+--- FAIL: TestStatusFlushesWhatIsDueFirst (0.07s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.595s
+FAIL
+exit=1 (killed)
+
+## status hides channels it cannot build
+# in internal/cli/status.go: "	e.warnBacklog(failed)\n" => "	_ = failed\n"
+--- FAIL: TestStatusOnlyWarnsOfADueChannelItCannotBuild (0.09s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.431s
+FAIL
+exit=1 (killed)
+
+## status fails on a secrets file problem
+# in internal/cli/status.go: "		e.warn(flatten(err))\n	}\n	e.warnBacklog" => "		return e.fail(err)\n	}\n	e.warnBacklog"
+--- FAIL: TestCommandsFailOnALooseSecretsFile (0.17s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.706s
+FAIL
+exit=1 (killed)
+
+## status hides the reason
+# in internal/cli/status.go: "		if q.Reason != "" {" => "		if false {"
+--- FAIL: TestFlushUnderAnotherConfigParksEntriesInsteadOfBurying (0.13s)
+--- FAIL: TestFlushNeverSendsAnEntryToAnotherServerOfTheSameName (0.11s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.638s
+FAIL
+exit=1 (killed)
+
+## a transient test failure is called dead
+# in internal/cli/channelcmd.go: "if channel.KindOf(err) == channel.TransientError {" => "if false {"
+--- FAIL: TestChannelTestReportsAFailure (0.07s)
+--- FAIL: TestChannelTestTransientFailureSaysTryAgain (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.622s
+FAIL
+exit=1 (killed)
+
+## channel test flushes under its own deadline
+# in internal/cli/channelcmd.go: "e.flushWarn(ctx, e.pipeline(cfg, st, chans))" => "e.flushWarn(context.Background(), e.pipeline(cfg, st, chans))"
+--- FAIL: TestChannelTestSharesOneDeadlineWithItsFlush (0.07s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.718s
+FAIL
+exit=1 (killed)
+
+## ask limit one too high
+# in internal/cli/input.go: "maxAskChars   = 1000" => "maxAskChars   = 1001"
+--- FAIL: TestAskAndActionLabelLimits (0.08s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.982s
+FAIL
+exit=1 (killed)
+
+## label limit one too low
+# in internal/cli/input.go: "n > maxLabelChars" => "n >= maxLabelChars"
+--- FAIL: TestAskAndActionLabelLimits (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.585s
+FAIL
+exit=1 (killed)
+
+## a body-file path is echoed whole
+# in internal/cli/input.go: "problem.Clip(file))" => "file)"
+--- FAIL: TestRejectedInputIsNotEchoedInFull (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.744s
+FAIL
+exit=1 (killed)
+
+## a channel name is echoed whole
+# in internal/cli/wire.go: "problem.Clip(n))" => "n)"
+--- FAIL: TestRejectedInputIsNotEchoedInFull (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	7.530s
+FAIL
+exit=1 (killed)
+
+## ask limit one too low
+# in internal/cli/notify.go: "n > maxAskChars" => "n >= maxAskChars"
+--- FAIL: TestAskAndActionLabelLimits (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.780s
+FAIL
+exit=1 (killed)
+
+## flush drops a build failure
+# in internal/cli/flush.go: "		problems = append(problems, failed[name])\n" => "		_ = failed[name]\n"
+--- FAIL: TestFlushLeavesAnUnbuildableChannelsEntriesQueued (0.12s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	6.792s
+FAIL
+exit=1 (killed)
+

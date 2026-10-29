@@ -1,0 +1,20 @@
+skills used: []
+
+Exit 75 with "queued" means the siren was not delivered to the phone. The journal copy was written, but nobody has been woken. A siren can't wait, so I keep retrying and make sure the human hears about it another way.
+
+**Next steps, in order:**
+
+1. Wait about 60 seconds, as the output says.
+2. Run `yo-human flush --config '/home/user/project/.yo-human.yaml'`.
+3. If it exits 0 and reports the message sent, I'm done. I don't re-send the notify. The dedup key `checkout-FAKE` and the queued item already cover it, and a second notify could double-page.
+4. If it fails again, I wait another 60s and flush again. I stop after the 5 attempts the tool said were left.
+
+**If all 5 attempts fail:**
+
+- The tool's instruction is to "tell the human in your session." I'd put a clear message in my session output, not just a log line: "Siren not delivered. Checkout is failing, and the ntfy server is unreachable after 5 flush attempts. The alert is in the journal and queued. Please look at checkout now."
+- I'd include what I know: the title, the ask, the dedup key, the config path, and the last flush error.
+- I would not switch to a lower level like `murmur` or `nudge`. That would downgrade the urgency, and `nudge` is held during quiet hours.
+- I would not try other notification channels or services I wasn't configured with. I also wouldn't edit the config to point at a different server.
+- Then I'd carry on with any work I can safely do on the checkout problem. I'd keep the session message current, and I'd run one more `yo-human flush` if I got a natural pause.
+
+The `yo-human flush` command is the only one I'd run to retry. I would not run `notify` again.

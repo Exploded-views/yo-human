@@ -1,0 +1,8 @@
+# Task 6 fix round 3 mutation checks (baseline passes; -timeout 60s per run, tree restored after each)
+MUTANT expired generation's held sends not cancelled: KILLED ['TestExpiredGenerationsHeldSendIsCancelled', 'TestExpiredGenerationsCancelFailureIsReported', 'TestExpiredGenerationsChannelGoneIsReported']
+MUTANT held sends collected only from a resolved generation: KILLED ['TestExpiredGenerationsHeldSendIsCancelled', 'TestExpiredGenerationsCancelFailureIsReported', 'TestExpiredGenerationsChannelGoneIsReported']
+# the third survived at first; TestExpiredGenerationsEveryHeldSendIsCancelled added; rerun:
+MUTANT only the first held send cancelled: KILLED ['TestExpiredGenerationsEveryHeldSendIsCancelled']
+
+$ go test -race -count=20 -run "Concurrent|Separate|Reopen|Flush|Stale|Late|Landing|Resolve|Generation|Inflight|Expired|Mid|Held" ./internal/core
+ok  	github.com/Exploded-views/yo-human/internal/core	125.476s

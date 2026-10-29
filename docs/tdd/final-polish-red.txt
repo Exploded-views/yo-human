@@ -1,0 +1,40 @@
+M1 final wave polish, against the 2f783fc code. Fix 1: an expired incident's resolve with a queued cancel has no next. Fix 2: a closed record is never pruned. The third test (a closed record a waiting message needs is kept) guards fix 2 and passes here, as nothing is pruned yet; its mutant is in final-polish-mutants.txt.
+
+$ go test -count=1 -run ExpiredResolveWithAQueuedCancel|ClosedRecordIsPruned|ClosedRecordAWaiting -v ./internal/core
+=== RUN   TestAnExpiredResolveWithAQueuedCancelSaysToFlush
+    prune_test.go:24: next = <nil>; want yo-human flush
+--- FAIL: TestAnExpiredResolveWithAQueuedCancelSaysToFlush (0.09s)
+=== RUN   TestAClosedRecordIsPrunedAfterIncidentTTL
+    prune_test.go:40: a closed record older than incident_ttl was kept
+--- FAIL: TestAClosedRecordIsPrunedAfterIncidentTTL (0.11s)
+=== RUN   TestAClosedRecordAWaitingMessageNeedsIsKept
+--- PASS: TestAClosedRecordAWaitingMessageNeedsIsKept (0.33s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.547s
+FAIL
+[exit 1]
+
+
+Review findings on the prune (against cf03731, with the inUseGap seam added: it runs after each directory IncidentsInUse lists). HIGH: a key pruned and reopened starts again at generation 1, so a stale resolve note from before the prune resolves the live incident. MEDIUM: IncidentsInUse misses an entry an unlocked Release moves between its scans, and gives an answer even when no two passes agree.
+
+$ go test -count=1 -run StaleNoteNever|IncidentsInUse -v ./internal/core ./internal/store
+=== RUN   TestAStaleNoteNeverResolvesTheKeysNextIncident
+    prune_test.go:98: a stale resolve note was sent for the reopened incident: {ID:M002 Level:page Title:Resolved: t Ask: Body: Link: Project: Agent: DedupKey:k Actions:[] Created:2026-10-30 12:00:00 +0000 UTC Resolved:true}
+--- FAIL: TestAStaleNoteNeverResolvesTheKeysNextIncident (0.30s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.322s
+=== RUN   TestIncidentsInUse
+--- PASS: TestIncidentsInUse (0.09s)
+=== RUN   TestIncidentsInUseSeesAnEntryMovedBetweenItsScans
+    inuse_gap_test.go:37: IncidentsInUse = map[], <nil>; want inc, its entry was queued or in flight throughout
+--- FAIL: TestIncidentsInUseSeesAnEntryMovedBetweenItsScans (0.05s)
+=== RUN   TestIncidentsInUseWithoutAStableAnswerFails
+    inuse_gap_test.go:47: IncidentsInUse = map[], nil; want an error when no two passes agree
+--- FAIL: TestIncidentsInUseWithoutAStableAnswerFails (0.05s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	0.198s
+FAIL
+[exit 1]
+
+
+Note (polish): TestIncidentsInUseWithoutAStableAnswerFails was rewritten after this RED commit (51bae6d) in 4bd08c4. The RED version moved one entry back and forth after every listing; with each pass listing inflight, queue, inflight, that entry is seen by every pass, so the passes agree and give the right answer. The test now has another process queue a message of a new incident after every listing, so no two passes agree. Its RED failure above (an answer with no error) holds for both versions. The helper mover lost its now unused "every" switch.

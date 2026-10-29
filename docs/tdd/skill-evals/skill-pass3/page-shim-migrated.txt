@@ -1,0 +1,28 @@
+skills used: ['yo-human-eval:yo-human']
+
+Your runbook script now execs `yo-human page`, and CI broken while production is up is the `--low` case. The shim block in the config maps `--low` to a level, so I don't need `yo-human levels --json` and won't run it. I'd run these two commands, in order.
+
+**1. CI is broken (page the human):**
+
+```
+/opt/bin/page.sh --low "CI on main is broken; production is unaffected" "" ci-main-FAKE
+```
+
+- `--low` goes before the summary.
+- The details argument is `""` because I have none. That keeps the dedup key `ci-main-FAKE` in last position.
+- I'd set `YO_HUMAN_PROJECT` and `YO_HUMAN_AGENT` first so the message says who sent it.
+- I'd put no secrets in the arguments.
+
+The script runs `yo-human page`, so I'd handle the exit code as follows:
+- **0:** done, including a suppressed repeat or a held message.
+- **64:** my call was wrong. I'd read the `error`, `valid` and `fix` lines, fix the call, and run it again.
+- **75:** I'd wait `after_seconds`, then run the printed `next.do` exactly as shown. I'd do that at most `attempts_left` times and never re-run the page. If the attempts run out, I'd tell the human directly in the session.
+- **69, 74, 78 or 70:** I'd stop and tell the human in the session, quoting the error text. I wouldn't retry, and I wouldn't edit the config.
+
+**2. Later, CI is fixed and verified (resolve):**
+
+```
+/opt/bin/page.sh --low --resolve ci-main-FAKE
+```
+
+I'd use the same `--low` and the same key. I wouldn't send a new page to say it's fixed. An unknown or already-resolved key exits 0 with `RESULT noop`. If resolve exits 69, a scheduled send couldn't be cancelled, so I'd tell the human they may still be paged for something already fixed.

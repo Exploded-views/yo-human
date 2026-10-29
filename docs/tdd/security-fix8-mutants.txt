@@ -1,0 +1,83 @@
+KILLED  the search never stops at a directory of another user
+  internal/config/paths.go: 'if fi, err := os.Stat(dir); err != nil || !isMine(fi) {' -> 'if fi, err := os.Stat(dir); err != nil || fi == nil {'
+  --- FAIL: TestProjectSearchStopsAtADirectoryOfAnotherUser (0.00s)
+      projectowner_test.go:85: found "$TMPDIR/TestProjectSearchStopsAtADirectoryOfAnotherUser1906080603/001/shared/.yo-human.yaml" at or above a directory another user owns
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  the search does not stop at home
+  internal/config/paths.go: 'if parent == dir || (homeInfo != nil && sameDir(dir, homeInfo)) {' -> 'if parent == dir || (homeInfo == nil && sameDir(dir, homeInfo)) {'
+  --- FAIL: TestProjectSearchStopsAtHome (0.00s)
+      projectowner_test.go:63: found "$TMPDIR/TestProjectSearchStopsAtHome4112855037/001/.yo-human.yaml" above $HOME
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  the search stops below home
+  internal/config/paths.go: 'if parent == dir || (homeInfo != nil && sameDir(dir, homeInfo)) {' -> 'if parent == dir || (homeInfo != nil && sameDir(parent, homeInfo)) {'
+  --- FAIL: TestProjectSearchStopsAtHome (0.00s)
+      projectowner_test.go:67: found "", want the file in $HOME itself, "$TMPDIR/TestProjectSearchStopsAtHome1706289788/001$HOME"
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  another user's project file is read
+  internal/config/load.go: 'case !isMine(fi):' -> 'case fi == nil:'
+  --- FAIL: TestProjectFileOfAnotherUserIsIgnored (0.00s)
+      projectowner_test.go:48: deadline from "$HOME/code/yo-human-m1/internal/config/testdata/user/config.yaml", notices [{Text:ignoring the project config "$TMPDIR/TestProjectFileOfAnotherUserIsIgnored61013671/001/.yo-human.yaml": someone other than you can write it or its directory; tell the human: they can make it theirs alone (chmod go
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  a project file others can write is read
+  internal/config/load.go: 'case !usersOwn(fi, filepath.Dir(path)):' -> 'case false && usersOwn(fi, filepath.Dir(path)):'
+  --- FAIL: TestProjectFileWritableByOthersIsIgnored (0.00s)
+      projectowner_test.go:32: group-writable file: deadline from "$TMPDIR/TestProjectFileWritableByOthersIsIgnored379181207/001/.yo-human.yaml", notices []; want the file ignored with a notice that others can write it
+      projectowner_test.go:32: world-writable file: deadline from "$TMPDIR/TestProjectFileWritableByOthersIsIgnored379181207/002/.yo-human.yaml", notices []; want the file ignored with a notice that others can write it
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  a relative XDG value is used
+  internal/config/paths.go: 'if v := os.Getenv(env); filepath.IsAbs(v) {' -> 'if v := os.Getenv(env); v != "" {'
+  --- FAIL: TestRelativeXDGDirectoriesAreIgnored (0.00s)
+      homeenv_test.go:37: levels: {code:78 out: err:error: no config file was found
+          valid: a file at --config or YO_HUMAN_CONFIG, a trusted .yo-human.yaml, "cfg/yo-human/config.yaml" or "/etc/yo-human/config.yaml"
+  [go test -count=1 ./internal/cli -run 'Home|XDG' exit 1]
+
+KILLED  a relative HOME is accepted
+  internal/cli/wire.go: 'if !needHome || filepath.IsAbs(os.Getenv("HOME")) {' -> 'if !needHome || os.Getenv("HOME") != "" {'
+  --- FAIL: TestNoAbsoluteHomeIsAConfigProblemAndCreatesNothing (0.04s)
+      homeenv_test.go:20: stderr = "error: no config file was found\nvalid: a file at --config or YO_HUMAN_CONFIG, a trusted .yo-human.yaml, \"relative$HOME/yo-human/config.yaml\" or \"/etc/yo-human/config.yaml\"\nfix: run `yo-human config init` to write a starter config\n", want it to contain "HOME"
+      homeenv_test.go:20: stderr = "error: no config file was found\nvalid: a file at --config or YO_HUMAN_CONFIG, a trusted .yo-human.yaml, \"relative$HOME/yo-human/config.yaml\" or \"/etc/yo-human/config.yaml\"\nfix: run `yo-human config init` to write a starter config\n", want it to contain "HOME"
+  [go test -count=1 ./internal/cli -run 'Home|XDG' exit 1]
+
+KILLED  HOME is always needed
+  internal/cli/wire.go: 'if !needHome || filepath.IsAbs' -> 'if needHome == !needHome && filepath.IsAbs'
+  --- FAIL: TestRelativeXDGDirectoriesAreIgnored (0.00s)
+      homeenv_test.go:37: levels: {code:78 out: err:error: HOME is not an absolute path (it is unset, empty or relative), and XDG_CONFIG_HOME and XDG_STATE_HOME do not both name absolute directories in its place
+          valid: an absolute HOME, or absolute XDG_CONFIG_HOME and XDG_STATE_HOME
+  --- FAIL: TestAbsoluteXDGDirectoriesNeedNoHome (0.00s)
+      homeenv_test.go:53: levels with XDG set and no HOME: {code:78 out: err:error: HOME is not an absolute path (it is unset, empty or relative), and XDG_CONFIG_HOME and XDG_STATE_HOME do not both name absolute directories in its place
+          valid: an absolute HOME, or absolute XDG_CONFIG_HOME and XDG_STATE_HOME
+  [go test -count=1 ./internal/cli -run 'Home|XDG' exit 1]
+
+KILLED  the home check is skipped
+  internal/cli/cli.go: 'if err := homeProblem(); err != nil && rest[0] != "version" {' -> 'if err := homeProblem(); err != nil && false {'
+  --- FAIL: TestNoAbsoluteHomeIsAConfigProblemAndCreatesNothing (0.03s)
+      homeenv_test.go:20: stderr = "error: no config file was found\nvalid: a file at --config or YO_HUMAN_CONFIG, a trusted .yo-human.yaml, \".config/yo-human/config.yaml\" or \"/etc/yo-human/config.yaml\"\nfix: run `yo-human config init` to write a starter config\n", want it to contain "HOME"
+      homeenv_test.go:20: stderr = "error: no config file was found\nvalid: a file at --config or YO_HUMAN_CONFIG, a trusted .yo-human.yaml, \".config/yo-human/config.yaml\" or \"/etc/yo-human/config.yaml\"\nfix: run `yo-human config init` to write a starter config\n", want it to contain "HOME"
+  [go test -count=1 ./internal/cli -run 'Home|XDG' exit 1]
+
+KILLED  version needs HOME too
+  internal/cli/cli.go: 'if err := homeProblem(); err != nil && rest[0] != "version" {' -> 'if err := homeProblem(); err != nil {'
+  --- FAIL: TestNoAbsoluteHomeIsAConfigProblemAndCreatesNothing (0.00s)
+      homeenv_test.go:24: version needs no HOME
+      homeenv_test.go:24: version needs no HOME
+  [go test -count=1 ./internal/cli -run 'Home|XDG' exit 1]
+
+KILLED  a relative log path is accepted
+  internal/channel/logch/logch.go: 'if !filepath.IsAbs(path) {' -> 'if filepath.IsAbs(path) && false {'
+  --- FAIL: TestLogRelativePathIsConfigError (0.00s)
+      logch_test.go:161: y.log: err = <nil> (kind 0), want a ConfigError asking for an absolute path
+      logch_test.go:161: ./y.log: err = <nil> (kind 0), want a ConfigError asking for an absolute path
+  [go test -count=1 ./internal/channel/logch exit 1]
+
+KILLED  e2e: the home check is skipped
+  internal/cli/cli.go: 'if err := homeProblem(); err != nil && rest[0] != "version" {' -> 'if err := homeProblem(); err != nil && false {'
+  --- FAIL: TestNoHomeCreatesNothing (0.05s)
+      home_test.go:17: yo-human levels -> exit 78
+          error: no config file was found
+  [go test -tags e2e -count=1 ./test/e2e -run NoHome exit 1]
+

@@ -1,0 +1,6 @@
+version: 2
+builds:
+  - env: [CGO_ENABLED=0]
+    tags: [e2e]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]

@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "Uses --level siren and a non-empty --ask, but the command has no --title (it uses --message instead), and the flags are hedged as guesses.",
+ "pass": false
+}

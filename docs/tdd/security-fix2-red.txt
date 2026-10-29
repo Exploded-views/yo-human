@@ -1,0 +1,57 @@
+$ go test -count=1 ./internal/cli -run 'BodyFile|Redacted'
+--- FAIL: TestBodyFileRefusesTheUserConfigDirectory (0.13s)
+    bodyfile_test.go:25: --body-file $TMPDIR/TestBodyFileRefusesTheUserConfigDirectory2859702323/001/.config/yo-human/secrets.yaml: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "--body-file" on stderr
+    bodyfile_test.go:26: stderr = "", want it to contain "user config directory"
+    bodyfile_test.go:25: --body-file $TMPDIR/TestBodyFileRefusesTheUserConfigDirectory2859702323/003/notes.txt: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "--body-file" on stderr
+    bodyfile_test.go:26: stderr = "", want it to contain "user config directory"
+    bodyfile_test.go:25: --body-file $TMPDIR/TestBodyFileRefusesTheUserConfigDirectory2859702323/001/hard.txt: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "--body-file" on stderr
+    bodyfile_test.go:26: stderr = "", want it to contain "user config directory"
+    bodyfile_test.go:25: --body-file $TMPDIR/TestBodyFileRefusesTheUserConfigDirectory2859702323/001/.config/yo-human/config.yaml: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "--body-file" on stderr
+    bodyfile_test.go:26: stderr = "", want it to contain "user config directory"
+    bodyfile_test.go:25: --body-file $TMPDIR/TestBodyFileRefusesTheUserConfigDirectory2859702323/001/.config/yo-human/secrets.yaml: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "--body-file" on stderr
+    bodyfile_test.go:26: stderr = "", want it to contain "user config directory"
+    bodyfile_test.go:29: a message went out
+--- FAIL: TestStoredSecretValuesAreRedactedBeforeEnqueue (0.22s)
+    bodyfile_test.go:41: stderr = "", want it to contain "warning: "
+    bodyfile_test.go:41: stderr = "", want it to contain "pd-critical"
+    bodyfile_test.go:45: phone message = "token FAKE-PD-CRITICAL\nrotate FAKE-PD-CRITICAL\nthe key is FAKE-PD-CRITICAL\nhttps://example.com/x?k=FAKE-PD-CRITICAL\nk-FAKE-PD-CRITICAL\np-FAKE-PD-CRITICAL\na-FAKE-PD-CRITICAL\nFAKE-PD-CRITICAL\nhttps://example.com/a?FAKE-PD-CRITICAL", must not contain "FAKE-PD-CRITICAL"
+    bodyfile_test.go:45: pager message = "token FAKE-PD-CRITICAL\nrotate FAKE-PD-CRITICAL\nthe key is FAKE-PD-CRITICAL\nhttps://example.com/x?k=FAKE-PD-CRITICAL\nk-FAKE-PD-CRITICAL\np-FAKE-PD-CRITICAL\na-FAKE-PD-CRITICAL\nFAKE-PD-CRITICAL\nhttps://example.com/a?FAKE-PD-CRITICAL", must not contain "FAKE-PD-CRITICAL"
+    bodyfile_test.go:58: resolve note = "token FAKE-PD-CRITICAL\nrotate FAKE-PD-CRITICAL\nthe key is FAKE-PD-CRITICAL\nhttps://example.com/x?k=FAKE-PD-CRITICAL\nk-FAKE-PD-CRITICAL\np-FAKE-PD-CRITICAL\na-FAKE-PD-CRITICAL\nFAKE-PD-CRITICAL\nhttps://example.com/a?FAKE-PD-CRITICAL", must not contain "FAKE-PD-CRITICAL"
+    bodyfile_test.go:58: resolve note = "Resolved: t\n\nrotated FAKE-PD-CRITICAL\n\nplain\n\n", must not contain "FAKE-PD-CRITICAL"
+--- FAIL: TestBodyFileTakesARegularFileOnlyAndNeverBlocks (5.03s)
+    bodyfile_test.go:84: --body-file $TMPDIR/TestBodyFileTakesARegularFileOnlyAndNeverBlocks1141061823/003/fifo blocked
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	5.388s
+FAIL
+[exit 1]
+
+$ go test -tags e2e -count=1 ./test/e2e -run 'BodyFile|IsRedacted'
+--- FAIL: TestBodyFileCannotCarryTheSecretsFile (0.05s)
+    bodyfile_test.go:21: yo-human notify --level note --title Disk is full on build-7 --ask Free some space --project proj --agent tester --body-file $TMPDIR/TestBodyFileCannotCarryTheSecretsFile3525546070/001$HOME/yo-human/secrets.yaml -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+    bodyfile_test.go:22: exit code 0, want 64
+        stdout:
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        stderr:
+--- FAIL: TestBodyFileFIFODoesNotHang (3.01s)
+    bodyfile_test.go:40: yo-human notify --level note --title t --body-file $TMPDIR/TestBodyFileFIFODoesNotHang1661664073/001/work/fifo -> exit -1
+    bodyfile_test.go:42: exit code -1, want 64
+        stdout:
+        stderr:
+--- FAIL: TestASecretValueInAMessageIsRedacted (0.06s)
+    bodyfile_test.go:50: yo-human notify --level note --title Disk is full on build-7 --ask Free some space --project proj --agent tester --body the routing key is ROUTINGKEY-FAKE-ONE -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+    bodyfile_test.go:55: ntfy received the secret value
+    bodyfile_test.go:55: bark received the secret value
+    bodyfile_test.go:60: no warning names the secret:
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	3.467s
+FAIL
+[exit 1]
+

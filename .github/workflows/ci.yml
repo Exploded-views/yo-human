@@ -56,6 +56,7 @@ jobs:
           go-version: "1.27.3"
       - run: make build test
       - run: ./dist/yo-human version
+      - run: go test -tags e2e ./test/e2e/ -count=1
 
   perf:
     strategy:
@@ -142,6 +143,7 @@ jobs:
       - name: History scan (scripts/secrets.sh holds the 0/1/2 contract)
         run: scripts/secrets.sh
       - run: make secrets-test
+      - run: make scripts-test
 
   vuln:
     runs-on: ubuntu-latest

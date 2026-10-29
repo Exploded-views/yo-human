@@ -47,13 +47,23 @@ git checkout -q - && echo main >main.txt && git add main.txt && git commit -q -m
 git merge -q --no-edit side && git commit -q --allow-empty -m empty
 check merge-and-empty-commits 0 && expect merge-and-empty-commits "secrets: 0 findings"
 
+# noleak NAME: assert the last output holds no AKIA key prefix. grep's own failure (exit 2) fails
+# the case too, rather than passing as no match.
+noleak() {
+  grep -q AKIA "$t/out"
+  case $? in
+  1) ;;
+  0) echo "FAIL $1: AKIA appears in output"; fails=$((fails + 1)) ;;
+  *) echo "FAIL $1: grep could not read the output"; fails=$((fails + 1)) ;;
+  esac
+}
+
 newrepo leak
 printf 'aws_access_key_id = AKIA%s\n' "$(rnd 16)" >leak.env
 git add leak.env && git commit -q -m leak
 check leak 1 && {
   expect leak "secrets: 1 findings"; expect leak "aws-access-token leak.env "
-  n=$(grep -c AKIA "$t/out")
-  [ "$n" = 0 ] || { echo "FAIL leak: AKIA appears $n times in output"; fails=$((fails + 1)); }
+  noleak leak
 }
 
 # the same repo with an unrelated blob gone: gitleaks logs an error and scans nothing.
@@ -127,11 +137,6 @@ printf 'aws_access_key_id = AKIA%sFAKE%s\n' "$(rnd 8)" "$(rnd 4)" >leak.env
 git add leak.env && git commit -q -m leak
 check fake-embedded 1 && expect fake-embedded "aws-access-token leak.env "
 
-# noleak NAME: assert the last output holds no AKIA key prefix.
-noleak() {
-  n=$(grep -c AKIA "$t/out")
-  [ "$n" = 0 ] || { echo "FAIL $1: AKIA appears $n times in output"; fails=$((fails + 1)); }
-}
 
 # A key that only a merge commit adds (an evil merge): no parent commit introduces it.
 newrepo evil

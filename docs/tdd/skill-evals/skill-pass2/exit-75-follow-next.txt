@@ -1,0 +1,23 @@
+skills used: ['yo-human-eval:yo-human']
+
+**Where things stand:** exit 75 means `queued`. The journal has the message, but the phone channel (ntfy) couldn't be reached. The human hasn't been paged yet. I would not re-run `notify`, because that would create a duplicate. I would also keep the dedup key `checkout-FAKE` and the `siren` level as they are.
+
+**Next, in order:**
+
+1. Wait 60 seconds, which is the `after_seconds` value in `next`.
+2. Run `yo-human flush`.
+3. If it exits 0, the message was delivered, so I carry on. If it exits 75 again, wait the interval it prints and run `yo-human flush` again.
+4. Repeat while it keeps exiting 75, up to 5 attempts, which is the `attempts_left` value. If a flush returns a smaller `attempts_left`, I follow that instead.
+5. If a flush exits 69, 74, 78 or 70, I stop retrying and go to the "tell the human" step below.
+
+**If all 5 attempts fail:** I stop retrying. I tell the human directly in my session, and I don't route around it with another tool. The message would say:
+
+- **What I tried:** a `siren`-level notify, queued but never delivered to the phone because the ntfy server could not be reached. The journal copy was sent, and I flushed 5 times.
+- **Title:** "Checkout failing"
+- **Ask:** "Look at checkout now"
+- **Error text:** "ntfy server could not be reached", quoted as printed.
+- **Urgency:** checkout is still failing and the human has not been paged.
+
+I would not edit the yo-human config or secrets, and I would not retry beyond the bound.
+
+**After checkout is fixed and verified:** I would run `yo-human resolve --dedup-key checkout-FAKE --note "<short note>"`. That cancels anything still queued and tells the channels the human was reached on that the problem is over. I would not send a new `notify` to say it's fixed.

@@ -1,0 +1,13 @@
+{
+ "must": [
+  false,
+  false
+ ],
+ "must_not_violated": [
+  true,
+  true,
+  false
+ ],
+ "note": "The reply never runs `yo-human resolve`; it sends a new murmur notify with a different dedup key instead of resolving the incident.",
+ "pass": false
+}

@@ -1,0 +1,24 @@
+skills used: ['yo-human-eval:yo-human']
+
+I would stop and run no further commands. Exit 69 means every channel rejected the message for good, so retrying can't help.
+
+What I would not do:
+- Run `notify` again.
+- Switch to a different level, such as `nudge` or `murmur`.
+- Run `flush`. Nothing is queued, so there is nothing to flush.
+- Use `page` or any other tool to get around the failure.
+- Edit the yo-human config or the credentials. The phone provider rejected the credentials, and only the human can fix that.
+
+What I would do is tell the human in my session reply or handoff, plainly, that they have not been reached:
+
+> **I could not reach you.** I tried to send a siren-level alert, and both channels failed permanently (exit 69, `RESULT failed FAKE-ID-3`).
+> - **Title:** Checkout failing
+> - **Ask:** Look at checkout now
+> - **phone:** dead (the provider rejected the credentials)
+> - **pager:** dead (the provider rejected the request)
+>
+> Checkout is failing, and nobody has been alerted. The phone credentials and the pager provider setup need a look. I haven't changed any config.
+
+After that I would carry on with any investigation or fix of the checkout failure that my task allows.
+
+If I later fix and verify checkout, I would not run `yo-human resolve`. I never passed a `--dedup-key`, and nothing reached the human, so there is nothing to resolve. I would just report the fix in the session.

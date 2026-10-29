@@ -1,0 +1,42 @@
+# what this is: task 11 fix round 4 (RED, second record): the round-4 tests as amended after the first RED record (a failed cancel is a problem saying the human may still be paged, exit 69, not an unexpected error; the late note is checked parked across a flush; test pipelines use distinct ids), run against the round-3 code at commit 0b3d221
+# command: go test -count=1 -timeout 250s ./internal/core ./internal/cli ./internal/channel/ntfy
+--- FAIL: TestResolveDeadLettersACancelTheProviderRefused (0.11s)
+    cancel_dead_test.go:43: resolve = phone:dead:provider refused;, provider refused; want resolved, the failed cancel reported as dead
+--- FAIL: TestResolveRetriesACancelThatFailedForNow (0.09s)
+    cancel_dead_test.go:58: resolve = phone:dead:provider refused;, provider refused; want the failed cancel reported and queued for a retry
+--- FAIL: TestALateScheduledSendWhoseCancelIsRefusedIsDeadLettered (0.11s)
+    cancel_dead_test.go:111: dead letter []; a scheduled page that landed after the resolve and could not be cancelled must be visible
+--- FAIL: TestALateResolveNoteIsPinnedToTheDestinationTheSendWentThrough (0.16s)
+    cancel_dead_test.go:121: notes sent 1; the late page went through one.example, its note must not go to two.example
+--- FAIL: TestExpiredGenerationsCancelFailureIsReported (0.11s)
+    landing_test.go:280: err provider down status "held"; the new page still goes out, and the failed cancel is reported
+--- FAIL: TestResolveReportsACancelThatFailed (0.06s)
+    resolve_fault_test.go:55: err = provider down status "resolved"; a scheduled page we could not cancel is the human's to know about
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	23.320s
+--- FAIL: TestResolveAndStatusShowACancelTheProviderRefused (0.21s)
+    round4_test.go:43: resolve: {code:70 out:RESULT resolved 01M5WG1GPCB3QC1X1ZK62FFFX9
+        pager: cancelled
+        phone: dead (ntfy answered HTTP 404: the scheduled send may already be gone, or this ntfy server cannot cancel scheduled messages (needs v2.16 or later); the human may still be paged)
+         err:error: unexpected error: ntfy answered HTTP 404: the scheduled send may already be gone, or this ntfy server cannot cancel scheduled messages (needs v2.16 or later); the human may still be paged
+        valid: a Problem with what, valid and fix
+        fix: report this as a bug
+        }; want resolved, and exit 69 for the cancel
+    round4_test.go:45: resolve stderr = "error: unexpected error: ntfy answered HTTP 404: the scheduled send may already be gone, or this ntfy server cannot cancel scheduled messages (needs v2.16 or later); the human may still be paged\nvalid: a Problem with what, valid and fix\nfix: report this as a bug\n", want it to contain "error: the scheduled send on phone could not be cancelled"
+    round4_test.go:45: resolve stderr = "error: unexpected error: ntfy answered HTTP 404: the scheduled send may already be gone, or this ntfy server cannot cancel scheduled messages (needs v2.16 or later); the human may still be paged\nvalid: a Problem with what, valid and fix\nfix: report this as a bug\n", want it to contain "yo-human status"
+    round4_test.go:46: resolve stderr = "error: unexpected error: ntfy answered HTTP 404: the scheduled send may already be gone, or this ntfy server cannot cancel scheduled messages (needs v2.16 or later); the human may still be paged\nvalid: a Problem with what, valid and fix\nfix: report this as a bug\n", must not contain "unexpected error"
+    round4_test.go:46: resolve stderr = "error: unexpected error: ntfy answered HTTP 404: the scheduled send may already be gone, or this ntfy server cannot cancel scheduled messages (needs v2.16 or later); the human may still be paged\nvalid: a Problem with what, valid and fix\nfix: report this as a bug\n", must not contain "report this as a bug"
+    round4_test.go:48: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "dead: 1"
+    round4_test.go:48: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "kind=cancel"
+    round4_test.go:48: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "needs v2.16 or later"
+    round4_test.go:48: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "the human may still be paged"
+    round4_test.go:49: status --json = "{\"dead\":[],\"held\":[],\"incidents\":[],\"inflight\":0,\"queued\":[],\"status\":\"ok\",\"version\":1}\n", want it to contain "\"kind\":\"cancel\""
+    round4_test.go:49: status --json = "{\"dead\":[],\"held\":[],\"incidents\":[],\"inflight\":0,\"queued\":[],\"status\":\"ok\",\"version\":1}\n", want it to contain "the human may still be paged"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	16.338s
+--- FAIL: TestCancelThatAnswers404IsPermanentAndSaysThePageMayStillFire (0.01s)
+    ntfy_test.go:333: cancel answered 404: err <nil>; want a permanent error (an old server or a proxy may not route DELETE)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.136s
+FAIL
+# exit: 1

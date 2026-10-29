@@ -1,0 +1,12 @@
+{
+ "must": [
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false
+ ],
+ "note": "Reply treats the page as delivered, runs no further notify/flush, and reports success; it doesn't explicitly say it keeps the dedup key for a later resolve, but mentions it in the report and does nothing further.",
+ "pass": true
+}

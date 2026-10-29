@@ -1,0 +1,196 @@
+# First pass (9 mutants): "no ancestor check" and "the project file is not a layer" did not compile (marked KILLED by an older runner; see the reruns below), and three survived. One test was added (a hard link made outside to a file deep in the user config directory, and a file in a subdirectory that cannot be listed), then the survivors were rerun.
+
+KILLED  no ancestor check
+  internal/cli/bodyfile.go: 'return underDir(file, dir) || holdsFile(p.UserDir, fi)' -> 'return holdsFile(p.UserDir, fi)'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 1]
+
+SURVIVED no recursive identity walk
+  internal/cli/bodyfile.go: 'return underDir(file, dir) || holdsFile(p.UserDir, fi)' -> 'return underDir(file, dir)'
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 0]
+
+KILLED  the config layers are not checked
+  internal/cli/bodyfile.go: 'if same(path, fi) {
+			return true
+		}
+	}
+	dir, err' -> 'if false && same(path, fi) {
+			return true
+		}
+	}
+	dir, err'
+  --- FAIL: TestBodyFileRefusesEveryConfigLayer (0.07s)
+      bodyfile_test.go:144: --body-file .yo-human.yaml: code=0 out="RESULT delivered <ULID>\nphone: sent\n" err="notice: ignoring the project config \"$TMPDIR/TestBodyFileRefusesEveryConfigLayer136604328/002/.yo-human.yaml\": it is not trusted, or has changed since it was; tell the human: they can read it and run `yo-human config t
+      bodyfile_test.go:144: --body-file $TMPDIR/TestBodyFileRefusesEveryConfigLayer136604328/003/explicit.yaml: code=0 out="RESULT delivered <ULID>\nphone: sent\n" err="notice: ignoring the project config \"$TMPDIR/TestBodyFileRefusesEveryConfigLayer136604328/002/.yo-human.yaml\": it is not 
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 1]
+
+KILLED  the project file is not a layer
+  internal/cli/bodyfile.go: 'p.Explicit, config.ProjectFile(p.Cwd)}' -> 'p.Explicit}'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 1]
+
+KILLED  the explicit file is not a layer
+  internal/cli/bodyfile.go: 'p.Explicit, config.ProjectFile(p.Cwd)}' -> 'config.ProjectFile(p.Cwd)}'
+  --- FAIL: TestBodyFileRefusesEveryConfigLayer (0.05s)
+      bodyfile_test.go:144: --body-file $TMPDIR/TestBodyFileRefusesEveryConfigLayer750999029/003/explicit.yaml: code=0 out="RESULT delivered <ULID>\nphone: sent\n" err="notice: ignoring the project config \"$TMPDIR/TestBodyFileRefusesEveryConfigLayer750999029/002/.yo-human.yaml\": it is not 
+      bodyfile_test.go:147: a message went out
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 1]
+
+SURVIVED the ancestors stop at the parent
+  internal/cli/bodyfile.go: 'if filepath.Dir(p) == p {
+			return false
+		}' -> 'return false'
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 0]
+
+SURVIVED the walk skips subdirectories
+  internal/cli/bodyfile.go: 'if err == nil && !d.IsDir() && same(path, fi) {' -> 'if d != nil && d.IsDir() && path != root {
+			return filepath.SkipDir
+		}
+		if err == nil && !d.IsDir() && same(path, fi) {'
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 0]
+
+KILLED  the descriptor is not compared with the checked file
+  internal/cli/bodyfile.go: 'err != nil || !os.SameFile(fi, got)' -> 'err != nil'
+  --- FAIL: TestBodyFileSwappedForAFIFOIsRefusedWithoutBlocking (0.05s)
+      bodyfile_test.go:107: a swapped body: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "not a regular file" on stderr
+  [go test -count=1 ./internal/cli -run 'BodyFile' -timeout 120s exit 1]
+
+KILLED  the body is opened blocking
+  internal/cli/bodyfile.go: 'const bodyFlags = os.O_RDONLY | syscall.O_NONBLOCK | syscall.O_NOCTTY' -> 'const bodyFlags = os.O_RDONLY | syscall.O_NOCTTY'
+  --- FAIL: TestBodyFileSwappedForAFIFOIsRefusedWithoutBlocking (5.02s)
+      bodyfile_test.go:109: the open of a swapped-in FIFO blocked
+  [go test -count=1 ./internal/cli -run 'BodyFile' -timeout 120s exit 1]
+
+# Second pass, after the added test
+
+KILLED  no ancestor check
+  internal/cli/bodyfile.go: 'return underDir(file, dir) || holdsFile(p.UserDir, fi)' -> 'return holdsFile(p.UserDir, fi)'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 1]
+
+KILLED  no recursive identity walk
+  internal/cli/bodyfile.go: 'return underDir(file, dir) || holdsFile(p.UserDir, fi)' -> 'return underDir(file, dir)'
+  --- FAIL: TestBodyFileRefusesDeepFilesOfTheUserConfigDirectory (0.05s)
+      bodyfile_test.go:162: --body-file $TMPDIR/TestBodyFileRefusesDeepFilesOfTheUserConfigDirectory3403447448/003/hard.txt: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "user config directory" on stderr
+      bodyfile_test.go:164: a message went out
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 1]
+
+KILLED  the ancestors stop at the parent
+  internal/cli/bodyfile.go: 'if filepath.Dir(p) == p {
+			return false
+		}' -> 'return false'
+  --- FAIL: TestBodyFileRefusesDeepFilesOfTheUserConfigDirectory (0.05s)
+      bodyfile_test.go:162: --body-file $TMPDIR/TestBodyFileRefusesDeepFilesOfTheUserConfigDirectory1192377831/001/.config/yo-human/locked/notes.txt: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "user config directory" on stderr
+      bodyfile_test.go:164: a message went out
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 1]
+
+KILLED  the walk skips subdirectories
+  internal/cli/bodyfile.go: 'if err == nil && !d.IsDir() && same(path, fi) {' -> 'if d != nil && d.IsDir() && path != root {
+			return filepath.SkipDir
+		}
+		if err == nil && !d.IsDir() && same(path, fi) {'
+  --- FAIL: TestBodyFileRefusesDeepFilesOfTheUserConfigDirectory (0.05s)
+      bodyfile_test.go:162: --body-file $TMPDIR/TestBodyFileRefusesDeepFilesOfTheUserConfigDirectory979514803/003/hard.txt: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "user config directory" on stderr
+      bodyfile_test.go:164: a message went out
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 1]
+
+# Reruns: every earlier mutant (fix1 to fix4) that did not compile, as a compilable mutant; the fix1 --yes mutants run on the environment-variable code that replaced them. The fix2 mutant 'containment accepts .. paths' has no rerun: the path-text check it mutated was removed in this round (identity checks replaced it).
+
+BUILD   within accepts any path (compilable rerun)
+  internal/config/private.go: 'return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))' -> 'return err == nil && rel != "."'
+  FAIL	github.com/Exploded-views/yo-human/internal/config [build failed]
+  internal/config/private.go:8:2: "strings" imported and not used
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  any answer confirms (compilable rerun)
+  internal/cli/tty.go: 'if strings.TrimSpace(answer) != "yes" {' -> 'if strings.TrimSpace(answer) == "never typed" {'
+  --- FAIL: TestConfigTrustAsksOnTheTerminal (0.02s)
+      humanonly_test.go:69: trust answered no: code=0 out="RESULT ok\ntrusting \"$TMPDIR/TestConfigTrustAsksOnTheTerminal83927787/002/.yo-human.yaml\"\ntrusted; a change to the file un-trusts it until you run this again\n" err=""; want exit 64, no stdout and "did not confirm" on stderr
+      humanonly_test.go:72: check after no = "warning: secret \"pd-critical\", used by channels.pager.routing_key, is not set\nvalid: a name listed by `yo-human secret list`\nfix: tell the human to run, in their own terminal: op read \"op://<vault>/<item>/<field>\" | yo-human secret set pd-critical\nwarning: secret \"ntfy-topic\", used by channels.phone.topic, is not set\nvalid: a name listed by `yo
+  --- FAIL: TestSecretSetTakesTheValueFromThePipeAndTheYesFromTheTerminal (0.02s)
+      humanonly_test.go:112: answer "nope\n": code=0 err="" stored=true; want stored=false
+  [go test -count=1 ./internal/cli exit 1]
+
+KILLED  a noninteractive run is not audited (compilable rerun)
+  internal/cli/tty.go: 'return audit(event, record)' -> '_, _ = event, record
+	return nil'
+  --- FAIL: TestConfigTrustNoninteractiveNeedsNoTerminalAndIsAudited (0.01s)
+      humanonly_test.go:208: log.jsonl has no trust line with noninteractive and path="$TMPDIR/TestConfigTrustNoninteractiveNeedsNoTerminalAndIsAudited612405266/002/.yo-human.yaml": []
+  --- FAIL: TestSecretSetNoninteractiveNeedsNoTerminalAndIsAuditedWithoutTheValue (0.01s)
+      humanonly_test.go:220: log.jsonl has no secret-set line with noninteractive and name="pd-critical": []
+  [go test -count=1 ./internal/cli exit 1]
+
+KILLED  trust always counts as noninteractive (rerun on the env-var code)
+  internal/cli/trustcmd.go: 'approve(noninteractive(), "config trust"' -> 'approve(true, "config trust"'
+  --- FAIL: TestConfigTrustNeedsTheHumansTerminal (0.01s)
+      humanonly_test.go:55: trust with no terminal: code=0 out="RESULT ok\ntrusting \"$TMPDIR/TestConfigTrustNeedsTheHumansTerminal2426127915/002/.yo-human.yaml\"\ntrusted; a change to the file un-trusts it until you run this again\n" err=""; want exit 64, no stdout and "error: " on stderr
+      humanonly_test.go:55: trust with no terminal stderr = "", want it to contain "ask the human to run"
+  --- FAIL: TestConfigTrustAsksOnTheTerminal (0.02s)
+      humanonly_test.go:69: trust answered no: code=0 out="RESULT ok\ntrusting \"$TMPDIR/TestConfigTrustAsksOnTheTerminal1797315953/002/.yo-human.yaml\"\ntrusted; a change to the file un-trusts it until you run this again\n" err=""; want exit 64, no stdout and "did not confirm" on stderr
+      humanonly_test.go:70: terminal = "", want it to contain "trusting"
+  [go test -count=1 ./internal/cli exit 1]
+
+KILLED  secret set always counts as noninteractive (rerun on the env-var code)
+  internal/cli/secretcmd.go: 'approve(noninteractive(), "secret set "+name' -> 'approve(true, "secret set "+name'
+  --- FAIL: TestSecretSetNeedsTheHumansTerminal (0.01s)
+      humanonly_test.go:88: secret set with no terminal: code=0 out="RESULT ok\nstored secret pd-critical\n" err=""; want exit 64, no stdout and "error: " on stderr
+      humanonly_test.go:88: secret set with no terminal stderr = "", want it to contain "ask the human to run"
+  --- FAIL: TestSecretSetTakesTheValueFromThePipeAndTheYesFromTheTerminal (0.02s)
+      humanonly_test.go:109: terminal = "", want it to contain "pd-critical"
+      humanonly_test.go:109: terminal = "", want it to contain "Type yes"
+  --- FAIL: TestNoFlagOrOtherValueSkipsTheTerminal (0.05s)
+      humanonly_test.go:238: YO_HUMAN_NONINTERACTIVE=true: code=0 out="RESULT ok\nstored secret pd-critical\n" err=""; want exit 64, no stdout and "error: " on stderr
+      humanonly_test.go:238: YO_HUMAN_NONINTERACTIVE=true stderr = "", want it to contain "ask the human to run"
+  [go test -count=1 ./internal/cli exit 1]
+
+KILLED  the body descriptor is not compared with the checked file (rerun)
+  internal/cli/bodyfile.go: 'err != nil || !os.SameFile(fi, got)' -> 'err != nil'
+  --- FAIL: TestBodyFileSwappedForAFIFOIsRefusedWithoutBlocking (0.04s)
+      bodyfile_test.go:107: a swapped body: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "not a regular file" on stderr
+  [go test -count=1 ./internal/cli -run 'BodyFile' -timeout 120s exit 1]
+
+KILLED  the explicit path is not checked to still name the opened file (compilable rerun)
+  internal/config/private.go: 'err != nil || !os.SameFile(fi, now)' -> 'err != nil || now == nil'
+  --- FAIL: TestExplicitFileSwappedAfterTheOpenIsRefused (0.00s)
+      explicit_test.go:175: error = <nil>, want a *problem.Problem
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  the explicit file's directory is not checked (compilable rerun)
+  internal/config/private.go: 'return err == nil && private(fi) && private(d)' -> 'return err == nil && private(fi) && d != nil'
+  --- FAIL: TestExplicitFileInTheUserDirWritableByOthersNeedsTrust (0.00s)
+      explicit_test.go:101: error = <nil>, want a *problem.Problem
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  no ancestor check (compilable rerun)
+  internal/cli/bodyfile.go: 'return underDir(file, dir) || holdsFile(p.UserDir, fi)' -> 'return (dir == nil && underDir(file, dir)) || holdsFile(p.UserDir, fi)'
+  --- FAIL: TestBodyFileRefusesDeepFilesOfTheUserConfigDirectory (0.05s)
+      bodyfile_test.go:162: --body-file $TMPDIR/TestBodyFileRefusesDeepFilesOfTheUserConfigDirectory93432904/001/.config/yo-human/locked/notes.txt: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "user config directory" on stderr
+      bodyfile_test.go:164: a message went out
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 1]
+
+SURVIVED the project file is not a layer (compilable rerun)
+  internal/cli/bodyfile.go: 'p.Explicit, config.ProjectFile(p.Cwd)}' -> 'p.Explicit, config.ProjectFile("")}'
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 0]
+
+
+KILLED  within accepts any path (compilable rerun, second form)
+  internal/config/private.go: 'return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))' -> 'return err == nil && rel != "." && !strings.HasPrefix(rel, "\x00")'
+  --- FAIL: TestOriginLayerRecordsTheKindOfEachLayer (0.00s)
+      containment_test.go:118: OriginLayer = map[channels.desk:1 channels.journal:2 channels.phone:2 channels.repo:3 deadline:3 human:2 incident_ttl:4 levels:3 version:2], want channels.repo from the project and incident_ttl from the explicit file outside the user directory
+  --- FAIL: TestExplicitFileOutsideTheUserDirNeedsTrust (0.00s)
+      explicit_test.go:52: error = <nil>, want a *problem.Problem
+  --- FAIL: TestExplicitFileOutsideTheUserDirMayNotDefineALogChannel (0.00s)
+      explicit_test.go:71: error = <nil>, want a *problem.Problem
+  --- FAIL: TestExplicitLinkFromTheUserDirToOutsideNeedsTrust (0.00s)
+      explicit_test.go:114: error = <nil>, want a *problem.Problem
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  the project file is not a layer (compilable rerun, second form)
+  internal/cli/bodyfile.go: 'p.Explicit, config.ProjectFile(p.Cwd)}' -> 'p.Explicit, config.ProjectFile("/")}'
+  --- FAIL: TestBodyFileRefusesEveryConfigLayer (0.04s)
+      bodyfile_test.go:144: --body-file .yo-human.yaml: code=0 out="RESULT delivered <ULID>\nphone: sent\n" err="notice: ignoring the project config \"$TMPDIR/TestBodyFileRefusesEveryConfigLayer3553132655/002/.yo-human.yaml\": it is not trusted, or has changed since it was; tell the human: they can read it and run `yo-human config 
+      bodyfile_test.go:147: a message went out
+  [go test -count=1 ./internal/cli -run 'BodyFile' exit 1]
+
+
+# The first form of "the project file is not a layer" is equivalent (ProjectFile("") searches from the working directory, as p.Cwd does), and the first form of "within accepts any path" did not compile; both second forms are killed.

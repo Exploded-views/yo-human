@@ -1,0 +1,58 @@
+# M1 task 8 fix round 1 mutation checks (shared helpers in internal/channel, bark action-preserving truncation, ntfy link tightening). Each mutant is one textual change, run with go test -count=1 -timeout 120s on ./internal/channel/... and ./internal/config, then restored.
+# First pass: 1 survivor (actions-only body not capped; got a test), 2 build failures (unused variable) and 1 non-unique pattern; their rewrites are the second block.
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/channel	0.013s
+ok  	github.com/Exploded-views/yo-human/internal/channel/bark	0.150s
+ok  	github.com/Exploded-views/yo-human/internal/channel/channeltest	0.010s
+ok  	github.com/Exploded-views/yo-human/internal/channel/logch	0.013s
+ok  	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.129s
+ok  	github.com/Exploded-views/yo-human/internal/config	0.057s
+exit=0
+=== first pass (raw)
+KILLED bark: truncation moved back to the whole string ['TestLongBodyKeepsEveryAction']
+KILLED bark: no newline room reserved ['TestLongBodyKeepsEveryAction']
+KILLED bark: oversized suffix not handled ['TestLongBodyKeepsEveryAction']
+KILLED bark: actions-only body not capped ['TestLongBodyKeepsEveryAction']
+KILLED bark: body-only not truncated ['TestBodyTruncatedWithMarker']
+KILLED bark: ForceQuery server accepted ['TestNewValidatesSettings']
+KILLED bark: redirect client not used ['TestRedirectIsNotFollowed']
+KILLED ntfy: redirect client not used ['TestRedirectIsNotFollowed']
+KILLED ntfy: link check skipped ['TestOnlyHTTPLinksReachThePhone']
+BUILDFAIL ntfy: action check skipped
+BUILDFAIL bark: action check skipped
+KILLED bark: link check skipped ['TestNoSecretInErrors', 'TestOnlyHTTPLinksReachThePhone']
+KILLED ntfy: truncation limit 4001 ['TestAsciiBodyTruncatesToExactlyTheLimit', 'TestBodyTruncatedWithMarker']
+KILLED SafeLink: userinfo allowed ['TestOnlyHTTPLinksReachThePhone', 'TestSafeLink']
+KILLED SafeLink: Host instead of Hostname ['TestOnlyHTTPLinksReachThePhone', 'TestSafeLink']
+KILLED SafeLink: any scheme ['TestOnlyHTTPLinksReachThePhone', 'TestSafeLink']
+KILLED SafeLink: ftp-like scheme prefix ['TestOnlyHTTPLinksReachThePhone', 'TestSafeLink']
+KILLED Truncate: keeps one byte over ['TestAsciiBodyTruncatesToExactlyTheLimit', 'TestBodyTruncatedWithMarker', 'TestLongBodyKeepsEveryAction', 'TestTruncate']
+KILLED Truncate: cuts inside a rune ['TestBodyTruncatedWithMarker', 'TestTruncate']
+KILLED Truncate: exact length truncated ['TestBodyTruncatedWithMarker', 'TestTruncate']
+KILLED Truncate: marker dropped ['TestAsciiBodyTruncatesToExactlyTheLimit', 'TestBodyTruncatedWithMarker', 'TestLongBodyKeepsEveryAction', 'TestTruncate']
+KILLED Truncate: tiny max keeps marker ['TestTruncate']
+KILLED TransportError: context permanent ['TestContextCancellationIsTransient', 'TestSendReturnsPromptlyWhenServerHangs', 'TestTransportErrorForContext']
+KILLED TransportError: context error not wrapped ['TestContextCancellationIsTransient', 'TestTransportErrorForContext']
+KILLED TransportError: raw error text ['TestTransportErrorDescribesInFixedWords', 'TestTransportErrorWording']
+KILLED TransportError: cert permanent ['TestTransportErrorDescribesInFixedWords']
+KILLED TransportError: dial permanent ['TestDialErrorIsTransient', 'TestTransportErrorDescribesInFixedWords']
+SKIP(count 2) TransportError: timeout text wrong
+KILLED TransportError: provider dropped ['TestTransportErrorDescribesInFixedWords', 'TestTransportErrorWording']
+KILLED NoRedirectClient: redirects followed ['TestNoRedirectClient', 'TestRedirectIsNotFollowed']
+KILLED NoRedirectClient: mutates the caller's client ['TestNoRedirectClient']
+KILLED NoRedirectClient: base ignored ['TestApplicationErrorIn200', 'TestAsciiBodyTruncatesToExactlyTheLimit', 'TestAskAloneIsTheMessage', 'TestBearerTokenOnlyWhenSet', 'TestBodyTruncatedWithMarker', 'TestDeliveryMoreThanThreeDaysOutIsPermanent', 'TestErrorKinds', 'TestInterruptionLevels', 'TestLongBodyKeepsEveryAction', 'TestNearDeliveryTimeSendsAtOnce', 'TestNoRedirectClient', 'TestOptionalFieldsOmitted', 'TestPriorityMapping', 'TestRedirectIsNotFollowed', 'TestScheduledSendHasDelayAndCancelDeletes', 'TestSendJSONShape', 'TestVolumeForms']
+KILLED bark: transport errors raw ['TestNoSecretInErrors']
+KILLED ntfy: transport errors raw ['TestNoSecretInErrors']
+=== rewritten and retried
+KILLED bark: actions-only body not capped ['TestLongBodyKeepsEveryAction']
+KILLED ntfy: action check skipped ['TestOnlyHTTPLinksReachThePhone']
+KILLED bark: action check skipped ['TestOnlyHTTPLinksReachThePhone']
+KILLED TransportError: timeout text wrong ['TestTransportErrorWording']
+KILLED TransportError: unreachable text wrong ['TestTransportErrorWording']
+=== go test -race -count=20
+ok  	github.com/Exploded-views/yo-human/internal/channel	1.065s
+ok  	github.com/Exploded-views/yo-human/internal/channel/bark	8.064s
+ok  	github.com/Exploded-views/yo-human/internal/channel/channeltest	1.033s
+ok  	github.com/Exploded-views/yo-human/internal/channel/logch	1.052s
+ok  	github.com/Exploded-views/yo-human/internal/channel/ntfy	6.252s
+exit=0

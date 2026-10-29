@@ -1,0 +1,40 @@
+skills used: ['yo-human-eval:yo-human']
+
+Dry run, nothing executed. These are the commands I would run, in order.
+
+**1. Read the human's level ladder.** I haven't done this yet this session, and level names differ per person, so I won't guess one.
+
+```
+yo-human levels --json
+```
+
+I'd pick the level whose `use_when` matches a production outage, where checkout is down and the human is needed now. I'd check its `ask` and `quiet_hours` fields. If no level clearly fits, I'd take the loudest one that does and not invent a name.
+
+**2. Send the notification.** `<LEVEL>` stands for the name chosen in step 1.
+
+```
+YO_HUMAN_PROJECT="<project>" YO_HUMAN_AGENT="<agent>" \
+yo-human notify --level <LEVEL> \
+  --title "Production DB unresponsive, checkout failing" \
+  --ask "Investigate the production database now; customers cannot complete checkout." \
+  --body "Production database stopped answering; checkout requests are failing. Detected by the unattended coding agent. Logs and details are in the session." \
+  --dedup-key prod-db-down-checkout-failing
+```
+
+- **Secrets:** none go in any argument or the body. I'd name the log or file location and not paste connection strings.
+- **Dedup key:** the key is stable and names the problem. A repeat at the same or a lower level is suppressed, and I can resolve it later.
+- **Result check:** I'd read the `RESULT` line and exit code.
+
+**3. Handle the exit code.**
+- **0** (delivered, partial, held, or suppressed): done. If the result is `held`, the message waits for quiet hours to end. I'd say so in my reply, since this is an outage.
+- **64:** my call was wrong. I'd read the `error`, `valid` and `fix` lines, correct the call, and rerun it.
+- **75 (queued):** I'd wait `after_seconds`, then run `next.do` exactly as printed, which is usually `yo-human flush`. I'd repeat this up to `attempts_left` times and never re-run `notify`. If the attempts run out, I'd tell the human directly in the session with the title and the ask.
+- **69, 74, 78, 70:** I'd stop, not retry or switch levels, and tell the human in the session. That message would cover what I tried, the ask, and the error text. For 78, I'd quote the `error` and `fix` lines and not touch the config.
+
+**4. Only after the database is fixed and verified:**
+
+```
+yo-human resolve --dedup-key prod-db-down-checkout-failing --note "<short note>"
+```
+
+I would not send a new `notify` to say it's fixed.

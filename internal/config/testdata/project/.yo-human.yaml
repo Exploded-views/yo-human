@@ -1,0 +1,9 @@
+deadline: 2s
+channels:
+  repo:
+    type: pager
+levels:
+  - name: project-only
+    use_when: from the project file
+    send:
+      - { channel: repo, interruption: active }

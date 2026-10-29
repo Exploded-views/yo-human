@@ -1,0 +1,88 @@
+KILLED  R1: a waiting message is never dropped
+  internal/core/repeat.go: 'return !queuedAt.IsZero() && inc != nil && !inc.Open && inc.Updated.After(queuedAt)' -> 'return false'
+  --- FAIL: TestAWaitingMessageClaimedBeforeAResolveDoesNotPage (0.30s)
+      followup_test.go:33: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 1; want the waiting message droppe
+      followup_test.go:36: incident &{Key:k Project: Generation:1 Previous:resolved Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex> 
+  --- FAIL: TestAWaitingRepeatClaimedBeforeAResolveDoesNotReopen (0.38s)
+      followup_test.go:55: sent [t Resolved: t louder]; want the first page and the resolve note, never the louder repeat
+      followup_test.go:58: incident &{Key:k Project: Generation:2 Previous:resolved Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex> 
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  R1: an unknown key leaves no closed record
+  internal/core/resolve.go: 'incs[key] = cur' -> ''
+  --- FAIL: TestAWaitingMessageClaimedBeforeAResolveDoesNotPage (0.30s)
+      followup_test.go:33: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 1; want the waiting message droppe
+      followup_test.go:36: incident &{Key:k Project: Generation:1 Previous: Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex> Latest:t
+  --- FAIL: TestAResolveOfAnUnknownKeyLeavesAClosedRecord (0.03s)
+      followup_test.go:184: record = &{Key: Project: Generation:0 Previous: Level: Rank:0 Open:false Reached:[] ContentHash: Latest: Opened:0001-01-01 00:00:00 +0000 UTC LastSent:0001-01-01 00:00:00 +0000 UTC Updated:0001-01-01 00:00:00 +0000 UTC}; want closed, project proj, key k, stamped
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  R1: a dropped message is sent anyway
+  internal/core/admit.go: 'if adm.dropped {' -> 'if false {'
+  --- FAIL: TestAWaitingMessageClaimedBeforeAResolveDoesNotPage (0.27s)
+      followup_test.go:33: flush = {Status:ok ID: Channels:[] Next:<nil> DedupKey: Warnings:[]}, sent 0; want the waiting message dropped, nothing sent
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  R2: a waiting message counts as pending
+  internal/store/queue.go: 'if w.IncidentKey == incidentKey && !isAdmit(w.Key) {' -> 'if w.IncidentKey == incidentKey {'
+  --- FAIL: TestAWaitingRepeatOfAStrandedIncidentIsSent (0.30s)
+      followup_test.go:74: flush = {Status:ok ID: Channels:[] Next:<nil> DedupKey: Warnings:[]}; want the repeat sent: the incident reached no one
+  --- FAIL: TestAWaitingMessageIsNotPending (0.01s)
+      followup_test.go:15: a queued waiting message counts as pending
+  [go test -count=1 -timeout 300s ./internal/core ./internal/store exit 1]
+
+KILLED  R2: a claimed waiting message counts as pending
+  internal/store/queue.go: '|| strings.Contains(key, admitSuffix+".")' -> ''
+  --- FAIL: TestAWaitingRepeatOfAStrandedIncidentIsSent (0.29s)
+      followup_test.go:74: flush = {Status:ok ID: Channels:[] Next:<nil> DedupKey: Warnings:[]}; want the repeat sent: the incident reached no one
+  --- FAIL: TestAWaitingMessageIsNotPending (0.05s)
+      followup_test.go:19: a claimed waiting message counts as pending
+  [go test -count=1 -timeout 300s ./internal/core ./internal/store exit 1]
+
+KILLED  R3: a landing waits only until the deadline
+  internal/core/repeat.go: 'p.d.Store.Unbounded().WithIncidents' -> 'p.d.Store.WithIncidents'
+  --- FAIL: TestALandingIsRecordedBehindABusyLock (0.46s)
+      followup_test.go:116: incident &{Key:k Project: Generation:1 Previous: Level:page Rank:1 Open:true Reached:[] ContentHash:<hex> Latest:t Opened:2026-10-30 12:00:00 +0000 UTC LastSent:2026-10-30 12:00:00 +0000 UTC Updated:2026-10-30 12:00
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  R3: Unbounded keeps the deadline
+  internal/store/store.go: 'c.ctx = nil' -> 'c.ctx = s.ctx'
+  --- FAIL: TestALandingIsRecordedBehindABusyLock (0.46s)
+      followup_test.go:116: incident &{Key:k Project: Generation:1 Previous: Level:page Rank:1 Open:true Reached:[] ContentHash:<hex> Latest:t Opened:2026-10-30 12:00:00 +0000 UTC LastSent:2026-10-30 12:00:00 +0000 UTC Updated:2026-10-30 12:00
+  --- FAIL: TestUnboundedWaitsPastTheDeadline (0.04s)
+      followup_test.go:40: Unbounded().WithIncidents = another yo-human process held the incident lock past this call's deadline; want it to wait for the lock
+  [go test -count=1 -timeout 300s ./internal/core ./internal/store exit 1]
+
+KILLED  R3: a busy lock after the sends is the call's error
+  internal/core/pipeline.go: 'if store.IsBusy(e) {' -> 'if false {'
+  --- FAIL: TestABusyLockInTheBacklogIsAWarning (0.45s)
+      followup_test.go:198: Notify = "delivered", another yo-human process held the incident lock past this call's deadline, warnings []; want delivered, no error, the busy lock as a warning
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  R4: an expired incident's scheduled sends are not cancelled
+  internal/core/resolve.go: 'b.cancelScheduled(ctx, inc)' -> ''
+  --- FAIL: TestResolvingAnExpiredIncidentStopsItsHeldPages (0.08s)
+      followup_test.go:149: cancelled map[]; want the scheduled page cancelled
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  R4: an expired incident's queued and held sends are kept
+  internal/core/resolve.go: 'if gone, cerr = b.p.d.Store.CancelIncident(key); cerr != nil {' -> 'if !open && inc.Open {\n\t\t} else if gone, cerr = b.p.d.Store.CancelIncident(key); cerr != nil {'
+  --- FAIL: TestResolvingAnExpiredIncidentStopsItsHeldPages (0.09s)
+      followup_test.go:152: queued 1, in flight 0 after the resolve; want the held copy removed
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  R4: the cli builds no channel for an expired incident
+  internal/cli/resolve.go: 'return inc.Reached, nil\n\t}' -> 'return inc.Reached, nil\n\t}\n\treturn nil, nil'
+  --- FAIL: TestResolveOfAnExpiredIncidentCancelsItsScheduledSend (0.15s)
+      scheduledcancel_test.go:182: resolve: {code:78 out:RESULT noop <ULID>
+      scheduledcancel_test.go:183: cancelled []; want the scheduled send cancelled
+  [go test -count=1 -timeout 300s ./internal/cli exit 1]
+
+KILLED  R4: an expired incident's resolve is not a noop
+  internal/core/resolve.go: 'open = b.now.Sub(cur.LastSent) <= b.p.d.Config.IncidentTTL' -> 'open = true'
+  --- FAIL: TestResolvingAnExpiredIncidentStopsItsHeldPages (0.08s)
+      followup_test.go:146: resolve: "resolved"; want noop
+  --- FAIL: TestResolveOfAnExpiredIncidentIsANoop (0.19s)
+      resolve_exit_test.go:169: resolve = {Status:resolved ID:M002 Channels:[{Channel:n Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}} {Channel:pd Status:sent Error: ProviderID: Scheduled:false
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+

@@ -1,0 +1,20 @@
+skills used: []
+
+I'd send it at the **siren** level. Checkout failing in production is impaired production, and siren is the only level that wakes a sleeping human. Nudge would be held during quiet hours, and murmur is only an FYI.
+
+The `levels` output doesn't show the notify syntax, so I don't know the exact flags. I wouldn't guess them. In order, I'd run:
+
+1. `yo-human notify --help`. This would confirm the flag names for level, message, and ask. It's read-only.
+2. The notify command itself, with this shape (the flag names are my best guess until step 1 confirms them):
+
+   ```
+   yo-human notify --level siren \
+     --message "Production checkout is failing. <what I observed: error, time first seen, scope>. I have not changed anything in production." \
+     --ask "Should I roll back the latest deploy, or wait for you to investigate?"
+   ```
+
+Siren has `ask: required`, so the notification has to include a concrete question the human can answer. The message should be self-contained, because they'll read it half-awake. It should say what's broken, what I saw, and what I have and haven't done.
+
+3. After sending, I'd check that the command exited 0. Then I'd stop and not take risky production actions like rollbacks or config changes on my own. I'd only do safe, read-only diagnosis while I wait for a reply.
+
+If the send fails, I'd report the failure and its output rather than assume the human was notified.
