@@ -14,8 +14,8 @@ func TestCrossSwarmIsIndistinguishableFromMissing(t *testing.T) {
 	it := e.post(t, node("ci-1", "crew"), notice("h1")).Item
 	before := len(e.events(t))
 	other := node("ci-9", "client")
-	_, errCross := e.b.Reply(context.Background(), other, it.ID, "hi", bus.SeverityNormal)
-	_, errMissing := e.b.Reply(context.Background(), other, bus.NewID("itm"), "hi", bus.SeverityNormal)
+	_, errCross := e.b.Reply(context.Background(), other, it.ID, "hi", bus.SeverityNormal, bus.UrgencyDigest)
+	_, errMissing := e.b.Reply(context.Background(), other, bus.NewID("itm"), "hi", bus.SeverityNormal, bus.UrgencyDigest)
 	a, b := errWithCode(t, errCross, bus.CodeNotFound), errWithCode(t, errMissing, bus.CodeNotFound)
 	if !reflect.DeepEqual(a, b) {
 		t.Errorf("cross-swarm error %+v differs from missing %+v", a, b)
@@ -31,13 +31,13 @@ func TestCrossSwarmIsIndistinguishableFromMissing(t *testing.T) {
 func TestReplyAppendsMessageAndEvent(t *testing.T) {
 	e := newEnv(t)
 	it := e.post(t, node("ci-1", "crew"), notice("h1")).Item
-	m, err := e.b.Reply(context.Background(), node("ci-2", "crew"), it.ID, "on it", bus.SeverityHigh)
+	m, err := e.b.Reply(context.Background(), node("ci-2", "crew"), it.ID, "on it", bus.SeverityHigh, bus.UrgencyDigest)
 	if err != nil {
 		t.Fatal(err)
 	}
 	same(t, "message", []any{m.ThreadID, m.From, m.FromKind, m.Body, m.Severity, m.ID != "", m.Created.IsZero()},
 		[]any{it.ID, "ci-2", bus.PrincipalNode, "on it", bus.SeverityHigh, true, false})
-	m2, err := e.b.Reply(context.Background(), duet, it.ID, "thanks", bus.SeverityNormal)
+	m2, err := e.b.Reply(context.Background(), duet, it.ID, "thanks", bus.SeverityNormal, bus.UrgencyDigest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,7 +69,7 @@ func TestReplyValidatesAndChecksWhoMayReply(t *testing.T) {
 		"too big":      {strings.Repeat("a", bus.MaxBody+1), bus.SeverityNormal},
 		"bad severity": {"hi", "urgent"}, "bidi": {"a" + string(rune(0x202e)) + "b", bus.SeverityNormal},
 	} {
-		_, err := e.b.Reply(context.Background(), n, it.ID, c.body, c.sev)
+		_, err := e.b.Reply(context.Background(), n, it.ID, c.body, c.sev, bus.UrgencyDigest)
 		if be := errWithCode(t, err, bus.CodeInvalid); be.What == "" {
 			t.Errorf("%s: no What", name)
 		}
@@ -78,7 +78,7 @@ func TestReplyValidatesAndChecksWhoMayReply(t *testing.T) {
 		{Kind: bus.PrincipalDesk, Name: "desk"}, {Kind: bus.PrincipalPasskey, Name: "phone"},
 		{Kind: bus.PrincipalExecutor, Name: "exec"}, {Kind: bus.PrincipalDeskStart, Name: "start"}, {},
 	} {
-		_, err := e.b.Reply(context.Background(), p, it.ID, "hi", bus.SeverityNormal)
+		_, err := e.b.Reply(context.Background(), p, it.ID, "hi", bus.SeverityNormal, bus.UrgencyDigest)
 		wantCode(t, err, bus.CodeForbidden)
 	}
 	if len(e.messages(t, it.ID)) != 0 {

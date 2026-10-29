@@ -218,7 +218,8 @@ func TestHandleScopedPerSwarm(t *testing.T) {
 
 func TestPostWithoutHandleAlwaysCreates(t *testing.T) {
 	e := newEnv(t)
-	q := bus.Draft{Kind: bus.KindQuestion, Severity: bus.SeverityNormal, To: "human", Title: "Which port?", Action: bus.ActionNone}
+	q := bus.Draft{Kind: bus.KindQuestion, Severity: bus.SeverityNormal, To: "human", Title: "Which port?", Action: bus.ActionNone,
+		Urgency: bus.UrgencyDigest}
 	a, b := e.post(t, node("ci-1", "crew"), q), e.post(t, node("ci-1", "crew"), q)
 	if a.Outcome != bus.OutcomeCreated || b.Outcome != bus.OutcomeCreated || a.Item.ID == b.Item.ID || a.Item.Handle == b.Item.Handle {
 		t.Fatalf("a = %+v, b = %+v", a.Item, b.Item)
@@ -296,7 +297,7 @@ func TestContentHashIsVersionedSHA256OfHashDraft(t *testing.T) {
 	got := e.post(t, node("ci-1", "crew"), d).Item.ContentHash
 	const body = `{"kind":"notice","severity":"normal","to":"human","handle":"h","title":"T","summary":"","detail":"",` +
 		`"required_action":"","repo":"","ref":"","base_ref":"","target":"","pinned_commit":"","pinned_tree":"",` +
-		`"action":"none","link":"","risk_flags":[],"untrusted":false}`
+		`"action":"none","link":"","risk_flags":[],"untrusted":false,"urgency":"digest"}`
 	sum := sha256.Sum256([]byte(body))
 	if want := "v1:" + hex.EncodeToString(sum[:]); got != want {
 		t.Errorf("hash = %s, want %s", got, want)

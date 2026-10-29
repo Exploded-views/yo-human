@@ -13,13 +13,13 @@ var walledNode = node("w-1", "client")
 
 func typed(n string) bus.Draft {
 	return bus.Draft{Kind: bus.KindNotice, Severity: bus.SeverityNormal, To: "human", Handle: "ob-" + n,
-		Title: "ob-" + n + " needs:owner", Action: bus.ActionNone}
+		Title: "ob-" + n + " needs:owner", Action: bus.ActionNone, Urgency: bus.UrgencyDigest}
 }
 
 func walledRelease() bus.Draft {
 	return bus.Draft{
 		Kind: bus.KindApproval, Severity: bus.SeverityHigh, To: "human", Handle: "ob-12", Title: "ob-12 deploy-ready",
-		Action: bus.ActionRelease, Target: "alpha", Repo: "cn:alpha", Ref: "v1.2.3", PinnedCommit: strings.Repeat("0a", 20),
+		Action: bus.ActionRelease, Target: "alpha", Repo: "cn:alpha", Ref: "v1.2.3", PinnedCommit: strings.Repeat("0a", 20), Urgency: bus.UrgencyPage,
 	}
 }
 
@@ -80,13 +80,13 @@ func TestWalledReplyRefusesFreeText(t *testing.T) {
 	e := newEnvWalled(t, "client")
 	it := e.post(t, walledNode, typed("12")).Item
 	for _, body := range []string{"the build failed on the client's server", "ob-12", "ob-12 blocked please help", "OB-12 blocked", ""} {
-		_, err := e.b.Reply(context.Background(), walledNode, it.ID, body, bus.SeverityNormal)
+		_, err := e.b.Reply(context.Background(), walledNode, it.ID, body, bus.SeverityNormal, bus.UrgencyDigest)
 		wantCode(t, err, bus.CodeInvalid)
 	}
 	if len(e.messages(t, it.ID)) != 0 {
 		t.Error("a refused reply stored a message")
 	}
-	m, err := e.b.Reply(context.Background(), walledNode, it.ID, "ob-12 blocked", bus.SeverityNormal)
+	m, err := e.b.Reply(context.Background(), walledNode, it.ID, "ob-12 blocked", bus.SeverityNormal, bus.UrgencyDigest)
 	if err != nil || m.Body != "ob-12 blocked" {
 		t.Fatalf("typed reply = %+v, %v", m, err)
 	}
@@ -96,14 +96,14 @@ func TestIntoWalledSwarmOnlyGoOrHold(t *testing.T) {
 	e := newEnvWalled(t, "client")
 	it := e.post(t, walledNode, typed("12")).Item
 	toClient := func(title string) bus.Draft {
-		return bus.Draft{Kind: bus.KindNotice, Severity: bus.SeverityNormal, To: "client", Title: title, Action: bus.ActionNone}
+		return bus.Draft{Kind: bus.KindNotice, Severity: bus.SeverityNormal, To: "client", Title: title, Action: bus.ActionNone, Urgency: bus.UrgencyDigest}
 	}
 	for _, title := range []string{"yes, go ahead", "go", "go sl:", "go sl:12 now", "Go sl:12", "go  sl:12", "stop sl:12", "go sl:12\nhold sl:13"} {
 		_, err := e.b.Post(context.Background(), duet, toClient(title))
 		if be := errWithCode(t, err, bus.CodeInvalid); be.What != "title" {
 			t.Errorf("post %q: What = %q", title, be.What)
 		}
-		_, err = e.b.Reply(context.Background(), duet, it.ID, title, bus.SeverityNormal)
+		_, err = e.b.Reply(context.Background(), duet, it.ID, title, bus.SeverityNormal, bus.UrgencyDigest)
 		if be := errWithCode(t, err, bus.CodeInvalid); be.What != "body" {
 			t.Errorf("reply %q: What = %q", title, be.What)
 		}
@@ -123,7 +123,7 @@ func TestIntoWalledSwarmOnlyGoOrHold(t *testing.T) {
 		if r := e.post(t, duet, toClient(title)); r.Item.Swarm != "client" || r.Item.Title != title {
 			t.Errorf("post %q = %+v", title, r.Item)
 		}
-		if _, err := e.b.Reply(context.Background(), duet, it.ID, title, bus.SeverityNormal); err != nil {
+		if _, err := e.b.Reply(context.Background(), duet, it.ID, title, bus.SeverityNormal, bus.UrgencyDigest); err != nil {
 			t.Errorf("reply %q: %v", title, err)
 		}
 	}
@@ -162,16 +162,16 @@ func TestUnwalledSwarmUnchanged(t *testing.T) {
 	e := newEnvWalled(t, "client")
 	d := bus.Draft{Kind: bus.KindQuestion, Severity: bus.SeverityNormal, To: "human", Handle: "free text",
 		Title: "Which port should the staging server use?", Summary: "words", Detail: "more words",
-		RequiredAction: "pick one", Link: "https://github.com/o/r/pull/1", Action: bus.ActionNone}
+		RequiredAction: "pick one", Link: "https://github.com/o/r/pull/1", Action: bus.ActionNone, Urgency: bus.UrgencyDigest}
 	d.Handle = "q-1"
 	it := e.post(t, node("ci-1", "crew"), d).Item
-	if _, err := e.b.Reply(context.Background(), node("ci-1", "crew"), it.ID, "any prose at all", bus.SeverityNormal); err != nil {
+	if _, err := e.b.Reply(context.Background(), node("ci-1", "crew"), it.ID, "any prose at all", bus.SeverityNormal, bus.UrgencyDigest); err != nil {
 		t.Errorf("prose reply in an unwalled swarm: %v", err)
 	}
 	dd := d
 	dd.To, dd.Handle = "crew", "q-2"
 	e.post(t, duet, dd)
-	if _, err := e.b.Reply(context.Background(), duet, it.ID, "Use 8080.", bus.SeverityNormal); err != nil {
+	if _, err := e.b.Reply(context.Background(), duet, it.ID, "Use 8080.", bus.SeverityNormal, bus.UrgencyDigest); err != nil {
 		t.Errorf("Duet's prose into an unwalled swarm: %v", err)
 	}
 }
@@ -182,8 +182,8 @@ func TestCrewProseReplyToWalledItemIsNotFound(t *testing.T) {
 	e := newEnvWalled(t, "client")
 	it := e.post(t, walledNode, typed("12")).Item
 	crew := node("ci-1", "crew")
-	_, errWalled := e.b.Reply(context.Background(), crew, it.ID, "plain prose, not typed", bus.SeverityNormal)
-	_, errMissing := e.b.Reply(context.Background(), crew, bus.NewID("itm"), "plain prose, not typed", bus.SeverityNormal)
+	_, errWalled := e.b.Reply(context.Background(), crew, it.ID, "plain prose, not typed", bus.SeverityNormal, bus.UrgencyDigest)
+	_, errMissing := e.b.Reply(context.Background(), crew, bus.NewID("itm"), "plain prose, not typed", bus.SeverityNormal, bus.UrgencyDigest)
 	a, b := errWithCode(t, errWalled, bus.CodeNotFound), errWithCode(t, errMissing, bus.CodeNotFound)
 	same(t, "walled vs missing", *a, *b)
 }

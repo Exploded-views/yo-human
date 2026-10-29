@@ -6,7 +6,7 @@ import (
 )
 
 func TestCheckWalledDraft(t *testing.T) {
-	ok := Draft{Kind: KindNotice, Severity: SeverityNormal, To: "human", Handle: "ob-3", Title: "ob-3 ack", Action: ActionNone,
+	ok := Draft{Kind: KindNotice, Severity: SeverityNormal, To: "human", Handle: "ob-3", Title: "ob-3 ack", Action: ActionNone, Urgency: UrgencyDigest,
 		RiskFlags: []string{"touches-auth"}}
 	if err := CheckWalledDraft(ok); err != nil {
 		t.Fatalf("typed draft: %v", err)

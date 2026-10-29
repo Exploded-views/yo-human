@@ -36,16 +36,16 @@ func TestOpenMigratesAndReopens(t *testing.T) {
 	if err := d.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if v := userVersion(t, path); v != 1 {
-		t.Fatalf("user_version = %d, want 1", v)
+	if v := userVersion(t, path); v != 2 {
+		t.Fatalf("user_version = %d, want 2", v)
 	}
 	d2, err := db.Open(path)
 	if err != nil {
 		t.Fatalf("reopen: %v", err)
 	}
 	defer func() { _ = d2.Close() }()
-	if v := userVersion(t, path); v != 1 {
-		t.Fatalf("user_version after the second migration run = %d, want 1", v)
+	if v := userVersion(t, path); v != 2 {
+		t.Fatalf("user_version after the second migration run = %d, want 2", v)
 	}
 	var found bool
 	tx(t, d2, func(x bus.Tx) (err error) { _, found, err = x.ItemByID("itm_1"); return })

@@ -59,14 +59,15 @@ func node(name, swarm string) bus.Principal {
 var duet = bus.Principal{Kind: bus.PrincipalDuet, Name: "duet"}
 
 func notice(handle string) bus.Draft {
-	return bus.Draft{Kind: bus.KindNotice, Severity: bus.SeverityNormal, To: "human", Handle: handle, Title: "Build done", Action: bus.ActionNone}
+	return bus.Draft{Kind: bus.KindNotice, Severity: bus.SeverityNormal, To: "human", Handle: handle, Title: "Build done", Action: bus.ActionNone,
+		Urgency: bus.UrgencyDigest}
 }
 
 func mergeApproval(handle string) bus.Draft {
 	return bus.Draft{
 		Kind: bus.KindApproval, Severity: bus.SeverityHigh, To: "human", Handle: handle, Title: "Merge PR 7",
 		Action: bus.ActionMerge, Target: "o/r#7", Repo: "o/r", Ref: "7", BaseRef: "main",
-		PinnedCommit: strings.Repeat("0a", 20),
+		PinnedCommit: strings.Repeat("0a", 20), Urgency: bus.UrgencyDigest,
 	}
 }
 

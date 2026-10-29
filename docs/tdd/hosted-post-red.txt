@@ -136,3 +136,61 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.701s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 2, part 3 (interrupt lanes: stubs Draft.Urgency, Message.Urgency and Reply's urg exist but nothing validates, hashes or stores them; db has no urgency column), 2026-10-29T01:34:18Z
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/ ./internal/hosted/db/
+--- FAIL: TestHashBytesArePinned (0.00s)
+    hash_test.go:25: hash bytes =
+        {"kind":"approval","severity":"high","to":"human","handle":"h","title":"T","summary":"S","detail":"D","required_action":"R","repo":"o/r","ref":"7","base_ref":"main","target":"o/r#7","pinned_commit":"c","pinned_tree":"t","action":"merge","link":"https://github.com/x","risk_flags":["a","b"],"untrusted":true}
+        want
+        {"kind":"approval","severity":"high","to":"human","handle":"h","title":"T","summary":"S","detail":"D","required_action":"R","repo":"o/r","ref":"7","base_ref":"main","target":"o/r#7","pinned_commit":"c","pinned_tree":"t","action":"merge","link":"https://github.com/x","risk_flags":["a","b"],"untrusted":true,"urgency":"page"}
+    hash_test.go:29: contentHash = v1:1434e1d8928aeecd291811faa8707fa0142c9b1ab692b3c8c8ea66825c3d7e5e
+--- FAIL: TestDraftValidation (0.00s)
+    --- FAIL: TestDraftValidation/no_urgency (0.00s)
+        validate_test.go:148: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/unknown_urgency (0.00s)
+        validate_test.go:148: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/urgency_in_the_wrong_case (0.00s)
+        validate_test.go:148: Validate = <nil>, want a bus error
+--- FAIL: TestContentHashIsVersionedSHA256OfHashDraft (0.20s)
+    post_test.go:303: hash = v1:7da3be957cfe1738ffd28e4c3ea8d517a3fbc10fd4a751955fe7e2a49d6585aa, want v1:75fe5e054e30d59a8742c341b1065e0f72cc6275435c10bfb890bdeabe026f58
+--- FAIL: TestPostWithoutUrgencyRefused (0.03s)
+    urgency_test.go:21: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestReplyWithoutUrgencyRefused (0.02s)
+    urgency_test.go:37: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestDuetCannotPostInterruptWhenGood (0.20s)
+    urgency_test.go:53: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestUrgencyRoundTripsThroughTheStore (0.02s)
+    urgency_test.go:88: stored urgency = "" (result "page"), want "page"
+    urgency_test.go:95: message urgency = [{ID:msg_m6gwvgk2gxud2o2qqgc6uvcx6z ThreadID:itm_uzubrywfg6e6hqu4ank3dgdi7x From:ci-1 FromKind:node Body:hi Severity:normal Urgency: Created:2026-10-28 09:30:02 +0000 UTC}] (result ""), want "page"
+    urgency_test.go:88: stored urgency = "" (result "interrupt-when-good"), want "interrupt-when-good"
+    urgency_test.go:95: message urgency = [{ID:msg_ytmxg2csrotgthilxhijft7dhc ThreadID:itm_czk6wgw6loan4u6kyxgoxvghzn From:ci-1 FromKind:node Body:hi Severity:normal Urgency: Created:2026-10-28 09:30:04 +0000 UTC}] (result ""), want "interrupt-when-good"
+    urgency_test.go:88: stored urgency = "" (result "digest"), want "digest"
+    urgency_test.go:95: message urgency = [{ID:msg_n7hldc3z2vubwc353opbpwpizk ThreadID:itm_ywqhqfyrh2j6djffxy62neetvs From:ci-1 FromKind:node Body:hi Severity:normal Urgency: Created:2026-10-28 09:30:06 +0000 UTC}] (result ""), want "digest"
+--- FAIL: TestUrgencyChangeIsARevision (0.21s)
+    urgency_test.go:110: urgency-only repost = unchanged revision 1
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.627s
+--- FAIL: TestOpenMigratesAndReopens (0.14s)
+    db_test.go:40: user_version = 1, want 2
+--- FAIL: TestMessagesRoundTripInOrder (0.02s)
+    events_test.go:114: got [{ID:msg_1 ThreadID:itm_1 From:ci-1 FromKind:node Body:hello Severity:low Urgency: Created:2026-10-28 09:30:15.123456 +0000 UTC} {ID:msg_2 ThreadID:itm_1 From:owner FromKind:duet Body:hi Severity:normal Urgency: Created:2026-10-28 09:30:16.123456 +0000 UTC}]
+--- FAIL: TestItemRoundTrip (0.02s)
+    items_test.go:31: ItemByID:
+         got {Draft:{Kind:approval Severity:high To:human Handle:first Title:Merge the change Summary:A summary. Detail:Some
+        detail. RequiredAction:Say yes. Repo:owner/repo Ref:42 BaseRef:main Target:repo PinnedCommit:abc123 PinnedTree:def456 Action:merge Link:https://example.org/pr/42 RiskFlags:[touches-auth large-diff] Untrusted:true Urgency:} ID:itm_1 Swarm:crew From:ci-1 FromKind:node Revision:1 State:open ContentHash:hash-1 LastSeq:7 AckedSeq:3 Created:2026-10-28 09:30:15.123456 +0000 UTC Updated:2026-10-28 09:31:15.123456 +0000 UTC}
+        want {Draft:{Kind:approval Severity:high To:human Handle:first Title:Merge the change Summary:A summary. Detail:Some
+        detail. RequiredAction:Say yes. Repo:owner/repo Ref:42 BaseRef:main Target:repo PinnedCommit:abc123 PinnedTree:def456 Action:merge Link:https://example.org/pr/42 RiskFlags:[touches-auth large-diff] Untrusted:true Urgency:page} ID:itm_1 Swarm:crew From:ci-1 FromKind:node Revision:1 State:open ContentHash:hash-1 LastSeq:7 AckedSeq:3 Created:2026-10-28 09:30:15.123456 +0000 UTC Updated:2026-10-28 09:31:15.123456 +0000 UTC}
+--- FAIL: TestUpdateItem (0.03s)
+    items_test.go:83: got {Draft:{Kind:approval Severity:high To:human Handle:first Title:Retitled Summary:A summary. Detail:Some
+        detail. RequiredAction:Say yes. Repo:owner/repo Ref:42 BaseRef:main Target:repo PinnedCommit:abc123 PinnedTree:def456 Action:merge Link:https://example.org/pr/42 RiskFlags:[x] Untrusted:true Urgency:} ID:itm_1 Swarm:crew From:ci-1 FromKind:node Revision:2 State:open ContentHash:hash-1 LastSeq:9 AckedSeq:3 Created:2026-10-28 09:30:15.123456 +0000 UTC Updated:2026-10-28 10:30:15.123456 +0000 UTC} want {Draft:{Kind:approval Severity:high To:human Handle:first Title:Retitled Summary:A summary. Detail:Some
+        detail. RequiredAction:Say yes. Repo:owner/repo Ref:42 BaseRef:main Target:repo PinnedCommit:abc123 PinnedTree:def456 Action:merge Link:https://example.org/pr/42 RiskFlags:[x] Untrusted:true Urgency:page} ID:itm_1 Swarm:crew From:ci-1 FromKind:node Revision:2 State:open ContentHash:hash-1 LastSeq:9 AckedSeq:3 Created:2026-10-28 09:30:15.123456 +0000 UTC Updated:2026-10-28 10:30:15.123456 +0000 UTC}
+--- FAIL: TestUrgencyColumnsAreChecked (0.08s)
+    urgency_test.go:33: an item with urgency "" was stored
+    urgency_test.go:41: a message with urgency "" was stored
+--- FAIL: TestUpdateItemChangesUrgency (0.11s)
+    urgency_test.go:55: urgency after update = ""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	2.954s
+FAIL
+exit=1

@@ -11,7 +11,7 @@ func fullDraft() Draft {
 	return Draft{
 		Kind: KindApproval, Severity: SeverityHigh, To: "human", Handle: "h", Title: "T", Summary: "S", Detail: "D",
 		RequiredAction: "R", Repo: "o/r", Ref: "7", BaseRef: "main", Target: "o/r#7", PinnedCommit: "c", PinnedTree: "t",
-		Action: ActionMerge, Link: "https://github.com/x", RiskFlags: []string{"a", "b"}, Untrusted: true,
+		Action: ActionMerge, Link: "https://github.com/x", RiskFlags: []string{"a", "b"}, Untrusted: true, Urgency: UrgencyPage,
 	}
 }
 
@@ -20,7 +20,7 @@ func fullDraft() Draft {
 func TestHashBytesArePinned(t *testing.T) {
 	const want = `{"kind":"approval","severity":"high","to":"human","handle":"h","title":"T","summary":"S","detail":"D",` +
 		`"required_action":"R","repo":"o/r","ref":"7","base_ref":"main","target":"o/r#7","pinned_commit":"c",` +
-		`"pinned_tree":"t","action":"merge","link":"https://github.com/x","risk_flags":["a","b"],"untrusted":true}`
+		`"pinned_tree":"t","action":"merge","link":"https://github.com/x","risk_flags":["a","b"],"untrusted":true,"urgency":"page"}`
 	if got := string(hashBytes(fullDraft())); got != want {
 		t.Errorf("hash bytes =\n%s\nwant\n%s", got, want)
 	}

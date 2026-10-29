@@ -137,6 +137,7 @@ type hashDraft struct {
 	Link           string   `json:"link"`
 	RiskFlags      []string `json:"risk_flags"`
 	Untrusted      bool     `json:"untrusted"`
+	Urgency        Urgency  `json:"-"` // stub
 }
 
 // hashBytes is the encoding/json form of d's hashDraft. This is Go's encoding, not RFC 8785

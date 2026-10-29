@@ -27,7 +27,7 @@ func TestNodeInSwarmDuetReachesNothing(t *testing.T) {
 	}
 	for _, sw := range []string{"duet", "human"} {
 		n := node("n", sw)
-		_, err := e.b.Reply(context.Background(), n, it.ID, "hi", bus.SeverityNormal)
+		_, err := e.b.Reply(context.Background(), n, it.ID, "hi", bus.SeverityNormal, bus.UrgencyDigest)
 		wantCode(t, err, bus.CodeForbidden)
 		_, err = e.b.Post(context.Background(), n, notice("x"))
 		wantCode(t, err, bus.CodeForbidden)

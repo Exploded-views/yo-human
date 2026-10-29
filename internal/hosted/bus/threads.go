@@ -9,7 +9,7 @@ import (
 
 // Reply adds a message to the thread of item threadID. The thread is the item's id. An item
 // the caller can't see and an item that doesn't exist give the same error.
-func (b *Bus) Reply(ctx context.Context, p Principal, threadID, body string, sev Severity) (Message, error) {
+func (b *Bus) Reply(ctx context.Context, p Principal, threadID, body string, sev Severity, urg Urgency) (Message, error) {
 	if e := mayWrite(p); e != nil {
 		return Message{}, e
 	}

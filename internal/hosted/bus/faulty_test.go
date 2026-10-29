@@ -102,7 +102,7 @@ func TestStoreFailureIsInternalAndRollsBack(t *testing.T) {
 		return err
 	}
 	reply := func(b *bus.Bus, id string) error {
-		_, err := b.Reply(context.Background(), node("ci-1", "crew"), id, "hi", bus.SeverityNormal)
+		_, err := b.Reply(context.Background(), node("ci-1", "crew"), id, "hi", bus.SeverityNormal, bus.UrgencyDigest)
 		return err
 	}
 	for _, c := range []struct {
