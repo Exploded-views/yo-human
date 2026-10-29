@@ -1,0 +1,59 @@
+# H1 Task 5 RED, 2026-10-29T01:06:52Z: bus stubs (Post and Reply return an error, visible returns false, mapStoreErr passes errors through)
+$ go test -count=1 -timeout 120s ./internal/hosted/bus/
+--- FAIL: TestStoreErrorsMapToBusErrors (0.00s)
+    store_errors_test.go:23: not found: got <nil>, want code not_found
+    store_errors_test.go:23: stale revision: got <nil>, want code stale_revision
+    store_errors_test.go:23: kind mismatch: got <nil>, want code internal
+    store_errors_test.go:23: anything else: got <nil>, want code internal
+    store_errors_test.go:31: store not-found = <nil>, want the same error as a missing id: <nil>
+--- FAIL: TestPostCreatesWithCredentialSwarm (0.02s)
+    post_test.go:16: Post: not implemented
+--- FAIL: TestFromComesFromCredential (0.31s)
+    post_test.go:41: Post: not implemented
+--- FAIL: TestNodeCannotTargetAnotherSwarm (0.22s)
+    post_test.go:58: Post: not implemented
+--- FAIL: TestRepostSameContentUnchanged (0.01s)
+    post_test.go:68: Post: not implemented
+--- FAIL: TestRepostEmptyAndNilFlagsAreTheSameContent (0.00s)
+    post_test.go:85: Post: not implemented
+--- FAIL: TestRepostChangedBumpsRevisionAndVoids (0.01s)
+    post_test.go:104: Post: not implemented
+--- FAIL: TestReviseWithoutApprovalDoesNotVoid (0.00s)
+    post_test.go:130: Post: not implemented
+--- FAIL: TestReviseChangingKindBumpsRevision (0.01s)
+    post_test.go:142: Post: not implemented
+--- FAIL: TestRepostByAnotherAuthorRefused (0.01s)
+    post_test.go:153: Post: not implemented
+--- FAIL: TestHandleScopedPerSwarm (0.00s)
+    post_test.go:171: Post: not implemented
+--- FAIL: TestPostWithoutHandleAlwaysCreates (0.26s)
+    post_test.go:182: Post: not implemented
+--- FAIL: TestPostRefusesNonPostingPrincipals (0.25s)
+    post_test.go:196: err = not implemented (*errors.errorString), want a *bus.Error with code forbidden
+--- FAIL: TestPostValidatesBeforeStoring (0.01s)
+    post_test.go:208: err = not implemented (*errors.errorString), want a *bus.Error with code invalid
+--- FAIL: TestPostRefusesExcludedActions (0.18s)
+    post_test.go:220: err = not implemented (*errors.errorString), want a *bus.Error with code excluded_action
+--- FAIL: TestPostChecksApprovability (0.01s)
+    post_test.go:233: err = not implemented (*errors.errorString), want a *bus.Error with code excluded_action
+--- FAIL: TestContentHashIsSHA256OfCanonicalJSON (0.00s)
+    post_test.go:248: Post: not implemented
+--- FAIL: TestVisibilityByKind (0.00s)
+    scope_test.go:28: passkey sees crew item = false, want true
+    scope_test.go:31: passkey sees client item = false, want true
+    scope_test.go:28: duet sees crew item = false, want true
+    scope_test.go:31: duet sees client item = false, want true
+    scope_test.go:28: desk sees crew item = false, want true
+    scope_test.go:31: desk sees client item = false, want true
+    scope_test.go:28: crew node sees crew item = false, want true
+    scope_test.go:31: client node sees client item = false, want true
+--- FAIL: TestCrossSwarmIsIndistinguishableFromMissing (0.27s)
+    threads_test.go:14: Post: not implemented
+--- FAIL: TestReplyAppendsMessageAndEvent (0.03s)
+    threads_test.go:33: Post: not implemented
+--- FAIL: TestReplyValidatesAndChecksWhoMayReply (0.04s)
+    threads_test.go:62: Post: not implemented
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.659s
+FAIL
+exit=1
