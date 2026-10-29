@@ -40,7 +40,12 @@ func cmdInit(e *env, args []string) int {
 	} else if err := initExplicit(path); err != nil {
 		return e.fail(err)
 	}
-	err := core.CreateFile(path, []byte(fmt.Sprintf(starterConfig, yamlQuoted(filepath.Join(stateDir(), "messages.log")))))
+	logPath, err := yamlQuoted(filepath.Join(stateDir(), "messages.log"))
+	if err != nil {
+		return e.fail(problem.Storef("the state directory %q cannot be written into the starter config", "a state directory whose path is valid UTF-8",
+			"set XDG_STATE_HOME to a directory with a plain name", stateDir()))
+	}
+	err = core.CreateFile(path, []byte(fmt.Sprintf(starterConfig, logPath)))
 	if errors.Is(err, fs.ErrExist) {
 		return e.fail(problem.Usagef("the config file %q already exists", "a path with no file at it",
 			"edit it, or remove "+problem.ShellQuote(path)+" first; `yo-human config init` never overwrites", path))
@@ -55,10 +60,18 @@ func cmdInit(e *env, args []string) int {
 	return ExitOK
 }
 
-// yamlQuoted renders s as a double-quoted YAML scalar on one line, escaped by the YAML encoder.
-func yamlQuoted(s string) string {
-	out, _ := yaml.Marshal(&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Style: yaml.DoubleQuotedStyle, Value: s}) // a string scalar always encodes
-	return strings.TrimSuffix(string(out), "\n")
+// yamlQuoted renders s as a double-quoted YAML scalar on one line, escaped by the YAML encoder. It
+// fails for text YAML cannot hold, such as invalid UTF-8, and for any result that is not one line.
+func yamlQuoted(s string) (string, error) {
+	out, err := yaml.Marshal(&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Style: yaml.DoubleQuotedStyle, Value: s})
+	if err != nil {
+		return "", err
+	}
+	q := strings.TrimSuffix(string(out), "\n")
+	if q == "" || strings.Contains(q, "\n") {
+		return "", errors.New("the YAML encoder did not produce one line")
+	}
+	return q, nil
 }
 
 // initExplicit gates config init at a path the caller chose: that writes where the caller says, so
