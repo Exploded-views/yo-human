@@ -64,11 +64,8 @@ func cmdInit(e *env, args []string) int {
 // fails for text YAML cannot hold, such as invalid UTF-8, and for any result that is not one line.
 func yamlQuoted(s string) (string, error) {
 	out, err := yaml.Marshal(&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Style: yaml.DoubleQuotedStyle, Value: s})
-	if err != nil {
-		return "", err
-	}
 	q := strings.TrimSuffix(string(out), "\n")
-	if q == "" || strings.Contains(q, "\n") {
+	if err != nil || q == "" || strings.Contains(q, "\n") {
 		return "", errors.New("the YAML encoder did not produce one line")
 	}
 	return q, nil
