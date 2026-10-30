@@ -3,7 +3,9 @@
   "required": ["device_key"],
   "properties": {
     "server": {"type": "string", "pattern": "^https://[^/]", "description": "the Bark server base URL, https only; default https://api.day.app"},
-    "device_key": {"type": "object", "required": ["secret"], "properties": {"secret": {"type": "string"}}, "additionalProperties": false}
+    "device_key": {"type": "object", "required": ["secret"], "properties": {"secret": {"type": "string"}}, "additionalProperties": false},
+    "username": {"type": "object", "required": ["secret"], "properties": {"secret": {"type": "string"}}, "additionalProperties": false, "description": "basic-auth user for a self-hosted server; set with password"},
+    "password": {"type": "object", "required": ["secret"], "properties": {"secret": {"type": "string"}}, "additionalProperties": false, "description": "basic-auth password for a self-hosted server; set with username"}
   },
   "additionalProperties": false
 }

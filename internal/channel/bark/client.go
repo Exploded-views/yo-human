@@ -108,6 +108,9 @@ func (c *barkChannel) Send(ctx context.Context, m channel.Message, s channel.Sen
 	}
 	req.Header.Set("User-Agent", c.ua)
 	req.Header.Set("Content-Type", "application/json")
+	if c.user != "" {
+		req.SetBasicAuth(c.user, c.pass)
+	}
 	if err := c.do(ctx, req); err != nil {
 		return channel.Receipt{}, err
 	}
@@ -147,6 +150,10 @@ func (c *barkChannel) do(ctx context.Context, req *http.Request) error {
 // envelope's message is the server's, and may echo what it was sent.
 func classify(what string, code int) error {
 	err := fmt.Errorf("bark answered %s %d", what, code)
+	if code == http.StatusTeapot || code == http.StatusUnauthorized {
+		// A basic-auth server answers 418 to a push without credentials; 401 is a wrong pair.
+		err = fmt.Errorf("%w; the server wants basic auth or rejected it: set username and password (secrets) on this channel instance", err)
+	}
 	if code == http.StatusRequestTimeout || code == http.StatusTooManyRequests || code >= 500 {
 		return channel.Transient(err)
 	}
