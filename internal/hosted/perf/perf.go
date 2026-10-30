@@ -124,7 +124,7 @@ func seeded(dir string, items int) (*bus.Bus, func(), error) {
 }
 
 // seededWarm is seeded with the warm-up draft given, so a failing warm-up can be tested.
-func seededWarm(dir string, items int, _ bus.Draft) (*bus.Bus, func(), error) {
+func seededWarm(dir string, items int, warm bus.Draft) (*bus.Bus, func(), error) {
 	d, err := db.Open(filepath.Join(dir, "bus.db"))
 	if err != nil {
 		return nil, nil, err
@@ -154,5 +154,12 @@ func seededWarm(dir string, items int, _ bus.Draft) (*bus.Bus, func(), error) {
 		closeDB()
 		return nil, nil, err
 	}
-	return bus.New(d, time.Now, bus.Limits{}), closeDB, nil
+	b := bus.New(d, time.Now, bus.Limits{})
+	// The first commit after the bulk seed pays a one-off cost (most likely the
+	// WAL checkpoint); the scenarios must not time it.
+	if _, err := b.Post(context.Background(), perfNode, warm); err != nil {
+		closeDB()
+		return nil, nil, err
+	}
+	return b, closeDB, nil
 }
