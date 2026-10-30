@@ -53,6 +53,7 @@ type Message struct {
 	FromKind           PrincipalKind
 	Body               string
 	Severity           Severity
+	Urgency            Urgency
 	Created            time.Time
 }
 

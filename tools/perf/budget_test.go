@@ -230,6 +230,27 @@ func TestRunBaseBudgets(t *testing.T) {
 	}
 }
 
+func TestSampleScenarioUsesItsSamples(t *testing.T) {
+	scs := []Scenario{{Name: "x", Sample: func(n int) ([]time.Duration, error) {
+		out := make([]time.Duration, n)
+		for i := range out {
+			out[i] = ms100(5)
+		}
+		return out, nil
+	}}}
+	code, out, _ := runPerf(t, `{"runs":3,"ci_headroom":2.0,"budgets":{"x":{"p95_ms":10}}}`, scs, false)
+	if code != 0 || !strings.Contains(out, "x: p95 5.0ms") {
+		t.Errorf("code %d, out %q", code, out)
+	}
+}
+
+func TestSampleScenarioErrorIsUsageError(t *testing.T) {
+	scs := []Scenario{{Name: "x", Sample: func(int) ([]time.Duration, error) { return nil, os.ErrClosed }}}
+	if code, _, errOut := runPerf(t, `{"runs":3,"ci_headroom":2.0,"budgets":{"x":{"p95_ms":10}}}`, scs, false); code != 2 || !strings.Contains(errOut, "x:") {
+		t.Errorf("code %d, stderr %q", code, errOut)
+	}
+}
+
 func TestSetupRunsOnceIntoATempDirTheTimedCommandSees(t *testing.T) {
 	var dirs []string
 	scs := []Scenario{{

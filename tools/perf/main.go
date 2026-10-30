@@ -15,13 +15,16 @@ import (
 	"time"
 )
 
-// Scenario is a named command whose wall time is budgeted.
+// Scenario is a named measurement whose p95 is budgeted: a command whose wall time is taken, or,
+// when Sample is set, a function that returns n timings itself (the hosted scenarios, which time
+// one call against a seeded database rather than a process start).
 type Scenario struct {
-	Name  string
-	Argv  []string
-	Env   []string               // extra environment for the timed command; $DIR becomes the temp dir
-	Setup func(dir string) error // run once into the temp dir, before timing
-	Exit  int                    // the exit code the command is expected to return; zero unless it is a failure path
+	Name   string
+	Argv   []string
+	Env    []string                             // extra environment for the timed command; $DIR becomes the temp dir
+	Setup  func(dir string) error               // run once into the temp dir, before timing
+	Exit   int                                  // the exit code the command is expected to return; zero unless it is a failure path
+	Sample func(n int) ([]time.Duration, error) // when set, returns the n timings itself and Argv is not run
 }
 
 // fixtureEnv is a fixture home, so a run reads neither the developer's config nor their state.
@@ -42,6 +45,8 @@ var scenarios = []Scenario{
 	{Name: "notify-held-local", Argv: notifyArgv("--level", "night", "--title", "perf", "--ask", "look"), Setup: heldFixture, Env: fixtureEnv},
 	// A quieter repeat of an open incident is recorded and sends nothing.
 	{Name: "notify-suppressed", Argv: notifyArgv("--level", "note", "--title", "perf", "--dedup-key", perfKey), Setup: suppressedFixture, Env: fixtureEnv},
+	{Name: "hosted-post", Sample: hostedSample("post")},
+	{Name: "hosted-revise", Sample: hostedSample("revise")},
 }
 
 func main() {
@@ -124,6 +129,9 @@ func exitedAs(err error, want int) bool {
 // once, into a fresh temp dir that is removed afterwards, before the first timed run; the dir
 // stands in for $DIR in Env.
 func measure(s Scenario, n int) (samples []time.Duration, err error) {
+	if s.Sample != nil {
+		return s.Sample(n)
+	}
 	dir, err := os.MkdirTemp("", "perf-"+s.Name+"-")
 	if err != nil {
 		return nil, err

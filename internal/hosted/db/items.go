@@ -11,7 +11,7 @@ import (
 
 const itemCols = `id, swarm, handle, kind, severity, to_target, from_name, from_kind, title, summary, detail,
 	required_action, repo, ref, base_ref, target, pinned_commit, pinned_tree, action, link, risk_flags,
-	untrusted, revision, state, content_hash, last_seq, acked_seq, created, updated`
+	untrusted, revision, state, content_hash, last_seq, acked_seq, created, updated, urgency`
 
 // rowScanner is a *sql.Row or *sql.Rows.
 type rowScanner interface{ Scan(dest ...any) error }
@@ -23,7 +23,7 @@ func scanItem(r rowScanner) (bus.Item, error) {
 	err := r.Scan(&it.ID, &it.Swarm, &it.Handle, &it.Kind, &it.Severity, &it.To, &it.From, &it.FromKind,
 		&it.Title, &it.Summary, &it.Detail, &it.RequiredAction, &it.Repo, &it.Ref, &it.BaseRef, &it.Target,
 		&it.PinnedCommit, &it.PinnedTree, &it.Action, &it.Link, &flags, &untrusted, &it.Revision, &it.State,
-		&it.ContentHash, &it.LastSeq, &it.AckedSeq, &created, &updated)
+		&it.ContentHash, &it.LastSeq, &it.AckedSeq, &created, &updated, &it.Urgency)
 	if err != nil {
 		return bus.Item{}, err
 	}
@@ -72,11 +72,11 @@ func (x *txn) InsertItem(it bus.Item) error {
 	if err != nil {
 		return fmt.Errorf("db: insert item: %w", err)
 	}
-	_, err = x.tx.ExecContext(x.ctx, `INSERT INTO items (`+itemCols+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	_, err = x.tx.ExecContext(x.ctx, `INSERT INTO items (`+itemCols+`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		it.ID, it.Swarm, it.Handle, it.Kind, it.Severity, it.To, it.From, it.FromKind, it.Title, it.Summary,
 		it.Detail, it.RequiredAction, it.Repo, it.Ref, it.BaseRef, it.Target, it.PinnedCommit, it.PinnedTree,
 		it.Action, it.Link, flags, boolInt(it.Untrusted), it.Revision, bus.StateOpen, it.ContentHash, it.LastSeq,
-		it.AckedSeq, fmtTime(it.Created), fmtTime(it.Updated))
+		it.AckedSeq, fmtTime(it.Created), fmtTime(it.Updated), it.Urgency)
 	if err != nil {
 		return fmt.Errorf("db: insert item: %w", err)
 	}
@@ -116,11 +116,11 @@ func (x *txn) UpdateItem(it bus.Item) error {
 		summary = ?, detail = ?, required_action = ?, repo = ?, ref = ?, base_ref = ?, target = ?, pinned_commit = ?,
 		pinned_tree = ?, action = ?, link = ?, risk_flags = ?, untrusted = ?, revision = ?,
 		state = CASE WHEN EXISTS (SELECT 1 FROM decisions WHERE item_id = items.id AND revision = ? AND (kind = 'approval') = (? = 'approval')) THEN 'decided' ELSE 'open' END,
-		content_hash = ?, last_seq = ?, acked_seq = ?, updated = ? WHERE id = ?`,
+		content_hash = ?, last_seq = ?, acked_seq = ?, updated = ?, urgency = ? WHERE id = ?`,
 		it.Handle, it.Kind, it.Severity, it.To, it.Title, it.Summary, it.Detail, it.RequiredAction, it.Repo,
 		it.Ref, it.BaseRef, it.Target, it.PinnedCommit, it.PinnedTree, it.Action, it.Link, flags,
 		boolInt(it.Untrusted), it.Revision, it.Revision, it.Kind, it.ContentHash, it.LastSeq, it.AckedSeq,
-		fmtTime(it.Updated), it.ID)
+		fmtTime(it.Updated), it.Urgency, it.ID)
 	if err != nil {
 		return fmt.Errorf("db: update item: %w", err)
 	}

@@ -29,6 +29,7 @@ type Error struct {
 	Code             Code
 	What, Valid, Fix string
 	Winner           *Record
+	cause            error // behind an internal error; never printed or sent, see Cause
 }
 
 func (e *Error) Error() string {
@@ -43,6 +44,11 @@ func AsError(err error) (*Error, bool) {
 	}
 	return nil, false
 }
+
+// Cause is the error behind an internal error, for the operator's log (Task 9 logs it
+// server-side). Error() never prints it, and no field a caller sees carries it. It is nil for
+// every other error. It is not Unwrap, so errors.Is on a bus error never reaches the cause.
+func (e *Error) Cause() error { return e.cause }
 
 func invalid(what, valid string) *Error {
 	return &Error{Code: CodeInvalid, What: what, Valid: valid, Fix: "correct " + what + " and post again"}

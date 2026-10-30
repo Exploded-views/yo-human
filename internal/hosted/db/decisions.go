@@ -33,10 +33,11 @@ func (x *txn) Decision(itemID string, rev int) (bus.Record, bool, error) {
 	return r, true, nil
 }
 
-// The errors InsertDecision returns when a record doesn't fit its item.
+// The errors InsertDecision and UpdateItem return when a write doesn't fit its item. They are
+// the bus's own values, so the bus can match them without importing db.
 var (
-	ErrKindMismatch  = errors.New("db: decision kind does not match the item kind")
-	ErrStaleRevision = errors.New("db: decision revision is not the item's current revision")
+	ErrKindMismatch  = bus.ErrKindMismatch
+	ErrStaleRevision = bus.ErrStaleRevision
 )
 
 // InsertDecision stores an answer or approval and, in the same transaction, marks the item

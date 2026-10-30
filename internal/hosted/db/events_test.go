@@ -97,9 +97,9 @@ func TestEventRoundTrip(t *testing.T) {
 func TestMessagesRoundTripInOrder(t *testing.T) {
 	d, _ := openTemp(t)
 	insertItem(t, d, item("itm_1", "crew", "first"))
-	m1 := bus.Message{ID: "msg_1", ThreadID: "itm_1", From: "ci-1", FromKind: bus.PrincipalNode, Body: "hello", Severity: bus.SeverityLow, Created: t0}
-	m2 := bus.Message{ID: "msg_2", ThreadID: "itm_1", From: "owner", FromKind: bus.PrincipalDuet, Body: "hi", Severity: bus.SeverityNormal, Created: t0.Add(time.Second)}
-	other := bus.Message{ID: "msg_3", ThreadID: "itm_2", From: "x", FromKind: bus.PrincipalNode, Body: "z", Severity: bus.SeverityLow, Created: t0}
+	m1 := bus.Message{ID: "msg_1", ThreadID: "itm_1", From: "ci-1", FromKind: bus.PrincipalNode, Body: "hello", Severity: bus.SeverityLow, Urgency: bus.UrgencyInterruptWhenGood, Created: t0}
+	m2 := bus.Message{ID: "msg_2", ThreadID: "itm_1", From: "owner", FromKind: bus.PrincipalDuet, Body: "hi", Severity: bus.SeverityNormal, Urgency: bus.UrgencyDigest, Created: t0.Add(time.Second)}
+	other := bus.Message{ID: "msg_3", ThreadID: "itm_2", From: "x", FromKind: bus.PrincipalNode, Body: "z", Severity: bus.SeverityLow, Urgency: bus.UrgencyDigest, Created: t0}
 	var got []bus.Message
 	tx(t, d, func(x bus.Tx) (err error) {
 		for _, m := range []bus.Message{m2, m1, other} {

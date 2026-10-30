@@ -32,6 +32,18 @@ const (
 	SeverityCritical Severity = "critical"
 )
 
+// Urgency is the lane an item or message takes to the owner: page (delivered at once),
+// interrupt-when-good (queued for Duet to choose) or digest (batched). It is always the poster's
+// choice; a missing one is refused, never defaulted.
+type Urgency string
+
+// The urgencies.
+const (
+	UrgencyPage              Urgency = "page"
+	UrgencyInterruptWhenGood Urgency = "interrupt-when-good"
+	UrgencyDigest            Urgency = "digest"
+)
+
 // Action is the category of what an approval authorizes. ActionNone is a plain item.
 type Action string
 
@@ -100,6 +112,7 @@ type Draft struct {
 	Link                               string
 	RiskFlags                          []string
 	Untrusted                          bool
+	Urgency                            Urgency // last: hashDraft is converted from Draft
 }
 
 // State is an item's lifecycle state.
@@ -171,4 +184,7 @@ const (
 type Limits struct {
 	LinkHosts []string
 	Policy    policy.Policy
+	// WalledSwarms are the swarms behind the client wall (the deployment's YH_WALLED_SWARMS).
+	// New copies them once; nothing a caller sends can add or remove one.
+	WalledSwarms []string
 }

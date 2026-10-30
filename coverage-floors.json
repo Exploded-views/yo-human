@@ -43,7 +43,7 @@
     "statements": 100.0
   },
   "github.com/Exploded-views/yo-human/internal/hosted/db": {
-    "statements": 81.3
+    "statements": 81.9
   },
   "github.com/Exploded-views/yo-human/internal/hosted/policy": {
     "statements": 100.0
@@ -65,5 +65,11 @@
   },
   "github.com/Exploded-views/yo-human/tools/perf": {
     "statements": 98.2
+  },
+  "github.com/Exploded-views/yo-human/internal/hosted/perf": {
+    "statements": 91.4
+  },
+  "github.com/Exploded-views/yo-human/internal/hosted/perf/cmd": {
+    "statements": 100.0
   }
 }

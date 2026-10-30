@@ -45,7 +45,7 @@ func item(id, swarm, handle string) bus.Item {
 			RequiredAction: "Say yes.", Repo: "owner/repo", Ref: "42", BaseRef: "main",
 			Target: "repo", PinnedCommit: "abc123", PinnedTree: "def456",
 			Action: bus.ActionMerge, Link: "https://example.org/pr/42",
-			RiskFlags: []string{"touches-auth", "large-diff"}, Untrusted: true,
+			RiskFlags: []string{"touches-auth", "large-diff"}, Untrusted: true, Urgency: bus.UrgencyPage,
 		},
 		ID: id, Swarm: swarm, From: "ci-1", FromKind: bus.PrincipalNode, Revision: 1,
 		State: bus.StateOpen, ContentHash: "hash-1", LastSeq: 7, AckedSeq: 3,

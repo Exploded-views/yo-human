@@ -1,0 +1,543 @@
+# H1 Task 5 RED, 2026-10-29T01:06:52Z: bus stubs (Post and Reply return an error, visible returns false, mapStoreErr passes errors through)
+$ go test -count=1 -timeout 120s ./internal/hosted/bus/
+--- FAIL: TestStoreErrorsMapToBusErrors (0.00s)
+    store_errors_test.go:23: not found: got <nil>, want code not_found
+    store_errors_test.go:23: stale revision: got <nil>, want code stale_revision
+    store_errors_test.go:23: kind mismatch: got <nil>, want code internal
+    store_errors_test.go:23: anything else: got <nil>, want code internal
+    store_errors_test.go:31: store not-found = <nil>, want the same error as a missing id: <nil>
+--- FAIL: TestPostCreatesWithCredentialSwarm (0.02s)
+    post_test.go:16: Post: not implemented
+--- FAIL: TestFromComesFromCredential (0.31s)
+    post_test.go:41: Post: not implemented
+--- FAIL: TestNodeCannotTargetAnotherSwarm (0.22s)
+    post_test.go:58: Post: not implemented
+--- FAIL: TestRepostSameContentUnchanged (0.01s)
+    post_test.go:68: Post: not implemented
+--- FAIL: TestRepostEmptyAndNilFlagsAreTheSameContent (0.00s)
+    post_test.go:85: Post: not implemented
+--- FAIL: TestRepostChangedBumpsRevisionAndVoids (0.01s)
+    post_test.go:104: Post: not implemented
+--- FAIL: TestReviseWithoutApprovalDoesNotVoid (0.00s)
+    post_test.go:130: Post: not implemented
+--- FAIL: TestReviseChangingKindBumpsRevision (0.01s)
+    post_test.go:142: Post: not implemented
+--- FAIL: TestRepostByAnotherAuthorRefused (0.01s)
+    post_test.go:153: Post: not implemented
+--- FAIL: TestHandleScopedPerSwarm (0.00s)
+    post_test.go:171: Post: not implemented
+--- FAIL: TestPostWithoutHandleAlwaysCreates (0.26s)
+    post_test.go:182: Post: not implemented
+--- FAIL: TestPostRefusesNonPostingPrincipals (0.25s)
+    post_test.go:196: err = not implemented (*errors.errorString), want a *bus.Error with code forbidden
+--- FAIL: TestPostValidatesBeforeStoring (0.01s)
+    post_test.go:208: err = not implemented (*errors.errorString), want a *bus.Error with code invalid
+--- FAIL: TestPostRefusesExcludedActions (0.18s)
+    post_test.go:220: err = not implemented (*errors.errorString), want a *bus.Error with code excluded_action
+--- FAIL: TestPostChecksApprovability (0.01s)
+    post_test.go:233: err = not implemented (*errors.errorString), want a *bus.Error with code excluded_action
+--- FAIL: TestContentHashIsSHA256OfCanonicalJSON (0.00s)
+    post_test.go:248: Post: not implemented
+--- FAIL: TestVisibilityByKind (0.00s)
+    scope_test.go:28: passkey sees crew item = false, want true
+    scope_test.go:31: passkey sees client item = false, want true
+    scope_test.go:28: duet sees crew item = false, want true
+    scope_test.go:31: duet sees client item = false, want true
+    scope_test.go:28: desk sees crew item = false, want true
+    scope_test.go:31: desk sees client item = false, want true
+    scope_test.go:28: crew node sees crew item = false, want true
+    scope_test.go:31: client node sees client item = false, want true
+--- FAIL: TestCrossSwarmIsIndistinguishableFromMissing (0.27s)
+    threads_test.go:14: Post: not implemented
+--- FAIL: TestReplyAppendsMessageAndEvent (0.03s)
+    threads_test.go:33: Post: not implemented
+--- FAIL: TestReplyValidatesAndChecksWhoMayReply (0.04s)
+    threads_test.go:62: Post: not implemented
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.659s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 2, part 1 (review fixes: reserved swarms, link text, versioned hash, node To, Error cause; stubs: ValidSwarm = ValidName, Cause() = nil, empty hashDraft), 2026-10-29T01:27:38Z
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestHashBytesArePinned (0.00s)
+    hash_test.go:25: hash bytes =
+        
+        want
+        {"kind":"approval","severity":"high","to":"human","handle":"h","title":"T","summary":"S","detail":"D","required_action":"R","repo":"o/r","ref":"7","base_ref":"main","target":"o/r#7","pinned_commit":"c","pinned_tree":"t","action":"merge","link":"https://github.com/x","risk_flags":["a","b"],"untrusted":true}
+    hash_test.go:29: contentHash = <64-hex>
+--- FAIL: TestHashDraftCoversEveryDraftField (0.00s)
+    hash_test.go:48: hashDraft fields [], want Draft's [Kind Severity To Handle Title Summary Detail RequiredAction Repo Ref BaseRef Target PinnedCommit PinnedTree Action Link RiskFlags Untrusted]
+--- FAIL: TestInternalErrorKeepsItsCause (0.00s)
+    store_errors_test.go:48: Cause() = internal: the bus (valid: a retry), want the store error
+--- FAIL: TestDraftValidation (0.00s)
+    --- FAIL: TestDraftValidation/link_with_invalid_UTF-8 (0.00s)
+        validate_test.go:145: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/link_with_a_bidi_override (0.00s)
+        validate_test.go:145: Validate = <nil>, want a bus error
+--- FAIL: TestNodeToMustBeHuman (0.01s)
+    post_test.go:62: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestPostRefusesNonPostingPrincipals (0.00s)
+    post_test.go:239: err = <nil> (<nil>), want a *bus.Error with code forbidden
+--- FAIL: TestContentHashIsVersionedSHA256OfHashDraft (0.00s)
+    post_test.go:302: hash = <64-hex>, want v1:<64-hex>
+--- FAIL: TestValidSwarmReservesDuetAndHuman (0.00s)
+    reserved_test.go:15: ValidSwarm("duet") = true, want false
+    reserved_test.go:15: ValidSwarm("human") = true, want false
+--- FAIL: TestNodeInSwarmDuetReachesNothing (0.00s)
+    reserved_test.go:31: err = <nil> (<nil>), want a *bus.Error with code forbidden
+--- FAIL: TestDuetCannotAddressReservedSwarms (0.01s)
+    reserved_test.go:48: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestVisibilityByKind (0.00s)
+    scope_test.go:38: a node in swarm "duet" sees an item in swarm "duet"
+    scope_test.go:38: a node in swarm "human" sees an item in swarm "human"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.202s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 2, part 2 (client wall: stubs CheckWalledDraft/CheckWalledMessage/checkSwarmMessage return nil, Limits.WalledSwarms unused), 2026-10-29T01:31:31Z
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestCheckWalledDraft (0.00s)
+    validate_wall_test.go:35: handle edit: got <nil>
+    validate_wall_test.go:35: handle edit: got <nil>
+    validate_wall_test.go:35: title edit: got <nil>
+    validate_wall_test.go:35: title edit: got <nil>
+    validate_wall_test.go:35: title edit: got <nil>
+    validate_wall_test.go:35: repo edit: got <nil>
+    validate_wall_test.go:35: repo edit: got <nil>
+    validate_wall_test.go:35: ref edit: got <nil>
+    validate_wall_test.go:35: ref edit: got <nil>
+    validate_wall_test.go:35: ref edit: got <nil>
+    validate_wall_test.go:35: base_ref edit: got <nil>
+    validate_wall_test.go:35: target edit: got <nil>
+--- FAIL: TestCheckWalledMessage (0.00s)
+    validate_wall_test.go:64: CheckWalledMessage("go sl:3", false) = <nil>, want ok=false
+    validate_wall_test.go:64: CheckWalledMessage("ob-3 blocked ", false) = <nil>, want ok=false
+    validate_wall_test.go:64: CheckWalledMessage("", false) = <nil>, want ok=false
+    validate_wall_test.go:64: CheckWalledMessage("ob-3 blocked", true) = <nil>, want ok=false
+    validate_wall_test.go:64: CheckWalledMessage("go sl:3 ", true) = <nil>, want ok=false
+    validate_wall_test.go:64: CheckWalledMessage("go sl:-3", true) = <nil>, want ok=false
+    validate_wall_test.go:64: CheckWalledMessage("go sl:03x", true) = <nil>, want ok=false
+    validate_wall_test.go:64: CheckWalledMessage("", true) = <nil>, want ok=false
+--- FAIL: TestWalledPostRefusesFreeText (0.04s)
+    wall_test.go:48: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestWalledRepostWithProseRefused (0.02s)
+    wall_test.go:71: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestWalledReplyRefusesFreeText (0.03s)
+    wall_test.go:84: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold (0.12s)
+    wall_test.go:103: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestWalledApprovalRefusesRealSlug (0.13s)
+    wall_test.go:148: code = excluded_action (action), want invalid
+--- FAIL: TestWalledListOnlyFromConfig (0.02s)
+    wall_test.go:206: err = <nil> (<nil>), want a *bus.Error with code invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.701s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 2, part 3 (interrupt lanes: stubs Draft.Urgency, Message.Urgency and Reply's urg exist but nothing validates, hashes or stores them; db has no urgency column), 2026-10-29T01:34:18Z
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/ ./internal/hosted/db/
+--- FAIL: TestHashBytesArePinned (0.00s)
+    hash_test.go:25: hash bytes =
+        {"kind":"approval","severity":"high","to":"human","handle":"h","title":"T","summary":"S","detail":"D","required_action":"R","repo":"o/r","ref":"7","base_ref":"main","target":"o/r#7","pinned_commit":"c","pinned_tree":"t","action":"merge","link":"https://github.com/x","risk_flags":["a","b"],"untrusted":true}
+        want
+        {"kind":"approval","severity":"high","to":"human","handle":"h","title":"T","summary":"S","detail":"D","required_action":"R","repo":"o/r","ref":"7","base_ref":"main","target":"o/r#7","pinned_commit":"c","pinned_tree":"t","action":"merge","link":"https://github.com/x","risk_flags":["a","b"],"untrusted":true,"urgency":"page"}
+    hash_test.go:29: contentHash = v1:<64-hex>
+--- FAIL: TestDraftValidation (0.00s)
+    --- FAIL: TestDraftValidation/no_urgency (0.00s)
+        validate_test.go:148: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/unknown_urgency (0.00s)
+        validate_test.go:148: Validate = <nil>, want a bus error
+    --- FAIL: TestDraftValidation/urgency_in_the_wrong_case (0.00s)
+        validate_test.go:148: Validate = <nil>, want a bus error
+--- FAIL: TestContentHashIsVersionedSHA256OfHashDraft (0.20s)
+    post_test.go:303: hash = v1:<64-hex>, want v1:<64-hex>
+--- FAIL: TestPostWithoutUrgencyRefused (0.03s)
+    urgency_test.go:21: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestReplyWithoutUrgencyRefused (0.02s)
+    urgency_test.go:37: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestDuetCannotPostInterruptWhenGood (0.20s)
+    urgency_test.go:53: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestUrgencyRoundTripsThroughTheStore (0.02s)
+    urgency_test.go:88: stored urgency = "" (result "page"), want "page"
+    urgency_test.go:95: message urgency = [{ID:msg_m6gwvgk2gxud2o2qqgc6uvcx6z ThreadID:itm_uzubrywfg6e6hqu4ank3dgdi7x From:ci-1 FromKind:node Body:hi Severity:normal Urgency: Created:2026-10-28 09:30:02 +0000 UTC}] (result ""), want "page"
+    urgency_test.go:88: stored urgency = "" (result "interrupt-when-good"), want "interrupt-when-good"
+    urgency_test.go:95: message urgency = [{ID:msg_ytmxg2csrotgthilxhijft7dhc ThreadID:itm_czk6wgw6loan4u6kyxgoxvghzn From:ci-1 FromKind:node Body:hi Severity:normal Urgency: Created:2026-10-28 09:30:04 +0000 UTC}] (result ""), want "interrupt-when-good"
+    urgency_test.go:88: stored urgency = "" (result "digest"), want "digest"
+    urgency_test.go:95: message urgency = [{ID:msg_n7hldc3z2vubwc353opbpwpizk ThreadID:itm_ywqhqfyrh2j6djffxy62neetvs From:ci-1 FromKind:node Body:hi Severity:normal Urgency: Created:2026-10-28 09:30:06 +0000 UTC}] (result ""), want "digest"
+--- FAIL: TestUrgencyChangeIsARevision (0.21s)
+    urgency_test.go:110: urgency-only repost = unchanged revision 1
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.627s
+--- FAIL: TestOpenMigratesAndReopens (0.14s)
+    db_test.go:40: user_version = 1, want 2
+--- FAIL: TestMessagesRoundTripInOrder (0.02s)
+    events_test.go:114: got [{ID:msg_1 ThreadID:itm_1 From:ci-1 FromKind:node Body:hello Severity:low Urgency: Created:2026-10-28 09:30:15.123456 +0000 UTC} {ID:msg_2 ThreadID:itm_1 From:owner FromKind:duet Body:hi Severity:normal Urgency: Created:2026-10-28 09:30:16.123456 +0000 UTC}]
+--- FAIL: TestItemRoundTrip (0.02s)
+    items_test.go:31: ItemByID:
+         got {Draft:{Kind:approval Severity:high To:human Handle:first Title:Merge the change Summary:A summary. Detail:Some
+        detail. RequiredAction:Say yes. Repo:owner/repo Ref:42 BaseRef:main Target:repo PinnedCommit:abc123 PinnedTree:def456 Action:merge Link:https://example.org/pr/42 RiskFlags:[touches-auth large-diff] Untrusted:true Urgency:} ID:itm_1 Swarm:crew From:ci-1 FromKind:node Revision:1 State:open ContentHash:hash-1 LastSeq:7 AckedSeq:3 Created:2026-10-28 09:30:15.123456 +0000 UTC Updated:2026-10-28 09:31:15.123456 +0000 UTC}
+        want {Draft:{Kind:approval Severity:high To:human Handle:first Title:Merge the change Summary:A summary. Detail:Some
+        detail. RequiredAction:Say yes. Repo:owner/repo Ref:42 BaseRef:main Target:repo PinnedCommit:abc123 PinnedTree:def456 Action:merge Link:https://example.org/pr/42 RiskFlags:[touches-auth large-diff] Untrusted:true Urgency:page} ID:itm_1 Swarm:crew From:ci-1 FromKind:node Revision:1 State:open ContentHash:hash-1 LastSeq:7 AckedSeq:3 Created:2026-10-28 09:30:15.123456 +0000 UTC Updated:2026-10-28 09:31:15.123456 +0000 UTC}
+--- FAIL: TestUpdateItem (0.03s)
+    items_test.go:83: got {Draft:{Kind:approval Severity:high To:human Handle:first Title:Retitled Summary:A summary. Detail:Some
+        detail. RequiredAction:Say yes. Repo:owner/repo Ref:42 BaseRef:main Target:repo PinnedCommit:abc123 PinnedTree:def456 Action:merge Link:https://example.org/pr/42 RiskFlags:[x] Untrusted:true Urgency:} ID:itm_1 Swarm:crew From:ci-1 FromKind:node Revision:2 State:open ContentHash:hash-1 LastSeq:9 AckedSeq:3 Created:2026-10-28 09:30:15.123456 +0000 UTC Updated:2026-10-28 10:30:15.123456 +0000 UTC} want {Draft:{Kind:approval Severity:high To:human Handle:first Title:Retitled Summary:A summary. Detail:Some
+        detail. RequiredAction:Say yes. Repo:owner/repo Ref:42 BaseRef:main Target:repo PinnedCommit:abc123 PinnedTree:def456 Action:merge Link:https://example.org/pr/42 RiskFlags:[x] Untrusted:true Urgency:page} ID:itm_1 Swarm:crew From:ci-1 FromKind:node Revision:2 State:open ContentHash:hash-1 LastSeq:9 AckedSeq:3 Created:2026-10-28 09:30:15.123456 +0000 UTC Updated:2026-10-28 10:30:15.123456 +0000 UTC}
+--- FAIL: TestUrgencyColumnsAreChecked (0.08s)
+    urgency_test.go:33: an item with urgency "" was stored
+    urgency_test.go:41: a message with urgency "" was stored
+--- FAIL: TestUpdateItemChangesUrgency (0.11s)
+    urgency_test.go:55: urgency after update = ""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	2.954s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 2, part 4 (budget scenarios: Scenario.Sample dispatch and the thin helper main exist; the samplers, Run and hostedSample are stubs; perf-budgets.json has no hosted entries), 2026-10-29T01:39:09Z
+$ go test -count=1 -timeout 300s ./tools/perf/ ./internal/hosted/perf/...
+--- FAIL: TestHostedSampleReadsTheHelperOutput (0.00s)
+    hosted_test.go:33: got [], <nil>, want [1ms 2.5ms]
+--- FAIL: TestHostedSampleRefusesBadOutput (0.00s)
+    hosted_test.go:45: too many lines: no error, got []
+    hosted_test.go:45: too few lines: no error, got []
+    hosted_test.go:45: not a number: no error, got []
+    hosted_test.go:45: zero: no error, got []
+    hosted_test.go:45: negative: no error, got []
+    hosted_test.go:45: helper fails: no error, got []
+--- FAIL: TestHostedSampleNamesTheScenarioInItsError (0.00s)
+    hosted_test.go:53: error = <nil>, want one that names the scenario
+--- FAIL: TestBudgetsFileHasTheHostedScenarios (0.00s)
+    hosted_test.go:72: no budget for hosted-post
+    hosted_test.go:72: no budget for hosted-revise
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.829s
+--- FAIL: TestSamplersTimeEachCall (0.03s)
+    perf_test.go:29: post: 0 samples, want 4
+--- FAIL: TestSamplersReportSetupErrors (0.00s)
+    perf_test.go:44: post: no error for an unusable directory
+    perf_test.go:44: revise: no error for an unusable directory
+--- FAIL: TestRunPrintsOneTimingPerLine (0.00s)
+    perf_test.go:56: post: code 2, stderr ""
+--- FAIL: TestRunRefusesBadArguments (0.00s)
+    perf_test.go:74: Run([]) = 2, stdout "", stderr ""
+    perf_test.go:74: Run([post]) = 2, stdout "", stderr ""
+    perf_test.go:74: Run([post 0]) = 2, stdout "", stderr ""
+    perf_test.go:74: Run([post x]) = 2, stdout "", stderr ""
+    perf_test.go:74: Run([sleep 3]) = 2, stdout "", stderr ""
+    perf_test.go:74: Run([post 3 4]) = 2, stdout "", stderr ""
+--- FAIL: TestSamplersOnTheRealSize (0.00s)
+    perf_test.go:86: post: <nil>, 0 samples
+    perf_test.go:86: revise: <nil>, 0 samples
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	0.037s
+?   	github.com/Exploded-views/yo-human/internal/hosted/perf/cmd	[no test files]
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 2, part 4 follow-up (mutants 'post reuses one handle' and 'revise measures an unchanged repost' survived: timePosts takes the wanted outcome but doesn't check it yet), 2026-10-29T06:14:50Z
+$ go test -count=1 -timeout 300s ./internal/hosted/perf/
+--- FAIL: TestTimePostsRefusesTheWrongOutcome (0.00s)
+    perf_test.go:118: an unchanged repost was timed as a creation
+    perf_test.go:121: an unchanged repost was timed as a revision
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	0.967s
+FAIL
+exit=1
+
+# Note: the SHA-256 digests in the failure output above were replaced with <64-hex> so the file passes the scrub (long-hex rule). Nothing else was edited.
+
+# H1 Task 5 RED, round 3, part 1 (walled refs, targets and risk flags; lead rulings 2026-10-29: pr:<1-6 digits> ref, base is main or release/<n>, target is prod|staging|preview|dev or cn:<name>[#N], no risk flags either way; also LOW-1 PolicyTarget maps cn: and LOW-2 CheckWalledMessage takes fromWalledNode), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestCheckWalledDraft (0.00s)
+    validate_wall_test.go:37: risk_flags edit: got <nil>
+    validate_wall_test.go:49: allowed draft {Kind:notice Severity:normal To:human Handle:ob-3 Title:ob-3 ack Summary: Detail: RequiredAction: Repo: Ref:pr:42 BaseRef:main Target: PinnedCommit: PinnedTree: Action:none Link: RiskFlags:[] Untrusted:false Urgency:digest}: invalid: ref (valid: empty, main, release/<n> or v<major>.<minor>.<patch>)
+--- FAIL: TestCheckWalledMessage (0.00s)
+    validate_wall_test.go:69: CheckWalledMessage("ob-3 blocked", fromWalledNode=true) = invalid: body (valid: exactly go sl:<n> or hold sl:<n>), want ok=true
+    validate_wall_test.go:69: CheckWalledMessage("ob-3 needs:none", fromWalledNode=true) = invalid: body (valid: exactly go sl:<n> or hold sl:<n>), want ok=true
+    validate_wall_test.go:69: CheckWalledMessage("go sl:3", fromWalledNode=true) = <nil>, want ok=false
+    validate_wall_test.go:69: CheckWalledMessage("go sl:3", fromWalledNode=false) = invalid: body (valid: ob-<n> then needs:owner, needs:none, ack, done, blocked, ci-red, deploy-ready or prod-down, optionally then sha256:<64 hex> bytes:<n>), want ok=true
+    validate_wall_test.go:69: CheckWalledMessage("hold sl:30", fromWalledNode=false) = invalid: body (valid: ob-<n> then needs:owner, needs:none, ack, done, blocked, ci-red, deploy-ready or prod-down, optionally then sha256:<64 hex> bytes:<n>), want ok=true
+    validate_wall_test.go:69: CheckWalledMessage("ob-3 blocked", fromWalledNode=false) = <nil>, want ok=false
+--- FAIL: TestWalledApprovalRefusesRealSlug (0.00s)
+    wall_test.go:170: Post: invalid: ref (valid: empty, main, release/<n> or v<major>.<minor>.<patch>)
+--- FAIL: TestStoredWalledItemKeepsItsPolicyTarget (0.00s)
+    wall_test.go:183: release: PolicyTarget repo = "cn:alpha", want cn/alpha
+    wall_test.go:186: release: re-check on the stored item: excluded_action: action (valid: a passkey target in the owner's policy)
+    wall_test.go:180: Post: invalid: ref (valid: empty, main, release/<n> or v<major>.<minor>.<patch>)
+--- FAIL: TestWalledRefAndTargetRefusals (0.01s)
+    --- FAIL: TestWalledRefAndTargetRefusals/base_a_tag (0.00s)
+        wall_test.go:202: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledRefAndTargetRefusals/target_seven-digit_number (0.00s)
+        wall_test.go:202: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledRefAndTargetRefusals/target_a_hyphenated_token_outside_the_list (0.00s)
+        wall_test.go:202: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledRefAndTargetRefusals/target_a_bare_codename_word (0.00s)
+        wall_test.go:202: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledRefAndTargetRefusals/a_walled_node's_risk_flag (0.00s)
+        wall_test.go:202: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledRefAndTargetRefusals/a_walled_node's_hyphenated_risk_flag (0.00s)
+        wall_test.go:202: err = <nil> (<nil>), want a *bus.Error with code invalid
+    wall_test.go:230: 6 events after refused posts
+    wall_test.go:236: err = <nil> (<nil>), want a *bus.Error with code invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.217s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 3, part 2 (MED-1: the 1 ms hosted budgets were measured on a Mac where fsync is nearly free; they must start at 10 ms), 2026-10-29
+$ go test -count=1 -timeout 300s ./tools/perf/
+--- FAIL: TestBudgetsFileHasTheHostedScenarios (0.00s)
+    hosted_test.go:78: hosted-post budget 1ms: must be 10 to 20ms (the plan's ceiling)
+    hosted_test.go:78: hosted-revise budget 1ms: must be 10 to 20ms (the plan's ceiling)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.192s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 3, part 3 (MED-2: TestNoCodenameMapInRepo and its probe; CodenameMapLines and TrackedFiles are stubs), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/repolint/
+--- FAIL: TestCodenameMapLinesFindsAPlantedMapping (0.00s)
+    codenames_test.go:38: findings = [], want [{notes.md 2} {conf/codenames 1} {conf/codenames 2} {x.json 1} {y.go 1}]
+--- FAIL: TestCodenameMapLinesAllowsExampleInFixtures (0.00s)
+    codenames_test.go:67: findings = [], want [{README.md 1} {pkg/mixed_test.go 1} {pkg/real_test.go 1}]
+--- FAIL: TestCodenameMapLinesReportsAnUnreadableFile (0.00s)
+    codenames_test.go:73: no error for a missing file
+--- FAIL: TestTrackedFilesNeedsAGitRepo (0.00s)
+    codenames_test.go:79: no error outside a git repository
+    codenames_test.go:83: TrackedFiles = 0 files, <nil>
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.020s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 3, part 1b (coordinator ruling after the security review: a walled pr:<n> ref is valid for a merge only and is stripped for a merge only; checkedView and PolicyTarget share one normalisation, asValidated, a stub here), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestAsValidatedMapsCodenameAndMergePRID (0.00s)
+    normalise_test.go:13: merge = {Kind: Severity: To: Handle: Title: Summary: Detail: RequiredAction: Repo:cn:alpha Ref:pr:42 BaseRef:main Target: PinnedCommit: PinnedTree: Action:merge Link: RiskFlags:[] Untrusted:false Urgency:}
+--- FAIL: TestCheckedViewAndPolicyTargetUseTheSameNormalisation (0.00s)
+    normalise_test.go:25: walled view = {Kind: Severity: To: Handle: Title: Summary: Detail: RequiredAction: Repo:cn/alpha Ref:42 BaseRef:main Target: PinnedCommit: PinnedTree: Action:merge Link: RiskFlags:[] Untrusted:false Urgency:}, want {Kind: Severity: To: Handle: Title: Summary: Detail: RequiredAction: Repo:cn:alpha Ref:pr:42 BaseRef:main Target: PinnedCommit: PinnedTree: Action:merge Link: RiskFlags:[] Untrusted:false Urgency:}
+--- FAIL: TestCheckWalledDraft (0.00s)
+    validate_wall_test.go:39: ref edit: got <nil>
+    validate_wall_test.go:39: ref edit: got <nil>
+--- FAIL: TestWalledRefAndTargetRefusals (0.01s)
+    --- FAIL: TestWalledRefAndTargetRefusals/pr:_ref_on_a_release (0.00s)
+        wall_test.go:202: code = excluded_action (action), want invalid
+    --- FAIL: TestWalledRefAndTargetRefusals/pr:_ref_on_a_public-sync (0.00s)
+        wall_test.go:203: What = "pinned_tree", want "ref"
+    --- FAIL: TestWalledRefAndTargetRefusals/pr:_ref_on_a_deploy (0.00s)
+        wall_test.go:202: code = excluded_action (action), want invalid
+    --- FAIL: TestWalledRefAndTargetRefusals/pr:_ref_on_a_other (0.00s)
+        wall_test.go:203: What = "repo", want "ref"
+    --- FAIL: TestWalledRefAndTargetRefusals/pr:_ref_on_a_none (0.00s)
+        wall_test.go:202: code = not_approvable (action), want invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.215s
+FAIL
+exit=1
+
+# Note, round 3, part 4 (NIT-2): in 81e18f6 (GREEN of round 2, part 4) the setup of TestSamplersReportSetupErrors was corrected after its RED. The RED version's "unusable directory" was usable, because db.Open creates directories, so the RED's two "no error for an unusable directory" lines came from the stubs and from that setup. The intent is unchanged; the test now builds a directory that cannot be used. This is a post-RED test correction, recorded here.
+# Part 4 other items: LOW-1 and LOW-2 are in the part 1 RED (TestStoredWalledItemKeepsItsPolicyTarget, TestCheckWalledMessage); LOW-3 is part 1; NIT-1 and NIT-3 are comment edits with no behaviour change, so they have no RED; NIT-4 is left as is (the long-hex scrub is not configured in this repo, so there is no path-scoped allowlist to use).
+
+# H1 Task 5 RED, round 3, part 5 (make floors failed at 2352d06: internal/hosted/perf/cmd is an internal package, so it can't be exempt and has no floor; main now goes through a stubbed exit var so it can be tested, and the stub main does nothing yet), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/perf/cmd/
+--- FAIL: TestMainExitsWithRunsCode (0.00s)
+    main_test.go:18: main exited with -1, want 2
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf/cmd	0.010s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 3, part 1c (survivor-driven: in the first round 3 mutation run, 'pr: digit count unbounded' and 'pr: accepting letters' survived, suite exit=0, because the ref cases ran on a release draft and the merge-only rule refused them first; the tests below put the ref cases on a merge. See hosted-post-mutants.txt, first run.), 2026-10-29
+$ mutant: wallRefRE pr:[0-9]{1,6} -> pr:[0-9]+ ; go test ./internal/hosted/bus/
+ok  	github.com/Exploded-views/yo-human/internal/hosted/bus
+exit=0
+$ mutant: wallRefRE pr:[0-9]{1,6} -> pr:[0-9a-z]{1,6} ; go test ./internal/hosted/bus/
+ok  	github.com/Exploded-views/yo-human/internal/hosted/bus
+exit=0
+
+# H1 Task 5 RED, round 4, item 1 (MED-1: the codename scan misses clone URL, scp, slug-first, slug-as-key, key=value and far-padded forms; NIT-1: RepoFiles skips dist and .cache at any depth, the root's only is meant). Note on 61bc689 (round 3 part 3): its GREEN replaced the RED's TestTrackedFilesNeedsAGitRepo with TestRepoFilesSkipsIgnoredDirectories, because internal packages may not run git (depguard); a post-RED test change, recorded here. Before the whole-line rule the scan flags 4 repo lines: 2 on cn/<name> in this record and 2 on release/<n> in tests; the fix excludes exactly those two slug kinds. 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/repolint/
+--- FAIL: TestCodenameMapLinesFindsEveryPasteForm (0.00s)
+    codenames_test.go:62: far padding: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:62: URL first: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:62: clone URL: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:62: scp style: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:62: slug first: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:62: slug as the key: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:62: key=value: findings = [], <nil>; want [{f.txt 2}]
+--- FAIL: TestCodenameMapLinesIgnoresRefsAndExamples (0.00s)
+    codenames_test.go:77: findings = [{a.md 1} {a.md 2}], <nil>; want none
+--- FAIL: TestRepoFilesSkipsIgnoredDirectories (0.00s)
+    codenames_test.go:132: RepoFiles with nested dist = [a.md d/b.go d/testdata/c.txt], <nil>; want [a.md d/.cache/m.go d/b.go d/dist/n.go d/testdata/c.txt]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.045s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 4, item 2 (NIT-2 and choice 3: the wall's PR id grammar is pr:[1-9][0-9]{0,5}; pr:0 and leading zeros are refused with the grammar named), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestCheckWalledDraft (0.00s)
+    validate_wall_test.go:43: ref edit: got <nil>
+    validate_wall_test.go:43: ref edit: got <nil>
+    validate_wall_test.go:43: ref edit: got <nil>
+--- FAIL: TestWalledPRRefGrammarIsNamedInTheError (0.00s)
+    validate_wall_test.go:94: pr:0: error = <nil>
+    validate_wall_test.go:94: pr:01: error = <nil>
+    validate_wall_test.go:94: pr:000001: error = <nil>
+    validate_wall_test.go:94: pr:: error = invalid: ref (valid: empty, main, release/<n>, v<major>.<minor>.<patch> or pr:<n> (at most 6 digits))
+    validate_wall_test.go:94: pr:1234567: error = invalid: ref (valid: empty, main, release/<n>, v<major>.<minor>.<patch> or pr:<n> (at most 6 digits))
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.271s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 4, item 4 (L1: repo owner cn is reserved for every node, walled or not; cna/x and xcn/y stay valid), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestOwnerCNIsReservedEverywhere (0.01s)
+    --- FAIL: TestOwnerCNIsReservedEverywhere/unwalled_node,_notice (0.00s)
+        wall_test.go:338: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestOwnerCNIsReservedEverywhere/unwalled_node,_merge_approval (0.00s)
+        wall_test.go:338: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestOwnerCNIsReservedEverywhere/Duet_to_an_unwalled_swarm (0.00s)
+        wall_test.go:338: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestOwnerCNIsReservedEverywhere/unwalled_node,_upper_case (0.00s)
+        wall_test.go:338: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestOwnerCNIsReservedEverywhere/walled_node (0.00s)
+        wall_test.go:340: error = invalid: repo (valid: empty or a codename: cn:<name>), want repo naming the reserved owner cn
+    wall_test.go:345: 4 events after refused posts
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.250s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 4, item 5 (L2: every digit field of the WALLED grammar is bounded: ob-N and sl:N ids are 1-9 then up to 5 more digits; bytes:N and each release/ number are 0 or 1-9 then up to 5 more (no leading zero); each semver part is 0 or 1-9 then up to 3 more. Unwalled digit fields are unchanged and are an accepted residual, by lead ruling 2026-10-29 (TestUnwalledDigitFieldsAreNotBounded passes before and after)), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestWalledDigitFieldsAreBounded (0.00s)
+    validate_wall_test.go:161: handle ob-N: one digit more is accepted
+    validate_wall_test.go:165: handle ob-N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:165: handle ob-N: zero or leading-zero case 1 is accepted
+    validate_wall_test.go:161: title ob-N: one digit more is accepted
+    validate_wall_test.go:165: title ob-N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:165: title ob-N: zero or leading-zero case 1 is accepted
+    validate_wall_test.go:161: title bytes:N: one digit more is accepted
+    validate_wall_test.go:165: title bytes:N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:161: message ob-N: one digit more is accepted
+    validate_wall_test.go:165: message ob-N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:165: message ob-N: zero or leading-zero case 1 is accepted
+    validate_wall_test.go:161: message bytes:N: one digit more is accepted
+    validate_wall_test.go:165: message bytes:N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:161: sl:N: one digit more is accepted
+    validate_wall_test.go:165: sl:N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:165: sl:N: zero or leading-zero case 1 is accepted
+    validate_wall_test.go:161: release/N: one digit more is accepted
+    validate_wall_test.go:165: release/N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:165: release/N: zero or leading-zero case 1 is accepted
+    validate_wall_test.go:161: release/N part: one digit more is accepted
+    validate_wall_test.go:161: base release/N: one digit more is accepted
+    validate_wall_test.go:165: base release/N: zero or leading-zero case 0 is accepted
+    validate_wall_test.go:161: semver major: one digit more is accepted
+    validate_wall_test.go:161: semver minor: one digit more is accepted
+    validate_wall_test.go:161: semver patch: one digit more is accepted
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.257s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 4, item 1b (survivor-driven: in the round 4 mutation run 'a slug may follow a path character' survived, suite exit=0, because no test had a codename next to a path such as the codename file's own /etc/... path; the test below adds it. See hosted-post-mutants.txt, round 4 first run.), 2026-10-29
+$ mutant: slugRE prefix class [^A-Za-z0-9._/-] -> [^A-Za-z0-9._-] ; go test ./internal/repolint/
+ok  	github.com/Exploded-views/yo-human/internal/repolint
+exit=0
+
+# H1 Task 5 RED, round 5, item 1 (MED-1: a walled release/ ref or base_ref has no cap on its dotted parts; it is release/N(.N){0,2}, at most 3 parts, and the error says so), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestWalledReleaseHasAtMostThreeParts (0.00s)
+    validate_wall_test.go:190: release/1.2.3.4 as ref: error = <nil>, want ref naming the 3-part grammar
+    validate_wall_test.go:190: release/1.2.3.4 as base_ref: error = <nil>, want base_ref naming the 3-part grammar
+    validate_wall_test.go:190: release/1.2.3.4.5 as base_ref: error = <nil>, want base_ref naming the 3-part grammar
+    validate_wall_test.go:190: release/1.2.3.4.5 as ref: error = <nil>, want ref naming the 3-part grammar
+    validate_wall_test.go:190: release/1.1.1.1.1.1.1.1.1.1.1.1.1 as ref: error = <nil>, want ref naming the 3-part grammar
+    validate_wall_test.go:190: release/1.1.1.1.1.1.1.1.1.1.1.1.1 as base_ref: error = <nil>, want base_ref naming the 3-part grammar
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.271s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 5, item 3 (NIT-1: the walled target's #N is the PR id pattern, #[1-9][0-9]{0,5}; #0 and leading zeros are refused), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestWalledTargetPRNumberHasNoLeadingZero (0.00s)
+    validate_wall_test.go:211: cn:alpha#0: error = <nil>
+    validate_wall_test.go:211: cn:alpha#000042: error = <nil>
+    validate_wall_test.go:211: cn:alpha#042: error = <nil>
+    validate_wall_test.go:211: cn:alpha#1000000: error = invalid: target (valid: empty, prod, staging, preview, dev or a codename: cn:<name> with an optional #<n> (at most 6 digits))
+    validate_wall_test.go:211: cn:alpha#: error = invalid: target (valid: empty, prod, staging, preview, dev or a codename: cn:<name> with an optional #<n> (at most 6 digits))
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.281s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 5, item 2 (LOW-1: the codename scan matches only lowercase github.com; any <host>[:/]owner/name in any case, and a ~/a/b/c clone path, on a line with a codename must be flagged). Repo-wide count of lines the new host and home-path rules flag before any exclusion: 0, so no new exclusion is added; release/, refs/, cn/ and example/ in fixtures stay as before. 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/repolint/
+--- FAIL: TestCodenameMapLinesFindsAnyHostAndLocalClonePaths (0.00s)
+    codenames_test.go:86: home clone path: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: home path first: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: capitalised host: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: all capitals: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: enterprise host: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: enterprise host first: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: gitlab: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: bitbucket: findings = [], <nil>; want [{f.txt 2}]
+    codenames_test.go:86: azure devops: findings = [], <nil>; want [{f.txt 2}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.036s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 6, item 2 (HIGH-1 follow-up: a built binary rode in on a merge; TestNoBinariesInRepo and BinaryFiles: a NUL byte in the first 8000 bytes, or a Mach-O, ELF or PE header, outside testdata/ is a finding; BinaryFiles is a stub here), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/repolint/
+--- FAIL: TestBinaryFilesFindsExecutablesAndNULs (0.01s)
+    binaries_test.go:46: BinaryFiles = [], <nil>; want [data.bin deep/dir/blob elf fat macho32 mytestdata/c.bin perf tools/x.exe]
+    binaries_test.go:49: no error for a missing file
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.340s
+FAIL
+exit=1
+
+# Note, round 6, item 3 (P3-NIT-1): v01.2.3, v1.02.3, v1.2.03, v00.1.1, v12345.1.1, v1.2.3.4 and v1.2 were added to TestWalledRefAndTargetRefusals as ref cases that assert the field the error names (ref). They all passed on arrival, so this is a test-only commit with no RED and no fix: the semver grammar already refused them.
+
+# H1 Task 5 RED, round 6, item 4 (P3-LOW-1, lead ruling 2026-10-30: pins only where the action requires them; first built as merge and release only, corrected below in item 4b)
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestWalledPinsOnlyOnMergeAndRelease (0.01s)
+    --- FAIL: TestWalledPinsOnlyOnMergeAndRelease/none_with_a_pinned_commit (0.00s)
+        wall_test.go:394: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledPinsOnlyOnMergeAndRelease/none_with_a_pinned_tree (0.00s)
+        wall_test.go:394: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledPinsOnlyOnMergeAndRelease/none_with_both (0.00s)
+        wall_test.go:394: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledPinsOnlyOnMergeAndRelease/other_with_a_pinned_commit (0.00s)
+        wall_test.go:395: What = "action", want "pinned_commit"
+    --- FAIL: TestWalledPinsOnlyOnMergeAndRelease/deploy_with_a_pinned_tree (0.00s)
+        wall_test.go:395: What = "action", want "pinned_tree"
+    --- FAIL: TestWalledPinsOnlyOnMergeAndRelease/public-sync_with_a_pinned_tree (0.00s)
+        wall_test.go:395: What = "action", want "pinned_tree"
+    wall_test.go:405: err = <nil> (<nil>), want a *bus.Error with code invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.580s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 6, item 4b (lead ruling 2026-10-30: pins only where the action requires them. A walled item may carry pinned_commit and pinned_tree exactly where Validate's required map requires them: pinned_commit for merge, release, deploy and public-sync; pinned_tree for public-sync. Derived from that map. none and other: both refused; an action that requires only pinned_commit refuses a pinned_tree; the lead's first brief said merge and release only and missed deploy), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem (0.01s)
+    --- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem/merge_with_a_pinned_tree (0.00s)
+        wall_pins_test.go:36: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem/release_with_a_pinned_tree (0.00s)
+        wall_pins_test.go:36: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem/deploy_with_a_pinned_tree (0.00s)
+        wall_pins_test.go:37: What = "pinned_commit", want "pinned_tree"
+    wall_pins_test.go:60: Post: invalid: pinned_commit (valid: empty: a walled item pins a commit or tree only on a merge or release approval)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.654s
+FAIL
+exit=1

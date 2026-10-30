@@ -14,13 +14,13 @@ var (
 var testLimits = Limits{LinkHosts: []string{"github.com"}}
 
 func question() Draft {
-	return Draft{Kind: KindQuestion, Severity: SeverityNormal, To: "human", Title: "Which port?", Action: ActionNone}
+	return Draft{Kind: KindQuestion, Severity: SeverityNormal, To: "human", Title: "Which port?", Action: ActionNone, Urgency: UrgencyDigest}
 }
 
 func mergeApproval() Draft {
 	return Draft{
 		Kind: KindApproval, Severity: SeverityHigh, To: "human", Handle: "merge-pr-7", Title: "Merge PR 7",
-		Action: ActionMerge, Target: "o/r#7", Repo: "o/r", Ref: "7", BaseRef: "main", PinnedCommit: sha1,
+		Action: ActionMerge, Target: "o/r#7", Repo: "o/r", Ref: "7", BaseRef: "main", PinnedCommit: sha1, Urgency: UrgencyDigest,
 	}
 }
 
@@ -52,11 +52,16 @@ func TestDraftValidation(t *testing.T) {
 		{"escape in the title", "title", func(d *Draft) { d.Title = "\x1b[31mred" }},
 		{"carriage return in the detail", "detail", func(d *Draft) { d.Detail = "a\rb" }},
 		{"C1 control in the summary", "summary", func(d *Draft) { d.Summary = "a\u009bb" }},
+		{"no urgency", "urgency", func(d *Draft) { d.Urgency = "" }},
+		{"unknown urgency", "urgency", func(d *Draft) { d.Urgency = "soon" }},
+		{"urgency in the wrong case", "urgency", func(d *Draft) { d.Urgency = "Page" }},
 		{"javascript link", "link", func(d *Draft) { d.Link = "javascript:alert(1)" }},
 		{"http link", "link", func(d *Draft) { d.Link = "http://github.com/x" }},
 		{"link off the allow-list", "link", func(d *Draft) { d.Link = "https://evil.example/x" }},
 		{"link host containing the allowed host", "link", func(d *Draft) { d.Link = "https://github.com.evil.example/x" }},
 		{"link host suffix without a dot", "link", func(d *Draft) { d.Link = "https://evilgithub.com/x" }},
+		{"link with invalid UTF-8", "link", func(d *Draft) { d.Link = "https://github.com/o/r/pull/\xff" }},
+		{"link with a bidi override", "link", func(d *Draft) { d.Link = "https://github.com/o/r/pull/" + string(rune(0x202e)) + "1" }},
 		{"link with userinfo", "link", func(d *Draft) { d.Link = "https://github.com" + "@evil.example/x" }},
 		{"link with userinfo on an allowed host", "link", func(d *Draft) { d.Link = "https://u" + "@github.com/x" }},
 		{"link of 2049 bytes", "link", func(d *Draft) { d.Link = "https://github.com/" + strings.Repeat("a", 2030) }},
@@ -208,7 +213,7 @@ func TestOtherCannotCarryPins(t *testing.T) {
 		"pinned_tree":   func(d *Draft) { d.PinnedTree = sha2 },
 	}
 	for field, edit := range edits {
-		d := Draft{Kind: KindApproval, Severity: SeverityNormal, To: "human", Handle: "h", Title: "t", Target: "x", Action: ActionOther}
+		d := Draft{Kind: KindApproval, Severity: SeverityNormal, To: "human", Handle: "h", Title: "t", Target: "x", Action: ActionOther, Urgency: UrgencyDigest}
 		edit(&d)
 		e, ok := AsError(d.Validate(testLimits))
 		if !ok || e.Code != CodeInvalid || e.What != field {

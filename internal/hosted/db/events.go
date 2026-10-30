@@ -59,8 +59,8 @@ func (x *txn) EventsSince(swarm string, since int64, limit int) ([]bus.Event, er
 
 // InsertMessage adds a message to its thread.
 func (x *txn) InsertMessage(m bus.Message) error {
-	_, err := x.tx.ExecContext(x.ctx, `INSERT INTO messages (id, thread_id, from_name, from_kind, body, severity, created)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`, m.ID, m.ThreadID, m.From, m.FromKind, m.Body, m.Severity, fmtTime(m.Created))
+	_, err := x.tx.ExecContext(x.ctx, `INSERT INTO messages (id, thread_id, from_name, from_kind, body, severity, created, urgency)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, m.ID, m.ThreadID, m.From, m.FromKind, m.Body, m.Severity, fmtTime(m.Created), m.Urgency)
 	if err != nil {
 		return fmt.Errorf("db: insert message: %w", err)
 	}
@@ -69,7 +69,7 @@ func (x *txn) InsertMessage(m bus.Message) error {
 
 // Messages returns a thread's messages, oldest first.
 func (x *txn) Messages(threadID string) ([]bus.Message, error) {
-	rows, err := x.tx.QueryContext(x.ctx, `SELECT id, thread_id, from_name, from_kind, body, severity, created
+	rows, err := x.tx.QueryContext(x.ctx, `SELECT id, thread_id, from_name, from_kind, body, severity, created, urgency
 		FROM messages WHERE thread_id = ? ORDER BY created, rowid`, threadID)
 	if err != nil {
 		return nil, fmt.Errorf("db: read messages: %w", err)
@@ -79,7 +79,7 @@ func (x *txn) Messages(threadID string) ([]bus.Message, error) {
 	for rows.Next() {
 		var m bus.Message
 		var created string
-		if err := rows.Scan(&m.ID, &m.ThreadID, &m.From, &m.FromKind, &m.Body, &m.Severity, &created); err != nil {
+		if err := rows.Scan(&m.ID, &m.ThreadID, &m.From, &m.FromKind, &m.Body, &m.Severity, &created, &m.Urgency); err != nil {
 			return nil, fmt.Errorf("db: read messages: %w", err)
 		}
 		if m.Created, err = parseTime(created); err != nil {

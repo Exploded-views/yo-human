@@ -1,0 +1,1300 @@
+# H1 Task 5 mutants, 2026-10-29T01:12:44Z, on the GREEN implementation; each applied by hand (script-applied string swap), vetted, run, reverted
+baseline internal/hosted/bus: exit=0
+
+## visible returns true for nodes
+internal/hosted/bus/scope.go: 'return p.Swarm != "" && it.Swarm == p.Swarm' -> 'return true'
+vet exit=0
+--- FAIL: TestNodeCannotTargetAnotherSwarm
+--- FAIL: TestVisibilityByKind
+--- FAIL: TestCrossSwarmIsIndistinguishableFromMissing
+suite exit=1
+
+## repost keeps the revision
+internal/hosted/bus/post.go: 'next.Draft, next.Revision, next.State = d, cur.Revision+1, StateOpen' -> 'next.Draft, next.Revision, next.State = d, cur.Revision, StateOpen'
+vet exit=0
+--- FAIL: TestRepostChangedBumpsRevisionAndVoids
+--- FAIL: TestReviseChangingKindBumpsRevision
+suite exit=1
+
+## From taken from the draft's text
+internal/hosted/bus/post.go: 'From: p.Name, FromKind: p.Kind, Revision: 1' -> 'From: d.Title, FromKind: p.Kind, Revision: 1'
+vet exit=0
+--- FAIL: TestStoreFailureIsInternalAndRollsBack
+--- FAIL: TestPostCreatesWithCredentialSwarm
+--- FAIL: TestFromComesFromCredential
+--- FAIL: TestRepostSameContentUnchanged
+--- FAIL: TestRepostEmptyAndNilFlagsAreTheSameContent
+--- FAIL: TestRepostChangedBumpsRevisionAndVoids
+--- FAIL: TestReviseWithoutApprovalDoesNotVoid
+--- FAIL: TestReviseOfAnsweredQuestionDoesNotVoid
+... and 2 more failing tests
+suite exit=1
+
+## node visibility ignores the swarm comparison (any node with a swarm sees all)
+internal/hosted/bus/scope.go: 'return p.Swarm != "" && it.Swarm == p.Swarm' -> 'return p.Swarm != ""'
+vet exit=0
+--- FAIL: TestNodeCannotTargetAnotherSwarm
+--- FAIL: TestVisibilityByKind
+--- FAIL: TestCrossSwarmIsIndistinguishableFromMissing
+suite exit=1
+
+## unknown principal kinds see everything
+internal/hosted/bus/scope.go: 'default:\n\t\treturn false' -> 'default:\n\t\treturn true'
+vet exit=0
+--- FAIL: TestVisibilityByKind
+suite exit=1
+
+## executor counted as an owner kind
+internal/hosted/bus/scope.go: 'case PrincipalDuet, PrincipalDesk, PrincipalPasskey:' -> 'case PrincipalDuet, PrincipalDesk, PrincipalPasskey, PrincipalExecutor:'
+vet exit=0
+--- FAIL: TestVisibilityByKind
+suite exit=1
+
+## desk dropped from the owner kinds
+internal/hosted/bus/scope.go: 'case PrincipalDuet, PrincipalDesk, PrincipalPasskey:' -> 'case PrincipalDuet, PrincipalPasskey:'
+vet exit=0
+--- FAIL: TestVisibilityByKind
+suite exit=1
+
+## Reply skips the visibility check
+internal/hosted/bus/threads.go: 'if !found || !b.visible(p, it) {' -> 'if !found {'
+vet exit=0
+--- FAIL: TestNodeCannotTargetAnotherSwarm
+--- FAIL: TestCrossSwarmIsIndistinguishableFromMissing
+suite exit=1
+
+## Reply answers a cross-swarm id with a different error
+internal/hosted/bus/threads.go: 'if !found || !b.visible(p, it) {\n\t\t\treturn notFoundErr()\n\t\t}' -> 'if !found {\n\t\t\treturn notFoundErr()\n\t\t}\n\t\tif !b.visible(p, it) {\n\t\t\treturn &Error{Code: CodeForbidden, What: "item", Valid: "your swarm\'s items", Fix: "none"}\n\t\t}'
+vet exit=0
+--- FAIL: TestNodeCannotTargetAnotherSwarm
+--- FAIL: TestCrossSwarmIsIndistinguishableFromMissing
+suite exit=1
+
+## Duet's item to the human goes to swarm 'human'
+internal/hosted/bus/post.go: 'case d.To == "human":\n\t\treturn "duet"' -> 'case d.To == "human":\n\t\treturn d.To'
+vet exit=0
+--- FAIL: TestFromComesFromCredential
+suite exit=1
+
+## node's item goes to the swarm in d.To
+internal/hosted/bus/post.go: 'case p.Kind == PrincipalNode:\n\t\treturn p.Swarm' -> 'case p.Kind == PrincipalNode:\n\t\treturn d.To'
+vet exit=0
+--- FAIL: TestStoreFailureIsInternalAndRollsBack
+--- FAIL: TestPostCreatesWithCredentialSwarm
+--- FAIL: TestNodeCannotTargetAnotherSwarm
+--- FAIL: TestRepostByAnotherAuthorRefused
+--- FAIL: TestHandleScopedPerSwarm
+--- FAIL: TestReplyAppendsMessageAndEvent
+suite exit=1
+
+## unchanged repost not detected
+internal/hosted/bus/post.go: 'if cur.ContentHash == hash {' -> 'if false {'
+vet exit=0
+--- FAIL: TestRepostSameContentUnchanged
+--- FAIL: TestRepostEmptyAndNilFlagsAreTheSameContent
+suite exit=1
+
+## approval_voided never appended
+internal/hosted/bus/post.go: 'if hadDecision && dec.Kind == RecordApproval {' -> 'if hadDecision && dec.Kind == RecordApproval && false {'
+vet exit=0
+--- FAIL: TestStoreFailureIsInternalAndRollsBack
+--- FAIL: TestRepostChangedBumpsRevisionAndVoids
+suite exit=1
+
+## approval_voided for any decision kind
+internal/hosted/bus/post.go: 'if hadDecision && dec.Kind == RecordApproval {' -> 'if hadDecision && dec.Kind != "" {'
+vet exit=0
+--- FAIL: TestReviseOfAnsweredQuestionDoesNotVoid
+suite exit=1
+
+## explicit secrets/money refusal dropped
+internal/hosted/bus/post.go: 'if d.Action == ActionSecrets || d.Action == ActionMoney {' -> 'if false {'
+vet exit=0
+--- FAIL: TestPostRefusesExcludedActions
+suite exit=1
+
+## approvability not checked
+internal/hosted/bus/post.go: 'if d.Kind == KindApproval {' -> 'if false {'
+vet exit=0
+--- FAIL: TestPostChecksApprovability
+suite exit=1
+
+## desk may post
+internal/hosted/bus/scope.go: 'case p.Kind == PrincipalDuet:' -> 'case p.Kind == PrincipalDuet || p.Kind == PrincipalDesk:'
+vet exit=0
+--- FAIL: TestPostRefusesNonPostingPrincipals
+--- FAIL: TestReplyValidatesAndChecksWhoMayReply
+suite exit=1
+
+## revise by another author allowed
+internal/hosted/bus/post.go: 'if cur.From != p.Name || cur.FromKind != p.Kind {' -> 'if false {'
+vet exit=0
+--- FAIL: TestRepostByAnotherAuthorRefused
+suite exit=1
+
+## validation skipped
+internal/hosted/bus/post.go: 'if err := d.Validate(b.l); err != nil {' -> 'if err := error(nil); err != nil {'
+vet exit=0
+--- FAIL: TestFromComesFromCredential
+--- FAIL: TestPostValidatesBeforeStoring
+suite exit=1
+
+## revise does not update LastSeq
+internal/hosted/bus/post.go: 'next.ContentHash, next.LastSeq, next.Updated = hash, last, now' -> 'next.ContentHash, next.LastSeq, next.Updated = hash, last-last+cur.LastSeq, now'
+vet exit=0
+--- FAIL: TestRepostChangedBumpsRevisionAndVoids
+suite exit=1
+
+## reply does not update LastSeq
+internal/hosted/bus/threads.go: 'it.LastSeq, it.Updated = seq, now' -> 'it.LastSeq, it.Updated = seq-seq+it.LastSeq, now'
+vet exit=0
+--- FAIL: TestReplyAppendsMessageAndEvent
+suite exit=1
+
+## item without a handle shares one handle
+internal/hosted/bus/post.go: 'it.Handle = it.ID' -> 'it.Handle = "-"'
+vet exit=0
+--- FAIL: TestPostWithoutHandleAlwaysCreates
+suite exit=1
+
+## hash ignores the handle
+internal/hosted/bus/post.go: 'raw, _ := json.Marshal(d)' -> 'd.Handle = ""\n\traw, _ := json.Marshal(d)'
+vet exit=0
+--- FAIL: TestContentHashIsSHA256OfCanonicalJSON
+suite exit=1
+
+## nil and empty flags hash differently
+internal/hosted/bus/post.go: 'if d.RiskFlags == nil {\n\t\td.RiskFlags = []string{}\n\t}' -> 'if false {\n\t\td.RiskFlags = []string{}\n\t}'
+vet exit=0
+--- FAIL: TestRepostEmptyAndNilFlagsAreTheSameContent
+--- FAIL: TestContentHashIsSHA256OfCanonicalJSON
+suite exit=1
+
+## store not-found mapped to internal
+internal/hosted/bus/scope.go: 'case errors.Is(err, ErrNotFound):\n\t\treturn notFoundErr()' -> 'case errors.Is(err, ErrNotFound):\n\t\treturn &Error{Code: CodeInternal, What: "the bus", Valid: "a retry", Fix: "retry"}'
+vet exit=0
+--- FAIL: TestStoreErrorsMapToBusErrors
+suite exit=1
+
+## store stale revision mapped to internal
+internal/hosted/bus/scope.go: 'return &Error{Code: CodeStaleRevision,' -> 'return &Error{Code: CodeInternal,'
+vet exit=0
+--- FAIL: TestStoreErrorsMapToBusErrors
+suite exit=1
+
+## reply event written to the caller's swarm
+internal/hosted/bus/threads.go: 'Event{Swarm: it.Swarm, ItemID: it.ID, Type: EventMessageAdded' -> 'Event{Swarm: p.Swarm, ItemID: it.ID, Type: EventMessageAdded'
+vet exit=0
+--- FAIL: TestReplyAppendsMessageAndEvent
+suite exit=1
+
+## reply body not trimmed before the empty check
+internal/hosted/bus/threads.go: 'case strings.TrimSpace(body) == "":' -> 'case body == "":'
+vet exit=0
+--- FAIL: TestReplyValidatesAndChecksWhoMayReply
+suite exit=1
+
+28 mutants, 0 survivors
+
+################ round 2 (Opus review of ba4da48, plus the client wall, interrupt lanes and budget scenarios) ################
+# Labels for round 1 (NIT-2). Tests added after the RED commit, in the GREEN commit, to kill mutants (they pass against the implementation and fix nothing):
+#   faulty_test.go (TestStoreFailureIsInternalAndRollsBack): the store-failure paths; needed for the 100% floor and kills the store-error mapping mutants
+#   TestReviseOfAnsweredQuestionDoesNotVoid: kills 'approval_voided for any decision kind'
+#   the Duet-notice case in TestPostRefusesExcludedActions: kills 'explicit secrets/money refusal dropped'
+#   TestAsBusErrorFallsBackToInternal: kills no recorded mutant. It is kept because it is the only test of asBusError's fail-closed fallback (a nil *Error there would mean 'no error' and let a draft through), and it is needed for the 100% floor.
+# The mutants below ran on part 4 as of 81e18f6. Two survived ('post reuses one handle', 'revise measures an unchanged repost'); they were fixed test-first (RED a7cd7c3, fix e1dc103) and re-run at the end of this file.
+
+# H1 Task 5 round 2 mutants, 2026-10-29T06:13:17Z, on the GREEN implementation of parts 1-4; each applied by hand (script-applied string swap), vetted, run, reverted
+baseline bus, db, perf, tools/perf: exit=0
+
+## part 1: ValidSwarm accepts duet
+internal/hosted/bus/validate.go: 'ValidName(s) && s != "duet" && s != "human"' -> 'ValidName(s) && s != "human"'
+vet exit=0
+--- FAIL: TestPostRefusesNonPostingPrincipals
+--- FAIL: TestValidSwarmReservesDuetAndHuman
+--- FAIL: TestNodeInSwarmDuetReachesNothing
+--- FAIL: TestDuetCannotAddressReservedSwarms
+--- FAIL: TestVisibilityByKind
+suite exit=1
+
+## part 1: ValidSwarm accepts human
+internal/hosted/bus/validate.go: 'ValidName(s) && s != "duet" && s != "human"' -> 'ValidName(s) && s != "duet"'
+vet exit=0
+--- FAIL: TestPostRefusesNonPostingPrincipals
+--- FAIL: TestValidSwarmReservesDuetAndHuman
+--- FAIL: TestNodeInSwarmDuetReachesNothing
+--- FAIL: TestVisibilityByKind
+suite exit=1
+
+## part 1: mayWrite checks ValidName, not ValidSwarm
+internal/hosted/bus/scope.go: 'p.Kind == PrincipalNode && ValidSwarm(p.Swarm) && p.Name != ""' -> 'p.Kind == PrincipalNode && ValidName(p.Swarm) && p.Name != ""'
+vet exit=0
+--- FAIL: TestPostRefusesNonPostingPrincipals
+--- FAIL: TestNodeInSwarmDuetReachesNothing
+suite exit=1
+
+## part 1: visible checks ValidName, not ValidSwarm
+internal/hosted/bus/scope.go: 'return ValidSwarm(p.Swarm) && it.Swarm == p.Swarm' -> 'return ValidName(p.Swarm) && it.Swarm == p.Swarm'
+vet exit=0
+--- FAIL: TestNodeInSwarmDuetReachesNothing
+--- FAIL: TestVisibilityByKind
+suite exit=1
+
+## part 1 (LOW-3): visible's swarm guard dropped
+internal/hosted/bus/scope.go: 'return ValidSwarm(p.Swarm) && it.Swarm == p.Swarm' -> 'return it.Swarm == p.Swarm'
+vet exit=0
+--- FAIL: TestNodeInSwarmDuetReachesNothing
+--- FAIL: TestVisibilityByKind
+suite exit=1
+
+## part 1 (LOW-3): mayWrite's name check dropped
+internal/hosted/bus/scope.go: 'ValidSwarm(p.Swarm) && p.Name != ""' -> 'ValidSwarm(p.Swarm)'
+vet exit=0
+--- FAIL: TestPostRefusesNonPostingPrincipals
+suite exit=1
+
+## part 1 (MED-2): author check without FromKind
+internal/hosted/bus/post.go: 'cur.From != p.Name || cur.FromKind != p.Kind' -> 'cur.From != p.Name'
+vet exit=0
+--- FAIL: TestRepostByNodeNamedDuetRefused
+suite exit=1
+
+## part 1 (LOW-3): void check reads revision 1
+internal/hosted/bus/post.go: 'x.Decision(cur.ID, cur.Revision)' -> 'x.Decision(cur.ID, 1)'
+vet exit=0
+--- FAIL: TestVoidReadsTheCurrentRevision
+suite exit=1
+
+## part 1 (MED-3): link UTF-8 check dropped
+internal/hosted/bus/validate.go: '!utf8.ValidString(d.Link) || strings.ContainsFunc(d.Link, isRefusedRune)' -> 'strings.ContainsFunc(d.Link, isRefusedRune)'
+vet exit=0
+--- FAIL: TestDraftValidation
+suite exit=1
+
+## part 1 (MED-3): link refused-rune check dropped
+internal/hosted/bus/validate.go: '!utf8.ValidString(d.Link) || strings.ContainsFunc(d.Link, isRefusedRune)' -> '!utf8.ValidString(d.Link)'
+vet exit=0
+--- FAIL: TestDraftValidation
+suite exit=1
+
+## part 1 (LOW-2): a node may address a non-owner
+internal/hosted/bus/post.go: 'case p.Kind == PrincipalNode && d.To != "human":' -> 'case false:'
+vet exit=0
+--- FAIL: TestNodeToMustBeHuman
+suite exit=1
+
+## part 1 (MED-1): Duet may address duet
+internal/hosted/bus/post.go: 'case d.To != "human" && !ValidSwarm(d.To):' -> 'case d.To != "human" && !ValidName(d.To):'
+vet exit=0
+--- FAIL: TestDuetCannotAddressReservedSwarms
+suite exit=1
+
+## part 1 (LOW-1): hash version prefix dropped
+internal/hosted/bus/post.go: 'return "v1:" + hex.EncodeToString(sum[:])' -> 'return hex.EncodeToString(sum[:])'
+vet exit=0
+--- FAIL: TestHashBytesArePinned
+--- FAIL: TestContentHashIsVersionedSHA256OfHashDraft
+suite exit=1
+
+## part 1 (LOW-1): a hash tag renamed
+internal/hosted/bus/post.go: '`json:"required_action"`' -> '`json:"requiredAction"`'
+vet exit=0
+--- FAIL: TestHashBytesArePinned
+--- FAIL: TestContentHashIsVersionedSHA256OfHashDraft
+suite exit=1
+
+## part 1 (LOW-4): internal error drops its cause
+internal/hosted/bus/scope.go: ', cause: err}' -> '}'
+vet exit=0
+--- FAIL: TestInternalErrorKeepsItsCause
+suite exit=1
+
+## part 2: no swarm is ever walled
+internal/hosted/bus/scope.go: '_, ok := b.walled[swarm]\n\treturn ok' -> 'return false'
+vet exit=0
+--- FAIL: TestWalledPostRefusesFreeText
+--- FAIL: TestWalledRepostWithProseRefused
+--- FAIL: TestWalledReplyRefusesFreeText
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+--- FAIL: TestWalledApprovalRefusesRealSlug
+--- FAIL: TestWalledListOnlyFromConfig
+suite exit=1
+
+## part 2: every swarm is walled
+internal/hosted/bus/scope.go: '_, ok := b.walled[swarm]\n\treturn ok' -> 'return true'
+vet exit=0
+--- FAIL: TestStoreFailureIsInternalAndRollsBack
+--- FAIL: TestPostCreatesWithCredentialSwarm
+--- FAIL: TestFromComesFromCredential
+--- FAIL: TestNodeToMustBeHuman
+--- FAIL: TestRepostSameContentUnchanged
+--- FAIL: TestRepostEmptyAndNilFlagsAreTheSameContent
+... and 23 more failing tests
+suite exit=1
+
+## part 2: Duet's post checked as a walled node's
+internal/hosted/bus/scope.go: 'return checkIntoWalledDraft(d)' -> 'return CheckWalledDraft(d)'
+vet exit=0
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+suite exit=1
+
+## part 2: a walled node's post checked as Duet's
+internal/hosted/bus/scope.go: 'case p.Kind == PrincipalDuet:\n\t\treturn checkIntoWalledDraft(d)' -> 'case p.Kind != PrincipalDuet:\n\t\treturn checkIntoWalledDraft(d)'
+vet exit=0
+--- FAIL: TestWalledPostRefusesFreeText
+--- FAIL: TestWalledRepostWithProseRefused
+--- FAIL: TestWalledReplyRefusesFreeText
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+--- FAIL: TestWalledApprovalRefusesRealSlug
+--- FAIL: TestCrewProseReplyToWalledItemIsNotFound
+suite exit=1
+
+## part 2: reply direction flipped
+internal/hosted/bus/scope.go: 'CheckWalledMessage(body, p.Kind == PrincipalDuet)' -> 'CheckWalledMessage(body, p.Kind != PrincipalDuet)'
+vet exit=0
+--- FAIL: TestWalledReplyRefusesFreeText
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+suite exit=1
+
+## part 2 (Review Focus 3): the reply wall runs before the visibility check
+internal/hosted/bus/threads.go: 'if !found || !b.visible(p, it) {\n\t\t\treturn notFoundErr()\n\t\t}\n\t\tif err := b.checkSwarmMessa' -> 'if found {\n\t\t\tif err := b.checkSwarmMessage(p, it.Swarm, body); err != nil {\n\t\t\t\treturn er'
+vet exit=0
+--- FAIL: TestCrewProseReplyToWalledItemIsNotFound
+suite exit=1
+
+## part 2: the reply wall checks the caller's swarm, not the item's
+internal/hosted/bus/threads.go: 'b.checkSwarmMessage(p, it.Swarm, body)' -> 'b.checkSwarmMessage(p, p.Swarm, body)'
+vet exit=0
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+suite exit=1
+
+## part 2: the post wall runs after Validate and policy (cn: repo fails Validate)
+internal/hosted/bus/post.go: 'v := b.checkedView(swarm, d)' -> 'v := d'
+vet exit=0
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 2: walled handle may be empty
+internal/hosted/bus/validate_wall.go: 'wallHandleRE   = regexp.MustCompile(`^ob-[0-9]+$`)' -> 'wallHandleRE   = regexp.MustCompile(`^(ob-[0-9]+)?$`)'
+vet exit=0
+--- FAIL: TestWalledPostRefusesFreeText
+suite exit=1
+
+## part 2: walled handle accepts any number of digits or none
+internal/hosted/bus/validate_wall.go: '`^ob-[0-9]+$`)\n\twallTitleRE' -> '`^ob-[0-9]*$`)\n\twallTitleRE'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+suite exit=1
+
+## part 2: typed title accepts trailing text
+internal/hosted/bus/validate_wall.go: '( sha256:[0-9a-f]{64} bytes:[0-9]+)?$`' -> '( sha256:[0-9a-f]{64} bytes:[0-9]+)?.*$`'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestCheckWalledMessage
+--- FAIL: TestWalledPostRefusesFreeText
+--- FAIL: TestWalledReplyRefusesFreeText
+suite exit=1
+
+## part 2: go/hold accepts any verb
+internal/hosted/bus/validate_wall.go: '`^(go|hold) sl:[0-9]+$`' -> '`^[a-z]+ sl:[0-9]+$`'
+vet exit=0
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+suite exit=1
+
+## part 2: codename may be a real slug
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallCodenameRE.MatchString)}' -> 'orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 2: any ref allowed
+internal/hosted/bus/validate_wall.go: '{"ref", d.Ref, "empty, main, release/<n> or v<major>.<minor>.<patch>", orEmpty(wallRefRE.M' -> '{"ref", d.Ref, "any", orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 2: summary may carry text
+internal/hosted/bus/validate_wall.go: '{"summary", d.Summary, "empty", empty},' -> ''
+vet exit=0
+--- FAIL: TestWalledPostRefusesFreeText
+--- FAIL: TestWalledRepostWithProseRefused
+suite exit=1
+
+## part 2: link may carry text
+internal/hosted/bus/validate_wall.go: '{"link", d.Link, "empty", empty},' -> ''
+vet exit=0
+--- FAIL: TestWalledPostRefusesFreeText
+suite exit=1
+
+## part 2: target may carry text
+internal/hosted/bus/validate_wall.go: '{"target", d.Target, "empty, an environment name or a codename: cn:<name>", orEmpty(wallTa' -> ''
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledPostRefusesFreeText
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 2: Duet's walled post may carry a handle
+internal/hosted/bus/validate_wall.go: '{"handle", d.Handle}, {"summary", d.Summary}' -> '{"summary", d.Summary}'
+vet exit=0
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+suite exit=1
+
+## part 2: Duet's walled post may carry a summary
+internal/hosted/bus/validate_wall.go: '{"handle", d.Handle}, {"summary", d.Summary}' -> '{"handle", d.Handle}'
+vet exit=0
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+suite exit=1
+
+## part 3: a missing urgency is accepted by Validate
+internal/hosted/bus/validate.go: 'case !slices.Contains(urgencies, d.Urgency):\n\t\treturn invalid("urgency", "page, interrupt-' -> 'case d.To'
+vet exit=0
+--- FAIL: TestDraftValidation
+suite exit=1
+
+## part 3: a missing urgency is accepted by checkUrgency
+internal/hosted/bus/post.go: 'case !slices.Contains(urgencies, u):\n\t\treturn invalid("urgency", "page, interrupt-when-goo' -> 'case p.Kind'
+vet exit=0
+--- FAIL: TestReplyWithoutUrgencyRefused
+suite exit=1
+
+## part 3: Duet may use interrupt-when-good
+internal/hosted/bus/post.go: 'case p.Kind == PrincipalDuet && u == UrgencyInterruptWhenGood:' -> 'case false:'
+vet exit=0
+--- FAIL: TestDuetCannotPostInterruptWhenGood
+suite exit=1
+
+## part 3: a reply's urgency is not checked
+internal/hosted/bus/threads.go: 'return checkUrgency(p, urg)' -> 'return nil'
+vet exit=0
+--- FAIL: TestReplyWithoutUrgencyRefused
+--- FAIL: TestDuetCannotPostInterruptWhenGood
+suite exit=1
+
+## part 3: a reply's urgency is not stored
+internal/hosted/bus/threads.go: 'Severity: sev, Urgency: urg, Created: now}' -> 'Severity: sev, Urgency: UrgencyDigest, Created: now}'
+vet exit=0
+--- FAIL: TestUrgencyRoundTripsThroughTheStore
+suite exit=1
+
+## part 3: the hash ignores urgency
+internal/hosted/bus/post.go: '`json:"urgency"`' -> '`json:"-"`'
+vet exit=0
+--- FAIL: TestHashBytesArePinned
+--- FAIL: TestContentHashIsVersionedSHA256OfHashDraft
+--- FAIL: TestUrgencyChangeIsARevision
+suite exit=1
+
+## part 3: UpdateItem does not write urgency
+internal/hosted/db/items.go: 'updated = ?, urgency = ? WHERE id = ?`' -> 'updated = ?, urgency = urgency WHERE id = ?`'
+vet exit=0
+--- FAIL: TestDecisionUniquePerRevision
+--- FAIL: TestStateGuardChecksRevisionClause
+--- FAIL: TestUpdateItem
+--- FAIL: TestStateOnlyFromDecisions
+--- FAIL: TestUpdateItemDerivesStateFromRevision
+--- FAIL: TestUpdateItemRevisionBackwardsRefused
+... and 1 more failing tests
+suite exit=1
+
+## part 3: UpdateItem's urgency argument dropped (item keeps the old lane)
+internal/hosted/db/items.go: 'fmtTime(it.Updated), it.Urgency, it.ID)' -> 'fmtTime(it.Updated), "digest", it.ID)'
+vet exit=0
+--- FAIL: TestUpdateItem
+--- FAIL: TestUpdateItemChangesUrgency
+suite exit=1
+
+## part 3: 0002 CHECK on items dropped
+internal/hosted/db/migrations/0002_urgency.sql: "ALTER TABLE items ADD COLUMN urgency TEXT NOT NULL DEFAULT 'digest'\n\tCHECK (urgency IN ('p" -> "ALTER TABLE items ADD COLUMN urgency TEXT NOT NULL DEFAULT 'digest';"
+vet exit=0
+--- FAIL: TestUrgencyColumnsAreChecked
+suite exit=1
+
+## part 3: 0002 CHECK on messages dropped
+internal/hosted/db/migrations/0002_urgency.sql: "ALTER TABLE messages ADD COLUMN urgency TEXT NOT NULL DEFAULT 'digest'\n\tCHECK (urgency IN " -> "ALTER TABLE messages ADD COLUMN urgency TEXT NOT NULL DEFAULT 'digest';"
+vet exit=0
+--- FAIL: TestUrgencyColumnsAreChecked
+suite exit=1
+
+## part 3: 0001_init.sql edited (the frozen file)
+internal/hosted/db/migrations/0001_init.sql: 'CREATE INDEX items_open_for_human' -> 'CREATE INDEX IF NOT EXISTS items_open_for_human'
+vet exit=0
+--- FAIL: TestMigration0001IsFrozen
+suite exit=1
+
+## part 4: the helper accepts a zero count
+internal/hosted/perf/perf.go: 'if fn == nil || n < 1 {' -> 'if fn == nil || n < 0 {'
+vet exit=0
+--- FAIL: TestRunRefusesBadArguments
+suite exit=1
+
+## part 4: the helper prints one timing too few
+internal/hosted/perf/perf.go: 'for _, d := range samples {' -> 'for _, d := range samples[1:] {'
+vet exit=0
+--- FAIL: TestRunPrintsOneTimingPerLine
+suite exit=1
+
+## part 4: revise measures an unchanged repost
+internal/hosted/perf/perf.go: 'fmt.Sprintf("Build %d", i+1)' -> '"Build 0"'
+vet exit=0
+suite exit=0
+SURVIVED or did not vet
+
+## part 4: post reuses one handle
+internal/hosted/perf/perf.go: 'fmt.Sprintf("perf-%d", i), "Build done"' -> '"perf-0", "Build done"'
+vet exit=0
+suite exit=0
+SURVIVED or did not vet
+
+## part 4: zero-nanosecond timings accepted
+tools/perf/hosted.go: 'err != nil || ns <= 0' -> 'err != nil || ns < 0'
+vet exit=0
+--- FAIL: TestHostedSampleRefusesBadOutput
+suite exit=1
+
+## part 4: the timing count is not checked
+tools/perf/hosted.go: 'if len(lines) != n {' -> 'if len(lines) < 0 {'
+vet exit=0
+--- FAIL: TestHostedSampleRefusesBadOutput
+suite exit=1
+
+## part 4: the helper command is dropped from the sample
+tools/perf/main.go: 'if s.Sample != nil {\n\t\treturn s.Sample(n)\n\t}' -> ''
+vet exit=0
+--- FAIL: TestSampleScenarioUsesItsSamples
+suite exit=1
+
+52 mutants, 2 survivors
+
+######## re-run after the part 4 follow-up (e1dc103), the two survivors only
+
+## part 4: revise measures an unchanged repost
+internal/hosted/perf/perf.go: 'fmt.Sprintf("Build %d", i+1)' -> '"Build 0"'
+vet exit=0
+--- FAIL: TestSamplersTimeEachCall
+--- FAIL: TestRunPrintsOneTimingPerLine
+--- FAIL: TestSamplersOnTheRealSize
+suite exit=1
+
+## part 4: post reuses one handle
+internal/hosted/perf/perf.go: 'fmt.Sprintf("perf-%d", i), "Build done"' -> '"perf-0", "Build done"'
+vet exit=0
+--- FAIL: TestSamplersTimeEachCall
+--- FAIL: TestRunPrintsOneTimingPerLine
+--- FAIL: TestSamplersOnTheRealSize
+suite exit=1
+
+2 mutants, 0 survivors
+
+######## round 3, FIRST RUN (head 85d0cf0): the two pr: survivors that drove part 1c, and three mutants that did not compile
+
+baseline: exit=0
+
+## part 1: pr: digit count unbounded
+internal/hosted/bus/validate_wall.go: '|pr:[0-9]{1,6})$' -> '|pr:[0-9]+)$'
+vet exit=0
+suite exit=0
+SURVIVED
+
+## part 1: pr: accepting letters
+internal/hosted/bus/validate_wall.go: '|pr:[0-9]{1,6})$' -> '|pr:[0-9a-z]{1,6})$'
+vet exit=0
+suite exit=0
+SURVIVED
+
+## part 1: the target check skipped
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallTargetRE.MatchString)}' -> 'orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledApprovalRefusesRealSlug
+--- FAIL: TestWalledPostRefusesFreeText
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the env branch allows / and :
+internal/hosted/bus/validate_wall.go: '`^(prod|staging|preview|dev|cn:' -> '`^((prod|staging|preview|dev)[/:a-z0-9]*|cn:'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: #N unbounded
+internal/hosted/bus/validate_wall.go: '(#[0-9]{1,6})?)$' -> '(#[0-9]+)?)$'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: cn: target case-insensitive
+internal/hosted/bus/validate_wall.go: 'MustCompile(`^(prod|staging' -> 'MustCompile(`(?i)^(prod|staging'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the ref rule skipped for Ref
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallRefRE.MatchString)}' -> 'orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledApprovalRefusesRealSlug
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the ref rule skipped for BaseRef
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallBaseRE.MatchString)}' -> 'orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: pr:<n> accepted as a base
+internal/hosted/bus/validate_wall.go: '|release/[0-9]+(\\.[0-9]+)*)$`)' -> '|release/[0-9]+(\\.[0-9]+)*|pr:[0-9]{1,6})$`)'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+suite exit=1
+
+## part 1: BaseRef checked with the Ref rule (v<semver> as a base)
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallBaseRE.MatchString)}' -> 'orEmpty(wallRefRE.MatchString)}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the env list replaced by a token pattern
+internal/hosted/bus/validate_wall.go: '^(prod|staging|preview|dev|cn:' -> '^([a-z0-9][a-z0-9-]{0,62}|cn:'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: walled node risk flags allowed
+internal/hosted/bus/validate_wall.go: 'return checkNoFlags(d)' -> 'return nil'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: Duet-into-walled risk flags allowed
+internal/hosted/bus/validate_wall.go: 'return checkNoFlags(d)' -> 'return nil'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: risk flags allowed in both directions
+internal/hosted/bus/validate_wall.go: 'if len(d.RiskFlags) != 0 {' -> 'if false {'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1b: pr: accepted for any action
+internal/hosted/bus/validate_wall.go: 'strings.HasPrefix(d.Ref, "pr:") && d.Action != ActionMerge' -> 'false'
+vet exit=1
+(mutant does not compile)
+
+## part 1b: pr: stripped for any action
+internal/hosted/bus/validate.go: 'if d.Action == ActionMerge {\n\t\td.Ref' -> 'if true {\n\t\td.Ref'
+vet exit=0
+--- FAIL: TestAsValidatedMapsCodenameAndMergePRID
+suite exit=1
+
+## part 1b: pr: not stripped in checkedView
+internal/hosted/bus/post.go: 'return asValidated(d)' -> 'd.Repo = codenameAsSlug(d.Repo)\n\t\treturn d'
+vet exit=0
+--- FAIL: TestCheckedViewAndPolicyTargetUseTheSameNormalisation
+--- FAIL: TestStoredWalledItemKeepsItsPolicyTarget
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 1b: pr: not stripped in PolicyTarget (expected equivalent: a merge target is BaseRef)
+internal/hosted/bus/validate.go: 'n := asValidated(*d)' -> 'n := *d\n\tn.Repo = codenameAsSlug(n.Repo)'
+vet exit=0
+suite exit=0
+SURVIVED
+
+## part 1: PolicyTarget does not map the codename
+internal/hosted/bus/validate.go: 'd.Repo = codenameAsSlug(d.Repo)\n\tif d.Action' -> 'if d.Action'
+vet exit=0
+--- FAIL: TestAsValidatedMapsCodenameAndMergePRID
+--- FAIL: TestStoredWalledItemKeepsItsPolicyTarget
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 4: CheckWalledMessage direction flipped
+internal/hosted/bus/validate_wall.go: 'if !fromWalledNode {' -> 'if fromWalledNode {'
+vet exit=0
+--- FAIL: TestCheckWalledMessage
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+--- FAIL: TestWalledReplyRefusesFreeText
+suite exit=1
+
+## part 4: Reply passes the wrong direction
+internal/hosted/bus/scope.go: 'p.Kind != PrincipalDuet)' -> 'p.Kind == PrincipalDuet)'
+vet exit=0
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+--- FAIL: TestWalledReplyRefusesFreeText
+suite exit=1
+
+## part 3: example/<name> allowed outside fixtures
+internal/repolint/codenames.go: 'if !fixture || !exampleSlugRE' -> 'if !exampleSlugRE'
+vet exit=0
+--- FAIL: TestCodenameMapLinesAllowsExampleInFixtures
+suite exit=1
+
+## part 3: example/<name> never allowed
+internal/repolint/codenames.go: 'if !fixture || !exampleSlugRE.MatchString(slug)' -> 'if true'
+vet exit=1
+(mutant does not compile)
+
+## part 3: the slug need not follow the separator
+internal/repolint/codenames.go: 'loc[0] != 0' -> 'false'
+vet exit=0
+--- FAIL: TestCodenameMapLinesIgnoresWhatIsNotAMapping
+suite exit=1
+
+## part 3: a next-argument separator is a mapping
+internal/repolint/codenames.go: '|| nextArg' -> ''
+vet exit=1
+(mutant does not compile)
+
+## part 3: a mapping in a testdata dir is not looked at
+internal/repolint/codenames.go: 'strings.HasPrefix(p, "testdata/") ||' -> 'true ||'
+vet exit=0
+--- FAIL: TestCodenameMapLinesAllowsExampleInFixtures
+suite exit=1
+
+## part 3: RepoFiles skips testdata
+internal/repolint/codenames.go: 'd.Name() == "dist"' -> 'd.Name() == "dist" || d.Name() == "testdata"'
+vet exit=0
+--- FAIL: TestRepoFilesSkipsIgnoredDirectories
+suite exit=1
+
+## part 5: main exits 0
+internal/hosted/perf/cmd/main.go: 'exit(perf.Run(' -> 'exit(0*perf.Run('
+vet exit=0
+--- FAIL: TestMainExitsWithRunsCode
+suite exit=1
+
+28 mutants, 6 survivors
+
+######## round 3, the survivor "pr: not stripped in PolicyTarget" is equivalent: policy.TargetFor reads BaseRef for a merge and never reads Ref, so the stripped and unstripped PolicyTarget are equal for every draft. It stays as a recorded survivor; checkedView and PolicyTarget share asValidated (TestCheckedViewAndPolicyTargetUseTheSameNormalisation), so they cannot drift.
+
+######## round 3, SECOND RUN (head a7365b5, after part 1c); the mutant "example/<name> never allowed" did not compile in this script, so it was run by hand:
+
+baseline: exit=0
+
+## part 1: pr: digit count unbounded
+internal/hosted/bus/validate_wall.go: '|pr:[0-9]{1,6})$' -> '|pr:[0-9]+)$'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: pr: accepting letters
+internal/hosted/bus/validate_wall.go: '|pr:[0-9]{1,6})$' -> '|pr:[0-9a-z]{1,6})$'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+suite exit=1
+
+## part 1: the target check skipped
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallTargetRE.MatchString)}' -> 'orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledApprovalRefusesRealSlug
+--- FAIL: TestWalledPostRefusesFreeText
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the env branch allows / and :
+internal/hosted/bus/validate_wall.go: '`^(prod|staging|preview|dev|cn:' -> '`^((prod|staging|preview|dev)[/:a-z0-9]*|cn:'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: #N unbounded
+internal/hosted/bus/validate_wall.go: '(#[0-9]{1,6})?)$' -> '(#[0-9]+)?)$'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: cn: target case-insensitive
+internal/hosted/bus/validate_wall.go: 'MustCompile(`^(prod|staging' -> 'MustCompile(`(?i)^(prod|staging'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the ref rule skipped for Ref
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallRefRE.MatchString)}' -> 'orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledApprovalRefusesRealSlug
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the ref rule skipped for BaseRef
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallBaseRE.MatchString)}' -> 'orEmpty(func(string) bool { return true })}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: pr:<n> accepted as a base
+internal/hosted/bus/validate_wall.go: '|release/[0-9]+(\\.[0-9]+)*)$`)' -> '|release/[0-9]+(\\.[0-9]+)*|pr:[0-9]{1,6})$`)'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+suite exit=1
+
+## part 1: BaseRef checked with the Ref rule (v<semver> as a base)
+internal/hosted/bus/validate_wall.go: 'orEmpty(wallBaseRE.MatchString)}' -> 'orEmpty(wallRefRE.MatchString)}'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: the env list replaced by a token pattern
+internal/hosted/bus/validate_wall.go: '^(prod|staging|preview|dev|cn:' -> '^([a-z0-9][a-z0-9-]{0,62}|cn:'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: walled node risk flags allowed
+internal/hosted/bus/validate_wall.go: 'return checkNoFlags(d)' -> 'return nil'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: Duet-into-walled risk flags allowed
+internal/hosted/bus/validate_wall.go: 'return checkNoFlags(d)' -> 'return nil'
+vet exit=0
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1: risk flags allowed in both directions
+internal/hosted/bus/validate_wall.go: 'if len(d.RiskFlags) != 0 {' -> 'if false {'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## part 1b: pr: accepted for any action
+internal/hosted/bus/validate_wall.go: 'strings.HasPrefix(d.Ref, "pr:") && d.Action != ActionMerge' -> 'strings.HasPrefix(d.Ref, "pr:") && false'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+suite exit=1
+
+## part 1b: pr: stripped for any action
+internal/hosted/bus/validate.go: 'if d.Action == ActionMerge {\n\t\td.Ref' -> 'if true {\n\t\td.Ref'
+vet exit=0
+--- FAIL: TestAsValidatedMapsCodenameAndMergePRID
+suite exit=1
+
+## part 1b: pr: not stripped in checkedView
+internal/hosted/bus/post.go: 'return asValidated(d)' -> 'd.Repo = codenameAsSlug(d.Repo)\n\t\treturn d'
+vet exit=0
+--- FAIL: TestCheckedViewAndPolicyTargetUseTheSameNormalisation
+--- FAIL: TestStoredWalledItemKeepsItsPolicyTarget
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 1b: pr: not stripped in PolicyTarget (expected equivalent: a merge target is BaseRef)
+internal/hosted/bus/validate.go: 'n := asValidated(*d)' -> 'n := *d\n\tn.Repo = codenameAsSlug(n.Repo)'
+vet exit=0
+suite exit=0
+SURVIVED
+
+## part 1: PolicyTarget does not map the codename
+internal/hosted/bus/validate.go: 'd.Repo = codenameAsSlug(d.Repo)\n\tif d.Action' -> 'if d.Action'
+vet exit=0
+--- FAIL: TestAsValidatedMapsCodenameAndMergePRID
+--- FAIL: TestStoredWalledItemKeepsItsPolicyTarget
+--- FAIL: TestWalledApprovalRefusesRealSlug
+suite exit=1
+
+## part 4: CheckWalledMessage direction flipped
+internal/hosted/bus/validate_wall.go: 'if !fromWalledNode {' -> 'if fromWalledNode {'
+vet exit=0
+--- FAIL: TestCheckWalledMessage
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+--- FAIL: TestWalledReplyRefusesFreeText
+suite exit=1
+
+## part 4: Reply passes the wrong direction
+internal/hosted/bus/scope.go: 'p.Kind != PrincipalDuet)' -> 'p.Kind == PrincipalDuet)'
+vet exit=0
+--- FAIL: TestIntoWalledSwarmOnlyGoOrHold
+--- FAIL: TestWalledReplyRefusesFreeText
+suite exit=1
+
+## part 3: example/<name> allowed outside fixtures
+internal/repolint/codenames.go: 'if !fixture || !exampleSlugRE' -> 'if !exampleSlugRE'
+vet exit=0
+--- FAIL: TestCodenameMapLinesAllowsExampleInFixtures
+suite exit=1
+
+## part 3: example/<name> never allowed
+internal/repolint/codenames.go: 'if !fixture || !exampleSlugRE.MatchString(slug)' -> 'if !fixture || true'
+vet exit=1
+(mutant does not compile)
+
+## part 3: the slug need not follow the separator
+internal/repolint/codenames.go: 'loc[0] != 0' -> 'false'
+vet exit=0
+--- FAIL: TestCodenameMapLinesIgnoresWhatIsNotAMapping
+suite exit=1
+
+## part 3: a next-argument separator is a mapping
+internal/repolint/codenames.go: 'loc[0] != 0 || nextArg' -> 'loc[0] != 0 || (nextArg && false)'
+vet exit=0
+--- FAIL: TestCodenameMapLinesIgnoresWhatIsNotAMapping
+suite exit=1
+
+## part 3: a mapping in a testdata dir is not looked at
+internal/repolint/codenames.go: 'strings.HasPrefix(p, "testdata/") ||' -> 'true ||'
+vet exit=0
+--- FAIL: TestCodenameMapLinesAllowsExampleInFixtures
+suite exit=1
+
+## part 3: RepoFiles skips testdata
+internal/repolint/codenames.go: 'd.Name() == "dist"' -> 'd.Name() == "dist" || d.Name() == "testdata"'
+vet exit=0
+--- FAIL: TestRepoFilesSkipsIgnoredDirectories
+suite exit=1
+
+## part 5: main exits 0
+internal/hosted/perf/cmd/main.go: 'exit(perf.Run(' -> 'exit(0*perf.Run('
+vet exit=0
+--- FAIL: TestMainExitsWithRunsCode
+suite exit=1
+
+28 mutants, 2 survivors
+
+## part 3: example/<name> never allowed (by hand, in a throwaway worktree)
+internal/repolint/codenames.go: exampleSlugRE `^example/` -> `^examplX/`
+vet exit=0
+--- FAIL: TestCodenameMapLinesAllowsExampleInFixtures
+suite exit=1
+
+round 3 total: 29 distinct mutants run (28 scripted + 1 by hand); survivors: 1, the equivalent one above.
+
+######## round 4, FIRST RUN (head 075fb15): 20 mutants, 1 survivor ("a slug may follow a path character"), which drove item 1b (b712de6)
+
+baseline: exit=0
+
+## item 1: the either-order rule removed (slugs only after the codename)
+internal/repolint/codenames.go: 'codenameTailRE.ReplaceAllString(line, " ")' -> 'codenameTailRE.ReplaceAllString(line[codenameRE.FindStringIndex(line)[0]:], " ")'
+vet exit=0
+--- FAIL: TestCodenameMapLinesFindsEveryPasteForm
+suite exit=1
+
+## item 1: the github URL form not matched
+internal/repolint/codenames.go: 'if githubRE.MatchString(line) {' -> 'if false && githubRE.MatchString(line) {'
+vet exit=0
+--- FAIL: TestCodenameMapLinesFindsEveryPasteForm
+suite exit=1
+
+## item 1: release/ slugs flagged
+internal/repolint/codenames.go: '{"release/", "refs/", "cn/"}' -> '{"refs/", "cn/"}'
+vet exit=0
+--- FAIL: TestCodenameMapLinesIgnoresRefsAndExamples
+--- FAIL: TestCodenameMapLinesIgnoresWhatIsNotAMapping
+--- FAIL: TestNoCodenameMapInRepo
+suite exit=1
+
+## item 1: refs/ slugs flagged
+internal/repolint/codenames.go: '{"release/", "refs/", "cn/"}' -> '{"release/", "cn/"}'
+vet exit=0
+--- FAIL: TestCodenameMapLinesIgnoresRefsAndExamples
+suite exit=1
+
+## item 1: example/<name> allowed outside fixtures
+internal/repolint/codenames.go: 'fixture && exampleSlugRE.MatchString(slug)' -> 'exampleSlugRE.MatchString(slug)'
+vet exit=0
+--- FAIL: TestCodenameMapLinesAllowsExampleInFixtures
+suite exit=1
+
+## item 1: a slug may follow a path character (URL tails read as slugs)
+internal/repolint/codenames.go: '[^A-Za-z0-9._/-])([A-Za-z0-9]' -> '[^A-Za-z0-9._-])([A-Za-z0-9]'
+vet exit=0
+suite exit=0
+SURVIVED
+
+## item 1: the root-only skip made any-depth
+internal/repolint/codenames.go: 'path == ".git" || path == ".cache" || path == "dist"' -> 'd.Name() == ".git" || d.Name() == ".cache" || d.Name() == "dist"'
+vet exit=0
+--- FAIL: TestRepoFilesSkipsIgnoredDirectories
+suite exit=1
+
+## item 2: pr: back to [0-9]{1,6}
+internal/hosted/bus/validate_wall.go: 'pr:` + wallID' -> 'pr:[0-9]{1,6}` + ""'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledPRRefGrammarIsNamedInTheError
+suite exit=1
+
+## item 4: the owner check limited to walled nodes
+internal/hosted/bus/post.go: 'e := checkRepoOwner(d.Repo); e != nil {' -> 'e := checkRepoOwner(d.Repo); e != nil && b.isWalled(swarm) {'
+vet exit=0
+--- FAIL: TestOwnerCNIsReservedEverywhere
+suite exit=1
+
+## item 4: the owner check case-sensitive
+internal/hosted/bus/post.go: 'strings.EqualFold(owner, "cn")' -> 'owner == "cn"'
+vet exit=0
+--- FAIL: TestOwnerCNIsReservedEverywhere
+suite exit=1
+
+## item 4: the owner check a prefix match
+internal/hosted/bus/post.go: 'strings.EqualFold(owner, "cn")' -> 'strings.HasPrefix(strings.ToLower(owner), "cn")'
+vet exit=0
+--- FAIL: TestOwnerCNIsReservedEverywhere
+--- FAIL: TestStoredWalledItemKeepsItsPolicyTarget
+--- FAIL: TestWalledApprovalRefusesRealSlug
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## item 4: the owner check a suffix match
+internal/hosted/bus/post.go: 'strings.EqualFold(owner, "cn")' -> 'strings.HasSuffix(strings.ToLower(owner), "cn")'
+vet exit=0
+--- FAIL: TestOwnerCNIsReservedEverywhere
+suite exit=1
+
+## item 5: id bound loosened (ob-N, sl:N 7 digits)
+internal/hosted/bus/validate_wall.go: 'wallID     = `[1-9][0-9]{0,5}`' -> 'wallID     = `[1-9][0-9]{0,6}`'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledDigitFieldsAreBounded
+--- FAIL: TestWalledPRRefGrammarIsNamedInTheError
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## item 5: id leading zero allowed
+internal/hosted/bus/validate_wall.go: 'wallID     = `[1-9][0-9]{0,5}`' -> 'wallID     = `[0-9]{1,6}`'
+vet exit=0
+--- FAIL: TestCheckWalledDraft
+--- FAIL: TestWalledDigitFieldsAreBounded
+--- FAIL: TestWalledPRRefGrammarIsNamedInTheError
+suite exit=1
+
+## item 5: count bound loosened (bytes:N, release numbers)
+internal/hosted/bus/validate_wall.go: 'wallCount  = `(?:0|[1-9][0-9]{0,5})`' -> 'wallCount  = `(?:0|[1-9][0-9]{0,6})`'
+vet exit=0
+--- FAIL: TestWalledDigitFieldsAreBounded
+suite exit=1
+
+## item 5: count leading zero allowed
+internal/hosted/bus/validate_wall.go: 'wallCount  = `(?:0|[1-9][0-9]{0,5})`' -> 'wallCount  = `[0-9]{1,6}`'
+vet exit=0
+--- FAIL: TestWalledDigitFieldsAreBounded
+suite exit=1
+
+## item 5: count unbounded
+internal/hosted/bus/validate_wall.go: 'wallCount  = `(?:0|[1-9][0-9]{0,5})`' -> 'wallCount  = `[0-9]+`'
+vet exit=0
+--- FAIL: TestWalledDigitFieldsAreBounded
+suite exit=1
+
+## item 5: semver bound loosened
+internal/hosted/bus/validate_wall.go: 'wallSemver = `(?:0|[1-9][0-9]{0,3})`' -> 'wallSemver = `(?:0|[1-9][0-9]{0,4})`'
+vet exit=0
+--- FAIL: TestWalledDigitFieldsAreBounded
+suite exit=1
+
+## item 5: semver leading zero allowed
+internal/hosted/bus/validate_wall.go: 'wallSemver = `(?:0|[1-9][0-9]{0,3})`' -> 'wallSemver = `[0-9]{1,4}`'
+vet exit=0
+--- FAIL: TestWalledDigitFieldsAreBounded
+suite exit=1
+
+## item 5: the bound applied to an unwalled handle
+internal/hosted/bus/post.go: 'if e := checkRepoOwner(d.Repo); e != nil {' -> 'if strings.HasPrefix(d.Handle, "ob-") && !wallHandleRE.MatchString(d.Handle) {\n\t\treturn wallInvalid("handle", "x")\n\t}\n\tif e := checkRepoOwner(d.Repo); e != nil {'
+vet exit=0
+--- FAIL: TestUnwalledDigitFieldsAreNotBounded
+suite exit=1
+
+20 mutants, 1 survivors
+
+######## round 4, RERUN of the survivor at b712de6, through crew-heavy:
+
+baseline: exit=0
+
+## item 1: a slug may follow a path character (URL tails read as slugs)
+internal/repolint/codenames.go: '[^A-Za-z0-9._/-])([A-Za-z0-9]' -> '[^A-Za-z0-9._-])([A-Za-z0-9]'
+vet exit=0
+--- FAIL: TestCodenameMapLinesIgnoresRefsAndExamples
+suite exit=1
+
+1 mutants, 0 survivors
+
+round 4 total: 20 mutants, 0 survivors after item 1b.
+Note: "the PR id back to [0-9]{1,6}" is the mutant for item 2; "the bound applied to an unwalled handle" is the mutant for item 5 (unwalled unchanged); "the owner check limited to walled nodes" is item 4. Full race, lint and floors runs were withdrawn per ev-113; the PR CI on the exact head is the gate.
+
+
+######## round 5 mutants, 2026-10-30T00:41:03Z, on the GREEN implementation (head e5c7ed7); each applied by script (string swap), vetted, run, reverted
+baseline: exit=0
+
+## item 1: the part cap removed for ref
+internal/hosted/bus/validate_wall.go: '){0,2}|v' -> ')*|v'
+vet exit=0
+--- FAIL: TestWalledReleaseHasAtMostThreeParts
+suite exit=1
+
+## item 1: the part cap removed for base_ref
+internal/hosted/bus/validate_wall.go: '){0,2})$`)' -> ')*)$`)'
+vet exit=0
+--- FAIL: TestWalledReleaseHasAtMostThreeParts
+suite exit=1
+
+## item 1: the part cap raised to 4 (ref)
+internal/hosted/bus/validate_wall.go: '){0,2}|v' -> '){0,3}|v'
+vet exit=0
+--- FAIL: TestWalledReleaseHasAtMostThreeParts
+suite exit=1
+
+## item 2: the host match case-sensitive
+internal/repolint/codenames.go: 'MustCompile(`(?i)[a-z0-9-]+(?:' -> 'MustCompile(`[a-z0-9-]+(?:'
+vet exit=0
+--- FAIL: TestCodenameMapLinesFindsAnyHostAndLocalClonePaths
+suite exit=1
+
+## item 2: the general host rule removed
+internal/repolint/codenames.go: 'if hostRE.MatchString(line) || homeRE' -> 'if false && hostRE.MatchString(line) || homeRE'
+vet exit=0
+--- FAIL: TestCodenameMapLinesFindsAnyHostAndLocalClonePaths
+--- FAIL: TestCodenameMapLinesFindsEveryPasteForm
+suite exit=1
+
+## item 2: the home clone path rule removed
+internal/repolint/codenames.go: '|| homeRE.MatchString(line)' -> '|| false && homeRE.MatchString(line)'
+vet exit=0
+--- FAIL: TestCodenameMapLinesFindsAnyHostAndLocalClonePaths
+suite exit=1
+
+## item 2: the host rule limited to github.com
+internal/repolint/codenames.go: '[a-z0-9-]+(?:\\.[a-z0-9-]+)+[:/]' -> 'github\\.com[:/]'
+vet exit=0
+--- FAIL: TestCodenameMapLinesFindsAnyHostAndLocalClonePaths
+suite exit=1
+
+## item 3: target #N back to [0-9]{1,6}
+internal/hosted/bus/validate_wall.go: '(#` + wallID + `)?)$`' -> '(#[0-9]{1,6})?)$`'
+vet exit=0
+--- FAIL: TestWalledTargetPRNumberHasNoLeadingZero
+suite exit=1
+
+8 mutants, 0 survivors
+
+round 5 total: 8 mutants, 0 survivors (items 1, 2 and 3; item 4 is a comment). Full runs skipped per ev-113.
+
+
+######## round 6 mutants, 2026-10-30T00:58:16Z, on the GREEN implementation (head b6f51e5); each applied by script (string swap), vetted, run, reverted
+baseline: exit=0
+
+## item 2: the NUL check removed
+internal/repolint/binaries.go: 'bytes.IndexByte(head, 0) >= 0 || isExecutable(head)' -> 'isExecutable(head)'
+vet exit=0
+--- FAIL: TestBinaryFilesFindsExecutablesAndNULs
+suite exit=1
+
+## item 2: the testdata exemption widened to the whole tree
+internal/repolint/binaries.go: 'strings.HasPrefix(p, "testdata/") || strings.Contains(p, "/testdata/")' -> 'strings.Contains(p, "testdata")'
+vet exit=0
+--- FAIL: TestBinaryFilesFindsExecutablesAndNULs
+suite exit=1
+
+## item 2: the executable-header check removed
+internal/repolint/binaries.go: '|| isExecutable(head)' -> ''
+vet exit=0
+--- FAIL: TestBinaryFilesFindsExecutablesAndNULs
+suite exit=1
+
+## item 2: the PE check removed
+internal/repolint/binaries.go: 'if len(head) >= 0x40 && bytes.HasPrefix(head, []byte("MZ")) {' -> 'if false && len(head) >= 0x40 && bytes.HasPrefix(head, []byte("MZ")) {'
+vet exit=0
+suite exit=0
+SURVIVED
+
+## item 2: the sniff window widened past 8000
+internal/repolint/binaries.go: 'const sniffLen = 8000' -> 'const sniffLen = 9000'
+vet exit=0
+--- FAIL: TestBinaryFilesFindsExecutablesAndNULs
+suite exit=1
+
+## item 4: the pin check removed
+internal/hosted/bus/validate_wall.go: 'if e := checkWalledPins(d); e != nil {' -> 'if e := checkWalledPins(d); false && e != nil {'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyOnMergeAndRelease
+suite exit=1
+
+## item 4: the pin check applied to unwalled items
+internal/hosted/bus/post.go: 'if e := checkRepoOwner(d.Repo); e != nil {' -> 'if e := checkWalledPins(d); e != nil {\n\t\treturn e\n\t}\n\tif e := checkRepoOwner(d.Repo); e != nil {'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyOnMergeAndRelease
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## item 4: pins allowed on every action
+internal/hosted/bus/validate_wall.go: 'if d.Action == ActionMerge || d.Action == ActionRelease {' -> 'if true {'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyOnMergeAndRelease
+suite exit=1
+
+## item 4: pins allowed on deploy
+internal/hosted/bus/validate_wall.go: 'if d.Action == ActionMerge || d.Action == ActionRelease {' -> 'if d.Action == ActionMerge || d.Action == ActionRelease || d.Action == ActionDeploy {'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyOnMergeAndRelease
+suite exit=1
+
+## item 4: pinned_tree not checked
+internal/hosted/bus/validate_wall.go: '{"pinned_commit", d.PinnedCommit}, {"pinned_tree", d.PinnedTree}' -> '{"pinned_commit", d.PinnedCommit}'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyOnMergeAndRelease
+suite exit=1
+
+10 mutants, 1 survivors
+
+round 6 total: 10 mutants, 1 survivor: "the PE check removed". It was equivalent: a PE header always contains the NUL bytes of its PE signature, so the NUL check finds every PE file and the separate PE branch was dead code. The branch is deleted (commit after this record); the other 9 mutants are killed. Full runs skipped per ev-113.
+
+
+######## round 6 (item 4b) mutants, 2026-10-30T01:03:05Z, on the GREEN implementation (head a0e4530); each applied by script (string swap), vetted, run, reverted
+baseline: exit=0
+
+## item 4b: the rule copied as a fixed merge/release list (deploy refused)
+internal/hosted/bus/validate_wall.go: '!slices.Contains(required[d.Action], f.field)' -> 'd.Action != ActionMerge && d.Action != ActionRelease'
+vet exit=1
+(mutant does not compile)
+
+## item 4b: pinned_tree allowed wherever pinned_commit is
+internal/hosted/bus/validate_wall.go: '!slices.Contains(required[d.Action], f.field)' -> '!slices.Contains(required[d.Action], "pinned_commit")'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem
+suite exit=1
+
+## item 4b: the pin check removed
+internal/hosted/bus/validate_wall.go: 'if f.v != "" && !slices.Contains(required[d.Action], f.field) {' -> 'if false && f.v != "" && !slices.Contains(required[d.Action], f.field) {'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem
+suite exit=1
+
+## item 4b: the pin check applied to unwalled items
+internal/hosted/bus/post.go: 'if e := checkRepoOwner(d.Repo); e != nil {' -> 'if e := checkWalledPins(d); e != nil {\n\t\treturn e\n\t}\n\tif e := checkRepoOwner(d.Repo); e != nil {'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+4 mutants, 1 survivors
+
+(the first mutant did not compile; rerun with a compiling form:)
+
+baseline: exit=0
+
+## item 4b: the rule copied as a fixed merge/release list (deploy refused)
+internal/hosted/bus/validate_wall.go: '!slices.Contains(required[d.Action], f.field)' -> '(d.Action != ActionMerge && d.Action != ActionRelease || slices.Contains([]string(nil), f.field))'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem
+suite exit=1
+
+1 mutants, 0 survivors
+
+item 4b total: 4 mutants, 0 survivors (rule copied as a merge/release list; pinned_tree allowed wherever pinned_commit is; check removed; check applied to unwalled).
