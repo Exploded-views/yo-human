@@ -1,0 +1,46 @@
+KILLED  a noop warns
+  internal/cli/redact.go: 'res.Status == core.StatusNoop ||' -> 'false ||'
+  --- FAIL: TestRedactionWarnsOnlyWhenSomethingIsSent (0.15s)
+      bodyfile_test.go:174: a noop resolve with a secret in its note: {code:0 out:RESULT noop <ULID>
+           err:warning: the message held the value of a secret; it was replaced with REDACTED before it was queued
+  [go test -count=1 ./internal/cli -run 'Redact|BodyFile' exit 1]
+
+KILLED  a suppressed repeat warns
+  internal/cli/redact.go: '|| res.Status == core.StatusSuppressed {' -> '|| false {'
+  --- FAIL: TestRedactionWarnsOnlyWhenSomethingIsSent (0.18s)
+      bodyfile_test.go:177: a suppressed repeat with a secret: {code:0 out:RESULT suppressed <ULID>
+           err:warning: the message held the value of a secret; it was replaced with REDACTED before it was queued
+  [go test -count=1 ./internal/cli -run 'Redact|BodyFile' exit 1]
+
+KILLED  never warns
+  internal/cli/redact.go: 'if !found || res.Status == ""' -> 'if true || res.Status == ""'
+  --- FAIL: TestStoredSecretValuesAreRedactedBeforeEnqueue (0.25s)
+      bodyfile_test.go:44: stderr = "", want it to contain "warning: "
+      bodyfile_test.go:44: stderr = "", want it to contain "held the value of a secret"
+  [go test -count=1 ./internal/cli -run 'Redact|BodyFile' exit 1]
+
+KILLED  the warning names the secret
+  internal/cli/redact.go: '"warning: the message held the value of a secret; it was replaced with %s before it was queued"' -> '"warning: the message held the value of a secret; it was replaced with %s before it was queued (pd-critical)"'
+  --- FAIL: TestStoredSecretValuesAreRedactedBeforeEnqueue (0.22s)
+      bodyfile_test.go:45: stderr = "warning: the message held the value of a secret; it was replaced with REDACTED before it was queued (pd-critical)\nvalid: a message that says where a secret is, never its value\nfix: never put a secret in a message; tell the human a secret may be exposed so they can check and rotate it\n", must not contain "pd-critical"
+  [go test -count=1 ./internal/cli -run 'Redact|BodyFile' exit 1]
+
+KILLED  notify does not warn
+  internal/cli/notify.go: 'e.warnRedacted(found, res)' -> '_ = found'
+  --- FAIL: TestStoredSecretValuesAreRedactedBeforeEnqueue (0.22s)
+      bodyfile_test.go:44: stderr = "", want it to contain "warning: "
+      bodyfile_test.go:44: stderr = "", want it to contain "held the value of a secret"
+  [go test -count=1 ./internal/cli -run 'Redact|BodyFile' exit 1]
+
+SURVIVED resolve does not warn
+  internal/cli/resolve.go: 'e.warnRedacted(redactedNote, res)' -> '_ = redactedNote'
+  [go test -count=1 ./internal/cli -run 'Redact|BodyFile' exit 0]
+
+# Second pass: the resolve test now checks that a sent note brings the warning.
+
+KILLED  resolve does not warn
+  internal/cli/resolve.go: 'e.warnRedacted(redactedNote, res)' -> '_ = redactedNote'
+  --- FAIL: TestStoredSecretValuesAreRedactedBeforeEnqueue (0.23s)
+      bodyfile_test.go:60: resolve stderr = "", want it to contain "held the value of a secret"
+  [go test -count=1 ./internal/cli -run 'Redact|BodyFile' exit 1]
+

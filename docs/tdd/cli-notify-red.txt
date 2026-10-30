@@ -1,0 +1,279 @@
+# what this is: task 11, against the code with no notify, resolve, flush, status or channel command (the registry and clock hooks exist but nothing reads them): every behaviour test fails (RED)
+# command: go test -count=1 -timeout 180s ./internal/cli
+--- FAIL: TestChannelTestSendsOneTestMessage (0.12s)
+    channelcmd_test.go:22: channel test: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+    channelcmd_test.go:23: stdout = "", want it to contain "phone: sent"
+    channelcmd_test.go:24: sends: phone 0, pager 0, journal 0; want only the phone
+--- FAIL: TestChannelTestReportsAFailure (0.07s)
+    channelcmd_test.go:48: permanent: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+    channelcmd_test.go:49: permanent stdout = "", want it to contain "phone: dead (provider said no)"
+    channelcmd_test.go:48: transient: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+    channelcmd_test.go:49: transient stdout = "", want it to contain "phone: dead (provider said no)"
+    channelcmd_test.go:55: config: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want the result, then exit 78
+    channelcmd_test.go:56: stderr = "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "rejected its configuration"
+    channelcmd_test.go:58: stdout = "{\"version\":1,\"error\":{\"what\":\"unknown command\",\"valid\":\"commands: config, levels, secret, version\",\"fix\":\"run one of them; `yo-human` with no arguments prints the usage\"}}\n", want it to contain "\"status\":\"failed\""
+    channelcmd_test.go:58: stdout = "{\"version\":1,\"error\":{\"what\":\"unknown command\",\"valid\":\"commands: config, levels, secret, version\",\"fix\":\"run one of them; `yo-human` with no arguments prints the usage\"}}\n", want it to contain "\"errors\":["
+--- FAIL: TestChannelTestUsageAndConfigErrors (0.05s)
+    channelcmd_test.go:63: no subcommand: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "subcommands" on stderr
+    channelcmd_test.go:64: unknown subcommand: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "subcommands" on stderr
+    channelcmd_test.go:65: no name: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "takes one channel name" on stderr
+    channelcmd_test.go:66: two names: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "takes one channel name" on stderr
+    channelcmd_test.go:67: unknown channel: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 78, no stdout and "no channel named \"ghost\"" on stderr
+    channelcmd_test.go:69: missing secret: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 78, no stdout and "yo-human secret set pd-critical" on stderr
+--- FAIL: TestChannelTestFlushesWhatIsDueFirst (0.03s)
+    channelcmd_test.go:82: test: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; pager got 0 new sends; want the older page flushed
+--- FAIL: TestChannelTestWithABrokenBacklogOnlyWarns (0.04s)
+    channelcmd_test.go:94: test: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want the test's own outcome
+    channelcmd_test.go:95: stderr = "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "warning:"
+    channelcmd_test.go:95: stderr = "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "pd-critical"
+--- FAIL: TestFlushSendsWhatIsDue (0.03s)
+    flush_test.go:19: too early: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want RESULT ok and nothing sent (the retry is not due)
+    flush_test.go:22: flush: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+    flush_test.go:23: stdout = "", want it to contain "phone: sent"
+    flush_test.go:23: stdout = "", want it to contain "pager: sent"
+    flush_test.go:26: stdout = "{\"version\":1,\"error\":{\"what\":\"unknown command\",\"valid\":\"commands: config, levels, secret, version\",\"fix\":\"run one of them; `yo-human` with no arguments prints the usage\"}}\n", want it to contain "\"status\":\"ok\""
+    flush_test.go:26: stdout = "{\"version\":1,\"error\":{\"what\":\"unknown command\",\"valid\":\"commands: config, levels, secret, version\",\"fix\":\"run one of them; `yo-human` with no arguments prints the usage\"}}\n", want it to contain "\"channels\":[]"
+    flush_test.go:27: stray: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "takes no arguments" on stderr
+--- FAIL: TestFlushBuildsOnlyTheChannelsOfItsDueEntries (0.04s)
+    flush_test.go:38: flush: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want the phone's send without the pager's secret
+--- FAIL: TestFlushLeavesAnUnbuildableChannelsEntriesQueued (0.06s)
+    flush_test.go:52: flush: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want the result, then exit 78
+    flush_test.go:53: stdout = "", want it to contain "phone: sent"
+    flush_test.go:53: stdout = "", want it to contain "pager: queued"
+    flush_test.go:54: stderr = "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "yo-human secret set pd-critical"
+    flush_test.go:55: queued 0, dead 0; want the pager's entry kept, none buried
+    flush_test.go:61: json: {code:64 out:{"version":1,"error":{"what":"unknown command","valid":"commands: config, levels, secret, version","fix":"run one of them; `yo-human` with no arguments prints the usage"}}
+         err:}
+    flush_test.go:65: after the fix: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+--- FAIL: TestNotifyAlsoSendsTheBacklogOfOtherChannels (0.03s)
+    flush_test.go:76: notify: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+    flush_test.go:77: the pager got 0 new sends; want the older page flushed by this call
+--- FAIL: TestNotifyWarnsOfABacklogChannelItCannotBuild (0.06s)
+    flush_test.go:89: notify: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+    flush_test.go:90: stderr = "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "warning:"
+    flush_test.go:90: stderr = "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "pd-critical"
+    flush_test.go:91: queued 0, dead 0; want the pager's entry kept
+    flush_test.go:93: stdout = "{\"version\":1,\"error\":{\"what\":\"unknown command\",\"valid\":\"commands: config, levels, secret, version\",\"fix\":\"run one of them; `yo-human` with no arguments prints the usage\"}}\n", want it to contain "\"warnings\":["
+    flush_test.go:93: stdout = "{\"version\":1,\"error\":{\"what\":\"unknown command\",\"valid\":\"commands: config, levels, secret, version\",\"fix\":\"run one of them; `yo-human` with no arguments prints the usage\"}}\n", want it to contain "pd-critical"
+--- FAIL: TestNotifyInputLimits (0.56s)
+    notify_input_test.go:40: body over the limit: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "16385 bytes > 16384" on stderr
+    notify_input_test.go:40: body that is not UTF-8: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "UTF-8" on stderr
+    notify_input_test.go:40: a fourth action: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "at most 3" on stderr
+    notify_input_test.go:40: an ftp link: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--link" on stderr
+    notify_input_test.go:40: a link with credentials: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--link" on stderr
+    notify_input_test.go:40: a link without a host: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--link" on stderr
+    notify_input_test.go:40: an ftp action: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--action" on stderr
+    notify_input_test.go:40: an action without a label: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--action" on stderr
+    notify_input_test.go:40: an action without an equals sign: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--action" on stderr
+    notify_input_test.go:40: a 256-character dedup key: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--dedup-key" on stderr
+    notify_input_test.go:40: a dedup key with a control character: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--dedup-key" on stderr
+    notify_input_test.go:40: a 201-character title: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "200" on stderr
+    notify_input_test.go:40: a title that is not UTF-8: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--title" on stderr
+    notify_input_test.go:40: a body from two places: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--body" on stderr
+    notify_input_test.go:40: an unreadable body file: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--body-file" on stderr
+    notify_input_test.go:40: an unknown flag: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--level" on stderr
+    notify_input_test.go:40: a flag that needs a value: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--link" on stderr
+    notify_input_test.go:40: a stray argument: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "takes no arguments" on stderr
+--- FAIL: TestNotifyAcceptsTheLimits (0.04s)
+    notify_input_test.go:52: at the limits: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+    notify_input_test.go:54: message = []; want the body and three actions intact (an equals sign in the URL stays in the URL)
+--- FAIL: TestNotifyFlattensTitleAndAsk (0.03s)
+    notify_input_test.go:61: run: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+    notify_input_test.go:63: message = []; want newlines and escapes flattened to spaces
+--- FAIL: TestNotifyReadsTheBodyFromAFileOrStdin (0.03s)
+    notify_input_test.go:69: body-file
+    notify_input_test.go:70: stdin
+    notify_input_test.go:71: literal
+    notify_input_test.go:76: bodies = []
+    notify_input_test.go:78: big file: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "16385 bytes > 16384" on stderr
+    notify_input_test.go:81: huge file: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "bytes > 16384" on stderr
+--- FAIL: TestNotifyRequiredFlags (0.04s)
+    notify_input_test.go:86: no level: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--level" on stderr
+    notify_input_test.go:87: no title: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--title" on stderr
+    notify_input_test.go:88: blank title: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--title" on stderr
+    notify_input_test.go:90: unknown level: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "unknown level \"urgent\"" on stderr
+    notify_input_test.go:91: stderr = "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "note (use when FYI only)"
+    notify_input_test.go:91: stderr = "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "page (use when production is down)"
+--- FAIL: TestNotifyAskRequiredUnlessOptional (0.03s)
+    notify_input_test.go:97: page without ask: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--ask" on stderr
+    notify_input_test.go:98: stderr = "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "--ask \"<what the human must do>\""
+    notify_input_test.go:99: blank ask: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--ask" on stderr
+    notify_input_test.go:101: note is ask: optional
+--- FAIL: TestDefaultsFromEnv (0.02s)
+    notify_input_test.go:115: source = []; want unknown, then the environment, then the flags
+--- FAIL: TestNotifyStatusesAndExitCodes (0.15s)
+    notify_result_test.go:33: delivered: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 0 and RESULT delivered first
+    notify_result_test.go:33: partial: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 0 and RESULT partial first
+    notify_result_test.go:33: queued: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 75 and RESULT queued first
+    notify_result_test.go:33: failed: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 69 and RESULT failed first
+    notify_result_test.go:33: held: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 0 and RESULT held first
+    notify_result_test.go:39: repeat: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want suppressed, exit 0
+--- FAIL: TestHeldSendsWaitInTheQueueAndSendNothing (0.03s)
+    notify_result_test.go:46: stdout = "", want it to contain "pager: held"
+    notify_result_test.go:47: a held send went out or was not queued: sent 0, queued 0
+--- FAIL: TestQueuedResultSaysWhatToDoNext (0.03s)
+    notify_result_test.go:55: stdout = "", want it to contain "next: yo-human flush in 60s, 5 attempts left, then tell the human in your session"
+    notify_result_test.go:55: stdout = "", want it to contain "pager: queued"
+    notify_result_test.go:69: json run: {code:64 out:{"version":1,"error":{"what":"unknown command","valid":"commands: config, levels, secret, version","fix":"run one of them; `yo-human` with no arguments prints the usage"}}
+         err:}
+    notify_result_test.go:70: object = {Version:0 Status: ID: Channels:[] Next:{Do: AfterSeconds:0 AttemptsLeft:0 Then:}}
+    notify_result_test.go:71: next = {Do: AfterSeconds:0 AttemptsLeft:0 Then:}
+--- FAIL: TestResultLineIsFirst (0.02s)
+    notify_result_test.go:88: status: first line "" does not match the RESULT grammar (code 64, err "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n")
+    notify_result_test.go:88: channeltst: first line "" does not match the RESULT grammar (code 64, err "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n")
+    notify_result_test.go:88: queued: first line "" does not match the RESULT grammar (code 64, err "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n")
+    notify_result_test.go:88: held: first line "" does not match the RESULT grammar (code 64, err "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n")
+    notify_result_test.go:88: delivered: first line "" does not match the RESULT grammar (code 64, err "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n")
+    notify_result_test.go:88: resolve: first line "" does not match the RESULT grammar (code 64, err "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n")
+    notify_result_test.go:88: noop: first line "" does not match the RESULT grammar (code 64, err "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n")
+    notify_result_test.go:88: flush: first line "" does not match the RESULT grammar (code 64, err "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n")
+    notify_result_test.go:90: flush prints RESULT ok, got ""
+--- FAIL: TestNotifyBuildsOnlyTheChannelsItsLevelSendsTo (0.04s)
+    notify_result_test.go:100: note: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want delivered without the pager's secret
+    notify_result_test.go:101: phone sent 0, pager sent 0
+    notify_result_test.go:103: page without the pager's secret: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 78, no stdout and "pd-critical" on stderr
+    notify_result_test.go:104: stderr = "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "yo-human secret set pd-critical"
+    notify_result_test.go:105: a config failure enqueued or sent something
+--- FAIL: TestNotifySendsTheNewMessageBeforeTheBacklog (0.03s)
+    notify_result_test.go:123: send order = []; want the new message first, then the backlog
+--- FAIL: TestNotifyWithAResultAndAConfigProblem (0.03s)
+    notify_result_test.go:132: text: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want the result, then exit 78
+    notify_result_test.go:133: stdout = "", want it to contain "pager: dead"
+    notify_result_test.go:134: stderr = "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "error: channel"
+    notify_result_test.go:134: stderr = "error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "rejected its configuration"
+    notify_result_test.go:140: json: {code:64 out:{"version":1,"error":{"what":"unknown command","valid":"commands: config, levels, secret, version","fix":"run one of them; `yo-human` with no arguments prints the usage"}}
+         err:}
+    notify_result_test.go:141: object = {Status: Errors:[]}; want the result with the problem in errors
+--- FAIL: TestNotifyWithAResultAndAStoreProblem (0.03s)
+    notify_result_test.go:152: text: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want the result, then exit 74
+    notify_result_test.go:160: json: {code:64 out:{"version":1,"error":{"what":"unknown command","valid":"commands: config, levels, secret, version","fix":"run one of them; `yo-human` with no arguments prints the usage"}}
+         err:} object {Status: Errors:[]}
+--- FAIL: TestResolveClosesTheIncidentAndNotesWhereItReached (0.02s)
+    resolve_test.go:15: resolve: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+    resolve_test.go:16: stdout = "", want it to contain "phone: sent"
+    resolve_test.go:16: stdout = "", want it to contain "pager: sent"
+    resolve_test.go:18: phone got []; want a passive resolve note carrying the note
+    resolve_test.go:20: pager resolved []; want the key closed through the channel
+    resolve_test.go:22: second resolve: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want noop, exit 0
+    resolve_test.go:24: stdout = "{\"version\":1,\"error\":{\"what\":\"unknown command\",\"valid\":\"commands: config, levels, secret, version\",\"fix\":\"run one of them; `yo-human` with no arguments prints the usage\"}}\n", want it to contain "\"status\":\"noop\""
+--- FAIL: TestResolveBuildsOnlyTheChannelsTheIncidentReached (0.03s)
+    resolve_test.go:35: resolve: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want resolved without the pager's secret
+--- FAIL: TestResolveNeedsTheSecretsOfTheChannelsItReached (0.04s)
+    resolve_test.go:45: resolve without the pager secret: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 78, no stdout and "yo-human secret set pd-critical" on stderr
+    resolve_test.go:48: after the fix the incident is still open and resolves: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+--- FAIL: TestResolveUsage (0.02s)
+    resolve_test.go:53: no key: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--dedup-key" on stderr
+    resolve_test.go:54: long key: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "255" on stderr
+    resolve_test.go:55: stray: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "takes no arguments" on stderr
+    resolve_test.go:56: unknown flag: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--dedup-key" on stderr
+    resolve_test.go:57: long note: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "16385 bytes > 16384" on stderr
+    resolve_test.go:58: bad note: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "--note" on stderr
+--- FAIL: TestResolveCancelsWhatIsStillQueued (0.03s)
+    resolve_test.go:65: setup: the pager's send should be queued
+    resolve_test.go:68: stdout = "", want it to contain "pager: cancelled"
+--- FAIL: TestStatusShowsQueuedHeldDeadIncidents (0.03s)
+    status_test.go:44: no result id in {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+--- FAIL: TestStatusIsEmptyAndNeedsNeitherSecretsNorChannels (0.00s)
+    status_test.go:81: status: {code:64 out:{"version":1,"error":{"what":"unknown command","valid":"commands: config, levels, secret, version","fix":"run one of them; `yo-human` with no arguments prints the usage"}}
+         err:}
+    status_test.go:82: stdout = "{\"version\":1,\"error\":{\"what\":\"unknown command\",\"valid\":\"commands: config, levels, secret, version\",\"fix\":\"run one of them; `yo-human` with no arguments prints the usage\"}}\n", want it to contain "\"queued\":[]"
+    status_test.go:82: stdout = "{\"version\":1,\"error\":{\"what\":\"unknown command\",\"valid\":\"commands: config, levels, secret, version\",\"fix\":\"run one of them; `yo-human` with no arguments prints the usage\"}}\n", want it to contain "\"held\":[]"
+    status_test.go:82: stdout = "{\"version\":1,\"error\":{\"what\":\"unknown command\",\"valid\":\"commands: config, levels, secret, version\",\"fix\":\"run one of them; `yo-human` with no arguments prints the usage\"}}\n", want it to contain "\"dead\":[]"
+    status_test.go:82: stdout = "{\"version\":1,\"error\":{\"what\":\"unknown command\",\"valid\":\"commands: config, levels, secret, version\",\"fix\":\"run one of them; `yo-human` with no arguments prints the usage\"}}\n", want it to contain "\"incidents\":[]"
+    status_test.go:82: stdout = "{\"version\":1,\"error\":{\"what\":\"unknown command\",\"valid\":\"commands: config, levels, secret, version\",\"fix\":\"run one of them; `yo-human` with no arguments prints the usage\"}}\n", want it to contain "\"inflight\":0"
+    status_test.go:84: stdout = "", want it to contain "queued: 0"
+    status_test.go:84: stdout = "", want it to contain "held: 0"
+    status_test.go:84: stdout = "", want it to contain "dead: 0"
+    status_test.go:84: stdout = "", want it to contain "incidents: 0"
+    status_test.go:87: stray: code=64 out="" err="error: unknown command\nvalid: commands: config, levels, secret, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n"; want exit 64, no stdout and "takes no arguments" on stderr
+--- FAIL: TestStatusDoesNotShowAnExpiredIncident (0.03s)
+    status_test.go:44: no result id in {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+--- FAIL: TestStatusShowsADueHeldEntryAsQueued (0.03s)
+    status_test.go:44: no result id in {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+--- FAIL: TestStatusSurvivesAHostileDedupKeyAndReason (0.03s)
+    status_test.go:111: status: {code:64 out: err:error: unknown command
+        valid: commands: config, levels, secret, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	2.403s
+FAIL
+# exit code: 1

@@ -1,0 +1,17 @@
+skills used: []
+
+Next steps, in order:
+
+1. **Wait 60 seconds**, then run `yo-human flush` (attempt 2 of the remaining 5).
+
+2. **Repeat** that wait-60s-then-`yo-human flush` cycle while it keeps exiting 75 with "queued". I'd follow the tool's own `next:` guidance and not invent a different cadence. I'd stop as soon as a flush reports delivered (exit 0).
+
+3. **If the attempts run out** (the `5 attempts left` budget is used up) and it's still queued, I would not retry further or work around it. I'd **tell the human directly in my session**, as the tool instructs. The message would be something like:
+
+   > SIREN undelivered: "Checkout failing". I tried to page you with `yo-human notify --level siren --ask "Look at checkout now" --dedup-key checkout-FAKE`. The phone notification stayed queued because the ntfy server couldn't be reached, even after 5 flush retries. Please look at checkout now. Check your ntfy server or connectivity too.
+
+4. **I would not**:
+   - Re-run `notify` with a new dedup key or a lower level (that would create duplicates or downgrade urgency).
+   - Try another channel or tool that I haven't been given.
+
+5. Meanwhile, I'd keep working on anything safe and unrelated, and I'd mention the pending siren in my final output either way.

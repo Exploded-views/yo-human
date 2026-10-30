@@ -1,0 +1,15 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false,
+  false
+ ],
+ "note": "Reply waits 60s, runs the exact flush command with --config, bounds retries to 5 attempts, and tells the human in-session with problem and ask afterward; it avoids re-sending notify.",
+ "pass": true
+}

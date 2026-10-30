@@ -1,0 +1,14 @@
+skills used: ['yo-human-eval:yo-human']
+
+Next step: **nothing more to send.** I wouldn't run any command right now.
+
+- The flush exited 0 and printed `RESULT ok` and `phone: sent`. That is a delivered channel line, so the siren reached the human's phone. It is the stop condition for the 75 retry loop.
+- I would not run `flush` again, and I would not re-run `notify`. A second `notify` would duplicate the page. Changing the key would do the same.
+- I would not run `resolve` yet. The checkout problem isn't fixed, and `resolve` belongs after a fix is verified.
+
+**In order:**
+1. Continue the actual work: investigate the checkout failure within my remit. I'd leave the config, trust and secrets alone.
+2. Once I've fixed the failure and verified it, run `yo-human resolve --dedup-key checkout-FAKE --note "<short note on the fix>"`. That cancels anything still queued and tells the phone the incident is over. I would not send a new `notify` to say "fixed".
+3. If `resolve` exits 75, follow its `next` command, up to the attempts it allows. If it exits 69, tell the human in my session that the page may still fire.
+
+If the human replies or takes over, I follow their lead. I would also state plainly in my handoff that the siren was delivered after one queued retry.

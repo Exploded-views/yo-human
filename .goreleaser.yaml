@@ -1,0 +1,35 @@
+version: 2
+project_name: yo-human
+builds:
+  - id: yo-human
+    main: ./cmd/yo-human
+    binary: yo-human
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    # The same -s -w and -X flags as `make build` (Makefile LDFLAGS); the commit is the 12-character
+    # short SHA, as there.
+    ldflags:
+      - -s -w
+      - -X github.com/Exploded-views/yo-human/internal/version.Version={{ .Version }}
+      - -X github.com/Exploded-views/yo-human/internal/version.Commit={{ slice .FullCommit 0 12 }}
+archives:
+  - id: tarball
+    ids: [yo-human]
+    formats: [tar.gz]
+    name_template: "yo-human_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files: [LICENSE, README.md]
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot"
+# v0.1.0 is archives plus checksums.txt: no homebrew tap, docker image or signing.
+# A draft keeps a pushed tag from going public before the owner has read the release page.
+release:
+  github:
+    owner: Exploded-views
+    name: yo-human
+  draft: true
+  prerelease: auto

@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "The reply uses nudge and passes --ask with a clear action, but its command has --message and no --title, and it hedges on flag names instead of giving one exact command.",
+ "pass": false
+}

@@ -1,0 +1,36 @@
+skills used: ['yo-human-eval:yo-human']
+
+Nothing is run here. This is the plan.
+
+**Level:** `nudge`. A build host at 95% disk means the human should look within the hour, but nothing is on fire. `siren` is for impaired production, and `murmur` is too quiet for a disk that stays full. I already have the level list from `levels --json`, so I won't re-read it this session.
+
+**Command, this pass:**
+
+```
+YO_HUMAN_PROJECT=<project> YO_HUMAN_AGENT=<agent> yo-human notify --level nudge \
+  --title "Build host disk 95% full" \
+  --ask "Free up space on the build host (clear old build artifacts, caches or logs) before it fills completely." \
+  --body "Disk usage on the build host has been at 95% across consecutive checks. This watcher re-checks every minute." \
+  --dedup-key disk-full-build-host
+```
+
+The body contains no secrets. `<project>` and `<agent>` stand for the real project and agent names, which I'd set from the environment.
+
+**On later passes while the disk is still full:** I run the exact same `notify`, with the same `--dedup-key disk-full-build-host` and the same level. I don't change the key, add a timestamp or counter, or skip the call.
+- A repeat at the same level is suppressed and exits 0, so the human isn't paged every minute.
+- The repeat still lets the reminder interval fire (if `nudge` has one).
+- It also retries the incident if every earlier send failed for good.
+
+**Exit codes on each pass:**
+- **0** (`delivered`, `held`, `suppressed`): carry on. `held` means it is waiting for quiet hours to end, which is intended.
+- **75** (`queued`): wait `next.after_seconds`, then run `next.do` exactly as printed (usually `yo-human flush`). Stop at the first exit 0 with `sent`, or at exit 69. I run `flush` at most `attempts_left` times, counting from the first `next`. If it is still queued after that, I tell the human in my session with the title and ask. I don't re-run `notify` for that message or change the key.
+- **69, 74, 78, 70:** stop and tell the human in my session, quoting the `error` and `fix` lines. I don't retry, switch levels, or edit the config or secrets.
+- **64:** my call is wrong, so I'd read `error`/`valid`/`fix` and correct it.
+
+**When the disk is fixed:** once usage is back below the threshold and I've verified it, I run:
+
+```
+yo-human resolve --dedup-key disk-full-build-host --note "Disk usage back to normal"
+```
+
+I don't send a new `notify` to say it's fixed. If the disk fills again later, the same key opens a fresh incident.

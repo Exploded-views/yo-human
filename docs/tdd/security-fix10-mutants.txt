@@ -1,0 +1,40 @@
+KILLED  the cap is off by one
+  internal/cli/input.go: 'if n := utf8.RuneCountInString(v); n > maxSourceChars {' -> 'if n := utf8.RuneCountInString(v); n >= maxSourceChars {'
+  --- FAIL: TestProjectAndAgentAreAtMost64Characters (0.02s)
+      sourcecap_test.go:29: 64 characters: {code:64 out: err:error: --project (or YO_HUMAN_PROJECT) is 64 characters
+          valid: at most 64 characters
+  [go test -count=1 ./internal/cli -run '64Characters|Page|Status|Resolve' exit 1]
+
+KILLED  the cap counts bytes
+  internal/cli/input.go: 'if n := utf8.RuneCountInString(v); n > maxSourceChars {' -> 'if n := len(v); n > maxSourceChars {'
+  --- FAIL: TestProjectAndAgentAreAtMost64Characters (0.02s)
+      sourcecap_test.go:29: 64 characters: {code:64 out: err:error: --project (or YO_HUMAN_PROJECT) is 128 characters
+          valid: at most 64 characters
+  [go test -count=1 ./internal/cli -run '64Characters|Page|Status|Resolve' exit 1]
+
+KILLED  notify's agent is not capped
+  internal/cli/notify.go: 'm.Agent, err = sourceArg("--agent", *agent, "YO_HUMAN_AGENT"); return' -> 'm.Agent = sourceOf(*agent, "YO_HUMAN_AGENT"); return'
+  --- FAIL: TestProjectAndAgentAreAtMost64Characters (0.10s)
+      sourcecap_test.go:20: notify with 65 characters: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "64 characters" on stderr
+      sourcecap_test.go:24: YO_HUMAN_AGENT with 65 characters: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "64 characters" on stderr
+  [go test -count=1 ./internal/cli -run '64Characters|Page|Status|Resolve' exit 1]
+
+KILLED  notify's project is not capped
+  internal/cli/notify.go: 'm.Project, err = sourceArg("--project", *project, "YO_HUMAN_PROJECT"); return' -> 'm.Project = sourceOf(*project, "YO_HUMAN_PROJECT"); return'
+  --- FAIL: TestProjectAndAgentAreAtMost64Characters (0.12s)
+      sourcecap_test.go:20: notify with 65 characters: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "64 characters" on stderr
+      sourcecap_test.go:24: YO_HUMAN_PROJECT with 65 characters: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "64 characters" on stderr
+  [go test -count=1 ./internal/cli -run '64Characters|Page|Status|Resolve' exit 1]
+
+KILLED  resolve's project is not capped
+  internal/cli/resolve.go: 'proj, err := sourceArg("--project", *project, "YO_HUMAN_PROJECT")' -> 'proj, err := sourceOf(*project, "YO_HUMAN_PROJECT"), error(nil)'
+  --- FAIL: TestProjectAndAgentAreAtMost64Characters (0.06s)
+      sourcecap_test.go:20: resolve with 65 characters: code=0 out="RESULT noop <ULID>\n" err=""; want exit 64, no stdout and "64 characters" on stderr
+  [go test -count=1 ./internal/cli -run '64Characters|Page|Status|Resolve' exit 1]
+
+KILLED  status's project is not capped
+  internal/cli/status.go: 'proj, err := sourceArg("--project", *project, "YO_HUMAN_PROJECT")' -> 'proj, err := sourceOf(*project, "YO_HUMAN_PROJECT"), error(nil)'
+  --- FAIL: TestProjectAndAgentAreAtMost64Characters (0.05s)
+      sourcecap_test.go:20: status with 65 characters: code=0 out="RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n" err=""; want exit 64, no stdout and "64 characters" on stderr
+  [go test -count=1 ./internal/cli -run '64Characters|Page|Status|Resolve' exit 1]
+

@@ -1,0 +1,36 @@
+KILLED  Enqueue replaces again
+  internal/store/queue.go: 'created, err := publishNoClobber(path, wireOf(p))' -> 'created, err := true, writeWire(path, wireOf(p))'
+  --- FAIL: TestEnqueueRefusesAKeyAlreadyQueued (0.02s)
+      enqueue_excl_test.go:17: Enqueue twice = <nil>; want a refusal naming the key
+  [go test -count=1 ./internal/store ./internal/core exit 1]
+
+KILLED  a refused Enqueue reports success
+  internal/store/queue.go: 'if err == nil && !created {' -> 'if false && !created {'
+  --- FAIL: TestEnqueueRefusesAKeyAlreadyQueued (0.02s)
+      enqueue_excl_test.go:17: Enqueue twice = <nil>; want a refusal naming the key
+  [go test -count=1 ./internal/store ./internal/core exit 1]
+
+SURVIVED  requeue goes through the exclusive Enqueue
+  internal/store/queue.go: 'if err := writeWire(s.path("queue", p.Key+".json"), wireOf(p)); err != nil {' -> 'if err := s.Enqueue(p); err != nil {'
+  [go test -count=1 ./internal/store ./internal/core exit 0]
+
+KILLED  requeue skips the key check
+  internal/store/queue.go: 'if err := validKey(p.Key); err != nil {\n\t\treturn err\n\t}\n\tif err := writeWire(' -> 'if err := writeWire('
+  --- FAIL: TestReleaseRefusesAnUnnameableKey (0.04s)
+      queue_test.go:283: Release of an entry with no key succeeded
+  --- FAIL: TestDeadlineBoundsTheCall (0.39s)
+      pipeline_test.go:179: Notify took 392.329958ms; want within 300ms of a 200ms deadline
+  [go test -count=1 ./internal/store ./internal/core exit 1]
+
+KILLED  requeue replaces a newer entry (rerun after requeue was made no-clobber, with a test)
+  internal/store/queue.go: 'if _, err := publishNoClobber(s.path("queue", p.Key+".json"), wireOf(p)); err != nil {' -> 'if err := writeWire(s.path("queue", p.Key+".json"), wireOf(p)); err != nil {'
+  --- FAIL: TestARequeueNeverReplacesANewerEntry (0.04s)
+      enqueue_excl_test.go:44: queue [{Key:01A.ntfy IncidentKey:inc Data:[123 34 116 105 116 108 101 34 58 34 116 34 125] Attempts:1 NextAttempt:2026-10-26 12:00:00 +0000 UTC DeliverAt:2026-10-26 12:00:00 +0000 UTC Reason:}], 1 queued, 0 in flight; want the newer entry kept and the claimed copy gone
+  [go test -count=1 ./internal/store ./internal/core exit 1]
+
+KILLED  requeue goes through the exclusive Enqueue (rerun)
+  internal/store/queue.go: 'if _, err := publishNoClobber(s.path("queue", p.Key+".json"), wireOf(p)); err != nil {' -> 'if err := s.Enqueue(p); err != nil {'
+  --- FAIL: TestARequeueNeverReplacesANewerEntry (0.04s)
+      enqueue_excl_test.go:40: Release: queue entry 01A.ntfy already exists
+  [go test -count=1 ./internal/store ./internal/core exit 1]
+

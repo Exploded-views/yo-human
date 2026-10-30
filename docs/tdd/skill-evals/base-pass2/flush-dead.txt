@@ -1,0 +1,20 @@
+skills used: []
+
+I would stop retrying and run no more commands.
+
+**Why:** The first failure (exit 75) was transient, so waiting and flushing was correct. This one (exit 69, "phone: dead (the provider rejected the credentials)") is permanent. More flushes would hit the same rejection. The remaining attempts don't help, because only a human can fix the credentials.
+
+**What I wouldn't do:**
+- Re-run `notify` with a new dedup key or the same one. It would go through the same dead phone channel.
+- Downgrade to `nudge` or `murmur`. That would misrepresent the severity, and `nudge` is held during quiet hours anyway.
+- Hunt for or edit the credentials or config, or invent other commands to reach the human. That's outside my remit.
+
+**What I would do:** The earlier output said to "tell the human in your session" once delivery fails. So my final message in this session, which is where they'll see it, would say:
+
+> **SIREN undelivered: checkout is failing, and I could not reach you.**
+> - I sent `yo-human notify --level siren --title "Checkout failing" --ask "Look at checkout now" --dedup-key checkout-FAKE`. It exited 75, and after a 60s wait, `yo-human flush` exited 69 with `RESULT failed: phone: dead (the provider rejected the credentials)`.
+> - Nothing has reached you. The phone credentials need to be fixed or re-issued. I haven't touched them.
+> - Checkout needs a look now. I haven't investigated or changed anything on that front.
+> - Once the credentials are fixed, `yo-human flush` should deliver the queued alert, or I can re-send it.
+
+I would then pause on anything that depends on a human response and wait for their reply.

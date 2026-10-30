@@ -1,0 +1,36 @@
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/store	2.055s
+exit=0
+=== mutant: Claim copies instead of renaming (internal/store/queue.go: os.Rename(s.path("queue", key+".json"), dst) -> copyKeep(s.path("queue", key+".json"), dst))
+--- FAIL: TestClaimIsExclusive (0.01s)
+    queue_test.go:96: cannot parse $TMPDIR/TestClaimIsExclusive3883433057/001/state/inflight/01A.ntfy.94705.json: unexpected end of JSON input
+    queue_test.go:96: cannot parse $TMPDIR/TestClaimIsExclusive3883433057/001/state/inflight/01A.ntfy.94705.json: unexpected end of JSON input
+    queue_test.go:96: cannot parse $TMPDIR/TestClaimIsExclusive3883433057/001/state/inflight/01A.ntfy.94705.json: unexpected end of JSON input
+    queue_test.go:105: 17 claims won, want exactly 1
+--- FAIL: TestClaimMovesFileByRename (0.02s)
+    queue_test.go:125: claim must move the same file (rename), not copy it
+    queue_test.go:128: queue file still present: <nil>
+--- FAIL: TestCompleteRemovesInflight (0.01s)
+    queue_test.go:189: counts = 1 0 0, want all 0
+--- FAIL: TestDeadIsKeptAndListed (0.03s)
+    queue_test.go:218: counts = 1 0 1, want 0 0 1
+--- FAIL: TestCancelIncidentSkipsClaimedEntries (0.02s)
+    queue_test.go:249: CancelIncident = [{A.x one [123 34 116 105 116 108 101 34 58 34 116 34 125] 0 2026-10-26 12:00:00 +0000 UTC 2026-10-26 12:00:00 +0000 UTC}], <nil>, want nothing (already in flight)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.163s
+FAIL
+exit=1
+=== mutant: Recover ignores pid liveness (internal/store/recover.go: !ok || pidAlive(pid) -> !ok || pid < 0)
+--- FAIL: TestRecoverSkipsLiveOwner (0.01s)
+    recover_test.go:49: Recover = 1, <nil>, want 0
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	1.996s
+FAIL
+exit=1
+=== mutant: WithIncidents without the flock (internal/store/incidents.go: if err := lockExclusive(f); err != nil { -> if err := error(nil); err != nil {)
+--- FAIL: TestWithIncidentsSerializes (1.36s)
+    incidents_test.go:77: counter = 50, want 100
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	1.703s
+FAIL
+exit=1

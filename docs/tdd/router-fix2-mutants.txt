@@ -1,0 +1,19 @@
+# Fix round 2 mutation checks (task 4); ok/FAIL/--- FAIL lines
+== baseline
+ok  	github.com/Exploded-views/yo-human/internal/core	0.011s
+== mutant: always use offAfter
+--- FAIL: TestQuietFallBackEdgeIsFirstOccurrence (0.00s)
+--- FAIL: TestQuietDayIsTheDayTheWindowStarts (0.00s)
+--- FAIL: TestQuietFallBackEdgeIsTheFirstOccurrence (0.00s)
+--- FAIL: TestPlanHoldInQuietHours (0.00s)
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.010s
+== mutant: latest valid candidate wins
+--- FAIL: TestQuietFallBackEdgeIsFirstOccurrence (0.00s)
+--- FAIL: TestQuietFallBackEdgeIsTheFirstOccurrence (0.00s)
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.011s
+== mutant: ZoneBounds end instead of start
+--- FAIL: TestQuietGapEndIsTheTransition (0.00s)
+--- FAIL: TestQuietGapStartIsTheTransition (0.00s)
+--- FAIL: TestQuietSpringForwardGapEnd (0.00s)
+--- FAIL: TestQuietSpringForwardGapStart (0.00s)
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.010s

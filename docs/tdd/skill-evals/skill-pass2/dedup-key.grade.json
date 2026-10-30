@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "Reply uses --dedup-key disk-full-build-host and --ask, and later passes reuse the same key (for escalation and resolve), though it mostly says not to resend on unchanged passes; levels used are valid.",
+ "pass": true
+}

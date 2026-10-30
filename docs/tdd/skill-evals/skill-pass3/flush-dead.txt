@@ -1,0 +1,22 @@
+skills used: ['yo-human-eval:yo-human']
+
+I would stop retrying and tell the human directly in my session. I would run no more commands.
+
+The `flush` exit 69 with `RESULT failed` means every channel rejected the send for good. The phone channel is dead because the provider rejected the credentials. Retrying can't fix that, and neither can a different level or another `notify`. Only the human can fix credentials, so I wouldn't touch the config or secrets. I also wouldn't try another tool to reach them, because the skill says not to route around the failure.
+
+Specifically, I would not:
+- run `yo-human flush` again,
+- re-run `notify` (it would duplicate the send),
+- change the level or the dedup key,
+- run `resolve`, because the problem isn't fixed.
+
+My message in the session would read roughly like this:
+
+> **I could not reach you. The siren alert failed to send.**
+> - **Title:** Checkout failing
+> - **Ask:** Look at checkout now
+> - **Level:** siren, dedup key `checkout-FAKE`
+> - **What happened:** `yo-human notify` exited 75 (queued). After waiting 60s, `yo-human flush` exited 69 with `RESULT failed` and the message `phone: dead (the provider rejected the credentials)`.
+> - **What you need to do:** Fix the yo-human phone channel credentials. I haven't edited the config or secrets. Please also look at checkout now, since the alert never reached you.
+
+After that I would carry on with whatever work doesn't depend on the human.

@@ -1,3 +1,4 @@
 dist/
 .cache/
 .superpowers/
+__pycache__/

@@ -1,0 +1,66 @@
+yo-human#59 scrub round: one mutant per rule class. Each fixture was rewritten to the allowed shape or built at runtime; the mutant removes the behaviour the fixture tests and the test must fail. Baseline (no mutant) passes.
+
+## url-credentials and email (userinfo refused, built at runtime) (internal/channel/helpers.go)
+mutant: replace ' && u.User == nil' with ''
+exit 1; 10 FAIL lines
+  --- FAIL: TestSafeLink 
+  --- FAIL: TestOnlyHTTPLinksReachThePhone 
+  --- FAIL: TestOnlyHTTPLinksReachThePhone 
+
+## home-path (HOME fallback) (internal/config/paths.go)
+mutant: replace 'filepath.Join(os.Getenv("HOME"), fallback)' with 'filepath.Join("/root", fallback)'
+exit 1; 4 FAIL lines
+  --- FAIL: TestDefaultPaths 
+
+## long-hex built by strings.Repeat (hex-looking secret name refused) (internal/secrets/secrets.go)
+mutant: replace 'len(name) >= 16' with 'len(name) >= 99'
+exit 1; 7 FAIL lines
+  --- FAIL: TestSecretsValidNameRefusesLikelyTokens 
+  --- FAIL: TestSecretSetRefusesBadNamesWithoutEchoingThem 
+
+## secret-assign (secret value no longer attached to the instance) (internal/config/validate.go)
+mutant: replace 'in.Secrets[field] = val' with '_ = val'
+exit 1; 4 FAIL lines
+  --- FAIL: TestInstancesResolveSecrets 
+
+## ntfy-url (credentials, query and fragment hidden in trust) (internal/cli/trustview.go)
+mutant: replace 'u.User != nil || u.RawQuery != ""' with 'false && u.RawQuery != ""'
+exit 1; 4 FAIL lines
+  --- FAIL: TestConfigTrustShowsWhatTheFileWouldDo 
+
+## home-path plants in leakcheck (path count dropped) (evals/leakcheck.sh)
+mutant: replace 'n=$((n + t + h + p))' with 'n=$((n + t + h))'
+exit 1; 1 FAIL lines
+  FAIL home-path (exit 0)
+
+## uuid plant in leakcheck (long-token count dropped) (evals/leakcheck.sh)
+mutant: replace 'n=$((n + t + h + p))' with 'n=$((n + h + p))'
+exit 1; 1 FAIL lines
+  FAIL long-token (exit 0)
+
+## email and internal-host plants in leakcheck (host count dropped) (evals/leakcheck.sh)
+mutant: replace 'n=$((n + t + h + p))' with 'n=$((n + t + p))'
+exit 1; 1 FAIL lines
+  FAIL hostname (exit 0)
+
+## uuid plant in leakcheck (uuid pattern and long-token count both dropped) (evals/leakcheck.sh)
+mutant: drop the uuid alternative from pat and t from the count
+exit 1; 2 FAIL lines
+  FAIL session-uuid (exit 0)
+  FAIL long-token (exit 0)
+
+## e2e hook exclusion in .golangci.yml (make lint-rules-test, 130 cases)
+baseline: all 130 cases pass, including internal/cli/testhooks_e2e.go setting the TLS roots on http.DefaultTransport (clean) and an internal/cli file doing the same (forbidigo, internal-no-network)
+mutant A: the exclusion deleted: FAIL internal/cli/testhooks_e2e.go: want clean, got forbidigo (exit 2)
+mutant B: the exclusion widened to path internal/cli/: FAIL internal/cli/casetransport/x.go: want forbidigo internal-no-network, got internal-no-network (exit 2)
+
+## e2e hook exclusion probes (carry-delta nits, yo-human#59; make lint-rules-test, 131 cases)
+new cases: internal/core/x_e2e.go using http.DefaultTransport (want forbidigo); internal/cli/testhooks_e2e.go with http.DefaultTransport and syscall.Socket (want forbidigo, and every issue line must be the socket one)
+RED, against the exclusion as it stood (path internal/cli/testhooks_e2e\.go$, text kept), the cases pass and the baseline is all 131; the mutants those cases are for:
+mutant W (path widened to _e2e\.go$): FAIL internal/core/x_e2e.go: want forbidigo, got clean (exit 1)
+mutant T (text: dropped): FAIL internal/cli/testhooks_e2e.go: want forbidigo, got clean (exit 1)
+Before the change both mutants passed all 130 old cases.
+GREEN: the path anchored to ^internal/cli/testhooks_e2e\.go$, text: kept; baseline all 131 cases pass
+mutant W (anchored path widened to _e2e\.go$): FAIL internal/core/x_e2e.go: want forbidigo, got clean (exit 1)
+mutant T (text: dropped): FAIL internal/cli/testhooks_e2e.go: want forbidigo, got clean (exit 1)
+mutant A (exclusion deleted): FAIL internal/cli/testhooks_e2e.go: want forbidigo, got forbidigo, but 5 issue lines lack 'opens sockets' (exit 1)

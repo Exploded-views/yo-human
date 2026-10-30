@@ -1,0 +1,14 @@
+{
+ "must": [
+  false,
+  false,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  true
+ ],
+ "note": "The reply picks siren in prose but gives no exact command, with no --title and no concrete --ask flag, so it omits --ask from any command.",
+ "pass": false
+}

@@ -1,0 +1,27 @@
+$ go test -count=1 -timeout 120s ./internal/store -run ALockWaitEnds
+--- FAIL: TestALockWaitEndsWithTheContext (3.03s)
+    lockwait_test.go:49: still waiting for the lock 3s after a 150ms deadline
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	3.041s
+FAIL
+[exit 1]
+
+$ go test -count=1 -timeout 120s ./internal/core -run BehindAHeldLock
+--- FAIL: TestAKeyedNotifyBehindAHeldLockIsQueuedForAFlush (5.02s)
+    lockwait_test.go:64: still waiting for the incident lock 5s after the deadline
+--- FAIL: TestAFlushBehindAHeldLockSaysToFlushAgain (5.08s)
+    lockwait_test.go:92: still waiting for the incident lock 5s after the deadline
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	10.109s
+FAIL
+[exit 1]
+
+$ go test -count=1 -timeout 120s ./internal/cli -run BehindAHeldLock
+--- FAIL: TestAResolveBehindAHeldLockSaysToRunItAgain (5.12s)
+    lockwait_test.go:41: resolve still waiting for the incident lock 5s after its 200ms deadline
+    testing.go:1619: TempDir RemoveAll cleanup: unlinkat $TMPDIR/TestAResolveBehindAHeldLockSaysToRunItAgain112696382/001/.local/state/yo-human: directory not empty
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	5.131s
+FAIL
+[exit 1]
+

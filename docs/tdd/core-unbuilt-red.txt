@@ -1,0 +1,11 @@
+# what this is: task 11, core: an entry for a configured channel that the command did not build is buried as 'not configured' instead of staying queued (RED)
+# command: go test -count=1 -timeout 120s ./internal/core -run AnEntryFor
+--- FAIL: TestAnEntryForAChannelNotBuiltStaysQueued (0.11s)
+    unbuilt_test.go:42: b = "dead" in [{Channel:b Status:dead Error:channel b is not configured ProviderID: Scheduled:false attempts:2 config:false buried:true}]; want queued
+    unbuilt_test.go:45: channels = [{Channel:b Status:dead Error:channel b is not configured ProviderID: Scheduled:false attempts:2 config:false buried:true}]; want one entry whose error says the channel was not built
+    unbuilt_test.go:48: queued 0, inflight 0, dead 1; want 1, 0, 0
+    unbuilt_test.go:52: dead = [{{M001.b  [123 34 109 101 115 115 97 103 101 34 58 123 34 105 100 34 58 34 77 48 48 49 34 44 34 108 101 118 101 108 34 58 34 112 97 103 101 34 44 34 116 105 116 108 101 34 58 34 116 34 44 34 97 115 107 34 58 34 34 44 34 98 111 100 121 34 58 34 34 44 34 108 105 110 107 34 58 34 34 44 34 112 114 111 106 101 99 116 34 58 34 34 44 34 97 103 101 110 116 34 58 34 34 44 34 100 101 100 117 112 95 107 101 121 34 58 34 34 44 34 97 99 116 105 111 110 115 34 58 110 117 108 108 44 34 99 114 101 97 116 101 100 34 58 34 50 48 50 54 45 49 48 45 51 48 84 49 50 58 48 48 58 48 48 90 34 44 34 114 101 115 111 108 118 101 100 34 58 102 97 108 115 101 125 44 34 103 101 110 101 114 97 116 105 111 110 34 58 48 44 34 101 110 113 117 101 117 101 100 34 58 34 50 48 50 54 45 49 48 45 51 48 84 49 50 58 48 48 58 48 48 90 34 44 34 105 110 115 116 97 110 99 101 34 58 34 98 34 44 34 105 110 116 101 114 114 117 112 116 105 111 110 34 58 34 97 99 116 105 118 101 34 125] 1 2026-10-30 12:01:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC} channel b is not configured 2026-10-26 14:29:45.866322 +0000 UTC}], <nil>; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.162s
+FAIL
+# exit code: 1

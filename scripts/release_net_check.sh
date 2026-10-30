@@ -3,8 +3,8 @@
 # in the module in the current directory. For every target in its RELEASE_TARGETS file (or
 # $RELEASE_TARGETS) it lists the release build's packages exactly as the release builds them:
 # CGO_ENABLED=0 GOOS=<os> GOARCH=<arch> go list -deps ./cmd/yo-human, with no build tags, and
-# GOFLAGS, GOEXPERIMENT and the go env file (GOENV=off: an empty GOFLAGS does not override a
-# `go env -w GOFLAGS`) cleared, and GOWORK=off (a go.work in the module is refused instead). It fails when, for any
+# GOFLAGS, GOEXPERIMENT, GOAMD64, GOARM64 (the release uses their defaults) and the go env file
+# (GOENV=off: an empty GOFLAGS does not override a `go env -w GOFLAGS`) cleared, and GOWORK=off (a go.work in the module is refused instead). It fails when, for any
 # target, a non-standard package outside the channel implementations
 # (<module>/internal/channel/<name>, registry excluded), a third-party module included, imports
 # net, a net/ package other than net/url, net/mail and net/netip, crypto/tls or log/syslog.
@@ -22,12 +22,12 @@ if [ -e go.work ]; then
   echo "release_net_check: go.work in the module changes what the go tool builds; remove it"; exit 2
 fi
 targets=$(sh "$here/release-targets.sh" "${RELEASE_TARGETS:-RELEASE_TARGETS}") || exit 2
-if ! mod=$(GOFLAGS= GOENV=off GOEXPERIMENT= GOWORK=off go list -m 2>"$d/err"); then
+if ! mod=$(GOFLAGS= GOENV=off GOEXPERIMENT= GOWORK=off GOAMD64= GOARM64= go list -m 2>"$d/err"); then
   echo "release_net_check: go list -m failed:"; cat "$d/err"; exit 2
 fi
 bad=0
 while read -r os arch; do
-  if ! CGO_ENABLED=0 GOOS=$os GOARCH=$arch GOFLAGS= GOENV=off GOEXPERIMENT= GOWORK=off go list -deps \
+  if ! CGO_ENABLED=0 GOOS=$os GOARCH=$arch GOFLAGS= GOENV=off GOEXPERIMENT= GOWORK=off GOAMD64= GOARM64= go list -deps \
       -f '{{if not .Standard}}{{.ImportPath}}{{range .Imports}} {{.}}{{end}}{{end}}' \
       ./cmd/yo-human >"$d/deps" 2>"$d/err"; then
     echo "release_net_check: $os/$arch: go list -deps ./cmd/yo-human failed:"; cat "$d/err"; exit 2

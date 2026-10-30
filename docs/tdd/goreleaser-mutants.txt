@@ -1,0 +1,12 @@
+=== g: GoreleaserTargets mutants (8d38038), each against go test ./internal/repolint/ -run Goreleaser; the fixtures that fail
+mutant: an extra target passes: failing: extraos twobuilds 
+mutant: a missing target passes: failing: missingarch targetextra twobuilds 
+mutant: an ignore list passes: failing: ignore 
+mutant: CGO_ENABLED=1 passes: failing: cgoon 
+mutant: no CGO_ENABLED passes: failing: noenv 
+mutant: GOFLAGS in env passes: failing: goflags 
+mutant: a -tags= flag passes: failing: tagsflag 
+mutant: a tags key passes: failing: tagskey 
+mutant: only the first build is checked: failing: twobuilds 
+mutant: RELEASE_TARGETS comments kept: failing: targetextra 
+mutant: only the first goarch is crossed with goos: failing: cgoon extraos goflags good ignore noenv tagsflag tagskey targetextra twobuilds 

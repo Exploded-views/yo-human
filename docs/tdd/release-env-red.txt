@@ -1,0 +1,84 @@
+=== yo-human#59 follow-up d: release_net_check clears GOAMD64 and GOARM64. RED at f77411d
+$ sh scripts/release_net_check_test.sh
+ok   implementations and transport may import the network; store is not in the release build (exit 0)
+ok   core imports net/http under a negated tag (exit 1)
+ok   core imports net/http only under the e2e tag (exit 0)
+ok   registry imports net (exit 1)
+ok   core imports net/rpc (exit 1)
+ok   core imports crypto/tls (exit 1)
+ok   core imports log/syslog (exit 1)
+ok   net/url, net/mail and net/netip are allowed (exit 0)
+ok   a third-party module in the release build imports net/http (exit 1)
+ok   core imports net/http in a !cgo file (the release has cgo off) (exit 1)
+ok   the same, with CGO_ENABLED=1 in the caller's environment (exit 1)
+ok   core imports net/http in an _darwin.go file (exit 1)
+ok   core imports net/http in an _linux.go file (exit 1)
+ok   core imports net/http in an _arm64.go file (exit 1)
+ok   a cgo-only file is outside the release graph (exit 0)
+ok   GOFLAGS=-tags=e2e in the caller's environment is ignored (exit 0)
+ok   GOFLAGS=-tags=e2e in a go env file is ignored (exit 0)
+FAIL an amd64.v3-only file, with GOAMD64=v3 in the caller's environment, is outside the release graph: want exit 0, got 1
+     release_net_check: linux/amd64: github.com/Exploded-views/yo-human/internal/core imports net/http
+     release_net_check: darwin/amd64: github.com/Exploded-views/yo-human/internal/core imports net/http
+FAIL a !amd64.v3 file, with GOAMD64=v3 in the caller's environment: output lacks 'linux/amd64: github.com/Exploded-views/yo-human/internal/core imports net/http'
+     release_net_check: linux/arm64: github.com/Exploded-views/yo-human/internal/core imports net/http
+     release_net_check: darwin/arm64: github.com/Exploded-views/yo-human/internal/core imports net/http
+FAIL a !arm64.v9.0 file, with GOARM64=v9.0 in the caller's environment: output lacks 'linux/arm64: github.com/Exploded-views/yo-human/internal/core imports net/http'
+     release_net_check: linux/amd64: github.com/Exploded-views/yo-human/internal/core imports net/http
+     release_net_check: darwin/amd64: github.com/Exploded-views/yo-human/internal/core imports net/http
+ok   a go.work in the module (exit 2)
+ok   RELEASE_TARGETS lists no target (exit 2)
+ok   RELEASE_TARGETS names a target go does not know (exit 2)
+ok   go list fails (exit 2)
+release_net_check_test: 3 failure(s)
+exit=1
+
+=== GREEN at f3e4413
+ok   RELEASE_TARGETS lists no target (exit 2)
+ok   RELEASE_TARGETS names a target go does not know (exit 2)
+ok   go list fails (exit 2)
+release_net_check_test: all cases pass
+
+=== yo-human#59 follow-up e: nodeps --release and release_build.sh. RED at d6426b7
+$ sh scripts/nodeps_test.sh
+ok   a clean listing
+ok   a forbidden package
+ok   go list fails
+ok   an empty listing proves nothing
+ok   go list fails after printing
+ok   grep fails
+ok   grep fails on the search
+ok   no pattern
+FAIL --release: a package only linux/amd64's release build holds: exit 0, want 1
+    nodeps: go list jsonschema -deps ./cmd/yo-human holds no package matching --release
+FAIL --release: the report does not name linux/amd64
+FAIL --release: a package only linux/arm64's release build holds: exit 0, want 1
+    nodeps: go list jsonschema -deps ./cmd/yo-human holds no package matching --release
+FAIL --release: the report does not name linux/arm64
+FAIL --release: a package only darwin/amd64's release build holds: exit 0, want 1
+    nodeps: go list jsonschema -deps ./cmd/yo-human holds no package matching --release
+FAIL --release: the report does not name darwin/amd64
+FAIL --release: a package only darwin/arm64's release build holds: exit 0, want 1
+    nodeps: go list jsonschema -deps ./cmd/yo-human holds no package matching --release
+FAIL --release: the report does not name darwin/arm64
+ok   --release: no target's release build holds it
+ok   --release: no pattern
+ok   the binary has no jsonschema
+FAIL no release target's binary has jsonschema: exit 2, want 0
+    package jsonschema is not in std (/opt/homebrew/Cellar/go/1.27.3/libexec/src/jsonschema)
+    malformed import path "-deps": leading dash
+    nodeps: go list jsonschema -deps ./cmd/yo-human failed
+ok   the config tests do import jsonschema
+nodeps_test: 9 case(s) failed
+exit=1
+$ sh scripts/release_build_test.sh
+FAIL release_build.sh exited 127
+     sh: scripts/release_build.sh: No such file or directory
+FAIL linux/amd64: no readable binary at linux_amd64/yo-human
+FAIL linux/arm64: no readable binary at linux_arm64/yo-human
+FAIL darwin/amd64: no readable binary at darwin_amd64/yo-human
+FAIL darwin/arm64: no readable binary at darwin_arm64/yo-human
+FAIL built 0 binaries for 4 targets
+release_build_test: 6 failure(s)
+exit=1
+(the RED's -ldflags assertion read go version -m, which omits -ldflags under -trimpath; GREEN at 83e3097 checks the -X string in each binary and the linux binaries' missing symbol table instead)

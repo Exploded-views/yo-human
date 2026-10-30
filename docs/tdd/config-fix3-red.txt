@@ -1,0 +1,34 @@
+$ go test -race -count=1 -timeout 60s ./internal/problem ./internal/secrets ./internal/config 2>&1
+--- FAIL: TestShellQuote (0.00s)
+    quote_test.go:39: ShellQuote("a\xffb") = "$'a\\xffb'", want "$'a\\377b'"
+    quote_test.go:39: ShellQuote("\x9b") = "$'\\x9b'", want "$'\\233'"
+    quote_test.go:39: ShellQuote("back\\slash\x01") = "$'back\\x5cslash\\x01'", want "$'back\\134slash\\001'"
+    quote_test.go:39: ShellQuote("a'\xc3") = "$'a\\x27\\xc3'", want "$'a\\047\\303'"
+    quote_test.go:39: ShellQuote("c1\u009b") = "$'c1\\xc2\\x9b'", want "$'c1\\302\\233'"
+    quote_test.go:39: ShellQuote("a\nb") = "$'a\\x0ab'", want "$'a\\012b'"
+    quote_test.go:39: ShellQuote("esc\x1b[31m") = "$'esc\\x1b[31m'", want "$'esc\\033[31m'"
+    quote_test.go:39: ShellQuote("q'\n") = "$'q\\x27\\x0a'", want "$'q\\047\\012'"
+    quote_test.go:39: ShellQuote("\x01abcdef") = "$'\\x01abcdef'", want "$'\\001abcdef'"
+    quote_test.go:39: ShellQuote("rlo\u202e") = "$'rlo\\xe2\\x80\\xae'", want "$'rlo\\342\\200\\256'"
+    quote_test.go:39: ShellQuote("x\\abc\x01") = "$'x\\x5cabc\\x01'", want "$'x\\134abc\\001'"
+--- FAIL: TestShellQuoteRoundTrips (0.32s)
+    quote_test.go:95: ksh printed "a«" (<nil>) for "a\nb", quoted "$'a\\x0ab'"
+    quote_test.go:95: ksh printed "a\u0ffb\n" (<nil>) for "a\xffb\n", quoted "$'a\\xffb\\x0a'"
+    quote_test.go:95: ksh printed "x\U0005cabc\x01" (<nil>) for "x\\abc\x01", quoted "$'x\\x5cabc\\x01'"
+    quote_test.go:95: ksh printed "\xf9\xaa\xbc\xb7\xaf" (<nil>) for "\x01abcdef", quoted "$'\\x01abcdef'"
+    quote_test.go:95: ksh printed "ƹ" (<nil>) for "\x1b9", quoted "$'\\x1b9'"
+    quote_test.go:95: ksh printed "ਊ" (<nil>) for "\n0a", quoted "$'\\x0a0a'"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/problem	0.449s
+--- FAIL: TestSecretsInvalidStoredNamesAreNeverPrinted (0.00s)
+    secrets_test.go:295: Load = 3, <nil>; want only the valid name
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.170s
+--- FAIL: TestFIFOProjectFileIsANotice (0.01s)
+    fifo_test.go:48: notices = [], want one containing "not a regular file"
+--- FAIL: TestFIFOExplicitFileIsAConfigProblem (3.00s)
+    fifo_test.go:57: Load hung on a FIFO
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	3.150s
+FAIL
+exit=1

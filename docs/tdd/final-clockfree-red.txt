@@ -1,0 +1,20 @@
+M1 R1 without the clock, against f977a4f. A waiting message a flush has claimed is sent after a resolve of its key that came first, when the resolve stamps the same instant or the clock stepped back 1s: the drop compares timestamps only. The guard (a message that starts waiting after the resolve is sent) passes here.
+
+$ go test -count=1 -run WhateverTheClock|WaitingAfterAResolve -v ./internal/core
+=== RUN   TestAWaitingMessageIsDroppedByAResolveWhateverTheClock
+=== RUN   TestAWaitingMessageIsDroppedByAResolveWhateverTheClock/same_instant
+    clockfree_test.go:27: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 1; want the waiting message dropped, nothing sent
+    clockfree_test.go:30: incident &{Key:k Project: Generation:1 Previous:resolved Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex> Latest:t Opened:2026-10-30 12:00:00 +0000 UTC LastSent:2026-10-30 12:00:00 +0000 UTC Updated:2026-10-30 12:00:00 +0000 UTC}; want it closed
+=== RUN   TestAWaitingMessageIsDroppedByAResolveWhateverTheClock/clock_stepped_back
+    clockfree_test.go:27: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 1; want the waiting message dropped, nothing sent
+    clockfree_test.go:30: incident &{Key:k Project: Generation:1 Previous:resolved Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex> Latest:t Opened:2026-10-30 12:00:00 +0000 UTC LastSent:2026-10-30 12:00:00 +0000 UTC Updated:2026-10-30 12:00:00 +0000 UTC}; want it closed
+--- FAIL: TestAWaitingMessageIsDroppedByAResolveWhateverTheClock (0.57s)
+    --- FAIL: TestAWaitingMessageIsDroppedByAResolveWhateverTheClock/same_instant (0.29s)
+    --- FAIL: TestAWaitingMessageIsDroppedByAResolveWhateverTheClock/clock_stepped_back (0.28s)
+=== RUN   TestAMessageWaitingAfterAResolveIsSent
+--- PASS: TestAMessageWaitingAfterAResolveIsSent (0.28s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.858s
+FAIL
+[exit 1]
+

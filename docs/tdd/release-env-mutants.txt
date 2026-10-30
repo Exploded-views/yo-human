@@ -1,0 +1,29 @@
+=== d: release_net_check.sh mutants, each against scripts/release_net_check_test.sh
+mutant: release_net_check.sh without GOAMD64=: FAIL an amd64.v3-only file, with GOAMD64=v3 in the caller's environment, is outside the release graph: want exit 0, got 1;FAIL a !amd64.v3 file, with GOAMD64=v3 in the caller's environment: output lacks 'linux/amd64: github.com/Exploded-views/yo-human/internal/core imports net/http';release_net_check_test: 2 failure(s);
+mutant: release_net_check.sh without GOARM64=: FAIL a !arm64.v9.0 file, with GOARM64=v9.0 in the caller's environment: output lacks 'linux/arm64: github.com/Exploded-views/yo-human/internal/core imports net/http';release_net_check_test: 1 failure(s);
+
+=== e: nodeps.sh --release and release_build.sh mutants, against scripts/nodeps_test.sh and scripts/release_build_test.sh
+mutant: nodeps.sh --release without CGO_ENABLED=0: nodeps_test: 4 case(s) failed
+mutant: nodeps.sh --release without GOFLAGS=: nodeps_test: 4 case(s) failed
+mutant: nodeps.sh --release without GOENV=off: nodeps_test: 4 case(s) failed
+mutant: nodeps.sh --release without GOEXPERIMENT=: nodeps_test: 4 case(s) failed
+mutant: nodeps.sh --release without GOWORK=off: nodeps_test: 4 case(s) failed
+mutant: nodeps.sh --release without GOAMD64=: nodeps_test: 4 case(s) failed
+mutant: nodeps.sh --release without GOARM64=: nodeps_test: 4 case(s) failed
+mutant: nodeps.sh --release only the first target: nodeps_test: 6 case(s) failed
+mutant: release_build.sh without CGO_ENABLED=0: release_build_test: 6 failure(s)
+mutant: release_build.sh without GOFLAGS=: release_build_test: 4 failure(s)
+mutant: release_build.sh without GOENV=off: release_build_test: 4 failure(s)
+mutant: release_build.sh without GOEXPERIMENT=: release_build_test: 4 failure(s)
+mutant: release_build.sh without GOWORK=off: release_build_test: 6 failure(s)
+mutant: release_build.sh without GOAMD64=: release_build_test: 2 failure(s)
+mutant: release_build.sh without GOARM64=: release_build_test: 2 failure(s)
+mutant: release_build.sh without -trimpath: release_build_test: 4 failure(s)
+mutant: release_build.sh drops LDFLAGS: release_build_test: 6 failure(s)
+mutant: release_build.sh without GOOS=$os: release_build_test: 6 failure(s)
+
+=== f (nit 2) and d: lint.sh mutants against the harness (lint_rules_test.sh at 8d38038, each run under the heavy lock)
+mutant: lint.sh without GOFLAGS=: FAIL internal/core/caseshellflags/x.go: core imports net/http in a !shellprobe file, with GOFLAGS=-tags=shellprobe in the shell: want internal-no-network, got clean; exit=1
+mutant: lint.sh without GOENV=off: FAIL internal/core/caseenvfile/x.go: core imports net/http in a !envfileprobe file, with a go env file setting GOFLAGS=-tags=envfileprobe: want internal-no-network, got clean; exit=1
+mutant: lint.sh without GOAMD64=: FAIL internal/core/caseamd64v3/x.go: core imports net/http in a !amd64.v3 file, with GOAMD64=v3 in the shell (the release is v1): want internal-no-network, got internal-no-network, but no pass with GOARCH=amd64 CGO_ENABLED=0 reported it; exit=1
+mutant: lint.sh without GOARM64=: FAIL internal/core/casearm64v9/x.go: core imports net/http in a !arm64.v9.0 file, with GOARM64=v9.0 in the shell (the release is v8.0): want internal-no-network, got internal-no-network, but no pass with GOARCH=arm64 CGO_ENABLED=0 reported it; exit=1

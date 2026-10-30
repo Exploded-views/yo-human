@@ -1,0 +1,13 @@
+skills used: []
+
+Next step: wait 120 seconds, as the CLI instructs, then run `yo-human flush` again. I wouldn't re-run `notify`, change the level, or change the dedup key. The alert is already queued, and `flush` is the retry mechanism. A second `notify` could create a duplicate.
+
+Order of commands:
+
+1. `sleep 120`
+2. `yo-human flush`
+   - If it reports delivered or sent, I stop retrying. Then I carry on with my work and mention the checkout issue in my session output.
+   - If it exits 75 again, I repeat the same pattern with whatever delay it names (likely longer). That would be attempt 3 of 5 remaining, with 3 attempts left. I'd repeat `sleep <N>` then `yo-human flush` for each retry.
+3. If the attempts run out and it's still queued, the CLI says to "tell the human in your session." I'd do that in plain text: "Siren alert 'Checkout failing' (dedup key checkout-FAKE) could not be delivered. The ntfy server was unreachable after all retries. Please look at checkout now." I'd put it at the top of my final output or the current message. I wouldn't try to reach the human by any other channel I wasn't set up to use.
+
+The `siren` level sends regardless of quiet hours, so I wouldn't downgrade it to `nudge` to get past the failure. The failure is a network problem, not a level problem. Nudge would also be held during quiet hours, which makes delivery less likely.

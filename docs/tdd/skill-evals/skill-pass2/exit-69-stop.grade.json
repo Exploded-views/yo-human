@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false,
+  false
+ ],
+ "note": "Reply stops using yo-human and tells the human with problem and ask, but never states that retrying cannot help; it only says the skill forbids retrying.",
+ "pass": false
+}

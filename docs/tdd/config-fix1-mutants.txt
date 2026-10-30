@@ -1,0 +1,114 @@
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/problem	1.020s
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.170s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.163s
+exit=0
+=== mutant: unreadable project file is fatal again (internal/config/load.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.180s
+--- FAIL: TestUnreadableProjectFileIsANoticeNotFatal (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.161s
+FAIL
+exit=1
+=== mutant: trust notice pastes the path unquoted (internal/config/load.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestHostilePathsAreQuoted (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.158s
+FAIL
+exit=1
+=== mutant: project path not symlink-resolved at all (internal/config/paths.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestTrustKeyIsTheSymlinkResolvedPath (0.00s)
+--- FAIL: TestTrustKeyResolvesASymlinkedProjectFile (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.160s
+FAIL
+exit=1
+=== mutant: symlinked project file not resolved (internal/config/paths.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestTrustKeyResolvesASymlinkedProjectFile (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.186s
+FAIL
+exit=1
+=== mutant: secrets follow symlinks (internal/secrets/secrets_unix.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+--- FAIL: TestSecretsSymlinkRefused (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.216s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.182s
+FAIL
+exit=1
+=== mutant: secrets size cap removed (internal/secrets/secrets.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+--- FAIL: TestSecretsOversizeRefused (0.32s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.470s
+ok  	github.com/Exploded-views/yo-human/internal/config	(cached)
+FAIL
+exit=1
+=== mutant: config size cap removed (internal/config/load.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestOversizeFiles (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.147s
+FAIL
+exit=1
+=== mutant: reference name not validated (internal/config/validate.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestReferenceNamesAreValidated (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.146s
+FAIL
+exit=1
+=== mutant: zero duration accepted (internal/config/decode.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestDurationsMustBePositive (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.137s
+FAIL
+exit=1
+=== mutant: name patterns dropped from the schema (internal/config/schema.json)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestNamesAreRestricted (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.152s
+FAIL
+exit=1
+=== mutant: Load skips Check (internal/config/load.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestLoadRunsCheck (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.144s
+FAIL
+exit=1
+=== mutant: notices dropped on error (internal/config/load.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestNoticesSurviveAnError (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.151s
+FAIL
+exit=1
+=== mutant: ShellQuote returns its input (internal/problem/problem.go)
+--- FAIL: TestShellQuote (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/problem	0.014s
+--- FAIL: TestSecretsFixQuotesHostilePaths (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.177s
+--- FAIL: TestHostilePathsAreQuoted (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.154s
+FAIL
+exit=1

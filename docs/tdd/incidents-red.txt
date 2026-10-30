@@ -1,0 +1,78 @@
+$ go test -race -count=1 ./internal/core 2>&1
+--- FAIL: TestSuppressedSendsNothing (0.03s)
+    repeat_notify_test.go:24: repeat = {Status:delivered ID:M002 Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false}] Next:<nil>}; want suppressed with an id and no sends
+--- FAIL: TestSuppressedStillDrainsTheBacklog (0.06s)
+    repeat_notify_test.go:48: status "delivered"
+--- FAIL: TestChangedRepeatUpdatesOnlyNativeDedup (0.05s)
+    repeat_notify_test.go:64: pd sent 2, ntfy sent 2; want 2 and 1
+--- FAIL: TestChangedRepeatWithoutNativeDedupIsRecordedOnly (0.04s)
+    repeat_notify_test.go:82: status "delivered", sent 2; want suppressed and one send
+    repeat_notify_test.go:85: Latest = "", want the new content kept
+--- FAIL: TestLouderRepeatSendsAndRaises (0.05s)
+    repeat_notify_test.go:96: incident = &{Key: Level: Rank:0 Open:false Reached:[] ContentHash: Latest: Opened:0001-01-01 00:00:00 +0000 UTC LastSent:0001-01-01 00:00:00 +0000 UTC Updated:0001-01-01 00:00:00 +0000 UTC}; want raised to page
+    repeat_notify_test.go:99: a lower repeat after the raise = "delivered", want suppressed
+--- FAIL: TestReminderSendsAgainWhenDue (0.03s)
+    repeat_notify_test.go:108: before the reminder = "delivered"
+--- FAIL: TestExpiredIncidentSendsAsNew (0.04s)
+    repeat_notify_test.go:128: Opened = 0001-01-01 00:00:00 +0000 UTC; an expired incident reopens fresh
+--- FAIL: TestConcurrentRepeatsPageOnce (0.16s)
+    repeat_notify_test.go:161: sent 20 times; one incident pages once
+    repeat_notify_test.go:164: statuses = map[delivered:20]; want 1 delivered and 19 suppressed
+--- FAIL: TestReachedComesFromReceipts (0.22s)
+    repeat_notify_test.go:188: Reached = map[]; want pd and sched only, with their provider ids
+    repeat_notify_test.go:197: Reached has 0 after the flush; the late send must be recorded
+--- FAIL: TestIncidentStoreFailureStopsNotify (0.02s)
+    repeat_notify_test.go:220: err = <nil>, sent 1, id "M001"; want the store error, no send, and the id
+--- FAIL: TestReachedFailureAfterASendIsReported (0.02s)
+    repeat_notify_test.go:249: err = <nil>, channels [{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false}]; want the failure reported, the send still sent
+--- FAIL: TestDecide (0.00s)
+    repeat_test.go:46: same rank and hash: Decide = 0, want 3
+    repeat_test.go:46: same rank and hash after the reminder: Decide = 0, want 4
+    repeat_test.go:46: exactly at the reminder: Decide = 0, want 4
+    repeat_test.go:46: no reminder is never due: Decide = 0, want 3
+    repeat_test.go:46: higher rank: Decide = 0, want 1
+    repeat_test.go:46: higher rank beats the reminder: Decide = 0, want 1
+    repeat_test.go:46: same rank, changed hash: Decide = 0, want 2
+    repeat_test.go:46: changed hash after the reminder: Decide = 0, want 4
+    repeat_test.go:46: lower rank: Decide = 0, want 3
+    repeat_test.go:46: lower rank, changed hash: Decide = 0, want 3
+    repeat_test.go:46: lower rank after the reminder: Decide = 0, want 4
+    repeat_test.go:46: exactly the ttl is not expired: Decide = 0, want 3
+--- FAIL: TestContentHash (0.00s)
+    repeat_test.go:55: hash "" is not a stable sha256 hex
+--- FAIL: TestResolveStoreFailure (0.00s)
+    resolve_fault_test.go:31: an unreadable incident store went unreported
+    resolve_fault_test.go:37: a failing recovery went unreported
+--- FAIL: TestResolveReportsACancelThatFailed (0.02s)
+    resolve_fault_test.go:53: err = <nil> status ""; a scheduled page we could not cancel is the human's to know about
+--- FAIL: TestResolveQueuesANoteThatFailed (0.02s)
+    resolve_fault_test.go:73: err = <nil>, {Status: ID: Channels:[] Next:<nil>}; want resolved with the close queued for a retry
+--- FAIL: TestResolveReportsACancelIncidentFailure (0.02s)
+    resolve_fault_test.go:92: err = <nil> status ""; a queue we could not clean is reported, but the incident is closed
+--- FAIL: TestResolveWhileSendInflightDropsTheRetry (0.02s)
+    --- FAIL: TestResolveWhileSendInflightDropsTheRetry/retry (0.01s)
+        resolve_race_test.go:40: resolve = ""
+    --- FAIL: TestResolveWhileSendInflightDropsTheRetry/release (0.01s)
+        resolve_race_test.go:40: resolve = ""
+--- FAIL: TestNotifyResolvedMidCallReportsResolved (0.02s)
+    resolve_race_test.go:73: got "delivered" next=<nil> sent=1; want resolved, no retry advice, nothing sent
+--- FAIL: TestNotifyLosingAClaimToAnotherProcessStaysQueued (0.02s)
+    resolve_race_test.go:89: got "delivered" next=<nil>; the other process is sending it, so it is still on its way
+--- FAIL: TestClaimLossCheckFailureIsReported (0.02s)
+    resolve_race_test.go:102: an unreadable incident store went unreported
+--- FAIL: TestResolveCancelsPending (0.03s)
+    resolve_test.go:40: status "" id ""
+--- FAIL: TestResolveNativeAndNotes (0.08s)
+    resolve_test.go:74: status ""
+--- FAIL: TestResolveUnknownIsNoop (0.02s)
+    resolve_test.go:107: unknown = {Status: ID: Channels:[] Next:<nil>}
+    resolve_test.go:112: resolved twice = "", want noop
+    resolve_test.go:115: sent 1; the second resolve must send nothing
+--- FAIL: TestResolveThenNotifyOpensAFreshIncident (0.04s)
+    resolve_test.go:127: incident = &{Key: Level: Rank:0 Open:false Reached:[] ContentHash: Latest: Opened:0001-01-01 00:00:00 +0000 UTC LastSent:0001-01-01 00:00:00 +0000 UTC Updated:0001-01-01 00:00:00 +0000 UTC}
+--- FAIL: TestResolveSendsWhatIsDue (0.04s)
+    resolve_test.go:140: queued = 1; resolve sends the backlog too
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.834s
+FAIL
+exit=1

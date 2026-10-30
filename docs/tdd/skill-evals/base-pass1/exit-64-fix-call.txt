@@ -1,0 +1,21 @@
+skills used: []
+
+Next I'd retry the same notification with a valid level. The error and the `levels` output agree on the valid names, so I don't need to run `levels` again.
+
+I'd pick **siren**. The title is "Checkout failing", and a failing checkout means production is impaired. That matches siren's `use_when`. `nudge` is for "look soon, nothing on fire," which understates a checkout outage. `urgent` was my guess at a name, and it doesn't exist.
+
+Siren also has `ask: required`, and my original call already had `--ask`, so it satisfies that. Siren is set to `send` during quiet hours, so it will go through even if the human is off. That fits a checkout outage that can't wait.
+
+The one command I'd run:
+
+```
+yo-human notify --level siren --title "Checkout failing" --ask "Look at checkout now"
+```
+
+I'm keeping the title and ask text unchanged. Only the level was wrong.
+
+After that:
+- **Exit 0:** I'd report that the siren notification was sent and carry on with my work. I wouldn't send it again.
+- **Another error:** I'd read the stderr `fix:` hint and correct only what it names. I wouldn't escalate or downgrade the level to get around an error.
+
+I'd also say in my final report that the first attempt failed because of an invalid level, and that I re-sent it as siren.

@@ -1,0 +1,72 @@
+--- FAIL: TestWriteFileAtomicLeavesNoTempOnSuccess (0.00s)
+    atomic_test.go:20: directory holds [], want only a.json
+--- FAIL: TestWriteFileAtomicReplacesExisting (0.00s)
+    atomic_test.go:39: content = "", want two
+--- FAIL: TestWriteFileAtomicFailureLeavesNoTemp (0.00s)
+    atomic_test.go:51: want an error renaming over a directory
+--- FAIL: TestWriteFileAtomicMissingDirectory (0.00s)
+    atomic_test.go:61: want an error for a missing directory
+--- FAIL: TestWithIncidentsSerializes (0.44s)
+    incidents_test.go:73: counter incident missing
+--- FAIL: TestWithIncidentsPersistsAndRollsBackOnError (0.00s)
+    incidents_test.go:105: persisted = <nil>, want the first write only
+    incidents_test.go:110: incidents.json: <nil> stat $TMPDIR/TestWithIncidentsPersistsAndRollsBackOnError2516293249/001/state/incidents.json: no such file or directory, want mode 600
+--- FAIL: TestWithIncidentsRejectsCorruptFile (0.00s)
+    incidents_test.go:117: open $TMPDIR/TestWithIncidentsRejectsCorruptFile1736954197/001/state/incidents.json: no such file or directory
+--- FAIL: TestAppendLogAppendsLinesMode600 (0.00s)
+    incidents_test.go:135: log: <nil> stat $TMPDIR/TestAppendLogAppendsLinesMode6001482968731/001/state/log.jsonl: no such file or directory, want mode 600
+--- FAIL: TestAppendLogRejectsUnmarshalable (0.00s)
+    incidents_test.go:155: want an error for a value that cannot be encoded
+--- FAIL: TestEnqueueRoundTripsAndCounts (0.00s)
+    queue_test.go:50: Due = [], <nil>
+--- FAIL: TestEnqueueRejectsUnsafeKeys (0.00s)
+    queue_test.go:66: Enqueue("") = nil, want an error
+    queue_test.go:66: Enqueue("../x") = nil, want an error
+    queue_test.go:66: Enqueue("a/b") = nil, want an error
+    queue_test.go:66: Enqueue(".hidden") = nil, want an error
+    queue_test.go:66: Enqueue("a\x00b") = nil, want an error
+--- FAIL: TestClaimIsExclusive (0.00s)
+    queue_test.go:94: 0 claims won, want exactly 1
+--- FAIL: TestClaimMovesFileByRename (0.00s)
+    queue_test.go:105: Claim 01A.ntfy: ok=false err=<nil>
+--- FAIL: TestDueRespectsNextAttemptAndDeliverAt (0.00s)
+    queue_test.go:148: at t0 due = [], want [A.x]
+    queue_test.go:151: at +1m due = [], want A.x and C.x
+    queue_test.go:154: at +1h due = [], want all three, A.x first
+--- FAIL: TestDueIsOldestFirst (0.00s)
+    queue_test.go:167: order = [], want b a c
+--- FAIL: TestCompleteRemovesInflight (0.00s)
+    queue_test.go:174: Claim A.x: ok=false err=<nil>
+--- FAIL: TestRetryIncrementsAttempts (0.00s)
+    queue_test.go:186: Claim A.x: ok=false err=<nil>
+--- FAIL: TestDeadIsKeptAndListed (0.00s)
+    queue_test.go:204: Claim A.x: ok=false err=<nil>
+--- FAIL: TestCancelIncidentRemovesOnlyThatIncident (0.00s)
+    queue_test.go:226: CancelIncident = [], <nil>, want 2 entries
+--- FAIL: TestCancelIncidentSkipsClaimedEntries (0.00s)
+    queue_test.go:237: Claim A.x: ok=false err=<nil>
+--- FAIL: TestRecoverStaleInflight (0.00s)
+    recover_test.go:31: rename $TMPDIR/TestRecoverStaleInflight2829505822/001/state/queue/A.x.json $TMPDIR/TestRecoverStaleInflight2829505822/001/state/inflight/A.x.2147483646.json: no such file or directory
+--- FAIL: TestRecoverSkipsLiveOwner (0.00s)
+    recover_test.go:46: rename $TMPDIR/TestRecoverSkipsLiveOwner1370683529/001/state/queue/A.x.json $TMPDIR/TestRecoverSkipsLiveOwner1370683529/001/state/inflight/A.x.87870.json: no such file or directory
+--- FAIL: TestRecoverSkipsFreshInflight (0.00s)
+    recover_test.go:58: rename $TMPDIR/TestRecoverSkipsFreshInflight3137445143/001/state/queue/A.x.json $TMPDIR/TestRecoverSkipsFreshInflight3137445143/001/state/inflight/A.x.2147483646.json: no such file or directory
+--- FAIL: TestRecoverIgnoresUnparseableNames (0.00s)
+    recover_test.go:67: open $TMPDIR/TestRecoverIgnoresUnparseableNames174583033/001/state/inflight/junk.json: no such file or directory
+--- FAIL: TestClaimRefreshesMtimeSoFreshClaimsAreNotStale (0.00s)
+    recover_test.go:79: chtimes $TMPDIR/TestClaimRefreshesMtimeSoFreshClaimsAreNotStale3300214117/001/state/queue/A.x.json: no such file or directory
+--- FAIL: TestOpenCreatesLayout (0.00s)
+    store_test.go:27: stat "": stat $TMPDIR/TestOpenCreatesLayout1105051821/001/state: no such file or directory
+--- FAIL: TestOpenRefusesLoosePermissions (0.00s)
+    store_test.go:56: Open error = <nil>, want a *problem.Problem
+--- FAIL: TestOpenFailsWhenPathIsAFile (0.00s)
+    store_test.go:73: Open on a file = <nil>, want a Store problem
+--- FAIL: TestTrustRoundTrip (0.00s)
+    trust_test.go:18: trusted sha: ok=false err=<nil>, want true
+--- FAIL: TestTrustSurvivesReopenAndReplaces (0.00s)
+    trust_test.go:41: new sha should be trusted after reopen
+    trust_test.go:47: other paths are kept
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	0.459s
+FAIL
+exit=1

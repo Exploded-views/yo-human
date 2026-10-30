@@ -1,0 +1,45 @@
+# what this is: task 11 fix round 2 (RED): a scheduled send on a channel that cannot be built or was removed is never cancelled (untyped 'unexpected error', a second resolve is a noop); the resolve note of a removed channel can never be sent; an entry for an unconfigured but built channel is sent; Reached records no destination
+# command: go test -count=1 -timeout 250s ./internal/core ./internal/cli
+--- FAIL: TestAnIncidentRecordsWhereEachChannelPointed (0.06s)
+    cancel_test.go:83: reached fingerprint = "", want "<hex>"
+--- FAIL: TestResolveQueuesTheCancelOfAScheduledSendItCannotReach (0.09s)
+    cancel_test.go:95: Resolve error = channel phone is not configured, so its scheduled send cannot be cancelled; want a Config problem saying the scheduled send on phone could not be cancelled yet
+--- FAIL: TestAQueuedCancelRunsOnlyThroughTheSameDestination (0.09s)
+    cancel_test.go:143: flush with the phone pointing elsewhere = , <nil>, cancelled []; want it parked
+--- FAIL: TestAQueuedCancelSurvivesTheIncidentReopening (0.18s)
+    cancel_test.go:166: cancelled 0; want the old generation's scheduled send cancelled
+--- FAIL: TestAResolveNoteWaitsForTheSameDestination (0.23s)
+    cancel_test.go:194: after restoring the channel: phone:queued:channel phone now points somewhere else than when this message was queued; it is not sent to a different destination;; sent 0, want the resolve note
+--- FAIL: TestAnEntryForAnUnconfiguredButBuiltChannelIsParked (0.03s)
+    cancel_test.go:209: flush = a:sent:;, <nil>, sent 1; want the entry parked, not sent
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	18.092s
+--- FAIL: TestResolveQueuesTheCancelWhenTheChannelHasNoSecret (0.29s)
+    round2_test.go:52: stderr = "error: secret \"ntfy-topic\", used by channels.phone.topic, is not set; the resolve note for channel phone waits in the queue until it can be built\nvalid: a name listed by `yo-human secret list`\nfix: op read \"op://<vault>/<item>/<field>\" | yo-human secret set ntfy-topic\nerror: unexpected error: channel phone is not configured, so its scheduled send cannot be cancelled\nvalid: a Problem with what, valid and fix\nfix: report this as a bug\n", want it to contain "error: a scheduled send on phone could not be cancelled yet"
+    round2_test.go:52: stderr = "error: secret \"ntfy-topic\", used by channels.phone.topic, is not set; the resolve note for channel phone waits in the queue until it can be built\nvalid: a name listed by `yo-human secret list`\nfix: op read \"op://<vault>/<item>/<field>\" | yo-human secret set ntfy-topic\nerror: unexpected error: channel phone is not configured, so its scheduled send cannot be cancelled\nvalid: a Problem with what, valid and fix\nfix: report this as a bug\n", want it to contain "queued for cancellation"
+    round2_test.go:52: stderr = "error: secret \"ntfy-topic\", used by channels.phone.topic, is not set; the resolve note for channel phone waits in the queue until it can be built\nvalid: a name listed by `yo-human secret list`\nfix: op read \"op://<vault>/<item>/<field>\" | yo-human secret set ntfy-topic\nerror: unexpected error: channel phone is not configured, so its scheduled send cannot be cancelled\nvalid: a Problem with what, valid and fix\nfix: report this as a bug\n", want it to contain "yo-human flush"
+    round2_test.go:53: stderr = "error: secret \"ntfy-topic\", used by channels.phone.topic, is not set; the resolve note for channel phone waits in the queue until it can be built\nvalid: a name listed by `yo-human secret list`\nfix: op read \"op://<vault>/<item>/<field>\" | yo-human secret set ntfy-topic\nerror: unexpected error: channel phone is not configured, so its scheduled send cannot be cancelled\nvalid: a Problem with what, valid and fix\nfix: report this as a bug\n", must not contain "report this as a bug"
+    round2_test.go:53: stderr = "error: secret \"ntfy-topic\", used by channels.phone.topic, is not set; the resolve note for channel phone waits in the queue until it can be built\nvalid: a name listed by `yo-human secret list`\nfix: op read \"op://<vault>/<item>/<field>\" | yo-human secret set ntfy-topic\nerror: unexpected error: channel phone is not configured, so its scheduled send cannot be cancelled\nvalid: a Problem with what, valid and fix\nfix: report this as a bug\n", must not contain "unexpected error"
+    round2_test.go:53: stderr = "error: secret \"ntfy-topic\", used by channels.phone.topic, is not set; the resolve note for channel phone waits in the queue until it can be built\nvalid: a name listed by `yo-human secret list`\nfix: op read \"op://<vault>/<item>/<field>\" | yo-human secret set ntfy-topic\nerror: unexpected error: channel phone is not configured, so its scheduled send cannot be cancelled\nvalid: a Problem with what, valid and fix\nfix: report this as a bug\n", must not contain "is not configured"
+    round2_test.go:54: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "reason: "
+    round2_test.go:54: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "not built"
+    round2_test.go:61: flush: {code:0 out:RESULT ok
+         err:}; cancelled []; want the scheduled send cancelled once
+    round2_test.go:63: cancelled again
+--- FAIL: TestResolveQueuesTheCancelWhenTheChannelWasRemovedAndRestored (0.20s)
+    round2_test.go:78: stderr = "error: channel phone is no longer configured; its queued sends were cancelled and no resolve note can be sent\nvalid: a channel named under channels: in the config in force\nfix: nothing is waiting for it; restore it in the config (or pass --config <file>) only if you want resolve notes sent there\nerror: unexpected error: channel phone is not configured, so its scheduled send cannot be cancelled\nvalid: a Problem with what, valid and fix\nfix: report this as a bug\n", want it to contain "error: a scheduled send on phone could not be cancelled yet"
+    round2_test.go:79: stderr = "error: channel phone is no longer configured; its queued sends were cancelled and no resolve note can be sent\nvalid: a channel named under channels: in the config in force\nfix: nothing is waiting for it; restore it in the config (or pass --config <file>) only if you want resolve notes sent there\nerror: unexpected error: channel phone is not configured, so its scheduled send cannot be cancelled\nvalid: a Problem with what, valid and fix\nfix: report this as a bug\n", must not contain "report this as a bug"
+    round2_test.go:79: stderr = "error: channel phone is no longer configured; its queued sends were cancelled and no resolve note can be sent\nvalid: a channel named under channels: in the config in force\nfix: nothing is waiting for it; restore it in the config (or pass --config <file>) only if you want resolve notes sent there\nerror: unexpected error: channel phone is not configured, so its scheduled send cannot be cancelled\nvalid: a Problem with what, valid and fix\nfix: report this as a bug\n", must not contain "nothing is waiting"
+    round2_test.go:86: cancelled 0 times after the channel was restored; want once
+--- FAIL: TestACancelIsNotRunThroughAChannelThatPointsElsewhere (0.21s)
+    round2_test.go:98: flush = "RESULT ok\n", want it to contain "now points somewhere else"
+--- FAIL: TestARemovedChannelsResolveNoteIsSentOnlyWhenRestoredIdentically (0.46s)
+    round2_test.go:110: stderr = "error: channel phone is no longer configured; its queued sends were cancelled and no resolve note can be sent\nvalid: a channel named under channels: in the config in force\nfix: nothing is waiting for it; restore it in the config (or pass --config <file>) only if you want resolve notes sent there\n", want it to contain "resolve note for it waits in the queue"
+    round2_test.go:111: stderr = "error: channel phone is no longer configured; its queued sends were cancelled and no resolve note can be sent\nvalid: a channel named under channels: in the config in force\nfix: nothing is waiting for it; restore it in the config (or pass --config <file>) only if you want resolve notes sent there\n", must not contain "nothing is waiting"
+    round2_test.go:121: phone got 0 new messages; want the resolve note once the channel is restored identically
+--- FAIL: TestNoNoteIsPromisedToAChannelThatOnlyHoldsAScheduledSend (0.23s)
+    round2_test.go:131: stderr = "error: secret \"ntfy-topic\", used by channels.phone.topic, is not set; the resolve note for channel phone waits in the queue until it can be built\nvalid: a name listed by `yo-human secret list`\nfix: op read \"op://<vault>/<item>/<field>\" | yo-human secret set ntfy-topic\nerror: unexpected error: channel phone is not configured, so its scheduled send cannot be cancelled\nvalid: a Problem with what, valid and fix\nfix: report this as a bug\n", must not contain "resolve note"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	13.330s
+FAIL
+# exit code: 1

@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "The reply uses a stable --dedup-key and --ask with nudge, and says later passes reuse the same key, though it hedges on whether to repeat the call at all.",
+ "pass": true
+}

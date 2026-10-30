@@ -1,0 +1,14 @@
+{
+ "must": [
+  false,
+  false,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  true,
+  false
+ ],
+ "note": "The reply's command has no --dedup-key and no --ask flag, and it handles repeats with a local marker file instead of reusing a key, so it sends with no dedup key; it does use valid level names only.",
+ "pass": false
+}

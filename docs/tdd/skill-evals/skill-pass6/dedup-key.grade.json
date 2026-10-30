@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "Reply uses stable --dedup-key and --ask, but on later passes it sends nothing new (only reuses the key when escalating to siren) rather than saying later passes reuse the same key.",
+ "pass": false
+}

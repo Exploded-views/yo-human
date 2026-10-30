@@ -1,0 +1,39 @@
+$ go test -race -count=1 ./internal/store ./internal/core 2>&1
+--- FAIL: TestReleaseKeepsAttemptsAndIsDueNow (0.01s)
+    queue_test.go:265: counts = 0 1 0, want 1 0 0
+--- FAIL: TestReleaseRefusesAnUnnameableKey (0.00s)
+    queue_test.go:282: Release of an entry with no key succeeded
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	4.283s
+--- FAIL: TestScheduledChannelGetsDeliverAt (0.03s)
+    pipeline_hold_test.go:80: channel result {Channel:phone Status:held Error: ProviderID: Scheduled:false}; want the receipt's provider id and Scheduled for Task 6
+--- FAIL: TestBacklogEntryTakenByAnotherProcessIsSkipped (0.05s)
+    pipeline_hold_test.go:172: sent 4; want the cancelled entry not sent
+    pipeline_hold_test.go:181: results [{Channel:a Status:sent Error: ProviderID: Scheduled:false} {Channel:a Status:sent Error: ProviderID: Scheduled:false}]; want one skipped
+--- FAIL: TestSummarize (0.00s)
+    pipeline_pure_test.go:73: sent and skipped: "delivered"; want "partial"
+    pipeline_pure_test.go:73: skipped only is still on its way: "failed"; want "queued"
+    pipeline_pure_test.go:73: skipped and dead is not failed: "failed"; want "queued"
+    pipeline_pure_test.go:73: skipped and held: "held"; want "queued"
+--- FAIL: TestNotifyNeverFailsBecauseAnotherProcessTookTheClaim (0.02s)
+    pipeline_round1_test.go:60: cannot replace $TMPDIR/TestNotifyNeverFailsBecauseAnotherProcessTookTheClaim386202558/001/state/queue/M001.a.json: rename $TMPDIR/TestNotifyNeverFailsBecauseAnotherProcessTookTheClaim386202558/001/state/queue/.tmp-M001.a.json-2021555622 $TMPDIR/TestNotifyNeverFailsBecauseAnotherProcessTookTheClaim386202558/001/state/queue/M001.a.json: no such file or directory
+--- FAIL: TestBacklogLeavesFreshFirstAttemptsToTheirOwnCaller (0.05s)
+    pipeline_round1_test.go:91: sent 2, queue map[]; want only the already-tried entry sent, the fresh one left
+--- FAIL: TestBacklogDoesNotStartWithAQuarterOfTheDeadlineLeft (0.74s)
+    pipeline_round1_test.go:113: 4 sends; want only the new message, no backlog send begun with so little time
+    pipeline_round1_test.go:116: queued = 0; want the 3 backlog entries untouched
+--- FAIL: TestSendCutShortByTheCallerIsReleasedWithoutSpendingAnAttempt (0.03s)
+    pipeline_round1_test.go:137: Attempts = 1; want 0: our own cut-off is not the channel's failure
+--- FAIL: TestFailedScheduledSendWithAFutureDeliverAtIsHeld (0.03s)
+    pipeline_round1_test.go:160: got "queued" [{Channel:phone Status:queued Error:down ProviderID: Scheduled:false}] next=&{Do:yo-human flush AfterSeconds:60 AttemptsLeft:5 Then:tell the human in your session}; want held: it is due after the window anyway
+--- FAIL: TestLogRecordsAttemptsAfterTheIncrement (0.02s)
+    pipeline_round1_test.go:179: first failed send logged attempts 0 (<nil>); want 1
+--- FAIL: TestRecoverJudgesFileAgeByTheRealClock (0.05s)
+    pipeline_round1_test.go:192: a file written a moment ago was recovered because the fake clock ran ahead
+    pipeline_round1_test.go:195: inflight = 0; want the young file left alone
+--- FAIL: TestConfigErrorIsDeadLetteredAndReportedAsConfig (0.02s)
+    pipeline_test.go:120: err = <nil>; want a Config problem so the CLI exits 78
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	5.364s
+FAIL
+exit=1

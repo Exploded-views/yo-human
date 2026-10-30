@@ -1,0 +1,26 @@
+=== yo-human#59: main's forbidigo syscall.Syscall rule meets M1's pty helpers (merge fallout)
+RED: at a0d8392 (the merge plus follow-ups, no exclusion), `make lint` passes its release-target
+passes but its last step, `golangci-lint run --build-tags e2e` on a darwin host, fails; `make ci`
+and `make ci-base` exit 2 in a clean --no-tags clone:
+test/e2e/pty_darwin_test.go:22:21: use of `syscall.Syscall` forbidden because "only a channel implementation opens sockets" (forbidigo)
+1 issues:
+* forbidigo: 1
+(test/e2e/pty_linux_test.go makes the same ioctl call and is excused the same way.)
+GREEN: .golangci.yml excuses forbidigo only for ^test/e2e/pty_(darwin|linux)_test\.go$ and text
+syscall\.Syscall (the TIOCPTYGRANT/TIOCSPTLCK ioctls open a pseudo-terminal, not a socket).
+Mutant (narrowness): a probe test/e2e/zz_probe_test.go (//go:build e2e) with `var _ = syscall.Socket`
+and `syscall.Syscall(syscall.SYS_SOCKET, 0, 0, 0)` is still reported with the exclusion in place:
+test/e2e/zz_probe_test.go:7:9: use of `syscall.Socket` forbidden ... (forbidigo)
+test/e2e/zz_probe_test.go:8:15: use of `syscall.Syscall` forbidden ... (forbidigo)
+2 issues: * forbidigo: 2
+The probe was removed afterwards. The lint_rules_test harness builds without the e2e tag, so it
+cannot hold a case for these files; the probe run above is the evidence.
+
+=== yo-human#59: coverage floors for packages new since main (merge fallout)
+RED: `make ci-base BASE=origin/main` (origin/main = 8953109) at 7e6eb8f exits 2 at the floors step:
+github.com/Exploded-views/yo-human/internal/channel/logch: new floor 87.0 outside [87.3, 87.8]
+github.com/Exploded-views/yo-human/internal/config: new floor 93.8 outside [95.5, 96.0]
+github.com/Exploded-views/yo-human/internal/store: new floor 86.0 outside [87.2, 87.7]
+(M1 floors were set before later tests raised coverage; plain `make floors` has no base and passed.)
+GREEN: floors raised to 87.3, 95.5 and 87.2 (never lowered; the window is RoundDown(current)-0.5);
+`coverfloors --base-floors` against main's file exits 0.

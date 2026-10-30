@@ -1,0 +1,84 @@
+KILLED  plain http accepted
+  internal/channel/helpers.go: 'u.Scheme != "https"' -> '(u.Scheme != "https" && u.Scheme != "http")'
+  --- FAIL: TestBarkServerMustBeHTTPS (0.00s)
+      bark_https_test.go:22: server "http://bark.example": err=<nil>; want a config error
+      bark_https_test.go:22: server "http://127.0.0.1:8080": err=<nil>; want a config error
+      bark_https_test.go:22: server "http://localhost": err=<nil>; want a config error
+  --- FAIL: TestPagerDutyEventsURLMustBeHTTPS (0.00s)
+      pagerduty_https_test.go:21: events_url "http://events.example/v2/enqueue": err=<nil>; want a config error
+      pagerduty_https_test.go:21: events_url "http://127.0.0.1:8080/v2/enqueue": err=<nil>; want a config error
+      pagerduty_https_test.go:21: events_url "http://localhost/v2": err=<nil>; want a config error
+  [go test -count=1 -timeout 300s -run MustBeHTTPS|ChannelURLsThatAreNotHTTPS ./internal/channel/bark ./internal/channel/pagerduty ./internal/cli exit 1]
+
+KILLED  an empty host accepted
+  internal/channel/helpers.go: '|| u.Hostname() == ""' -> ''
+  --- FAIL: TestBarkServerMustBeHTTPS (0.00s)
+      bark_https_test.go:22: server "https://": err=<nil>; want a config error
+      bark_https_test.go:22: server "https://:443": err=<nil>; want a config error
+  --- FAIL: TestPagerDutyEventsURLMustBeHTTPS (0.00s)
+      pagerduty_https_test.go:21: events_url "https://": err=<nil>; want a config error
+      pagerduty_https_test.go:21: events_url "https://:443/v2": err=<nil>; want a config error
+  --- FAIL: TestConfigCheckRefusesChannelURLsThatAreNotHTTPS (0.05s)
+      https_test.go:25: pagerduty no host: code=0 out="RESULT ok\nconfig ok: 4 channels, 2 levels\nchannels.bell <- $TMPDIR/TestConfigCheckRefusesChannelURLsThatAreNotHTTPS3946675247/003/.config/yo-human/config.yaml = {\"events_url\":\"https://:443/v2\",\"routing_key\":{\"secret\":\"pd-critical\"},\"t
+  [go test -count=1 -timeout 300s -run MustBeHTTPS|ChannelURLsThatAreNotHTTPS ./internal/channel/bark ./internal/channel/pagerduty ./internal/cli exit 1]
+
+KILLED  credentials accepted
+  internal/channel/helpers.go: '|| u.User != nil' -> ''
+  --- FAIL: TestBarkServerMustBeHTTPS (0.00s)
+      bark_https_test.go:22: server "https://<user-pass>@bark.example": err=<nil>; want a config error
+      bark_https_test.go:22: server "https://<user>@bark.example": err=<nil>; want a config error
+  --- FAIL: TestPagerDutyEventsURLMustBeHTTPS (0.00s)
+      pagerduty_https_test.go:21: events_url "https://<user-pass>@events.example/v2": err=<nil>; want a config error
+      pagerduty_https_test.go:21: events_url "https://<user>@events.example/v2": err=<nil>; want a config error
+  --- FAIL: TestConfigCheckRefusesChannelURLsThatAreNotHTTPS (0.04s)
+      https_test.go:25: bark credentials: code=0 out="RESULT ok\nconfig ok: 4 channels, 2 levels\nchannels.bell <- $TMPDIR/TestConfigCheckRefusesChannelURLsThatAreNotHTTPS67775300/003/.config/yo-human/config.yaml = {\"device_key\":{\"secret\":\"bark-key\"},\"server\":\"https://<user-pass>@bark.example\",\"typ
+  [go test -count=1 -timeout 300s -run MustBeHTTPS|ChannelURLsThatAreNotHTTPS ./internal/channel/bark ./internal/channel/pagerduty ./internal/cli exit 1]
+
+KILLED  bark skips the check
+  internal/channel/bark/bark.go: 'server, ok := channel.ServerURL(s)' -> 'server, ok := s, true'
+  --- FAIL: TestBarkServerMustBeHTTPS (0.00s)
+      bark_https_test.go:22: server "http://bark.example": err=<nil>; want a config error
+      bark_https_test.go:22: server "http://127.0.0.1:8080": err=<nil>; want a config error
+      bark_https_test.go:22: server "http://localhost": err=<nil>; want a config error
+      bark_https_test.go:22: server "ftp://bark.example": err=<nil>; want a config error
+      bark_https_test.go:22: server "https://<user-pass>@bark.example": err=<nil>; want a config error
+      bark_https_test.go:22: server "https://<user>@bark.example": err=<nil>; want a config error
+      bark_https_test.go:22: server "https://": err=<nil>; want a config error
+  [go test -count=1 -timeout 300s -run MustBeHTTPS|ChannelURLsThatAreNotHTTPS ./internal/channel/bark ./internal/channel/pagerduty ./internal/cli exit 1]
+
+KILLED  pagerduty skips the check
+  internal/channel/pagerduty/pagerduty.go: 'if _, ok := channel.ServerURL(s); !ok {' -> 'if false {'
+  --- FAIL: TestPagerDutyEventsURLMustBeHTTPS (0.00s)
+      pagerduty_https_test.go:21: events_url "http://events.example/v2/enqueue": err=<nil>; want a config error
+      pagerduty_https_test.go:21: events_url "http://127.0.0.1:8080/v2/enqueue": err=<nil>; want a config error
+      pagerduty_https_test.go:21: events_url "http://localhost/v2": err=<nil>; want a config error
+      pagerduty_https_test.go:21: events_url "ftp://events.example/v2": err=<nil>; want a config error
+      pagerduty_https_test.go:21: events_url "https://<user-pass>@events.example/v2": err=<nil>; want a config error
+      pagerduty_https_test.go:21: events_url "https://<user>@events.example/v2": err=<nil>; want a config error
+      pagerduty_https_test.go:21: events_url "https://": err=<nil>; want a config error
+  [go test -count=1 -timeout 300s -run MustBeHTTPS|ChannelURLsThatAreNotHTTPS ./internal/channel/bark ./internal/channel/pagerduty ./internal/cli exit 1]
+
+KILLED  bark echoes the value
+  internal/channel/bark/bark.go: 'return "", errors.New("must be an https URL with a host, without credentials, query or fragment")' -> 'return "", errors.New("must be an https URL with a host, without credentials, query or fragment, not " + s)'
+  --- FAIL: TestBarkServerMustBeHTTPS (0.00s)
+      bark_https_test.go:26: server "http://bark.example": error "bark instance \"n\": setting server must be an https URL with a host, without credentials, query or fragment, not http://bark.example"; want it to ask for https without echoing the value
+      bark_https_test.go:26: server "http://127.0.0.1:8080": error "bark instance \"n\": setting server must be an https URL with a host, without credentials, query or fragment, not http://127.0.0.1:8080"; want it to ask for https without echoing the value
+      bark_https_test.go:26: server "http://localhost": error "bark instance \"n\": setting server must be an https URL with a host, without credentials, query or fragment, not http://localhost"; want it to ask for https without echoing the value
+      bark_https_test.go:26: server "ftp://bark.example": error "bark instance \"n\": setting server must be an https URL with a host, without credentials, query or fragment, not ftp://bark.example"; want it to ask for https without echoing the value
+      bark_https_test.go:26: server "https://<user-pass>@bark.example": error "bark instance \"n\": setting server must be an https URL with a host, without credentials, query or fragment, not https://<user-pass>@bark.example"; want it to ask for https without echoing the value
+      bark_https_test.go:26: server "https://<user>@bark.example": error "bark instance \"n\": setting server must be an https URL with a host, without credentials, query or fragment, not https://<user>@bark.example"; want it to ask for https without echoing the value
+      bark_https_test.go:26: server "https://": error "bark instance \"n\": setting server must be an https URL with a host, without credentials, query or fragment, not https://"; want it to ask for https without echoing the value
+  [go test -count=1 -timeout 300s -run MustBeHTTPS|ChannelURLsThatAreNotHTTPS ./internal/channel/bark ./internal/channel/pagerduty ./internal/cli exit 1]
+
+KILLED  pagerduty echoes the value
+  internal/channel/pagerduty/pagerduty.go: 'return "", errors.New("must be an https URL with a host, without credentials, query or fragment")' -> 'return "", errors.New("must be an https URL with a host, without credentials, query or fragment, not " + s)'
+  --- FAIL: TestPagerDutyEventsURLMustBeHTTPS (0.00s)
+      pagerduty_https_test.go:25: events_url "http://events.example/v2/enqueue": error "pagerduty instance \"n\": setting events_url must be an https URL with a host, without credentials, query or fragment, not http://events.example/v2/enqueue"; want it to ask for https without echoing the value
+      pagerduty_https_test.go:25: events_url "http://127.0.0.1:8080/v2/enqueue": error "pagerduty instance \"n\": setting events_url must be an https URL with a host, without credentials, query or fragment, not http://127.0.0.1:8080/v2/enqueue"; want it to ask for https without echoing the value
+      pagerduty_https_test.go:25: events_url "http://localhost/v2": error "pagerduty instance \"n\": setting events_url must be an https URL with a host, without credentials, query or fragment, not http://localhost/v2"; want it to ask for https without echoing the value
+      pagerduty_https_test.go:25: events_url "ftp://events.example/v2": error "pagerduty instance \"n\": setting events_url must be an https URL with a host, without credentials, query or fragment, not ftp://events.example/v2"; want it to ask for https without echoing the value
+      pagerduty_https_test.go:25: events_url "https://<user-pass>@events.example/v2": error "pagerduty instance \"n\": setting events_url must be an https URL with a host, without credentials, query or fragment, not https://<user-pass>@events.example/v2"; want it to ask for https without echoing the value
+      pagerduty_https_test.go:25: events_url "https://<user>@events.example/v2": error "pagerduty instance \"n\": setting events_url must be an https URL with a host, without credentials, query or fragment, not https://<user>@events.example/v2"; want it to ask for https without echoing the value
+      pagerduty_https_test.go:25: events_url "https://": error "pagerduty instance \"n\": setting events_url must be an https URL with a host, without credentials, query or fragment, not https://"; want it to ask for https without echoing the value
+  [go test -count=1 -timeout 300s -run MustBeHTTPS|ChannelURLsThatAreNotHTTPS ./internal/channel/bark ./internal/channel/pagerduty ./internal/cli exit 1]
+

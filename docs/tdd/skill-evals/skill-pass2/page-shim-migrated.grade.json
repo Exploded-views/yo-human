@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "Reply uses `/opt/bin/page.sh --low` with summary and key ci-main-FAKE, resolves with `--low --resolve ci-main-FAKE`, and adds no --level/--title/--ask, guessed level names, or notify.",
+ "pass": true
+}

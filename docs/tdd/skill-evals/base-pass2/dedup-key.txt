@@ -1,0 +1,19 @@
+skills used: []
+
+I'd send one `nudge`, then stay quiet on later passes while the disk stays full.
+
+**Why `nudge`:** a build host at 95% needs a human soon, but production isn't impaired, so `siren` would wake them for nothing. `murmur` is too weak, because something does need doing. `nudge` is held during quiet hours, which suits a problem that can wait until morning.
+
+**Pass 1 (in order)**
+1. Run `yo-human --help` (and the help for its send subcommand). `levels --json` shows `ask` is required for `nudge`, but it doesn't show the flag syntax, so I won't guess it.
+2. Check for a state file in my own working directory, such as `./.disk-alert-state`. On the first pass it won't exist.
+3. Send the notification with the level set to `nudge`, using the syntax from step 1. The message would be self-contained, for example: "Build host disk is 95% full (was 95% on the previous check). What should I do: clear build caches and old artifacts, or leave it alone?" It would include the mount point and the largest directories, found with read-only `df` and `du`. The `ask` is required, so I'd phrase it as a concrete question.
+4. Write the state file with the level sent, the timestamp, and the usage percentage. I'd write it only if the send exited 0. If the send failed, I'd leave the file absent so the next pass retries.
+5. Delete nothing on my own initiative, because the human hasn't approved that.
+
+**Later passes (every minute)**
+- If usage is still around 95% and the state file says I already sent a `nudge`, I send nothing. A message every minute for hours would be spam, and the human already has the ask.
+- If the human replied with an answer, I act on that answer and nothing more.
+- I'd re-send a `nudge` only if the state file is more than a long interval old (say 4 hours) and there's no reply. The message would say the disk is still full and the question is still open.
+- If usage climbs to about 100%, or builds start failing because of it, I'd escalate once to `siren` and record that in the state file. At that point something can't wait.
+- If usage drops well below the threshold, I send one `murmur` saying it's resolved, then clear the state file. That way a later full disk starts a fresh alert.

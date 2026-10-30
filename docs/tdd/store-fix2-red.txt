@@ -1,0 +1,8 @@
+--- FAIL: TestQuarantineNeverOverwritesExistingDeadRecord (0.03s)
+    quarantine_test.go:110: counts = 0 0 1, want 0 0 2
+--- FAIL: TestDeadTwiceOnSameKeyKeepsBoth (0.05s)
+    quarantine_test.go:127: counts = 0 0 1, want 0 0 2
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.210s
+FAIL
+exit=1

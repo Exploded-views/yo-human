@@ -1,0 +1,20 @@
+$ go test -count=1 ./internal/core
+--- FAIL: TestFlushThatLeavesASendQueuedIsQueuedWithNext (0.09s)
+    flush_status_test.go:37: flush = {Status:queued ID: Channels:[{Channel:a Status:queued Error:down ProviderID: Scheduled:false attempts:2 config:false buried:false parked:false level:page retryAt:{wall:0 ext:63928958640 loc:<nil>}}] Next:0x77e8f620150}; want queued with next in 120s and 4 attempts left (2 of the 6 sends spent; the backoff doubles)
+--- FAIL: TestFlushNextUsesTheEntrysLevelRetry (0.09s)
+    flush_status_test.go:80: flush = {Status:queued ID: Channels:[{Channel:a Status:queued Error:down ProviderID: Scheduled:false attempts:2 config:false buried:false parked:false level:page retryAt:{wall:0 ext:63928958640 loc:<nil>}}] Next:0x77e8f621d70}; want next with 3 sends left of the page level's 5 (retry times 4, plus the first)
+--- FAIL: TestTheAttemptsLeftCountDownToTheDeadLetter (0.22s)
+    flush_status_test.go:120: countdown = [5 3 2 1 0], want [5 4 3 2 1] then failed
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	18.743s
+FAIL
+[exit 1]
+
+$ go test -count=1 ./internal/cli
+--- FAIL: TestFlushThatLeavesASendQueuedExits75WithNext (0.12s)
+    flush_exit_test.go:29: stdout = "RESULT queued\npager: queued (provider said no)\nphone: queued (provider said no)\nnext: yo-human flush in 120s, 3 attempts left, then tell the human in your session\n", want it to contain "next: yo-human flush in 120s, 4 attempts left, then tell the human in your session"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	11.127s
+FAIL
+[exit 1]
+

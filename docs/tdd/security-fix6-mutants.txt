@@ -1,0 +1,162 @@
+# First pass (15 mutants): 3 survived and 2 did not compile. Two core tests were added (a project's repeat sees its pending send and its resolve cancels it; a project's stale resolve note is dropped once the incident reopens), the cli resolve test now checks which incident closed, and the survivors and the build failures were rerun.
+
+KILLED  the project is ignored
+  internal/core/pipeline.go: 'if project == "" {
+		return key
+	}
+	return project + "\x00" + key' -> 'return key'
+  --- FAIL: TestIncidentsAreNamespacedByProject (0.06s)
+      namespace_test.go:31: beta's first page of the same key = suppressed, want delivered: it is beta's own incident
+  --- FAIL: TestIncidentKeyIsUnambiguous (0.00s)
+      namespace_test.go:55: two different (project, key) pairs share an incident key
+  [go test -count=1 ./internal/core exit 1]
+
+KILLED  an ambiguous separator
+  internal/core/pipeline.go: 'return project + "\x00" + key' -> 'return project + "/" + key'
+  --- FAIL: TestIncidentKeyIsUnambiguous (0.00s)
+      namespace_test.go:55: two different (project, key) pairs share an incident key
+  [go test -count=1 ./internal/core exit 1]
+
+KILLED  admit looks up the bare key
+  internal/core/repeat.go: 'id := incidentID(m)
+	err := p.d.Store' -> 'id := m.DedupKey
+	err := p.d.Store'
+  --- FAIL: TestIncidentsAreNamespacedByProject (0.00s)
+  [go test -count=1 ./internal/core exit 1]
+
+KILLED  record files under the bare key
+  internal/core/repeat.go: 'id := incidentID(m)
+	if dec == SendNew' -> 'id := m.DedupKey
+	if dec == SendNew'
+  --- FAIL: TestIncidentsAreNamespacedByProject (0.01s)
+  [go test -count=1 ./internal/core exit 1]
+
+SURVIVED the incident forgets its project
+  internal/core/repeat.go: 'Key: m.DedupKey, Project: m.Project, Generation' -> 'Key: m.DedupKey, Generation'
+  [go test -count=1 ./internal/core exit 0]
+
+SURVIVED queue entries carry the bare key
+  internal/core/pipeline.go: 'return incidentID(m)
+}' -> 'return m.DedupKey
+}'
+  [go test -count=1 ./internal/core exit 0]
+
+SURVIVED the resolve note has no project
+  internal/core/resolve.go: 'DedupKey: inc.Key, Project: inc.Project,' -> 'DedupKey: inc.Key,'
+  [go test -count=1 ./internal/core exit 0]
+
+KILLED  the provider sees the namespaced key
+  internal/core/resolve.go: 'DedupKey: inc.Key, Project: inc.Project,' -> 'DedupKey: IncidentKey(inc.Project, inc.Key), Project: inc.Project,'
+  --- FAIL: TestIncidentsAreNamespacedByProject (0.17s)
+      namespace_test.go:41: resolved keys = [beta\x00disk-7], want [disk-7], the caller's key
+  [go test -count=1 ./internal/core exit 1]
+
+BUILD   resolve ignores the caller's project
+  internal/cli/resolve.go: 'core.IncidentKey(sourceOf(*project, "YO_HUMAN_PROJECT"), *key)' -> 'core.IncidentKey("alpha", *key)'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  internal/cli/resolve.go:22:2: declared and not used: project
+  [go test -count=1 ./internal/cli -run 'Callers|RandomSuffix|PageDefault|PageEmpty|Status|Resolve' exit 1]
+
+KILLED  status shows every project
+  internal/cli/status.go: 'return sc.all || project == "" || project == sc.project' -> 'return true'
+  --- FAIL: TestStatusShowsTheCallersProjectUnlessAll (0.18s)
+      namespace_test.go:47: status as alpha = [alpha/alpha-key beta/beta-key]
+      namespace_test.go:49: status --project beta = [alpha/alpha-key beta/beta-key]
+  [go test -count=1 ./internal/cli -run 'Callers|RandomSuffix|PageDefault|PageEmpty|Status|Resolve' exit 1]
+
+KILLED  status --all is ignored
+  internal/cli/status.go: 'return sc.all || project == "" || project == sc.project' -> 'return project == "" || project == sc.project'
+  --- FAIL: TestStatusShowsTheCallersProjectUnlessAll (0.19s)
+      namespace_test.go:51: status --all = [alpha/alpha-key]
+  [go test -count=1 ./internal/cli -run 'Callers|RandomSuffix|PageDefault|PageEmpty|Status|Resolve' exit 1]
+
+KILLED  an entry of no project is hidden
+  internal/cli/status.go: 'return sc.all || project == "" || project == sc.project' -> 'return sc.all || project == sc.project'
+  --- FAIL: TestResolveQueuesTheCancelWhenTheChannelHasNoSecret (0.17s)
+      round2_test.go:56: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "reason: "
+      round2_test.go:56: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "not built"
+  --- FAIL: TestStatusLabelsEachEntryByKind (0.20s)
+      round2_test.go:146: status = "RESULT ok\nqueued: 0\nheld: 1\ndead: 0\ninflight: 0\nincidents: 1\nheld <ULID> pager until=<TIME> kind=send\nincident other project=unknown level=night generation=1 last_sent=<TIME> latest: other\n", want it to contain "kind=cancel"
+      round2_test.go:154: kinds in the JSON = map[send:true]; want cancel and send
+  --- FAIL: TestStatusCallsAnEntryItCannotReadUnreadable (0.06s)
+      round2_test.go:172: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "dead: 1"
+      round2_test.go:172: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "kind=unreadable"
+  --- FAIL: TestResolveAndStatusShowACancelTheProviderRefused (0.12s)
+      round4_test.go:48: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "dead: 1"
+      round4_test.go:48: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n", want it to contain "kind=cancel"
+  --- FAIL: TestStatusFlattensWhatTheIncidentFileHolds (0.05s)
+      status_test.go:139: status: {code:0 out:RESULT ok
+          queued: 0
+  [go test -count=1 ./internal/cli -run 'Callers|RandomSuffix|PageDefault|PageEmpty|Status|Resolve' exit 1]
+
+KILLED  the shim key has no suffix
+  internal/cli/page.go: '+ "-" + randomHex(2)' -> '+ "-" + "abcd"'
+  --- FAIL: TestPageDefaultKeyHasARandomSuffix (0.16s)
+      namespace_test.go:67: two pages in the same second share a key
+  [go test -count=1 ./internal/cli -run 'Callers|RandomSuffix|PageDefault|PageEmpty|Status|Resolve' exit 1]
+
+KILLED  e2e: the provider sees the namespaced key
+  internal/core/resolve.go: 'DedupKey: inc.Key, Project: inc.Project,' -> 'DedupKey: IncidentKey(inc.Project, inc.Key), Project: inc.Project,'
+  --- FAIL: TestIncidentsAreNamespacedByProjectAndPagerDutyKeepsTheKey (0.24s)
+      namespace_test.go:15: yo-human notify --level urgent --title Disk full --ask Free space --dedup-key disk-7 -> exit 0
+          RESULT delivered <ULID>
+  --- FAIL: TestResolveSendsPagerDutyResolveAndPassiveNotes (0.25s)
+      resolve_test.go:14: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+          RESULT delivered <ULID>
+  --- FAIL: TestPageShimTriggerAndResolve (0.29s)
+      shim_trust_test.go:15: yo-human page Disk is full on build-7 df says 100% disk-7 -> exit 0
+          RESULT delivered <ULID>
+  [go test -tags e2e -count=1 ./test/e2e -run 'Namespaced|Resolve|Shim' exit 1]
+
+BUILD   e2e: resolve ignores the caller's project
+  internal/cli/resolve.go: 'core.IncidentKey(sourceOf(*project, "YO_HUMAN_PROJECT"), *key)' -> 'core.IncidentKey("proj", *key)'
+  e2e: go build failed: exit status 1
+  internal/cli/resolve.go:22:2: declared and not used: project
+  [go test -tags e2e -count=1 ./test/e2e -run 'Namespaced|Resolve|Shim' exit 1]
+
+# Second pass
+
+KILLED  the incident forgets its project
+  internal/core/repeat.go: 'Key: m.DedupKey, Project: m.Project, Generation' -> 'Key: m.DedupKey, Generation'
+  --- FAIL: TestAProjectsIncidentSeesItsPendingSends (0.15s)
+      namespace_test.go:78: repeat with a send pending = queued, want suppressed
+  [go test -count=1 ./internal/core exit 1]
+
+KILLED  queue entries carry the bare key
+  internal/core/pipeline.go: 'return incidentID(m)
+}' -> 'return m.DedupKey
+}'
+  --- FAIL: TestAProjectsIncidentSeesItsPendingSends (0.10s)
+      namespace_test.go:78: repeat with a send pending = queued, want suppressed
+      namespace_test.go:82: 2 entries queued after the resolve, want its send cancelled
+  [go test -count=1 ./internal/core exit 1]
+
+SURVIVED the resolve note has no project
+  internal/core/resolve.go: 'DedupKey: inc.Key, Project: inc.Project,' -> 'DedupKey: inc.Key,'
+  [go test -count=1 ./internal/core exit 0]
+
+SURVIVED resolve ignores the caller's project (compilable)
+  internal/cli/resolve.go: 'core.IncidentKey(sourceOf(*project, "YO_HUMAN_PROJECT"), *key)' -> 'core.IncidentKey(sourceOf("", "YO_HUMAN_PROJECT")+(*project)[:0], *key)'
+  [go test -count=1 ./internal/cli -run 'Callers|RandomSuffix|PageDefault|PageEmpty|Status|Resolve' exit 0]
+
+KILLED  e2e: resolve ignores the caller's project (compilable)
+  internal/cli/resolve.go: 'core.IncidentKey(sourceOf(*project, "YO_HUMAN_PROJECT"), *key)' -> 'core.IncidentKey("proj"+(*project)[:0], *key)'
+  --- FAIL: TestIncidentsAreNamespacedByProjectAndPagerDutyKeepsTheKey (0.18s)
+      namespace_test.go:15: yo-human notify --level urgent --title Disk full --ask Free space --dedup-key disk-7 -> exit 0
+          RESULT delivered <ULID>
+  [go test -tags e2e -count=1 ./test/e2e -run 'Namespaced|Resolve|Shim' exit 1]
+
+# Third pass
+
+KILLED  the resolve note has no project
+  internal/core/resolve.go: 'DedupKey: inc.Key, Project: inc.Project,' -> 'DedupKey: inc.Key,'
+  --- FAIL: TestAProjectsResolveNoteIsDroppedWhenItsIncidentReopens (0.15s)
+      namespace_test.go:100: the old generation's resolve note was sent after the incident reopened
+  [go test -count=1 ./internal/core exit 1]
+
+KILLED  resolve ignores the caller's project (compilable)
+  internal/cli/resolve.go: 'core.IncidentKey(sourceOf(*project, "YO_HUMAN_PROJECT"), *key)' -> 'core.IncidentKey(sourceOf("", "YO_HUMAN_PROJECT")+(*project)[:0], *key)'
+  --- FAIL: TestResolveOnlySeesTheCallersProject (0.26s)
+      namespace_test.go:24: status after alpha's resolve = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 1\nincident disk-7 project=alpha level=page generation=1 last_sent=<TIME> latest: t\n", want it to contain "incident disk-7 project=beta"
+  [go test -count=1 ./internal/cli -run 'Callers|RandomSuffix|PageDefault|PageEmpty|Status|Resolve' exit 1]
+

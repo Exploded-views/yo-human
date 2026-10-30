@@ -1,0 +1,66 @@
+$ go test -count=1 ./internal/core -run AResolveWhose|ADeadCancelOutranks
+--- FAIL: TestAResolveWhoseCancelIsQueuedSaysToFlush (0.07s)
+    resolve_exit_test.go:37: problems [4] (the scheduled send on phone could not be cancelled: provider refused); want one Queued problem
+    resolve_exit_test.go:40: result "resolved" next <nil>; want resolved, with a next step that flushes
+--- FAIL: TestAResolveWhoseCloseIsQueuedSaysToFlush (0.17s)
+    resolve_exit_test.go:73: problems [] (<nil>); want one Queued problem naming pd
+    resolve_exit_test.go:76: result "resolved" next <nil>; want resolved, with a next step that flushes
+--- FAIL: TestAResolveWhoseCloseIsRefusedIsUnavailable (0.13s)
+    resolve_exit_test.go:86: problems [] (<nil>), next <nil>; want one Unavailable problem and no next
+--- FAIL: TestADeadCancelOutranksAQueuedClose (0.18s)
+    resolve_exit_test.go:116: problems [4] (the scheduled send on sched could not be cancelled: provider refused); want the dead cancel first, then the queued close
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.795s
+FAIL
+[exit 1]
+
+$ go test -count=1 ./internal/cli -run TestExit
+--- FAIL: TestExitCodeTable (0.00s)
+    exit_test.go:24: exitForProblem(kind 5) = 70, want 75
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.012s
+FAIL
+[exit 1]
+
+$ go test -tags e2e -count=1 ./test/e2e -run ResolveCancelFailingTransiently|ResolveWhilePagerDutyIsDown
+--- FAIL: TestResolveCancelFailingTransientlyIsRetriedByFlush (0.13s)
+    resolve_test.go:110: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT held <ULID>
+        phone: held
+        bell: held
+        pager: held
+    resolve_test.go:112: yo-human resolve --dedup-key disk-7 -> exit 69
+        RESULT resolved <ULID>
+        bell: cancelled
+        pager: cancelled
+        phone: queued (ntfy answered HTTP 503)
+        error: the scheduled send on phone could not be cancelled: ntfy answered HTTP 503
+        valid: a cancel the provider accepts
+        fix: the cancel is queued and `yo-human flush` retries it; until it succeeds the human may still be paged
+    resolve_test.go:113: exit code 69, want 75
+        stdout:
+        RESULT resolved <ULID>
+        bell: cancelled
+        pager: cancelled
+        phone: queued (ntfy answered HTTP 503)
+        stderr:
+        error: the scheduled send on phone could not be cancelled: ntfy answered HTTP 503
+        valid: a cancel the provider accepts
+        fix: the cancel is queued and `yo-human flush` retries it; until it succeeds the human may still be paged
+--- FAIL: TestResolveWhilePagerDutyIsDownSaysToFlush (0.23s)
+    resolve_test.go:135: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    resolve_test.go:137: yo-human resolve --dedup-key disk-7 --json -> exit 0
+        {"version":1,"status":"resolved","id":"<ULID>","channels":[{"channel":"pager","status":"queued","error":"pagerduty answered HTTP 503"},{"channel":"phone","status":"sent"},{"channel":"bell","status":"sent"}]}
+    resolve_test.go:138: exit code 0, want 75
+        stdout:
+        {"version":1,"status":"resolved","id":"<ULID>","channels":[{"channel":"pager","status":"queued","error":"pagerduty answered HTTP 503"},{"channel":"phone","status":"sent"},{"channel":"bell","status":"sent"}]}
+        stderr:
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	0.721s
+FAIL
+[exit 1]
+

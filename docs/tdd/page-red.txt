@@ -1,0 +1,51 @@
+# what this is: task 12 RED: the page shim tests against a CLI with no page command (every page call is "unknown command", exit 64; TestPageUsage passes only because 64 is also the unknown-command code, and is pinned by the mutants)
+# command: go test -count=1 -timeout 250s ./internal/cli -run TestPage
+--- FAIL: TestPageTrigger (0.03s)
+    page_test.go:28: page: {code:64 out: err:error: unknown command
+        valid: commands: channel, config, flush, levels, notify, resolve, secret, status, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want RESULT delivered first, exit 0
+    page_test.go:30: pager got 0 sends; want 1
+    page_test.go:39: sends = []; want YO_HUMAN_AGENT to win over shim.agent
+--- FAIL: TestPageLow (0.02s)
+    page_test.go:45: page --low: {code:64 out: err:error: unknown command
+        valid: commands: channel, config, flush, levels, notify, resolve, secret, status, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+    page_test.go:47: phone got [], pager 0; want one note-level send
+--- FAIL: TestPageDefaultDedupKey (0.02s)
+    page_test.go:58: keys = []; want orch-<time>Z (UTC, from the clock), empty body when none given
+--- FAIL: TestPageResolve (0.03s)
+    page_test.go:65: page --resolve: {code:64 out: err:error: unknown command
+        valid: commands: channel, config, flush, levels, notify, resolve, secret, status, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+    page_test.go:66: pager resolved []; want key1
+    page_test.go:69: page --low --resolve: {code:64 out: err:error: unknown command
+        valid: commands: channel, config, flush, levels, notify, resolve, secret, status, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }
+--- FAIL: TestPageWithoutShimBlock (0.02s)
+    page_test.go:77: [page x]: {code:64 out: err:error: unknown command
+        valid: commands: channel, config, flush, levels, notify, resolve, secret, status, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want exit 78
+    page_test.go:78: stderr = "error: unknown command\nvalid: commands: channel, config, flush, levels, notify, resolve, secret, status, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "shim:"
+    page_test.go:77: [page --resolve k]: {code:64 out: err:error: unknown command
+        valid: commands: channel, config, flush, levels, notify, resolve, secret, status, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want exit 78
+    page_test.go:78: stderr = "error: unknown command\nvalid: commands: channel, config, flush, levels, notify, resolve, secret, status, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "shim:"
+--- FAIL: TestPageHalfConfiguredShim (0.02s)
+    page_test.go:118: low with no shim.low: {code:64 out: err:error: unknown command
+        valid: commands: channel, config, flush, levels, notify, resolve, secret, status, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want exit 78
+    page_test.go:119: stderr = "error: unknown command\nvalid: commands: channel, config, flush, levels, notify, resolve, secret, status, version\nfix: run one of them; `yo-human` with no arguments prints the usage\n", want it to contain "shim.low.level"
+--- FAIL: TestPageJSONAndFlatSummary (0.02s)
+    page_test.go:125: stdout = "{\"version\":1,\"error\":{\"what\":\"unknown command\",\"valid\":\"commands: channel, config, flush, levels, notify, resolve, secret, status, version\",\"fix\":\"run one of them; `yo-human` with no arguments prints the usage\"}}\n", want it to contain "\"status\":\"delivered\""
+    page_test.go:127: sends = []; want a one-line title
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.195s
+FAIL
+# exit: 1

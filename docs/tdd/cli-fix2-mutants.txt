@@ -1,0 +1,162 @@
+# what this is: task 10 fix round 2 mutants: the control-character refusal and escaping of the trust display, oneLine, --json usage and version, warning prefix, terminal message, exclusive-write fallback; each run has a 300s timeout
+# test command: go test -count=1 -timeout 120s ./internal/cli/ ./internal/store/ (timeout 300s per run)
+## baseline
+ok  	github.com/Exploded-views/yo-human/internal/cli	0.330s
+ok  	github.com/Exploded-views/yo-human/internal/store	2.174s
+exit=0
+
+## control scan never fires
+# in internal/cli/trustcmd.go: '\tif holdsControl(doc) {' => '\tif false {'
+--- FAIL: TestConfigTrustRefusesControlCharacters (0.09s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.397s
+FAIL
+exit=1 (killed)
+
+## keys are not scanned
+# in internal/cli/trustcmd.go: 'isControl(k) || holdsControl(x)' => 'holdsControl(x)'
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL
+exit=1 (killed)
+
+## list items are not scanned
+# in internal/cli/trustcmd.go: '\t\tfor _, x := range t {\n\t\t\tif holdsControl(x) {' => '\t\tfor _, x := range t[:0] {\n\t\t\tif holdsControl(x) {'
+--- FAIL: TestConfigTrustRefusesControlCharacters (0.04s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.348s
+FAIL
+exit=1 (killed)
+
+## C1 not treated as control
+# in internal/cli/trustcmd.go: 'strings.ContainsFunc(s, unicode.IsControl)' => 'strings.ContainsFunc(s, func(r rune) bool { return r < 0x80 && unicode.IsControl(r) })'
+--- FAIL: TestConfigTrustRefusesControlCharacters (0.04s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.334s
+FAIL
+exit=1 (killed)
+
+## strings not scanned
+# in internal/cli/trustcmd.go: '\tcase string:\n\t\treturn isControl(t)' => '\tcase string:\n\t\treturn false'
+--- FAIL: TestConfigTrustRefusesControlCharacters (0.07s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.367s
+FAIL
+exit=1 (killed)
+
+## refusal echoes the path value
+# in internal/cli/trustcmd.go: '(it is not shown)"' => '(it is not shown: "+fmt.Sprint(doc)+")"'
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL
+exit=1 (killed)
+
+## setting key not escaped
+# in internal/cli/trustcmd.go: 'cv.Settings[esc(key)]' => 'cv.Settings[key]'
+--- FAIL: TestDescribeEscapesEveryFileDerivedString (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.309s
+FAIL
+exit=1 (killed)
+
+## channel name not escaped
+# in internal/cli/trustcmd.go: 'Name: esc(name), Type: esc(typ)' => 'Name: name, Type: esc(typ)'
+--- FAIL: TestDescribeEscapesEveryFileDerivedString (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.317s
+FAIL
+exit=1 (killed)
+
+## channel type not escaped
+# in internal/cli/trustcmd.go: 'Name: esc(name), Type: esc(typ)' => 'Name: esc(name), Type: typ'
+--- FAIL: TestDescribeEscapesEveryFileDerivedString (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.483s
+FAIL
+exit=1 (killed)
+
+## level name not escaped
+# in internal/cli/trustcmd.go: 'lv.Name = esc(name)' => 'lv.Name = name'
+--- FAIL: TestDescribeEscapesEveryFileDerivedString (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.501s
+FAIL
+exit=1 (killed)
+
+## send channel and interruption not escaped
+# in internal/cli/trustcmd.go: 'sv.Channel, sv.Interruption = esc(ch), esc(ir)' => 'sv.Channel, sv.Interruption = ch, ir'
+--- FAIL: TestDescribeEscapesEveryFileDerivedString (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.405s
+FAIL
+exit=1 (killed)
+
+## oneLine only newlines
+# in internal/cli/output.go: '\t\tif unicode.IsControl(r) {' => "\t\tif r == '\\n' || r == '\\r' {"
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL
+exit=1 (killed)
+
+## --json with no command prints usage
+# in internal/cli/cli.go: 'if len(rest) == 0 && e.asJSON {' => 'if false {'
+--- FAIL: TestJSONWithoutACommandIsAUsageObject (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.385s
+FAIL
+exit=1 (killed)
+
+## --json version prints text
+# in internal/cli/cli.go: '\t\tif e.asJSON {\n\t\t\te.ok(nil, map[string]any{"release"' => '\t\tif false {\n\t\t\te.ok(nil, map[string]any{"release"'
+--- FAIL: TestJSONVersion (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.487s
+FAIL
+exit=1 (killed)
+
+## JSON warning keeps its prefix
+# in internal/cli/output.go: 'out[i].What = strings.TrimPrefix(out[i].What, "warning: ")' => '_ = i'
+--- FAIL: TestJSONWarningsDropTheWarningPrefix (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.390s
+FAIL
+exit=1 (killed)
+
+## terminal message unchanged
+# in internal/cli/secretcmd.go: 'reads the value from a pipe: stdin is a terminal or device, not a pipe' => 'reads the value from a pipe, not from a terminal'
+--- FAIL: TestSecretSetRefusesATerminal (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.466s
+FAIL
+exit=1 (killed)
+
+## no hard-link fallback
+# in internal/store/atomic.go: '\t\treturn createExclusive(path, data, perm) // no hard links here' => '\t\treturn ioProblem("cannot create", path, err)'
+--- FAIL: TestWriteFileExclusiveFallsBackWithoutHardLinks (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.941s
+FAIL
+exit=1 (killed)
+
+## fallback replaces
+# in internal/store/atomic.go: 'os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm)' => 'os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)'
+--- FAIL: TestWriteFileExclusiveFallsBackWithoutHardLinks (0.04s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.828s
+FAIL
+exit=1 (killed)
+
+## fallback hides ErrExist
+# in internal/store/atomic.go: '\tif errors.Is(err, fs.ErrExist) {\n\t\treturn fmt.Errorf("%s: %w", path, fs.ErrExist)\n\t}\n\tif err != nil {\n\t\treturn ioProblem("cannot create"' => '\tif errors.Is(err, fs.ErrExist) {\n\t\treturn fmt.Errorf("%s", path)\n\t}\n\tif err != nil {\n\t\treturn ioProblem("cannot create"'
+--- FAIL: TestWriteFileExclusiveFallsBackWithoutHardLinks (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.700s
+FAIL
+exit=1 (killed)
+
+## link seam ignored
+# in internal/store/atomic.go: 'if err := linkFile(tmp, path); err != nil {' => 'if err := os.Link(tmp, path); err != nil {'
+--- FAIL: TestWriteFileExclusiveFallsBackWithoutHardLinks (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.782s
+FAIL
+exit=1 (killed)
+
+# survivors: none

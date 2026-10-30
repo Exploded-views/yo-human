@@ -1,0 +1,52 @@
+BUILD   no length prefix
+  internal/core/pipeline.go: 'full := strconv.Itoa(len(project)) + ":" + project + "/" + key' -> 'full := project + "/" + key'
+  FAIL	github.com/Exploded-views/yo-human/internal/core [build failed]
+  internal/core/pipeline.go:9:2: "strconv" imported and not used
+  [go test -count=1 ./internal/core -run 'ProviderKey|Namespaced' exit 1]
+
+SURVIVED rune count instead of bytes
+  internal/core/pipeline.go: 'strconv.Itoa(len(project))' -> 'strconv.Itoa(len([]rune(project)))'
+  [go test -count=1 ./internal/core -run 'ProviderKey|Namespaced' exit 0]
+
+KILLED  the hashed form lacks its marker
+  internal/core/pipeline.go: 'return "h:" + hex.EncodeToString(sum[:])' -> 'return "1:" + hex.EncodeToString(sum[:])'
+  --- FAIL: TestProviderKeyStaysWithin255Bytes (0.00s)
+      namespace_test.go:84: ProviderKey = "1:<hex>", "1:<hex>"; want two different hashed keys (h:...) of at most 255 bytes
+  [go test -count=1 ./internal/core -run 'ProviderKey|Namespaced' exit 1]
+
+KILLED  no length limit
+  internal/core/pipeline.go: 'if len(full) <= maxProviderKey {' -> 'if len(full) > 0 {'
+  --- FAIL: TestProviderKeyStaysWithin255Bytes (0.00s)
+      namespace_test.go:84: ProviderKey = "5:alpha/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", "4:beta/kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
+  --- FAIL: TestProviderKeyOfALongProject (0.00s)
+      namespace_test.go:104: long-project keys "253:😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀a/disk-7" (264 bytes) and "253:😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀b/disk-7" (264 bytes); want two different valid keys of at most 255 bytes
+  [go test -count=1 ./internal/core -run 'ProviderKey|Namespaced' exit 1]
+
+KILLED  the hash covers the key only
+  internal/core/pipeline.go: 'sum := sha256.Sum256([]byte(full))' -> 'sum := sha256.Sum256([]byte(key))'
+  --- FAIL: TestProviderKeyStaysWithin255Bytes (0.00s)
+      namespace_test.go:84: ProviderKey = "h:<hex>", "h:<hex>"; want two different hashed keys (h:...) of at most 255 bytes
+  --- FAIL: TestProviderKeyOfALongProject (0.00s)
+      namespace_test.go:104: long-project keys "h:<hex>" (66 bytes) and "h:<hex>" (66 bytes); want two different valid keys of at most 255 bytes
+  [go test -count=1 ./internal/core -run 'ProviderKey|Namespaced' exit 1]
+
+# Second pass: the first mutant rerun in a form that compiles; a non-ASCII project test added for the byte length.
+
+KILLED  no length prefix (compilable)
+  internal/core/pipeline.go: 'full := strconv.Itoa(len(project)) + ":" + project + "/" + key' -> 'full := project + "/" + key + strconv.Itoa(0)[:0]'
+  --- FAIL: TestIncidentsAreNamespacedByProject (0.15s)
+      namespace_test.go:39: no message reached the channel with dedup key "5:alpha/disk-7"; keys seen: map[alpha/disk-7:true beta/disk-7:true]
+      namespace_test.go:39: no message reached the channel with dedup key "4:beta/disk-7"; keys seen: map[alpha/disk-7:true beta/disk-7:true]
+  --- FAIL: TestProviderKeyStaysWithin255Bytes (0.00s)
+      namespace_test.go:87: ProviderKey = "alpha/disk-7", want 5:alpha/disk-7
+  --- FAIL: TestProviderKeyIsInjective (0.00s)
+      namespace_test.go:147: project a/b key c and project a key b/c share "a/b/c"
+      namespace_test.go:160: ProviderKey of a non-ASCII project = "café/k", want the length in bytes, 5:café/k
+  [go test -count=1 ./internal/core -run 'ProviderKey|Namespaced' exit 1]
+
+KILLED  rune count instead of bytes
+  internal/core/pipeline.go: 'strconv.Itoa(len(project))' -> 'strconv.Itoa(len([]rune(project)))'
+  --- FAIL: TestProviderKeyIsInjective (0.00s)
+      namespace_test.go:160: ProviderKey of a non-ASCII project = "4:café/k", want the length in bytes, 5:café/k
+  [go test -count=1 ./internal/core -run 'ProviderKey|Namespaced' exit 1]
+

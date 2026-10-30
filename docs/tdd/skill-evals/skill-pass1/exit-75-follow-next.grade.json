@@ -1,0 +1,15 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false,
+  false
+ ],
+ "note": "Reply waits 60s and runs flush, caps retries at 5, and then tells the human in-session with the title and ask, without re-sending notify or retrying forever.",
+ "pass": true
+}

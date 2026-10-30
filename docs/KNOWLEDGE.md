@@ -51,6 +51,17 @@ Written 2026-10-26 by the session that ran the original design conversation, for
 
 The owner picked **yo-human** (product and CLI): robots looking for their human. App Store-style subtitle idea: "Middle management for your AI". Alternatives considered: Mgmt, Hooman, Psst, Skip Level (and ~100 more). Lesson from top app names: one short real word or a light coinage; the joke goes in the subtitle.
 
+## Decisions M1 settled (2026-10-26)
+
+The full list, with the question each answered, is in OPEN-QUESTIONS.md (9 to 16); the spec's amendments record the behaviour.
+
+- **Exit codes are the contract.** 0 done; 64 fix the call; 75 queued, follow `next` (bounded, then tell the human); 69 failed for good, stop; 78 config only the human can fix; 74 store I/O; 70 a bug. A resolve whose cancel or PagerDuty close is queued exits 75, and one refused for good exits 69: the human may still be paged.
+- **Never lost.** Parked entries are kept forever, never aged out; a lock another process holds past the deadline leaves a keyed notify waiting in the queue for its incident check.
+- **Trusted project files** may reference secrets and point channels elsewhere; `config trust` shows all of it first, and they cannot define `log` channels.
+- **The human's commands** (`config trust`, `config init --config`, `secret set`) ask for a typed `yes` at the terminal. The human's own scripts skip it with `YO_HUMAN_NONINTERACTIVE=1` in the environment, audited in `log.jsonl`. An environment variable, not a flag, because an agent allowed to run `yo-human …` controls flags but not its environment. No output of the binary names it.
+- **Flags after the command**, so a harness's prefix deny rule matches every form. `--help`, `-h` and `help` print the usage and exit 0.
+- **Many harnesses.** The toolkit will drive yo-human from Claude Code, Codex, opencode and others. Each harness's permission rules are the primary boundary; the terminal prompt is defence in depth that a pseudo-terminal harness defeats.
+
 ## Pitfalls already hit (don't repeat)
 
 - Piping a check through `tail` hides its exit code: check exit codes directly.

@@ -1,0 +1,28 @@
+skills used: ['yo-human-eval:yo-human']
+
+**Next step:** I'd skip `yo-human levels --json`. The shim block in the config maps `--low` to the right level, and `page` takes no `--level`, so I never choose a level name. I'd go straight to the page.
+
+**1. Page the human (CI broken, production up):**
+
+```
+/opt/bin/page.sh --low "CI broken on main; production unaffected" "Main-branch CI is failing. Production is healthy. Needs a fix, but not urgent." ci-main-FAKE
+```
+
+- I'd use `--low` because this is "CI/CD broken while production is up". The default level is for "need the human now", and that doesn't apply.
+- `--low` goes before the summary.
+- The dedup key is the stable, problem-named `ci-main-FAKE`, so repeats are suppressed.
+- The details contain no secrets.
+
+**Exit codes:**
+- **0** (delivered, held, or suppressed): I carry on. `held` means the page waits for quiet hours to end, which is intended.
+- **64:** I read the `error`, `valid` and `fix` lines, fix the call, and rerun it.
+- **75:** I wait `after_seconds`, then run `yo-human flush`. I repeat while it exits 75, up to `attempts_left` times. I don't rerun the page. If the attempts run out, I tell the human directly in my session.
+- **69, 74, 78 or 70:** I stop. I tell the human in my session what I tried, the ask, and the error text. I don't retry, edit the config, or route around the failure.
+
+**2. Later, once CI is fixed and I've verified it (for example, a green run on main):**
+
+```
+/opt/bin/page.sh --low --resolve ci-main-FAKE
+```
+
+This uses the same key. It cancels anything still queued and tells the channels the human was reached on that the problem is over. I wouldn't send a new page saying "fixed". An unknown or already-resolved key exits 0 with `RESULT noop`, which is fine. If resolve exits 69, a scheduled page couldn't be cancelled, so I'd tell the human they may still get paged for something already fixed.

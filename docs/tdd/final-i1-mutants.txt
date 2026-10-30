@@ -1,0 +1,75 @@
+KILLED  a raise removes no held copy
+  internal/core/repeat.go: 'if dec == SendRaised || dec == Remind { // the copies still held are replaced by this send' -> 'if false { // the copies still held are replaced by this send'
+  --- FAIL: TestALouderRepeatInQuietHoursPagesOnce (0.17s)
+      raise_held_test.go:74: queue 1/0/0; the held quieter copy must leave the queue
+      raise_held_test.go:83: local got 2 sends; want only the louder page, nothing more after the window
+  --- FAIL: TestAReminderReplacesTheHeldCopy (0.17s)
+      raise_held_test.go:105: queued 2; want only the reminder's held send for local
+      raise_held_test.go:109: local got 2 sends after the window; want one
+  --- FAIL: TestARaisesFailedCancelIsAWarningAndIsQueued (0.15s)
+      raise_held_test.go:127: queue [ cancel]; want only the cancel, kept for a retry
+  [go test -count=1 ./internal/core ./internal/store exit 1]
+
+KILLED  only a raise removes held copies, not a reminder
+  internal/core/repeat.go: 'if dec == SendRaised || dec == Remind { // the copies' -> 'if dec == SendRaised { // the copies'
+  --- FAIL: TestAReminderReplacesTheHeldCopy (0.20s)
+      raise_held_test.go:105: queued 2; want only the reminder's held send for local
+      raise_held_test.go:109: local got 2 sends after the window; want one
+  [go test -count=1 ./internal/core ./internal/store exit 1]
+
+KILLED  a raise keeps the scheduled copy
+  internal/core/repeat.go: 'inc.Level, inc.Rank, inc.ContentHash, inc.LastSent = m.Level, rank, hash, now\n\t\treturn replaceScheduled(inc)' -> 'inc.Level, inc.Rank, inc.ContentHash, inc.LastSent = m.Level, rank, hash, now\n\t\treturn nil'
+  --- FAIL: TestALouderRepeatInQuietHoursPagesOnce (0.16s)
+      raise_held_test.go:71: cancelled map[]; the scheduled quieter copy must be cancelled when the louder one goes out
+      raise_held_test.go:78: reached {Instance:sched Delivered:[<hex>] Scheduled:[{ID:SCHED-FAKE-1 Fingerprint:<hex>}]}; a cancelled scheduled send is no longer held
+  --- FAIL: TestARaisesFailedCancelIsAWarningAndIsQueued (0.15s)
+      raise_held_test.go:124: warnings []; want the failed cancel as one warning
+      raise_held_test.go:127: queue []; want only the cancel, kept for a retry
+  --- FAIL: TestLaterReceiptsAccumulateOnTheInstance (0.31s)
+      repeat_notify_test.go:249: sched = {Instance:sched Delivered:[<hex>] Scheduled:[{ID:SCHED-FAKE-1 Fingerprint:<hex>}]}; want delivered, and the earlier held send replaced
+  [go test -count=1 ./internal/core ./internal/store exit 1]
+
+KILLED  a reminder keeps the scheduled copy
+  internal/core/repeat.go: 'inc.ContentHash, inc.LastSent = hash, now\n\t\treturn replaceScheduled(inc)' -> 'inc.ContentHash, inc.LastSent = hash, now\n\t\treturn nil'
+  --- FAIL: TestAReminderReplacesTheHeldCopy (0.14s)
+      raise_held_test.go:102: cancelled map[]; want the first scheduled copy cancelled and the reminder kept
+  --- FAIL: TestEachScheduledSendIsCancelledThroughItsOwnDestination (0.10s)
+      reached_test.go:58: reminder warnings []; want sched-1's cancellation queued for one.example
+  [go test -count=1 ./internal/core ./internal/store exit 1]
+
+KILLED  the cancelled copy stays on the record
+  internal/core/repeat.go: 'inc.Reached[i].Scheduled = nil' -> '_ = i'
+  --- FAIL: TestResolveCancelsAHeldPageAfterALouderOneWasDelivered (0.12s)
+      landing_test.go:196: Cancelled [{Instance:n ProviderID:SCHED-FAKE Scheduled:true} {Instance:n ProviderID:SCHED-FAKE Scheduled:true}], want the held page
+  --- FAIL: TestExpiredGenerationsEveryHeldSendIsCancelled (0.13s)
+      landing_test.go:306: Cancelled map[SCHED-FAKE-1:2 SCHED-FAKE-2:1]; both held pages of the expired generation must be cancelled
+  --- FAIL: TestALouderRepeatInQuietHoursPagesOnce (0.13s)
+      raise_held_test.go:78: reached {Instance:sched Delivered:[<hex>] Scheduled:[{ID:SCHED-FAKE-1 Fingerprint:<hex>}]}; a cancelled scheduled send is no longer held
+  --- FAIL: TestEachScheduledSendIsCancelledThroughItsOwnDestination (0.15s)
+      reached_test.go:61: under two first: queued 2; want the other send's cancellation queued
+  [go test -count=1 ./internal/core ./internal/store exit 1]
+
+KILLED  CancelHeld removes due entries too
+  internal/store/queue.go: 'w.IncidentKey == incidentKey && w.DeliverAt.After(now)' -> 'w.IncidentKey == incidentKey'
+  --- FAIL: TestBacklogEntryTakenByAnotherProcessIsSkipped (0.14s)
+      pipeline_hold_test.go:183: results [{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:2 config:false buried:false parked:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}]; want one skipped
+  --- FAIL: TestCancelHeldRemovesOnlyThatIncidentsHeldEntries (0.05s)
+      cancelheld_test.go:21: CancelHeld = [{Key:01A.ntfy IncidentKey:inc Data:[123 34 116 105 116 108 101 34 58 34 116 34 125] Attempts:0 NextAttempt:2026-10-26 12:00:00 +0000 UTC DeliverAt:2026-10-26 13:00:00 +0000 UTC Reason:} {Key:01C.ntfy IncidentKey:inc Data:[123 34 116 105 116 108 101 34 58 34 1
+  [go test -count=1 ./internal/core ./internal/store exit 1]
+
+KILLED  CancelHeld ignores the incident
+  internal/store/queue.go: 'return w.IncidentKey == incidentKey && w.DeliverAt.After(now)' -> 'return w.DeliverAt.After(now)'
+  --- FAIL: TestCancelHeldRemovesOnlyThatIncidentsHeldEntries (0.07s)
+      cancelheld_test.go:21: CancelHeld = [{Key:01A.ntfy IncidentKey:inc Data:[123 34 116 105 116 108 101 34 58 34 116 34 125] Attempts:0 NextAttempt:2026-10-26 12:00:00 +0000 UTC DeliverAt:2026-10-26 13:00:00 +0000 UTC Reason:} {Key:01B.ntfy IncidentKey:other Data:[123 34 116 105 116 108 101 34 58 34
+  [go test -count=1 ./internal/core ./internal/store exit 1]
+
+SURVIVED  a CancelHeld failure is ignored
+  internal/core/repeat.go: 'if _, err := p.d.Store.CancelHeld(id, now); err != nil {\n\t\t\t\treturn err' -> 'if _, err := p.d.Store.CancelHeld(id, now); err != nil {\n\t\t\t\t_ = err'
+  [go test -count=1 ./internal/core ./internal/store exit 0]
+
+KILLED  a CancelHeld failure is ignored (rerun after the test made only the removal fail)
+  internal/core/repeat.go: 'if _, err := p.d.Store.CancelHeld(id, now); err != nil {\n\t\t\t\treturn err' -> 'if _, err := p.d.Store.CancelHeld(id, now); err != nil {\n\t\t\t\t_ = err'
+  --- FAIL: TestARaiseThatCannotRemoveTheHeldCopyStops (0.12s)
+      raise_held_test.go:166: Notify = {Status:delivered ID:M002 Channels:[{Channel:local Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false level:page retryAt:{wall:0 ext:0 loc:<nil>}} {Channel:sched Status:sent Error: ProviderID:NOW-FAKE Scheduled:false 
+  [go test -count=1 ./internal/core exit 1]
+

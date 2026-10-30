@@ -1,0 +1,17 @@
+skills used: []
+
+Here is what I would do next, in order.
+
+1. **Load the `yo-human-eval:yo-human` skill** with the Skill tool. The call just exited non-zero, and that skill covers exit codes and dedup keys. If it requires anything beyond what I have, such as a dedup key, I'd follow it.
+
+2. **Pick the level from the `levels` output I already have.** I wouldn't re-run `levels`. `urgent` isn't a valid level. Checkout failing means production is impaired, which matches `siren`: "Production is impaired or something cannot wait for the human to come back." `nudge` is held during quiet hours, so it could leave checkout broken until the human looks. `siren` is sent regardless of quiet hours. It also requires `--ask`, and I already have one.
+
+3. **Retry once** with the corrected level and the same title and ask:
+   ```
+   yo-human notify --level siren --title "Checkout failing" --ask "Look at checkout now"
+   ```
+   If the skill calls for a dedup key, I'd add it.
+
+4. **Check the exit code.**
+   - On exit 0, I'm done. I'd note in my report that the notification went out as `siren`, and that my first attempt used an invalid level.
+   - On a non-zero exit, I'd read stderr and the skill's guidance for that code. I wouldn't loop blindly or downgrade to `murmur` to make the call succeed.

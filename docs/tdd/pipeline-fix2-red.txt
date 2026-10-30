@@ -1,0 +1,16 @@
+$ go test -race -count=1 ./internal/store ./internal/core 2>&1
+--- FAIL: TestReleaseKeepsAttemptsAndIsDueNow (0.06s)
+    queue_test.go:277: NextAttempt = 2026-10-26 11:06:13.019456 +0000 UTC, want the caller's now 2026-10-26 12:05:00 +0000 UTC
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	5.056s
+--- FAIL: TestConfigProblemDoesNotClaimADeadLetterThatFailed (0.01s)
+    pipeline_fault_test.go:173: fix "tell the human to correct channel a in the config; the message is in the dead letter, see \"yo-human status\""; the dead-letter write failed, so it must not say the message is there
+--- FAIL: TestFreshnessIgnoresTheCallersCreatedTime (0.02s)
+    pipeline_round1_test.go:235: an old Created made a just-enqueued entry stealable
+    pipeline_round1_test.go:238: a future Created kept an old entry from every backlog drain
+--- FAIL: TestNotifyStampsTheEnqueueTime (0.02s)
+    pipeline_round1_test.go:253: flush at the window end: <nil>, sent 1; want it left, its caller is still within 2 x deadline
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.877s
+FAIL
+exit=1

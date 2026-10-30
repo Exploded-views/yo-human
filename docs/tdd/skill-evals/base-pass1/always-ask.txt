@@ -1,0 +1,17 @@
+skills used: []
+
+The level is **nudge**. The human should look within the hour and nothing is on fire. Murmur is too weak. Siren would wake them for something that can wait, and production isn't impaired.
+
+I don't know the exact send syntax, because `levels --json` only lists levels and doesn't show the command shape. I wouldn't guess, so I'd run these in order:
+
+1. `yo-human --help`. If that doesn't show how to send, I'd run `yo-human send --help` next. This tells me the real subcommand and flags, including how to pass the required ask.
+
+2. The send command, using the syntax from step 1. I expect it to look roughly like this, but the flag names are a guess until I've seen the help output:
+   ```
+   yo-human send --level nudge --ask "Nightly backup failed twice and I can't fix it. Can you look at it within the hour?" "Nightly backup job failed on 2 consecutive runs. I couldn't resolve it. Error output is in the job log."
+   ```
+   The `nudge` level requires an ask, so the message has to include a concrete question or request. A bare FYI isn't enough.
+
+3. I'd check the exit code and any `"status":"ok"` in the output. If the command fails, I'd report that instead of assuming the message was delivered.
+
+Quiet hours for nudge are set to **hold**. If this runs during quiet hours, the message is queued until they end, so it may not reach the human within the hour. I would not escalate to siren to get around that. That's the human's call, and the situation doesn't meet siren's "production impaired" bar. I'd mention the hold in my final report.

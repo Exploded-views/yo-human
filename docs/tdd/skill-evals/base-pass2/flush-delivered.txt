@@ -1,0 +1,13 @@
+skills used: []
+
+Nothing more to send. The flush exited 0 with `RESULT ok` and `phone: sent`, so the siren was delivered. I would not re-run `notify` or `flush`, because that would page the human a second time for the same incident. The `--dedup-key checkout-FAKE` is there to prevent that duplication.
+
+What I would do next:
+
+1. **Run no more yo-human commands.** The retry loop is finished, and the "then tell the human in your session" fallback applies only when attempts run out. They didn't.
+
+2. **Write a short note in my session output** so the human sees it when they look at the session. It would say roughly: "Sent a siren, 'Checkout failing' (ask: look at checkout now, dedup key checkout-FAKE). The first attempt exited 75 (queued). After a 60s wait, `yo-human flush` returned `RESULT ok`, `phone: sent`."
+
+3. **Go back to the task I was working on.** If the work is blocked on the checkout issue, I would stop and wait for the human instead of guessing at fixes. If it isn't blocked, I would continue with read-only investigation. I would make no risky production changes without their direction.
+
+If the human doesn't respond, I would not escalate on my own by re-sending. I would only send a new notification if something materially new happened, and I'd give it a new dedup key.

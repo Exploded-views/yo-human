@@ -1,0 +1,128 @@
+# Mutation checks for M1 task 5 fix round 1 (internal/core and internal/store). Each mutant is applied to the GREEN code, then 'go test -race -count=1 -timeout 90s ./internal/core ./internal/store' is run; output filtered to ok/FAIL/--- FAIL/panic lines.
+# First run: the 'no quarter-of-deadline guard' and 'config problem not returned' mutants did not compile (unused variables), which is not a kill. Both were rewritten to compile and re-run; their results are in the closing section.
+== baseline
+ok  	github.com/Exploded-views/yo-human/internal/core	8.971s
+ok  	github.com/Exploded-views/yo-human/internal/store	6.083s
+== mutant: skipped not counted as queued
+--- FAIL: TestSummarize (0.00s)
+--- FAIL: TestNotifyNeverFailsBecauseAnotherProcessTookTheClaim (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	4.868s
+ok  	github.com/Exploded-views/yo-human/internal/store	4.962s
+FAIL
+== mutant: skipped not counted as unfinished
+--- FAIL: TestSummarize (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.831s
+ok  	github.com/Exploded-views/yo-human/internal/store	5.945s
+FAIL
+== mutant: fresh first attempts not left alone
+--- FAIL: TestBacklogLeavesFreshFirstAttemptsToTheirOwnCaller (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.695s
+ok  	github.com/Exploded-views/yo-human/internal/store	6.020s
+FAIL
+== mutant: fresh check ignores Attempts
+--- FAIL: TestBacklogLeavesFreshFirstAttemptsToTheirOwnCaller (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.898s
+ok  	github.com/Exploded-views/yo-human/internal/store	6.037s
+FAIL
+== mutant: no quarter-of-deadline guard
+FAIL	github.com/Exploded-views/yo-human/internal/core [build failed]
+ok  	github.com/Exploded-views/yo-human/internal/store	4.276s
+FAIL
+== mutant: cut-off send always spends an attempt
+--- FAIL: TestSendCutShortByTheCallerIsReleasedWithoutSpendingAnAttempt (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.609s
+ok  	github.com/Exploded-views/yo-human/internal/store	5.897s
+FAIL
+== mutant: cut-off send never counts (no half-deadline exception)
+--- FAIL: TestSendThatRanHalfTheDeadlineCountsAsAFailure (0.22s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.844s
+ok  	github.com/Exploded-views/yo-human/internal/store	6.007s
+FAIL
+== mutant: store Release spends an attempt
+--- FAIL: TestSendCutShortByTheCallerIsReleasedWithoutSpendingAnAttempt (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.824s
+--- FAIL: TestReleaseKeepsAttemptsAndIsDueNow (0.06s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	5.000s
+FAIL
+== mutant: store Release keeps the old NextAttempt
+ok  	github.com/Exploded-views/yo-human/internal/core	9.203s
+--- FAIL: TestReleaseKeepsAttemptsAndIsDueNow (0.07s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	5.156s
+FAIL
+== mutant: config problem not returned
+FAIL	github.com/Exploded-views/yo-human/internal/core [build failed]
+ok  	github.com/Exploded-views/yo-human/internal/store	4.306s
+FAIL
+== mutant: config flag dropped
+--- FAIL: TestConfigErrorIsDeadLetteredAndReportedAsConfig (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.813s
+ok  	github.com/Exploded-views/yo-human/internal/store	5.963s
+FAIL
+== mutant: config problem even when another channel is queued
+--- FAIL: TestConfigErrorNextToAQueuedChannelIsNotAConfigProblem (0.04s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.796s
+ok  	github.com/Exploded-views/yo-human/internal/store	5.996s
+FAIL
+== mutant: future DeliverAt reported queued
+--- FAIL: TestFailedScheduledSendWithAFutureDeliverAtIsHeld (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.960s
+ok  	github.com/Exploded-views/yo-human/internal/store	6.070s
+FAIL
+== mutant: Recover on the fake clock
+--- FAIL: TestNotifyNeverFailsBecauseAnotherProcessTookTheClaim (0.01s)
+--- FAIL: TestRecoverJudgesFileAgeByTheRealClock (0.07s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	4.640s
+ok  	github.com/Exploded-views/yo-human/internal/store	4.849s
+FAIL
+== mutant: log attempts before the increment
+--- FAIL: TestLogRecordsAttemptsAfterTheIncrement (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.931s
+ok  	github.com/Exploded-views/yo-human/internal/store	6.125s
+FAIL
+== mutant: provider id not filled in
+--- FAIL: TestScheduledChannelGetsDeliverAt (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.868s
+ok  	github.com/Exploded-views/yo-human/internal/store	6.020s
+FAIL
+== mutant: Scheduled not filled in
+--- FAIL: TestScheduledChannelGetsDeliverAt (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	8.078s
+ok  	github.com/Exploded-views/yo-human/internal/store	6.153s
+FAIL
+== mutant: BacklogWorkers ignored
+--- FAIL: TestBacklogEntryTakenByAnotherProcessIsSkipped (0.05s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.891s
+ok  	github.com/Exploded-views/yo-human/internal/store	5.922s
+FAIL
+
+# Re-run of the two mutants rewritten to compile
+== baseline
+== mutant: no quarter-of-deadline guard
+--- FAIL: TestBacklogDoesNotStartWithAQuarterOfTheDeadlineLeft (0.71s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	8.216s
+ok  	github.com/Exploded-views/yo-human/internal/store	5.924s
+FAIL
+== mutant: config problem not returned
+--- FAIL: TestConfigErrorIsDeadLetteredAndReportedAsConfig (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	7.790s
+ok  	github.com/Exploded-views/yo-human/internal/store	5.903s
+FAIL

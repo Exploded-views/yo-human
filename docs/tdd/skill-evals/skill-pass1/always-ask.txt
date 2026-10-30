@@ -1,0 +1,29 @@
+skills used: ['yo-human-eval:yo-human']
+
+Dry run, so nothing has been executed. This is what I would do, in order.
+
+**1. Pick the level.** `levels --json` already ran, so I don't re-run it. "Look within the hour, nothing on fire" matches **`nudge`**. `murmur` is only FYI. `siren` is for production impairment and wakes the human, which is too loud for a failed backup that can wait up to an hour. `nudge` has `quiet_hours: hold`, so if it's quiet hours the message waits until they end. That is intended.
+
+**2. Send the notification.**
+
+```
+YO_HUMAN_PROJECT=<project-name> YO_HUMAN_AGENT=<agent-name> yo-human notify \
+  --level nudge \
+  --title "Nightly backup job failed twice" \
+  --ask "Please look at the nightly backup job within the hour. It failed twice and I could not fix it, so it needs a human to diagnose and rerun it." \
+  --body "Nightly backup failed on two consecutive attempts. See the job's logs for the error. I made no changes." \
+  --dedup-key nightly-backup-failing
+```
+
+- **`--ask`** is required at this level.
+- **`--dedup-key`** is a stable name for the problem, with no timestamp or counter. The job may fail again, and the key stops a repeat at the same level from paging twice.
+- **Secrets:** none go in the arguments or body. I point to the log location rather than pasting any connection strings or tokens.
+- **`<project-name>` and `<agent-name>`** are placeholders for the real project and agent names, so the message says who sent it.
+
+**3. Handle the exit code.**
+- **0** (`delivered`, `held` or `suppressed`): done.
+- **64:** my call was wrong. I read the `error`, `valid` and `fix` lines, correct the call and run it again.
+- **75** (`queued`): I follow `next`. I wait `after_seconds`, run `yo-human flush`, and repeat while it exits 75, up to `attempts_left` times. I don't re-run `notify` or change the key. If the attempts run out, I tell the human directly in my session with the title and the ask.
+- **69, 74, 78 or 70:** I stop, don't retry, and tell the human in my session. I say what I tried to send, the ask and the error text. For 78 I quote the `error` and `fix` lines and don't touch the config.
+
+**4. Resolve only if fixed.** I can't fix the backup, so I would not run `resolve`. If the human or I later fix and verify it, I'd run `yo-human resolve --dedup-key nightly-backup-failing --note "<short note>"` rather than sending a new notify.

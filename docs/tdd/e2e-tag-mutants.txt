@@ -212,3 +212,9 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.010s
 FAIL
 exit=1
+
+=== M1 merge (yo-human#59): the name check (7dab2bf), each mutant run against go test ./internal/repolint/ -run TestE2EOnlyFixtures
+mutant: name check dropped: FAIL
+mutant: test files not exempt from the name check: FAIL
+mutant: _e2e.go files not exempt from the name check: FAIL
+mutant: name check on files that build without the tag: FAIL

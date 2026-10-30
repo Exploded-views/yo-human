@@ -1,0 +1,29 @@
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/store	2.112s
+exit=0
+=== mutant: quarantine ignores a link failure and removes the source (internal/store/quarantine.go: return ioProblem("cannot quarantine", path, err)
+	}
+	if err := removeFile -> err = nil
+	}
+	if err := removeFile)
+--- FAIL: TestQuarantineLinkFailureLeavesSourceVisible (0.01s)
+    quarantine_test.go:147: Due: want the quarantine failure reported
+    quarantine_test.go:150: source must stay in queue/ when it cannot be quarantined: stat $TMPDIR/TestQuarantineLinkFailureLeavesSourceVisible1924202307/001/state/queue/bad.x.json: no such file or directory
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.424s
+FAIL
+exit=1
+=== mutant: dead listing always strips a stamp-like suffix (internal/store/quarantine.go: if b, err := os.ReadFile(path); err == nil && json.Unmarshal(b, &w) == nil && w.Key == stem { -> if b, err := os.ReadFile(path); err == nil && json.Unmarshal(b, &w) == nil && w.Key == "" {)
+--- FAIL: TestDeadKeepsInstanceNameOfManyDigits (0.03s)
+    quarantine_test.go:187: DeadEntries = [{Pending:{Key:01A IncidentKey:i Data:[123 34 116 105 116 108 101 34 58 34 116 34 125] Attempts:0 NextAttempt:2026-10-26 12:00:00 +0000 UTC DeliverAt:2026-10-26 12:00:00 +0000 UTC} Reason:unreadable: file holds key "01A.123456789012345678", its name says "01A" At:2026-10-26 09:04:03.751782 +0000 UTC}], <nil>, want key "01A.123456789012345678"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.308s
+FAIL
+exit=1
+=== mutant: quarantine overwrites an existing dead record (internal/store/quarantine.go: linkFirstFree(path, s.path("dead"), deadNames(key)) -> os.Rename(path, s.path("dead", key+".json")))
+--- FAIL: TestQuarantineNeverOverwritesExistingDeadRecord (0.04s)
+    quarantine_test.go:111: counts = 0 0 1, want 0 0 2
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.144s
+FAIL
+exit=1

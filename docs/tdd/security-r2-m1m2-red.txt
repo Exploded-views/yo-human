@@ -1,0 +1,161 @@
+$ go test -count=1 ./internal/core -run 'Namespaced|ProviderKey'
+--- FAIL: TestIncidentsAreNamespacedByProject (0.13s)
+    namespace_test.go:38: no message reached the channel with dedup key "alpha/disk-7"; keys seen: map[disk-7:true]
+    namespace_test.go:38: no message reached the channel with dedup key "beta/disk-7"; keys seen: map[disk-7:true]
+    namespace_test.go:38: keys seen map[disk-7:true], want exactly [alpha/disk-7 beta/disk-7]
+    namespace_test.go:43: resolved keys = [disk-7], want [beta/disk-7], beta's key only
+--- FAIL: TestProviderKeyStaysWithin255Bytes (0.00s)
+    namespace_test.go:83: ProviderKey = "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk", "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"; want two different keys of at most 255 bytes, each starting with its project
+    namespace_test.go:86: ProviderKey = "disk-7", want alpha/disk-7
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.142s
+FAIL
+[exit 1]
+
+$ go test -count=1 ./internal/cli -run 'CallersProject|OutOfReach|UnlessAll'
+--- FAIL: TestAnotherProjectIsOutOfReachWhenTheProjectIsSet (0.25s)
+    namespace_test.go:48: resolve --project victim --dedup-key db-1: code=0 out="RESULT resolved <ULID>\npager: cancelled\nphone: cancelled\n" err=""; want exit 64, no stdout and "YO_HUMAN_PROJECT" on stderr
+    namespace_test.go:49: fix = "", want it to contain "run it from that project"
+    namespace_test.go:48: status --all: code=0 out="RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n" err=""; want exit 64, no stdout and "YO_HUMAN_PROJECT" on stderr
+    namespace_test.go:49: fix = "", want it to contain "run it from that project"
+    namespace_test.go:48: status --project victim: code=0 out="RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\n" err=""; want exit 64, no stdout and "YO_HUMAN_PROJECT" on stderr
+    namespace_test.go:49: fix = "", want it to contain "run it from that project"
+    namespace_test.go:48: notify --level page --title t --ask a --project victim --dedup-key db-1: code=75 out="RESULT queued <ULID>\nphone: queued (provider said no)\npager: queued (provider said no)\nnext: yo-human flush in 60s, 5 attempts left, then tell the human in your session\n" err=""; want exit 64, no stdout and "YO_HUMAN_PROJECT" on stderr
+    namespace_test.go:49: fix = "", want it to contain "run it from that project"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.707s
+FAIL
+[exit 1]
+
+$ go test -tags e2e -count=1 ./test/e2e
+--- FAIL: TestDeliveredOnAllThree (0.13s)
+    delivery_test.go:15: yo-human --json notify --level page --title Disk is full on build-7 --ask Free some space --body df says 100% --link https://example.com/runbook --dedup-key disk-7 --project proj --agent tester -> exit 0
+        {"version":1,"status":"delivered","id":"<ULID>","channels":[{"channel":"phone","status":"sent"},{"channel":"bell","status":"sent"},{"channel":"pager","status":"sent"}]}
+    delivery_test.go:22: pagerduty event: dedup_key is disk-7, want proj/disk-7
+    delivery_test.go:24: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[{"key":"disk-7","project":"proj","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full on build-7"}],"inflight":0,"queued":[],"status":"ok","version":1}
+--- FAIL: TestQueuedWhenEverythingIsDownThenFlushDelivers (0.27s)
+    delivery_test.go:55: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 75
+        RESULT queued <ULID>
+        phone: queued (ntfy answered HTTP 503)
+        bell: queued (bark answered HTTP 503)
+        pager: queued (pagerduty answered HTTP 503)
+        next: yo-human flush in 60s, 5 attempts left, then tell the human in your session
+    delivery_test.go:57: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[{"key":"disk-7","project":"proj","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full on build-7"}],"inflight":0,"queued":[{"id":"<ULID>","channel":"bell","attempts":1,"next_attempt":"<TIME>","kind":"send"},{"id":"<ULID>","channel":"pager","attempts":1,"next_attempt":"<TIME>","kind":"send"},{"id":"<ULID>","channel":"phone","attempts":1,"next_attempt":"<TIME>","kind":"send"}],"status":"ok","version":1}
+    delivery_test.go:64: yo-human flush -> exit 0
+        RESULT ok
+    delivery_test.go:69: yo-human flush -> exit 0
+        RESULT ok
+        bell: sent
+        pager: sent
+        phone: sent
+    delivery_test.go:74: the retried page: dedup_key is disk-7, want proj/disk-7
+    delivery_test.go:76: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[{"key":"disk-7","project":"proj","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full on build-7"}],"inflight":0,"queued":[],"status":"ok","version":1}
+--- FAIL: TestIncidentsAreNamespacedByProjectAtPagerDutyToo (0.22s)
+    namespace_test.go:16: yo-human notify --level urgent --title Disk full --ask Free space --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    namespace_test.go:18: yo-human resolve --dedup-key disk-7 -> exit 0
+        RESULT noop <ULID>
+    namespace_test.go:21: yo-human resolve --dedup-key disk-7 -> exit 0
+        RESULT resolved <ULID>
+        pager: sent
+        bell: sent
+        phone: sent
+    namespace_test.go:24: PagerDuty request 0 has dedup_key disk-7, want alpha/disk-7
+    namespace_test.go:24: PagerDuty request 1 has dedup_key disk-7, want alpha/disk-7
+--- FAIL: TestAnotherProjectIsOutOfReach (0.23s)
+    namespace_test.go:36: yo-human notify --level urgent --title Disk full --ask Free space --dedup-key db-1 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    namespace_test.go:38: yo-human resolve --project victim --dedup-key db-1 -> exit 0
+        RESULT resolved <ULID>
+        pager: sent
+        bell: sent
+        phone: sent
+    namespace_test.go:38: exit code 0, want 64
+        stdout:
+        RESULT resolved <ULID>
+        pager: sent
+        bell: sent
+        phone: sent
+        stderr:
+--- FAIL: TestHeldInQuietHoursThenFlushAfterTheWindow (0.19s)
+    quiet_test.go:22: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT held <ULID>
+        phone: held
+        bell: held
+        pager: held
+    quiet_test.go:30: yo-human --json status -> exit 0
+        {"dead":[],"held":[{"id":"<ULID>","channel":"bell","deliver_at":"<TIME>","kind":"send"},{"id":"<ULID>","channel":"pager","deliver_at":"<TIME>","kind":"send"}],"incidents":[{"key":"disk-7","project":"proj","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full on build-7"}],"inflight":0,"queued":[],"status":"ok","version":1}
+    quiet_test.go:41: yo-human flush -> exit 0
+        RESULT ok
+    quiet_test.go:46: yo-human flush -> exit 0
+        RESULT ok
+        bell: sent
+        pager: sent
+    quiet_test.go:48: released pagerduty send: dedup_key is disk-7, want proj/disk-7
+    quiet_test.go:50: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[{"key":"disk-7","project":"proj","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full on build-7"}],"inflight":0,"queued":[],"status":"ok","version":1}
+--- FAIL: TestRepeatSuppressedAndLouderEscalates (0.32s)
+    quiet_test.go:64: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    quiet_test.go:66: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT suppressed <ULID>
+    quiet_test.go:67: yo-human notify --level note --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT suppressed <ULID>
+    quiet_test.go:72: yo-human notify --level urgent --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    quiet_test.go:77: escalation to PagerDuty: dedup_key is disk-7, want proj/disk-7
+    quiet_test.go:80: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[{"key":"disk-7","project":"proj","level":"urgent","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full on build-7"}],"inflight":0,"queued":[],"status":"ok","version":1}
+--- FAIL: TestResolveSendsPagerDutyResolveAndPassiveNotes (0.28s)
+    resolve_test.go:14: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    resolve_test.go:15: yo-human resolve --dedup-key disk-7 --note Freed 40 GB -> exit 0
+        RESULT resolved <ULID>
+        pager: sent
+        phone: sent
+        bell: sent
+    resolve_test.go:22: the resolve carries the trigger's dedup key: dedup_key is disk-7, want proj/disk-7
+    resolve_test.go:41: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[],"inflight":0,"queued":[],"status":"ok","version":1}
+    resolve_test.go:45: yo-human resolve --dedup-key disk-7 -> exit 0
+        RESULT noop <ULID>
+--- FAIL: TestPageShimTriggerAndResolve (0.30s)
+    shim_trust_test.go:15: yo-human page Disk is full on build-7 df says 100% disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    shim_trust_test.go:20: shim trigger: map[dedup_key:disk-7 event_action:trigger payload:map[component:orchestrator custom_details:map[ask:Look at it now. body:df says 100% level:page message_id:<ULID>] severity:error source:proj summary:Disk is full on build-7] routing_key:ROUTINGKEY-FAKE-ONE]
+    shim_trust_test.go:25: yo-human page --resolve disk-7 -> exit 0
+        RESULT resolved <ULID>
+        pager: sent
+        phone: sent
+        bell: sent
+    shim_trust_test.go:31: shim resolve: map[dedup_key:disk-7 event_action:resolve routing_key:ROUTINGKEY-FAKE-ONE]
+    shim_trust_test.go:34: yo-human page --low Cache is cold  cache-1 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	5.575s
+FAIL
+[exit 1]
+

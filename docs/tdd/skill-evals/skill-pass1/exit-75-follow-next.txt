@@ -1,0 +1,24 @@
+skills used: ['yo-human-eval:yo-human']
+
+**Next steps (dry run, nothing executed):**
+
+The exit 75 means the message is queued and the journal has it, but the phone channel (ntfy) was unreachable. I would not re-run `notify`, because that makes a duplicate. I would not change the dedup key either. I would follow the `next:` line, with a bound.
+
+1. Wait 60 seconds. I'd use `sleep 60`.
+2. Run `yo-human flush`.
+3. If `flush` exits 0, the message was delivered. I'd carry on.
+4. If `flush` exits 75 again, I'd wait the `after_seconds` it prints (60 unless it says otherwise) and run `yo-human flush` again. I'd repeat this at most 5 times, the `attempts_left` value. If a later `flush` reports a smaller count, I'd use that.
+5. If `flush` exits 69, 74, 78, or 70, I'd stop retrying and go to the section below.
+
+**If it keeps failing (5 attempts used up, or a hard-stop exit code):**
+
+The human hasn't been reached on the phone, so I'd tell them directly in my session reply or handoff. I would state plainly:
+
+- **Title:** "Checkout failing"
+- **Ask:** "Look at checkout now"
+- **Level:** siren, because production is impaired.
+- **What happened:** The notification was written to the journal but the phone push stayed queued because the ntfy server couldn't be reached. I made the initial `notify` call and 5 `flush` retries, and all of them failed. I'd quote the final exit code and any `error:` or `fix:` lines.
+
+If the code is 78, I would not edit the config or secrets myself. I would not route around the failure with another notification tool either.
+
+Once checkout is fixed and verified, I'd run `yo-human resolve --dedup-key checkout-FAKE` to cancel anything still queued. I wouldn't send a new notify to say it's fixed.

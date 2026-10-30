@@ -1,0 +1,949 @@
+M1 startup pass, mutation checks on the hand-written schema validator and its callers (raw failing output, cut to 40 lines; each mutant reverted after). On the first run three mutants did not build and were rewritten (minLength by bytes, items unchecked, arrays by length), and the $ref mutant survived: TestCompileNodeRefusesWhatItCannotCheck now also refuses a $ref into another tree whose last segment names a definition. This run: all killed.
+
+=== a property name reported where its object is, not at the top level
+--- internal/config/schemacheck.go
+- n.propNames.check(k, "", out)
++ n.propNames.check(k, path, out)
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnCraftedDocs (0.01s)
+    agreement_test.go: config, crafted doc 24 "channels: {Pager: {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+    agreement_test.go: config, crafted doc 25 "channels: {-pager: {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+    agreement_test.go: config, crafted doc 26 "channels: {\"\": {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+    agreement_test.go: config, crafted doc 27 "channels: {a-very-long-channel-name-that-goes-on-and-on-and-on-past-sixty-three-chars: {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+    agreement_test.go: config, crafted doc 33 "channels: {Bad: x, good: {}}": reference [(top level): fails "pattern" channels.Bad: fails "type" channels.good: fails "required"] (err <nil>); validator [channels.Bad: fails "type" channels.good: fails "required" channels: fails "pattern"] (err <nil>)
+    agreement_test.go: config, crafted doc 34 "channels: {\"ü\": {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+    agreement_test.go: config, crafted doc 96 "version: 2\nnope: 1\nhuman: x\nchannels: {Bad: 1}\nlevels: [{}]\nquiet_hours: {}\nshim: {low: 5}": reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [channels.Bad: fails "type" channels: fails "pattern" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryFixture (0.06s)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3359: reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3326: reference [(top level): fails "pattern" channels.Bad: fails "type" channels.good: fails "required"] (err <nil>); validator [channels.Bad: fails "type" channels.good: fails "required" channels: fails "pattern"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3044: reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3076: reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 6644: reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [channels.Bad: fails "type" channels: fails "pattern" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3008: reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 2973: reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryKeywordShape (0.00s)
+    schemanode_test.go:80: keywords, doc 32 "{o: {ab: true, cd: 1, e: false}}": reference [(top level): fails "minLength" o.cd: fails "type"] (err <nil>); validator [o.cd: fails "type" o: fails "minLength"] (err <nil>)
+    schemanode_test.go:80: keywords, doc 34 "{o: {\"ü\": true, \"üü\": true}}": reference [(top level): fails "minLength"] (err <nil>); validator [o: fails "minLength"] (err <nil>)
+--- FAIL: FuzzValidatorAgreesWithJSONSchema (0.05s)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#24 (0.00s)
+        agreement_test.go: config, "channels: {Pager: {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#25 (0.00s)
+        agreement_test.go: config, "channels: {-pager: {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#26 (0.00s)
+        agreement_test.go: config, "channels: {\"\": {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#27 (0.00s)
+        agreement_test.go: config, "channels: {a-very-long-channel-name-that-goes-on-and-on-and-on-past-sixty-three-chars: {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#33 (0.00s)
+        agreement_test.go: config, "channels: {Bad: x, good: {}}": reference [(top level): fails "pattern" channels.Bad: fails "type" channels.good: fails "required"] (err <nil>); validator [channels.Bad: fails "type" channels.good: fails "required" channels: fails "pattern"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#34 (0.00s)
+        agreement_test.go: config, "channels: {\"ü\": {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [channels: fails "pattern"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#96 (0.00s)
+        agreement_test.go: config, "version: 2\nnope: 1\nhuman: x\nchannels: {Bad: 1}\nlevels: [{}]\nquiet_hours: {}\nshim: {low: 5}": reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [channels.Bad: fails "type" channels: fails "pattern" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/206ad0a5760b06b0 (0.00s)
+        agreement_test.go: config, "0B:\nchannels: {C}\nB: \n1A:\nX: ": reference [(top level): fails "pattern" 0B: unknown key 1A: unknown key B: unknown key X: unknown key channels.C: fails "type"] (err <nil>); validator [0B: unknown key 1A: unknown key B: unknown key X: unknown key channels.C: fails "type" channels: fails "pattern"] (err <nil>)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.132s
+FAIL
+[exit 1] KILLED
+
+=== one violation per missing required key
+--- internal/config/schemacheck.go
+- fail("required")
+			break
++ fail("required")
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnCraftedDocs (0.01s)
+    agreement_test.go: channel ntfy, crafted doc 1 "version: 1": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" version: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 2 "version: 2": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" version: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 3 "version: \"1\"": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" version: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 4 "version: 1.0": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" version: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 5 "version: 1.5": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" version: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 6 "version: 1e0": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" version: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 7 "version: true": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" version: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 8 "version: null": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" version: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 9 "version: [1]": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" version: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 10 "nope: 1": reference [(top level): fails "required" nope: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" nope: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 11 "{a: 1, b: 2, version: 1}": reference [(top level): fails "required" a: unknown key b: unknown key version: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" a: unknown key b: unknown key version: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 12 "\"bad\\tkey\": 1": reference [(top level): fails "required" bad\tkey: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" bad\tkey: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 13 "human: {name: Sam}": reference [(top level): fails "required" human: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" human: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 13 "human: {name: Sam}": reference [(top level): fails "required" name: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" name: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 14 "human: {name: 7}": reference [(top level): fails "required" human: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" human: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 14 "human: {name: 7}": reference [(top level): fails "required" name: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" name: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 15 "human: {nick: x}": reference [(top level): fails "required" human: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" human: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 15 "human: {nick: x}": reference [(top level): fails "required" nick: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" nick: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 16 "human: x": reference [(top level): fails "required" human: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" human: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 17 "human: null": reference [(top level): fails "required" human: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" human: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 18 "deadline: 1s": reference [(top level): fails "required" deadline: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" deadline: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 19 "deadline: 5": reference [(top level): fails "required" deadline: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" deadline: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 20 "incident_ttl: [24h]": reference [(top level): fails "required" incident_ttl: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" incident_ttl: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 21 "channels: {}": reference [(top level): fails "required" channels: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" channels: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 21 "channels: {}": reference [(top level): fails "required"] (err <nil>); validator [(top level): fails "required" (top level): fails "required"] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 22 "channels: []": reference [(top level): fails "required" channels: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" channels: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 23 "channels: {pager: {type: pagerduty, routing_key: {secret: pd}}}": reference [(top level): fails "required" channels: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" channels: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 23 "channels: {pager: {type: pagerduty, routing_key: {secret: pd}}}": reference [(top level): fails "required" pager: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" pager: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 23 "channels: {pager: {type: pagerduty, routing_key: {secret: pd}}}": reference [(top level): fails "required" routing_key: unknown key type: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" routing_key: unknown key type: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 23 "channels: {pager: {type: pagerduty, routing_key: {secret: pd}}}": reference [(top level): fails "required" secret: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" secret: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 24 "channels: {Pager: {type: log}}": reference [(top level): fails "required" channels: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" channels: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 24 "channels: {Pager: {type: log}}": reference [(top level): fails "required" Pager: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" Pager: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 24 "channels: {Pager: {type: log}}": reference [(top level): fails "required" type: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" type: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 25 "channels: {-pager: {type: log}}": reference [(top level): fails "required" channels: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" channels: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 25 "channels: {-pager: {type: log}}": reference [(top level): fails "required" -pager: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" -pager: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 25 "channels: {-pager: {type: log}}": reference [(top level): fails "required" type: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" type: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 26 "channels: {\"\": {type: log}}": reference [(top level): fails "required" channels: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" channels: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 26 "channels: {\"\": {type: log}}": reference [(top level): fails "required" (top level): unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" (top level): unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 26 "channels: {\"\": {type: log}}": reference [(top level): fails "required" type: unknown key] (err <nil>); validator [(top level): fails "required" (top level): fails "required" type: unknown key] (err <nil>)
+[... 1283 more lines]
+[exit 1] KILLED
+
+=== no integer: every number is fractional
+--- internal/config/schemacheck.go
+- if r, ok := ratOf(x); ok && r.IsInt() {
++ if r, ok := ratOf(x); ok && r.IsInt() && false {
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnCraftedDocs (0.01s)
+    agreement_test.go: config, crafted doc 65 "levels: [{name: page, retry: {every: 1m, times: 3}}]": reference [] (err <nil>); validator [levels.0.retry.times: fails "type"] (err <nil>)
+    agreement_test.go: config, crafted doc 66 "levels: [{name: page, retry: {every: 1m, times: -1}}]": reference [levels.0.retry.times: fails "minimum"] (err <nil>); validator [levels.0.retry.times: fails "minimum" levels.0.retry.times: fails "type"] (err <nil>)
+    agreement_test.go: config, crafted doc 68 "levels: [{name: page, retry: {times: 2.0}}]": reference [] (err <nil>); validator [levels.0.retry.times: fails "type"] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryFixture (0.06s)
+    agreement_test.go: config, internal/config/agreement_test.go offset 4845: reference [] (err <nil>); validator [levels.0.retry.times: fails "type"] (err <nil>)
+    agreement_test.go: config, internal/cli/trustview_test.go offset 277: reference [] (err <nil>); validator [levels.0.retry.times: fails "type"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 4902: reference [levels.0.retry.times: fails "minimum"] (err <nil>); validator [levels.0.retry.times: fails "minimum" levels.0.retry.times: fails "type"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 5018: reference [] (err <nil>); validator [levels.0.retry.times: fails "type"] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryKeywordShape (0.00s)
+    schemanode_test.go:80: keywords, doc 21 "{t: 3}": reference [] (err <nil>); validator [t: fails "type"] (err <nil>)
+    schemanode_test.go:80: keywords, doc 22 "{t: 3.0}": reference [] (err <nil>); validator [t: fails "type"] (err <nil>)
+    schemanode_test.go:80: keywords, doc 30 "{i: [{id: 1}, {id: 0}, {}, x, {id: 1.5}]}": reference [i.1.id: fails "minimum" i.2: fails "required" i.3: fails "type" i.4.id: fails "type"] (err <nil>); validator [i.0.id: fails "type" i.1.id: fails "minimum" i.1.id: fails "type" i.2: fails "required" i.3: fails "type" i.4.id: fails "type"] (err <nil>)
+--- FAIL: FuzzValidatorAgreesWithJSONSchema (0.05s)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#65 (0.00s)
+        agreement_test.go: config, "levels: [{name: page, retry: {every: 1m, times: 3}}]": reference [] (err <nil>); validator [levels.0.retry.times: fails "type"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#66 (0.00s)
+        agreement_test.go: config, "levels: [{name: page, retry: {every: 1m, times: -1}}]": reference [levels.0.retry.times: fails "minimum"] (err <nil>); validator [levels.0.retry.times: fails "minimum" levels.0.retry.times: fails "type"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#68 (0.00s)
+        agreement_test.go: config, "levels: [{name: page, retry: {times: 2.0}}]": reference [] (err <nil>); validator [levels.0.retry.times: fails "type"] (err <nil>)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.129s
+FAIL
+[exit 1] KILLED
+
+=== an integer is not a number
+--- internal/config/schemacheck.go
+- got == t || t == "number" && got == "integer"
++ got == t
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryKeywordShape (0.00s)
+    schemanode_test.go:80: keywords, doc 27 "{n: 1}": reference [] (err <nil>); validator [n: fails "type"] (err <nil>)
+    schemanode_test.go:80: keywords, doc 28 "{n: -1}": reference [n: fails "minimum"] (err <nil>); validator [n: fails "minimum" n: fails "type"] (err <nil>)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.128s
+FAIL
+[exit 1] KILLED
+
+=== minLength counts bytes, not runes
+--- internal/config/schemacheck.go
+- utf8.RuneCountInString(s) < n.minLength
++ len(s)+0*utf8.RuneCountInString(s) < n.minLength
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryKeywordShape (0.00s)
+    schemanode_test.go:80: keywords, doc 34 "{o: {\"ü\": true, \"üü\": true}}": reference [(top level): fails "minLength"] (err <nil>); validator [] (err <nil>)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.128s
+FAIL
+[exit 1] KILLED
+
+=== pattern not checked
+--- internal/config/schemacheck.go
+- n.pattern != nil && !n.pattern.MatchString(s)
++ false
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnCraftedDocs (0.01s)
+    agreement_test.go: config, crafted doc 24 "channels: {Pager: {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 25 "channels: {-pager: {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 26 "channels: {\"\": {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 27 "channels: {a-very-long-channel-name-that-goes-on-and-on-and-on-past-sixty-three-chars: {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 33 "channels: {Bad: x, good: {}}": reference [(top level): fails "pattern" channels.Bad: fails "type" channels.good: fails "required"] (err <nil>); validator [channels.Bad: fails "type" channels.good: fails "required"] (err <nil>)
+    agreement_test.go: config, crafted doc 34 "channels: {\"ü\": {type: log}}": reference [(top level): fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: channel bark, crafted doc 41 "channels: {phone: {type: ntfy, server: \"http://ntfy.example\", topic: {secret: t}, token: {secret: k, x: 1}}}": reference [(top level): fails "required" server: fails "pattern" token: unknown key topic: unknown key type: unknown key] (err <nil>); validator [(top level): fails "required" token: unknown key topic: unknown key type: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 41 "channels: {phone: {type: ntfy, server: \"http://ntfy.example\", topic: {secret: t}, token: {secret: k, x: 1}}}": reference [server: fails "pattern" token.x: unknown key type: unknown key] (err <nil>); validator [token.x: unknown key type: unknown key] (err <nil>)
+    agreement_test.go: channel bark, crafted doc 42 "channels: {phone: {type: ntfy, server: \"https:///\", topic: TOPIC}}": reference [(top level): fails "required" server: fails "pattern" topic: unknown key type: unknown key] (err <nil>); validator [(top level): fails "required" topic: unknown key type: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 42 "channels: {phone: {type: ntfy, server: \"https:///\", topic: TOPIC}}": reference [server: fails "pattern" topic: fails "type" type: unknown key] (err <nil>); validator [topic: fails "type" type: unknown key] (err <nil>)
+    agreement_test.go: channel pagerduty, crafted doc 46 "channels: {pager: {type: pagerduty, events_url: \"ftp://x\", routing_key: {secret: r}}}": reference [events_url: fails "pattern" type: unknown key] (err <nil>); validator [type: unknown key] (err <nil>)
+    agreement_test.go: config, crafted doc 60 "levels: [{name: Page}]": reference [levels.0.name: fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 87 "quiet_hours: {timezone: UTC, windows: [{days: [funday], from: \"24:00\", to: \"7:30\"}]}": reference [quiet_hours.windows.0.days.0: fails "enum" quiet_hours.windows.0.from: fails "pattern" quiet_hours.windows.0.to: fails "pattern"] (err <nil>); validator [quiet_hours.windows.0.days.0: fails "enum"] (err <nil>)
+    agreement_test.go: config, crafted doc 88 "quiet_hours: {timezone: UTC, windows: [{days: mon, from: 2200, to: \"23:60\"}]}": reference [quiet_hours.windows.0.days: fails "type" quiet_hours.windows.0.from: fails "type" quiet_hours.windows.0.to: fails "pattern"] (err <nil>); validator [quiet_hours.windows.0.days: fails "type" quiet_hours.windows.0.from: fails "type"] (err <nil>)
+    agreement_test.go: config, crafted doc 91 "quiet_hours: {timezone: 5, windows: [{days: [mon], from: \"22:00\\n\", to: \"07:00\"}]}": reference [quiet_hours.timezone: fails "type" quiet_hours.windows.0.from: fails "pattern"] (err <nil>); validator [quiet_hours.timezone: fails "type"] (err <nil>)
+    agreement_test.go: config, crafted doc 96 "version: 2\nnope: 1\nhuman: x\nchannels: {Bad: 1}\nlevels: [{}]\nquiet_hours: {}\nshim: {low: 5}": reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryFixture (0.06s)
+    agreement_test.go: config, internal/config/agreement_test.go offset 6375: reference [quiet_hours.timezone: fails "type" quiet_hours.windows.0.from: fails "pattern"] (err <nil>); validator [quiet_hours.timezone: fails "type"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 6644: reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>)
+    agreement_test.go: channel bark, internal/cli/trust_test.go offset 129: reference [(top level): fails "required" server: fails "pattern" type: unknown key] (err <nil>); validator [(top level): fails "required" type: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, internal/cli/trust_test.go offset 129: reference [(top level): fails "required" server: fails "pattern" type: unknown key] (err <nil>); validator [(top level): fails "required" type: unknown key] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3008: reference [(top level): fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 6148: reference [quiet_hours.windows.0.days: fails "type" quiet_hours.windows.0.from: fails "type" quiet_hours.windows.0.to: fails "pattern"] (err <nil>); validator [quiet_hours.windows.0.days: fails "type" quiet_hours.windows.0.from: fails "type"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3359: reference [(top level): fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: channel pagerduty, internal/config/agreement_test.go offset 4100: reference [events_url: fails "pattern" type: unknown key] (err <nil>); validator [type: unknown key] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 4576: reference [levels.0.name: fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3326: reference [(top level): fails "pattern" channels.Bad: fails "type" channels.good: fails "required"] (err <nil>); validator [channels.Bad: fails "type" channels.good: fails "required"] (err <nil>)
+    agreement_test.go: config, internal/config/load_test.go offset 8383: reference [quiet_hours.windows.0.from: fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 6059: reference [quiet_hours.windows.0.days.0: fails "enum" quiet_hours.windows.0.from: fails "pattern" quiet_hours.windows.0.to: fails "pattern"] (err <nil>); validator [quiet_hours.windows.0.days.0: fails "enum"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 2973: reference [(top level): fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: channel bark, internal/cli/cancelwarn_test.go offset 320: reference [(top level): fails "required" server: fails "pattern" topic: unknown key type: unknown key] (err <nil>); validator [(top level): fails "required" topic: unknown key type: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, internal/cli/cancelwarn_test.go offset 320: reference [server: fails "pattern" type: unknown key] (err <nil>); validator [type: unknown key] (err <nil>)
+    agreement_test.go: channel bark, internal/config/agreement_test.go offset 3816: reference [(top level): fails "required" server: fails "pattern" topic: unknown key type: unknown key] (err <nil>); validator [(top level): fails "required" topic: unknown key type: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, internal/config/agreement_test.go offset 3816: reference [server: fails "pattern" topic: fails "type" type: unknown key] (err <nil>); validator [topic: fails "type" type: unknown key] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3076: reference [(top level): fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: channel bark, internal/config/agreement_test.go offset 3703: reference [(top level): fails "required" server: fails "pattern" token: unknown key topic: unknown key type: unknown key] (err <nil>); validator [(top level): fails "required" token: unknown key topic: unknown key type: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, internal/config/agreement_test.go offset 3703: reference [server: fails "pattern" token.x: unknown key type: unknown key] (err <nil>); validator [token.x: unknown key type: unknown key] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3044: reference [(top level): fails "pattern"] (err <nil>); validator [] (err <nil>)
+--- FAIL: FuzzValidatorAgreesWithJSONSchema (0.05s)
+[... 40 more lines]
+[exit 1] KILLED
+
+=== an unknown key accepted
+--- internal/config/schemacheck.go
+- if n.noOthers {
++ if false {
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnCraftedDocs (0.02s)
+    agreement_test.go: channel bark, crafted doc 1 "version: 1": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel log, crafted doc 1 "version: 1": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 1 "version: 1": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel pagerduty, crafted doc 1 "version: 1": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel bark, crafted doc 2 "version: 2": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel log, crafted doc 2 "version: 2": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 2 "version: 2": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel pagerduty, crafted doc 2 "version: 2": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel bark, crafted doc 3 "version: \"1\"": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel log, crafted doc 3 "version: \"1\"": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 3 "version: \"1\"": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel pagerduty, crafted doc 3 "version: \"1\"": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel bark, crafted doc 4 "version: 1.0": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel log, crafted doc 4 "version: 1.0": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 4 "version: 1.0": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel pagerduty, crafted doc 4 "version: 1.0": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel bark, crafted doc 5 "version: 1.5": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel log, crafted doc 5 "version: 1.5": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 5 "version: 1.5": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel pagerduty, crafted doc 5 "version: 1.5": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel bark, crafted doc 6 "version: 1e0": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel log, crafted doc 6 "version: 1e0": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 6 "version: 1e0": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel pagerduty, crafted doc 6 "version: 1e0": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel bark, crafted doc 7 "version: true": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel log, crafted doc 7 "version: true": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 7 "version: true": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel pagerduty, crafted doc 7 "version: true": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel bark, crafted doc 8 "version: null": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel log, crafted doc 8 "version: null": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 8 "version: null": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel pagerduty, crafted doc 8 "version: null": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel bark, crafted doc 9 "version: [1]": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel log, crafted doc 9 "version: [1]": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 9 "version: [1]": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel pagerduty, crafted doc 9 "version: [1]": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel bark, crafted doc 10 "nope: 1": reference [(top level): fails "required" nope: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel log, crafted doc 10 "nope: 1": reference [(top level): fails "required" nope: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 10 "nope: 1": reference [(top level): fails "required" nope: unknown key] (err <nil>); validator [(top level): fails "required"] (err <nil>)
+[... 5367 more lines]
+[exit 1] KILLED
+
+=== additionalProperties as a schema not checked
+--- internal/config/schemacheck.go
+- n.others.check(obj[k], at, out)
++ _ = at
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnCraftedDocs (0.01s)
+    agreement_test.go: config, crafted doc 28 "channels: {pager: {}}": reference [channels.pager: fails "required"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 29 "channels: {pager: {type: \"\"}}": reference [channels.pager.type: fails "minLength"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 30 "channels: {pager: {type: 5}}": reference [channels.pager.type: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 31 "channels: {pager: x}": reference [channels.pager: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 32 "channels: {pager: null}": reference [channels.pager: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 33 "channels: {Bad: x, good: {}}": reference [(top level): fails "pattern" channels.Bad: fails "type" channels.good: fails "required"] (err <nil>); validator [(top level): fails "pattern"] (err <nil>)
+    agreement_test.go: config, crafted doc 96 "version: 2\nnope: 1\nhuman: x\nchannels: {Bad: 1}\nlevels: [{}]\nquiet_hours: {}\nshim: {low: 5}": reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [(top level): fails "pattern" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryFixture (0.06s)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3206: reference [channels.pager.type: fails "minLength"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3326: reference [(top level): fails "pattern" channels.Bad: fails "type" channels.good: fails "required"] (err <nil>); validator [(top level): fails "pattern"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3180: reference [channels.pager: fails "required"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3273: reference [channels.pager: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3298: reference [channels.pager: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 6644: reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [(top level): fails "pattern" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3240: reference [channels.pager.type: fails "type"] (err <nil>); validator [] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryKeywordShape (0.00s)
+    schemanode_test.go:80: keywords, doc 32 "{o: {ab: true, cd: 1, e: false}}": reference [(top level): fails "minLength" o.cd: fails "type"] (err <nil>); validator [(top level): fails "minLength"] (err <nil>)
+--- FAIL: FuzzValidatorAgreesWithJSONSchema (0.04s)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#28 (0.00s)
+        agreement_test.go: config, "channels: {pager: {}}": reference [channels.pager: fails "required"] (err <nil>); validator [] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#29 (0.00s)
+        agreement_test.go: config, "channels: {pager: {type: \"\"}}": reference [channels.pager.type: fails "minLength"] (err <nil>); validator [] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#30 (0.00s)
+        agreement_test.go: config, "channels: {pager: {type: 5}}": reference [channels.pager.type: fails "type"] (err <nil>); validator [] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#31 (0.00s)
+        agreement_test.go: config, "channels: {pager: x}": reference [channels.pager: fails "type"] (err <nil>); validator [] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#32 (0.00s)
+        agreement_test.go: config, "channels: {pager: null}": reference [channels.pager: fails "type"] (err <nil>); validator [] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#33 (0.00s)
+        agreement_test.go: config, "channels: {Bad: x, good: {}}": reference [(top level): fails "pattern" channels.Bad: fails "type" channels.good: fails "required"] (err <nil>); validator [(top level): fails "pattern"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#96 (0.00s)
+        agreement_test.go: config, "version: 2\nnope: 1\nhuman: x\nchannels: {Bad: 1}\nlevels: [{}]\nquiet_hours: {}\nshim: {low: 5}": reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [(top level): fails "pattern" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/206ad0a5760b06b0 (0.00s)
+        agreement_test.go: config, "0B:\nchannels: {C}\nB: \n1A:\nX: ": reference [(top level): fails "pattern" 0B: unknown key 1A: unknown key B: unknown key X: unknown key channels.C: fails "type"] (err <nil>); validator [(top level): fails "pattern" 0B: unknown key 1A: unknown key B: unknown key X: unknown key] (err <nil>)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.127s
+FAIL
+[exit 1] KILLED
+
+=== items not checked
+--- internal/config/schemacheck.go
+- n.items.check(e, join(path, strconv.Itoa(i)), out)
++ _, _, _ = e, i, strconv.Itoa
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnCraftedDocs (0.01s)
+    agreement_test.go: config, crafted doc 57 "levels: [x]": reference [levels.0: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 58 "levels: [{}]": reference [levels.0: fails "required"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 60 "levels: [{name: Page}]": reference [levels.0.name: fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 61 "levels: [{name: 5}]": reference [levels.0.name: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 62 "levels: [{name: page, extra: 1}]": reference [levels.0.extra: unknown key] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 63 "levels: [{name: page, use_when: 5, ask: maybe, quiet_hours: never}]": reference [levels.0.ask: fails "enum" levels.0.quiet_hours: fails "enum" levels.0.use_when: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 66 "levels: [{name: page, retry: {every: 1m, times: -1}}]": reference [levels.0.retry.times: fails "minimum"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 67 "levels: [{name: page, retry: {every: 5, times: 1.5}}]": reference [levels.0.retry.every: fails "type" levels.0.retry.times: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 69 "levels: [{name: page, retry: {times: \"3\"}}]": reference [levels.0.retry.times: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 70 "levels: [{name: page, retry: {often: true}}]": reference [levels.0.retry.often: unknown key] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 71 "levels: [{name: page, retry: x}]": reference [levels.0.retry: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 73 "levels: [{name: page, reminder: 60}]": reference [levels.0.reminder: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 75 "levels: [{name: page, send: [{channel: pager, interruption: loud}]}]": reference [levels.0.send.0.interruption: fails "enum"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 76 "levels: [{name: page, send: [{channel: \"\", interruption: active}]}]": reference [levels.0.send.0.channel: fails "minLength"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 77 "levels: [{name: page, send: [{}]}]": reference [levels.0.send.0: fails "required"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 78 "levels: [{name: page, send: [{channel: pager, interruption: active, options: [1]}]}]": reference [levels.0.send.0.options: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 79 "levels: [{name: page, send: [{channel: pager, interruption: active, x: 1}]}]": reference [levels.0.send.0.x: unknown key] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 80 "levels: [{name: page, send: x}]": reference [levels.0.send: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 81 "levels: [{name: page, send: [x, null, 5]}]": reference [levels.0.send.0: fails "type" levels.0.send.1: fails "type" levels.0.send.2: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 86 "quiet_hours: {timezone: UTC, windows: [{}]}": reference [quiet_hours.windows.0: fails "required"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 87 "quiet_hours: {timezone: UTC, windows: [{days: [funday], from: \"24:00\", to: \"7:30\"}]}": reference [quiet_hours.windows.0.days.0: fails "enum" quiet_hours.windows.0.from: fails "pattern" quiet_hours.windows.0.to: fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 88 "quiet_hours: {timezone: UTC, windows: [{days: mon, from: 2200, to: \"23:60\"}]}": reference [quiet_hours.windows.0.days: fails "type" quiet_hours.windows.0.from: fails "type" quiet_hours.windows.0.to: fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 89 "quiet_hours: {timezone: UTC, windows: [{days: [], from: \"00:00\", to: \"23:59\", x: 1}]}": reference [quiet_hours.windows.0.x: unknown key] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 91 "quiet_hours: {timezone: 5, windows: [{days: [mon], from: \"22:00\\n\", to: \"07:00\"}]}": reference [quiet_hours.timezone: fails "type" quiet_hours.windows.0.from: fails "pattern"] (err <nil>); validator [quiet_hours.timezone: fails "type"] (err <nil>)
+    agreement_test.go: config, crafted doc 96 "version: 2\nnope: 1\nhuman: x\nchannels: {Bad: 1}\nlevels: [{}]\nquiet_hours: {}\nshim: {low: 5}": reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryFixture (0.06s)
+    agreement_test.go: config, internal/cli/trustview_test.go offset 3754: reference [colour: unknown key levels.0.loudness: unknown key levels.0.send.0.via: unknown key] (err <nil>); validator [colour: unknown key] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 6148: reference [quiet_hours.windows.0.days: fails "type" quiet_hours.windows.0.from: fails "type" quiet_hours.windows.0.to: fails "pattern"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 5376: reference [levels.0.send.0.interruption: fails "enum"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/load_test.go offset 7979: reference [levels.0.send.0.interruption: fails "enum"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 4902: reference [levels.0.retry.times: fails "minimum"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 5066: reference [levels.0.retry.times: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 4532: reference [levels.0: fails "required"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 5560: reference [levels.0.send.0.options: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 5449: reference [levels.0.send.0.channel: fails "minLength"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 5649: reference [levels.0.send.0.x: unknown key] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 5521: reference [levels.0.send.0: fails "required"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 4960: reference [levels.0.retry.every: fails "type" levels.0.retry.times: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 5766: reference [levels.0.send.0: fails "type" levels.0.send.1: fails "type" levels.0.send.2: fails "type"] (err <nil>); validator [] (err <nil>)
+[... 74 more lines]
+[exit 1] KILLED
+
+=== $ref not followed
+--- internal/config/schemacheck.go
+- if n.refNode != nil {
+		n.refNode.check(v, path, out)
+	}
++ 
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnCraftedDocs (0.01s)
+    agreement_test.go: config, crafted doc 93 "shim: {default: {level: 5}, low: x, agent: 5}": reference [shim.agent: fails "type" shim.default.level: fails "type" shim.low: fails "type"] (err <nil>); validator [shim.agent: fails "type"] (err <nil>)
+    agreement_test.go: config, crafted doc 94 "shim: {default: {mode: x}, extra: 1}": reference [shim.default.mode: unknown key shim.extra: unknown key] (err <nil>); validator [shim.extra: unknown key] (err <nil>)
+    agreement_test.go: config, crafted doc 96 "version: 2\nnope: 1\nhuman: x\nchannels: {Bad: 1}\nlevels: [{}]\nquiet_hours: {}\nshim: {low: 5}": reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" version: fails "const"] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryFixture (0.06s)
+    agreement_test.go: config, internal/config/agreement_test.go offset 6644: reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" version: fails "const"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 6590: reference [shim.default.mode: unknown key shim.extra: unknown key] (err <nil>); validator [shim.extra: unknown key] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 6540: reference [shim.agent: fails "type" shim.default.level: fails "type" shim.low: fails "type"] (err <nil>); validator [shim.agent: fails "type"] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryKeywordShape (0.00s)
+    schemanode_test.go:80: keywords, doc 30 "{i: [{id: 1}, {id: 0}, {}, x, {id: 1.5}]}": reference [i.1.id: fails "minimum" i.2: fails "required" i.3: fails "type" i.4.id: fails "type"] (err <nil>); validator [] (err <nil>)
+--- FAIL: FuzzValidatorAgreesWithJSONSchema (0.05s)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#93 (0.00s)
+        agreement_test.go: config, "shim: {default: {level: 5}, low: x, agent: 5}": reference [shim.agent: fails "type" shim.default.level: fails "type" shim.low: fails "type"] (err <nil>); validator [shim.agent: fails "type"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#94 (0.00s)
+        agreement_test.go: config, "shim: {default: {mode: x}, extra: 1}": reference [shim.default.mode: unknown key shim.extra: unknown key] (err <nil>); validator [shim.extra: unknown key] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#96 (0.00s)
+        agreement_test.go: config, "version: 2\nnope: 1\nhuman: x\nchannels: {Bad: 1}\nlevels: [{}]\nquiet_hours: {}\nshim: {low: 5}": reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" version: fails "const"] (err <nil>)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.129s
+FAIL
+[exit 1] KILLED
+
+=== const compares numbers by spelling
+--- internal/config/schemacheck.go
+- return ok1 && ok2 && ra.Cmp(rb) == 0
++ _, _, _, _ = ra, rb, ok1, ok2
+		return a == b
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryKeywordShape (0.00s)
+    schemanode_test.go:80: keywords, doc 0 "{c: {a: [1, 2, {b: null}]}}": reference [] (err <nil>); validator [c: fails "const"] (err <nil>)
+    schemanode_test.go:80: keywords, doc 13 "{e: 1}": reference [] (err <nil>); validator [e: fails "enum"] (err <nil>)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.131s
+FAIL
+[exit 1] KILLED
+
+=== an object in const or enum compared by size only
+--- internal/config/schemacheck.go
+- if yv, ok := y[k]; !ok || !jsonEqual(xv, yv) {
++ if _, ok := y[k]; !ok && xv == nil {
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryKeywordShape (0.00s)
+    schemanode_test.go:80: keywords, doc 1 "{c: {a: [1, 2, {b: 0}]}}": reference [c: fails "const"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 2 "{c: {a: [1, 2]}}": reference [c: fails "const"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 4 "{c: {a: [1, 3, {b: null}]}}": reference [c: fails "const"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 11 "{e: {k: false}}": reference [e: fails "enum"] (err <nil>); validator [] (err <nil>)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.193s
+FAIL
+[exit 1] KILLED
+
+=== an array in const or enum compared by length only
+--- internal/config/schemacheck.go
+- if !jsonEqual(x[i], y[i]) {
++ if i < 0 {
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryKeywordShape (0.00s)
+    schemanode_test.go:80: keywords, doc 1 "{c: {a: [1, 2, {b: 0}]}}": reference [c: fails "const"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 4 "{c: {a: [1, 3, {b: null}]}}": reference [c: fails "const"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 8 "{e: [1, y]}": reference [e: fails "enum"] (err <nil>); validator [] (err <nil>)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.197s
+FAIL
+[exit 1] KILLED
+
+=== minimum inclusive bound made exclusive
+--- internal/config/schemacheck.go
+- r.Cmp(n.minimum) < 0
++ r.Cmp(n.minimum) <= 0
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryFixture (0.06s)
+    agreement_test.go: config, internal/cli/trustview_test.go offset 277: reference [] (err <nil>); validator [levels.0.retry.times: fails "minimum"] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryKeywordShape (0.00s)
+    schemanode_test.go:80: keywords, doc 25 "{n: 0.5}": reference [] (err <nil>); validator [n: fails "minimum"] (err <nil>)
+    schemanode_test.go:80: keywords, doc 30 "{i: [{id: 1}, {id: 0}, {}, x, {id: 1.5}]}": reference [i.1.id: fails "minimum" i.2: fails "required" i.3: fails "type" i.4.id: fails "type"] (err <nil>); validator [i.0.id: fails "minimum" i.1.id: fails "minimum" i.2: fails "required" i.3: fails "type" i.4.id: fails "type"] (err <nil>)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.132s
+FAIL
+[exit 1] KILLED
+
+=== violations left unsorted
+--- internal/config/schemacheck.go
+- sort.Slice(out, func(i, j int) bool { return out[i].String() < out[j].String() })
+	return out, nil
++ _ = sort.Slice
+	return out, nil
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryKeywordShape (0.00s)
+    schemanode_test.go:80: keywords, doc 32 "{o: {ab: true, cd: 1, e: false}}": reference [(top level): fails "minLength" o.cd: fails "type"] (err <nil>); validator [o.cd: fails "type" (top level): fails "minLength"] (err <nil>)
+--- FAIL: FuzzValidatorAgreesWithJSONSchema (0.05s)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/0b07a9c126eb2d7f (0.00s)
+        agreement_test.go: config, "{A: 0,00A: {A: {A: A,path: 000000000A}},levels: [{name: 000a,x: 0,send: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [00A: unknown key A: unknown key levels.0.send.0.000000A: unknown key levels.0.send.0.00000A000000: unknown key levels.0.send.0.00000A: unknown key levels.0.send.0: fails "required" levels.0.x: unknown key] (err <nil>); validator [00A: unknown key A: unknown key levels.0.send.0: fails "required" levels.0.send.0.000000A: unknown key levels.0.send.0.00000A: unknown key levels.0.send.0.00000A000000: unknown key levels.0.x: unknown key] (err <nil>)
+        agreement_test.go: channel bark, "{A: 0,00A: {A: {A: A,path: 000000000A}},levels: [{name: 000a,x: 0,send: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [(top level): fails "required" 000000A: unknown key 00000A000000: unknown key 00000A: unknown key] (err <nil>); validator [(top level): fails "required" 000000A: unknown key 00000A: unknown key 00000A000000: unknown key] (err <nil>)
+        agreement_test.go: channel log, "{A: 0,00A: {A: {A: A,path: 000000000A}},levels: [{name: 000a,x: 0,send: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [(top level): fails "required" 000000A: unknown key 00000A000000: unknown key 00000A: unknown key] (err <nil>); validator [(top level): fails "required" 000000A: unknown key 00000A: unknown key 00000A000000: unknown key] (err <nil>)
+        agreement_test.go: channel ntfy, "{A: 0,00A: {A: {A: A,path: 000000000A}},levels: [{name: 000a,x: 0,send: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [(top level): fails "required" 000000A: unknown key 00000A000000: unknown key 00000A: unknown key] (err <nil>); validator [(top level): fails "required" 000000A: unknown key 00000A: unknown key 00000A000000: unknown key] (err <nil>)
+        agreement_test.go: channel pagerduty, "{A: 0,00A: {A: {A: A,path: 000000000A}},levels: [{name: 000a,x: 0,send: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [(top level): fails "required" 000000A: unknown key 00000A000000: unknown key 00000A: unknown key] (err <nil>); validator [(top level): fails "required" 000000A: unknown key 00000A: unknown key 00000A000000: unknown key] (err <nil>)
+        agreement_test.go: config, "{A: 0,00A: {A: {A: A,path: 000000000A}},levels: [{name: 000a,x: 0,send: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [000000A: unknown key 00000A000000: unknown key 00000A: unknown key] (err <nil>); validator [000000A: unknown key 00000A: unknown key 00000A000000: unknown key] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/17d36a80e185a44f (0.00s)
+        agreement_test.go: channel bark, "A: [{00000A,0000\"\",0000A: [{0A}]}]": reference [(top level): fails "required" 00000A: unknown key 0000A: unknown key 0000\"\": unknown key] (err <nil>); validator [(top level): fails "required" 0000\"\": unknown key 00000A: unknown key 0000A: unknown key] (err <nil>)
+        agreement_test.go: channel log, "A: [{00000A,0000\"\",0000A: [{0A}]}]": reference [(top level): fails "required" 00000A: unknown key 0000A: unknown key 0000\"\": unknown key] (err <nil>); validator [(top level): fails "required" 0000\"\": unknown key 00000A: unknown key 0000A: unknown key] (err <nil>)
+        agreement_test.go: channel ntfy, "A: [{00000A,0000\"\",0000A: [{0A}]}]": reference [(top level): fails "required" 00000A: unknown key 0000A: unknown key 0000\"\": unknown key] (err <nil>); validator [(top level): fails "required" 0000\"\": unknown key 00000A: unknown key 0000A: unknown key] (err <nil>)
+        agreement_test.go: channel pagerduty, "A: [{00000A,0000\"\",0000A: [{0A}]}]": reference [(top level): fails "required" 00000A: unknown key 0000A: unknown key 0000\"\": unknown key] (err <nil>); validator [(top level): fails "required" 0000\"\": unknown key 00000A: unknown key 0000A: unknown key] (err <nil>)
+        agreement_test.go: config, "A: [{00000A,0000\"\",0000A: [{0A}]}]": reference [00000A: unknown key 0000A: unknown key 0000\"\": unknown key] (err <nil>); validator [0000\"\": unknown key 00000A: unknown key 0000A: unknown key] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/206ad0a5760b06b0 (0.00s)
+        agreement_test.go: config, "0B:\nchannels: {C}\nB: \n1A:\nX: ": reference [(top level): fails "pattern" 0B: unknown key 1A: unknown key B: unknown key X: unknown key channels.C: fails "type"] (err <nil>); validator [0B: unknown key 1A: unknown key B: unknown key X: unknown key (top level): fails "pattern" channels.C: fails "type"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/276c94bc808744df (0.00s)
+        agreement_test.go: channel bark, "00000A: [{00000A,000A: [{0\"\",00000000A,000000A}]}]": reference [(top level): fails "required" 00000000A: unknown key 000000A: unknown key 0\"\": unknown key] (err <nil>); validator [(top level): fails "required" 0\"\": unknown key 00000000A: unknown key 000000A: unknown key] (err <nil>)
+        agreement_test.go: channel log, "00000A: [{00000A,000A: [{0\"\",00000000A,000000A}]}]": reference [(top level): fails "required" 00000000A: unknown key 000000A: unknown key 0\"\": unknown key] (err <nil>); validator [(top level): fails "required" 0\"\": unknown key 00000000A: unknown key 000000A: unknown key] (err <nil>)
+        agreement_test.go: channel ntfy, "00000A: [{00000A,000A: [{0\"\",00000000A,000000A}]}]": reference [(top level): fails "required" 00000000A: unknown key 000000A: unknown key 0\"\": unknown key] (err <nil>); validator [(top level): fails "required" 0\"\": unknown key 00000000A: unknown key 000000A: unknown key] (err <nil>)
+        agreement_test.go: channel pagerduty, "00000A: [{00000A,000A: [{0\"\",00000000A,000000A}]}]": reference [(top level): fails "required" 00000000A: unknown key 000000A: unknown key 0\"\": unknown key] (err <nil>); validator [(top level): fails "required" 0\"\": unknown key 00000000A: unknown key 000000A: unknown key] (err <nil>)
+        agreement_test.go: config, "00000A: [{00000A,000A: [{0\"\",00000000A,000000A}]}]": reference [00000000A: unknown key 000000A: unknown key 0\"\": unknown key] (err <nil>); validator [0\"\": unknown key 00000000A: unknown key 000000A: unknown key] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/2c8ac03dea6593dc (0.00s)
+        agreement_test.go: channel bark, "A: [{00000A,000A,0000\"\",1000A: [{0A}]}]": reference [(top level): fails "required" 00000A: unknown key 0000\"\": unknown key 000A: unknown key 1000A: unknown key] (err <nil>); validator [(top level): fails "required" 0000\"\": unknown key 00000A: unknown key 000A: unknown key 1000A: unknown key] (err <nil>)
+        agreement_test.go: channel log, "A: [{00000A,000A,0000\"\",1000A: [{0A}]}]": reference [(top level): fails "required" 00000A: unknown key 0000\"\": unknown key 000A: unknown key 1000A: unknown key] (err <nil>); validator [(top level): fails "required" 0000\"\": unknown key 00000A: unknown key 000A: unknown key 1000A: unknown key] (err <nil>)
+        agreement_test.go: channel ntfy, "A: [{00000A,000A,0000\"\",1000A: [{0A}]}]": reference [(top level): fails "required" 00000A: unknown key 0000\"\": unknown key 000A: unknown key 1000A: unknown key] (err <nil>); validator [(top level): fails "required" 0000\"\": unknown key 00000A: unknown key 000A: unknown key 1000A: unknown key] (err <nil>)
+        agreement_test.go: channel pagerduty, "A: [{00000A,000A,0000\"\",1000A: [{0A}]}]": reference [(top level): fails "required" 00000A: unknown key 0000\"\": unknown key 000A: unknown key 1000A: unknown key] (err <nil>); validator [(top level): fails "required" 0000\"\": unknown key 00000A: unknown key 000A: unknown key 1000A: unknown key] (err <nil>)
+        agreement_test.go: config, "A: [{00000A,000A,0000\"\",1000A: [{0A}]}]": reference [00000A: unknown key 0000\"\": unknown key 000A: unknown key 1000A: unknown key] (err <nil>); validator [0000\"\": unknown key 00000A: unknown key 000A: unknown key 1000A: unknown key] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/3cb608a0d2eaff0f (0.00s)
+        agreement_test.go: channel bark, "{A: 0,0A: {A: {A: A,000A: 000000000A}},A00000: [{000A: 00A,x: 0,000B: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [(top level): fails "required" 0A: unknown key A00000: unknown key A: unknown key] (err <nil>); validator [(top level): fails "required" 0A: unknown key A: unknown key A00000: unknown key] (err <nil>)
+        agreement_test.go: channel log, "{A: 0,0A: {A: {A: A,000A: 000000000A}},A00000: [{000A: 00A,x: 0,000B: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [(top level): fails "required" 0A: unknown key A00000: unknown key A: unknown key] (err <nil>); validator [(top level): fails "required" 0A: unknown key A: unknown key A00000: unknown key] (err <nil>)
+        agreement_test.go: channel ntfy, "{A: 0,0A: {A: {A: A,000A: 000000000A}},A00000: [{000A: 00A,x: 0,000B: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [(top level): fails "required" 0A: unknown key A00000: unknown key A: unknown key] (err <nil>); validator [(top level): fails "required" 0A: unknown key A: unknown key A00000: unknown key] (err <nil>)
+        agreement_test.go: channel pagerduty, "{A: 0,0A: {A: {A: A,000A: 000000000A}},A00000: [{000A: 00A,x: 0,000B: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [(top level): fails "required" 0A: unknown key A00000: unknown key A: unknown key] (err <nil>); validator [(top level): fails "required" 0A: unknown key A: unknown key A00000: unknown key] (err <nil>)
+        agreement_test.go: config, "{A: 0,0A: {A: {A: A,000A: 000000000A}},A00000: [{000A: 00A,x: 0,000B: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [0A: unknown key A00000: unknown key A: unknown key] (err <nil>); validator [0A: unknown key A: unknown key A00000: unknown key] (err <nil>)
+        agreement_test.go: channel bark, "{A: 0,0A: {A: {A: A,000A: 000000000A}},A00000: [{000A: 00A,x: 0,000B: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [(top level): fails "required" 000000A: unknown key 00000A000000: unknown key 00000A: unknown key] (err <nil>); validator [(top level): fails "required" 000000A: unknown key 00000A: unknown key 00000A000000: unknown key] (err <nil>)
+        agreement_test.go: channel log, "{A: 0,0A: {A: {A: A,000A: 000000000A}},A00000: [{000A: 00A,x: 0,000B: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [(top level): fails "required" 000000A: unknown key 00000A000000: unknown key 00000A: unknown key] (err <nil>); validator [(top level): fails "required" 000000A: unknown key 00000A: unknown key 00000A000000: unknown key] (err <nil>)
+        agreement_test.go: channel ntfy, "{A: 0,0A: {A: {A: A,000A: 000000000A}},A00000: [{000A: 00A,x: 0,000B: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [(top level): fails "required" 000000A: unknown key 00000A000000: unknown key 00000A: unknown key] (err <nil>); validator [(top level): fails "required" 000000A: unknown key 00000A: unknown key 00000A000000: unknown key] (err <nil>)
+        agreement_test.go: channel pagerduty, "{A: 0,0A: {A: {A: A,000A: 000000000A}},A00000: [{000A: 00A,x: 0,000B: [{00000A,000000A: A,00000A000000: 000000A}]}]}": reference [(top level): fails "required" 000000A: unknown key 00000A000000: unknown key 00000A: unknown key] (err <nil>); validator [(top level): fails "required" 000000A: unknown key 00000A: unknown key 00000A000000: unknown key] (err <nil>)
+[... 27 more lines]
+[exit 1] KILLED
+
+=== enum not checked
+--- internal/config/schemacheck.go
+- n.enum != nil && !n.inEnum(v)
++ false
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnCraftedDocs (0.01s)
+    agreement_test.go: config, crafted doc 63 "levels: [{name: page, use_when: 5, ask: maybe, quiet_hours: never}]": reference [levels.0.ask: fails "enum" levels.0.quiet_hours: fails "enum" levels.0.use_when: fails "type"] (err <nil>); validator [levels.0.use_when: fails "type"] (err <nil>)
+    agreement_test.go: config, crafted doc 75 "levels: [{name: page, send: [{channel: pager, interruption: loud}]}]": reference [levels.0.send.0.interruption: fails "enum"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 87 "quiet_hours: {timezone: UTC, windows: [{days: [funday], from: \"24:00\", to: \"7:30\"}]}": reference [quiet_hours.windows.0.days.0: fails "enum" quiet_hours.windows.0.from: fails "pattern" quiet_hours.windows.0.to: fails "pattern"] (err <nil>); validator [quiet_hours.windows.0.from: fails "pattern" quiet_hours.windows.0.to: fails "pattern"] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryFixture (0.06s)
+    agreement_test.go: config, internal/config/agreement_test.go offset 5376: reference [levels.0.send.0.interruption: fails "enum"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/load_test.go offset 7979: reference [levels.0.send.0.interruption: fails "enum"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 6059: reference [quiet_hours.windows.0.days.0: fails "enum" quiet_hours.windows.0.from: fails "pattern" quiet_hours.windows.0.to: fails "pattern"] (err <nil>); validator [quiet_hours.windows.0.from: fails "pattern" quiet_hours.windows.0.to: fails "pattern"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 4664: reference [levels.0.ask: fails "enum" levels.0.quiet_hours: fails "enum" levels.0.use_when: fails "type"] (err <nil>); validator [levels.0.use_when: fails "type"] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryKeywordShape (0.00s)
+    schemanode_test.go:80: keywords, doc 8 "{e: [1, y]}": reference [e: fails "enum"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 9 "{e: [1]}": reference [e: fails "enum"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 11 "{e: {k: false}}": reference [e: fails "enum"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 12 "{e: {k: true, j: 1}}": reference [e: fails "enum"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 14 "{e: 1.5}": reference [e: fails "enum"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 18 "{e: true}": reference [e: fails "enum"] (err <nil>); validator [] (err <nil>)
+--- FAIL: FuzzValidatorAgreesWithJSONSchema (0.05s)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#63 (0.00s)
+        agreement_test.go: config, "levels: [{name: page, use_when: 5, ask: maybe, quiet_hours: never}]": reference [levels.0.ask: fails "enum" levels.0.quiet_hours: fails "enum" levels.0.use_when: fails "type"] (err <nil>); validator [levels.0.use_when: fails "type"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#75 (0.00s)
+        agreement_test.go: config, "levels: [{name: page, send: [{channel: pager, interruption: loud}]}]": reference [levels.0.send.0.interruption: fails "enum"] (err <nil>); validator [] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#87 (0.00s)
+        agreement_test.go: config, "quiet_hours: {timezone: UTC, windows: [{days: [funday], from: \"24:00\", to: \"7:30\"}]}": reference [quiet_hours.windows.0.days.0: fails "enum" quiet_hours.windows.0.from: fails "pattern" quiet_hours.windows.0.to: fails "pattern"] (err <nil>); validator [quiet_hours.windows.0.from: fails "pattern" quiet_hours.windows.0.to: fails "pattern"] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/3a1c114ac045bdd8 (0.00s)
+        agreement_test.go: keywords, "e: 0": reference [e: fails "enum"] (err <nil>); validator [] (err <nil>)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.130s
+FAIL
+[exit 1] KILLED
+
+=== const not checked
+--- internal/config/schemacheck.go
+- n.hasConst && !jsonEqual(v, n.constVal)
++ false
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnCraftedDocs (0.02s)
+    agreement_test.go: config, crafted doc 2 "version: 2": reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 3 "version: \"1\"": reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 5 "version: 1.5": reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 7 "version: true": reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 8 "version: null": reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 9 "version: [1]": reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 96 "version: 2\nnope: 1\nhuman: x\nchannels: {Bad: 1}\nlevels: [{}]\nquiet_hours: {}\nshim: {low: 5}": reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type"] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryFixture (0.12s)
+    agreement_test.go: config, internal/config/agreement_test.go offset 6644: reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type"] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 9561: reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 2538: reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 2572: reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 2606: reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 2624: reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 2523: reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 2642: reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/load_test.go offset 8594: reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryKeywordShape (0.00s)
+    schemanode_test.go:80: keywords, doc 1 "{c: {a: [1, 2, {b: 0}]}}": reference [c: fails "const"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 2 "{c: {a: [1, 2]}}": reference [c: fails "const"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 3 "{c: {a: [1, 2, {b: null}], z: 1}}": reference [c: fails "const"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 4 "{c: {a: [1, 3, {b: null}]}}": reference [c: fails "const"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 5 "{c: [1, 2]}": reference [c: fails "const"] (err <nil>); validator [] (err <nil>)
+    schemanode_test.go:80: keywords, doc 6 "{c: 1}": reference [c: fails "const"] (err <nil>); validator [] (err <nil>)
+--- FAIL: FuzzValidatorAgreesWithJSONSchema (0.10s)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#2 (0.00s)
+        agreement_test.go: config, "version: 2": reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#3 (0.00s)
+        agreement_test.go: config, "version: \"1\"": reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#5 (0.00s)
+        agreement_test.go: config, "version: 1.5": reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#7 (0.00s)
+        agreement_test.go: config, "version: true": reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#8 (0.00s)
+        agreement_test.go: config, "version: null": reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#9 (0.00s)
+        agreement_test.go: config, "version: [1]": reference [version: fails "const"] (err <nil>); validator [] (err <nil>)
+    --- FAIL: FuzzValidatorAgreesWithJSONSchema/seed#96 (0.00s)
+        agreement_test.go: config, "version: 2\nnope: 1\nhuman: x\nchannels: {Bad: 1}\nlevels: [{}]\nquiet_hours: {}\nshim: {low: 5}": reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type"] (err <nil>)
+[... 13 more lines]
+[exit 1] KILLED
+
+=== type not checked
+--- internal/config/schemacheck.go
+- len(n.types) > 0 && !n.typeMatches(v)
++ false
+$ go test ./internal/config -run Agrees
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnCraftedDocs (0.01s)
+    agreement_test.go: config, crafted doc 14 "human: {name: 7}": reference [human.name: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 16 "human: x": reference [human: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 17 "human: null": reference [human: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 19 "deadline: 5": reference [deadline: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 20 "incident_ttl: [24h]": reference [incident_ttl: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 22 "channels: []": reference [channels: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 30 "channels: {pager: {type: 5}}": reference [channels.pager.type: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 31 "channels: {pager: x}": reference [channels.pager: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 32 "channels: {pager: null}": reference [channels.pager: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 33 "channels: {Bad: x, good: {}}": reference [(top level): fails "pattern" channels.Bad: fails "type" channels.good: fails "required"] (err <nil>); validator [(top level): fails "pattern" channels.good: fails "required"] (err <nil>)
+    agreement_test.go: channel log, crafted doc 39 "channels: {journal: {type: log, path: 5, extra: 1}}": reference [extra: unknown key path: fails "type" type: unknown key] (err <nil>); validator [extra: unknown key type: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 42 "channels: {phone: {type: ntfy, server: \"https:///\", topic: TOPIC}}": reference [server: fails "pattern" topic: fails "type" type: unknown key] (err <nil>); validator [server: fails "pattern" type: unknown key] (err <nil>)
+    agreement_test.go: channel ntfy, crafted doc 43 "channels: {phone: {type: ntfy, topic: {}, token: {secret: 5}}}": reference [(top level): fails "required" token.secret: fails "type" topic: fails "required" type: unknown key] (err <nil>); validator [(top level): fails "required" topic: fails "required" type: unknown key] (err <nil>)
+    agreement_test.go: channel bark, crafted doc 45 "channels: {phone: {type: bark, device_key: [d]}}": reference [device_key: fails "type" type: unknown key] (err <nil>); validator [type: unknown key] (err <nil>)
+    agreement_test.go: channel pagerduty, crafted doc 47 "channels: {pager: {type: pagerduty, events_url: 5}}": reference [(top level): fails "required" events_url: fails "type" type: unknown key] (err <nil>); validator [(top level): fails "required" type: unknown key] (err <nil>)
+    agreement_test.go: config, crafted doc 56 "levels: {}": reference [levels: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 57 "levels: [x]": reference [levels.0: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 61 "levels: [{name: 5}]": reference [levels.0.name: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 63 "levels: [{name: page, use_when: 5, ask: maybe, quiet_hours: never}]": reference [levels.0.ask: fails "enum" levels.0.quiet_hours: fails "enum" levels.0.use_when: fails "type"] (err <nil>); validator [levels.0.ask: fails "enum" levels.0.quiet_hours: fails "enum"] (err <nil>)
+    agreement_test.go: config, crafted doc 63 "levels: [{name: page, use_when: 5, ask: maybe, quiet_hours: never}]": reference [ask: unknown key name: unknown key quiet_hours: fails "type" use_when: unknown key] (err <nil>); validator [ask: unknown key name: unknown key use_when: unknown key] (err <nil>)
+    agreement_test.go: config, crafted doc 64 "levels: [{name: page, ask: required, quiet_hours: hold}, {name: note, ask: optional, quiet_hours: send}]": reference [ask: unknown key name: unknown key quiet_hours: fails "type"] (err <nil>); validator [ask: unknown key name: unknown key] (err <nil>)
+    agreement_test.go: config, crafted doc 64 "levels: [{name: page, ask: required, quiet_hours: hold}, {name: note, ask: optional, quiet_hours: send}]": reference [ask: unknown key name: unknown key quiet_hours: fails "type"] (err <nil>); validator [ask: unknown key name: unknown key] (err <nil>)
+    agreement_test.go: config, crafted doc 67 "levels: [{name: page, retry: {every: 5, times: 1.5}}]": reference [levels.0.retry.every: fails "type" levels.0.retry.times: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 69 "levels: [{name: page, retry: {times: \"3\"}}]": reference [levels.0.retry.times: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 71 "levels: [{name: page, retry: x}]": reference [levels.0.retry: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 73 "levels: [{name: page, reminder: 60}]": reference [levels.0.reminder: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 78 "levels: [{name: page, send: [{channel: pager, interruption: active, options: [1]}]}]": reference [levels.0.send.0.options: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 80 "levels: [{name: page, send: x}]": reference [levels.0.send: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 81 "levels: [{name: page, send: [x, null, 5]}]": reference [levels.0.send.0: fails "type" levels.0.send.1: fails "type" levels.0.send.2: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 88 "quiet_hours: {timezone: UTC, windows: [{days: mon, from: 2200, to: \"23:60\"}]}": reference [quiet_hours.windows.0.days: fails "type" quiet_hours.windows.0.from: fails "type" quiet_hours.windows.0.to: fails "pattern"] (err <nil>); validator [quiet_hours.windows.0.to: fails "pattern"] (err <nil>)
+    agreement_test.go: config, crafted doc 90 "quiet_hours: {timezone: UTC, windows: x, extra: 1}": reference [quiet_hours.extra: unknown key quiet_hours.windows: fails "type"] (err <nil>); validator [quiet_hours.extra: unknown key] (err <nil>)
+    agreement_test.go: config, crafted doc 91 "quiet_hours: {timezone: 5, windows: [{days: [mon], from: \"22:00\\n\", to: \"07:00\"}]}": reference [quiet_hours.timezone: fails "type" quiet_hours.windows.0.from: fails "pattern"] (err <nil>); validator [quiet_hours.windows.0.from: fails "pattern"] (err <nil>)
+    agreement_test.go: config, crafted doc 93 "shim: {default: {level: 5}, low: x, agent: 5}": reference [shim.agent: fails "type" shim.default.level: fails "type" shim.low: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 95 "shim: []": reference [shim: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, crafted doc 96 "version: 2\nnope: 1\nhuman: x\nchannels: {Bad: 1}\nlevels: [{}]\nquiet_hours: {}\nshim: {low: 5}": reference [(top level): fails "pattern" channels.Bad: fails "type" human: fails "type" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" shim.low: fails "type" version: fails "const"] (err <nil>); validator [(top level): fails "pattern" levels.0: fails "required" nope: unknown key quiet_hours: fails "required" version: fails "const"] (err <nil>)
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnEveryFixture (0.06s)
+    agreement_test.go: config, internal/cli/scheduledcancel_test.go offset 8733: reference [quiet_hours: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: config, internal/config/agreement_test.go offset 3273: reference [channels.pager: fails "type"] (err <nil>); validator [] (err <nil>)
+    agreement_test.go: keywords, internal/config/containment_test.go offset 453: reference [n: fails "type"] (err <nil>); validator [] (err <nil>)
+[... 140 more lines]
+[exit 1] KILLED
+
+=== an unknown schema keyword skipped instead of refused
+--- internal/config/schemanode.go
+- c, ok := compilers[k]
+		if !ok {
+			return nil, fmt.Errorf("unsupported schema keyword %q", k)
+		}
++ c, ok := compilers[k]
+		if !ok {
+			continue
+		}
+$ go test ./internal/config -run 'Refuses'
+--- FAIL: TestCompileNodeRefusesWhatItCannotCheck (0.00s)
+    schemanode_test.go:112: a nested unknown keyword: {"properties": {"a": {"oneOf": []}}} compiled; want it refused
+    schemanode_test.go:112: an unknown keyword: {"maxLength": 3} compiled; want it refused
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.013s
+FAIL
+[exit 1] KILLED
+
+=== a $ref outside $defs resolved by its last segment
+--- internal/config/schemanode.go
+- name, ok := strings.CutPrefix(n.ref, "#/$defs/")
++ name, ok := n.ref[strings.LastIndex(n.ref, "/")+1:], true
+$ go test ./internal/config -run 'Refuses'
+--- FAIL: TestCompileNodeRefusesWhatItCannotCheck (0.00s)
+    schemanode_test.go:112: a $ref to another tree: {"$ref": "#/definitions/item", "$defs": {"item": {}}} compiled; want it refused
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.012s
+FAIL
+[exit 1] KILLED
+
+=== the loader skips the schema check
+--- internal/config/load.go
+- found, err := nodeViolations(sch, m)
++ found, err := []violation(nil), error(nil)
+	_ = sch
+$ go test ./internal/config ./internal/cli
+--- FAIL: TestCheckLayer (0.00s)
+    fileaccess_test.go:58: a file with an unknown key: <nil>; want a Config problem
+--- FAIL: TestLoadProblems (0.02s)
+    --- FAIL: TestLoadProblems/unknown_top-level_key (0.00s)
+        load_test.go:243: error = <nil>, want a *problem.Problem
+    --- FAIL: TestLoadProblems/wrong_type (0.00s)
+        load_test.go:243: Kind = 3, want 1 (the merged config cannot be decoded)
+    --- FAIL: TestLoadProblems/bad_version (0.01s)
+        load_test.go:243: error = <nil>, want a *problem.Problem
+--- FAIL: TestHostilePathsAreQuoted (0.01s)
+    robust_test.go:115: error = <nil>, want a *problem.Problem
+--- FAIL: TestNamesAreRestricted (0.03s)
+    robust_test.go:150: channel name "Bad_Name" accepted
+    robust_test.go:154: level name "Bad_Name" accepted
+    robust_test.go:150: channel name "-lead" accepted
+    robust_test.go:154: level name "-lead" accepted
+    robust_test.go:150: channel name "has space" accepted
+    robust_test.go:154: level name "has space" accepted
+    robust_test.go:150: channel name "<hex>" accepted
+    robust_test.go:154: level name "<hex>" accepted
+    robust_test.go:150: channel name "a.b" accepted
+    robust_test.go:154: level name "a.b" accepted
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.559s
+--- FAIL: TestConfigTrustAllowsNewlinesAndTabsInValues (0.04s)
+    forge_test.go:71: newline in interruption: code=0 out="RESULT ok\ntrusting \"/private$TMPDIR/TestConfigTrustAllowsNewlinesAndTabsInValues1042315031/003/p/.yo-human.yaml\"\nversion 1\nchannel \"office\" has type \"ntfy\"\nchannel \"office\" server <not a valid URL>\nlevel \"page\" use_when \"x\"\nlevel \"page\" sends to \"office\" (x\\nchannel \\\"office\\\" server \\\"https://trusted.example\\\")\ntrusted; a change to the file un-trusts it until you run this again\n" err=""; want exit 78, no stdout and "breaks the config schema" on stderr
+--- FAIL: TestConfigTrustRefusesAFileThatBreaksTheSchema (0.02s)
+    trust_test.go:247: trust of a file that breaks the schema: code=0 out="RESULT ok\ntrusting \"/private$TMPDIR/TestConfigTrustRefusesAFileThatBreaksTheSchema4055471367/001/proj/.yo-human.yaml\"\nversion 1\nalso sets (not shown; read the file): colour\ntrusted; a change to the file un-trusts it until you run this again\n" err=""; want exit 78, no stdout and "breaks the config schema" on stderr
+    trust_test.go:248: the prompt was shown: "trusting \"/private$TMPDIR/TestConfigTrustRefusesAFileThatBreaksTheSchema4055471367/001/proj/.yo-human.yaml\"\nversion 1\nalso sets (not shown; read the file): colour\nTrust this file? Type yes to confirm: "
+    trust_test.go:250: a trust record was written: <nil>
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	15.274s
+FAIL
+[exit 1] KILLED
+
+=== a channel's settings skip the schema check
+--- internal/config/validate.go
+- found, err := nodeViolations(sch, settings)
++ found, err := []violation(nil), error(nil)
+	_ = sch
+$ go test ./internal/config ./internal/cli
+--- FAIL: TestBarkSchemaAcceptsSecretReferences (0.00s)
+    bark_schema_test.go:35: no key: accepted
+    bark_schema_test.go:35: http server: accepted
+    bark_schema_test.go:35: stray key: accepted
+--- FAIL: TestNtfySchemaAcceptsSecretReferences (0.00s)
+    ntfy_schema_test.go:34: no topic: accepted
+    ntfy_schema_test.go:34: http server: accepted
+    ntfy_schema_test.go:34: stray key: accepted
+--- FAIL: TestPagerDutySchemaAcceptsSecretReferences (0.00s)
+    pagerduty_schema_test.go:35: no key: accepted
+    pagerduty_schema_test.go:35: http url: accepted
+    pagerduty_schema_test.go:35: stray key: accepted
+--- FAIL: TestCheckFindings (0.00s)
+    --- FAIL: TestCheckFindings/settings_violate_the_type's_schema (0.00s)
+        validate_test.go:71: Check = [], want exactly one problem
+--- FAIL: TestSchemaViolationsNeverEchoValues (0.00s)
+    validate_test.go:169: want schema findings
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.242s
+ok  	github.com/Exploded-views/yo-human/internal/cli	15.205s
+FAIL
+[exit 1] KILLED
+
+
+=== the jsonschema dependency gate, scripts/nodeps.sh. On the first run two mutants survived: a go list failure ignored, and a grep failure on the search passed as no match (the stub that failed every grep stopped the script at the control first, and the failing go list printed nothing, so the control caught it). nodeps_test.sh now has a go list that fails after printing, and a grep that fails only on the search; all four killed.
+
+=== nodeps: a match passes
+--- scripts/nodeps.sh
+- sed 's/^/  /' "$tmp.hits" >&2; exit 1 ;;
++ sed 's/^/  /' "$tmp.hits" >&2; exit 0 ;;
+$ sh scripts/nodeps_test.sh
+ok   a clean listing
+FAIL a forbidden package: exit 0, want 1
+    nodeps: go list -deps ./cmd/yo-human holds packages matching jsonschema:
+      github.com/santhosh-tekuri/jsonschema/v6
+ok   go list fails
+ok   an empty listing proves nothing
+ok   go list fails after printing
+ok   grep fails
+ok   grep fails on the search
+ok   no pattern
+ok   the binary has no jsonschema
+FAIL the config tests do import jsonschema: exit 0, want 1
+    nodeps: go list -deps -test ./internal/config holds packages matching jsonschema:
+      github.com/santhosh-tekuri/jsonschema/v6/kind
+      github.com/santhosh-tekuri/jsonschema/v6
+nodeps_test: 2 case(s) failed
+[exit 1] KILLED
+
+=== nodeps: a failing go list is ignored
+--- scripts/nodeps.sh
+- go list "$@" >"$tmp" || { echo "nodeps: go list $* failed" >&2; exit 2; }
++ go list "$@" >"$tmp" || true
+$ sh scripts/nodeps_test.sh
+ok   a clean listing
+ok   a forbidden package
+ok   go list fails
+ok   an empty listing proves nothing
+FAIL go list fails after printing: exit 0, want 2
+    go: a package failed to load
+    nodeps: go list -deps ./cmd/yo-human holds no package matching jsonschema
+ok   grep fails
+ok   grep fails on the search
+ok   no pattern
+ok   the binary has no jsonschema
+ok   the config tests do import jsonschema
+nodeps_test: 1 case(s) failed
+[exit 1] KILLED
+
+=== nodeps: no control
+--- scripts/nodeps.sh
+- 1) echo "nodeps: go list $* does not list runtime, so the search proves nothing" >&2; exit 2 ;;
++ 1) ;;
+$ sh scripts/nodeps_test.sh
+ok   a clean listing
+ok   a forbidden package
+ok   go list fails
+FAIL an empty listing proves nothing: exit 0, want 2
+    nodeps: go list -deps ./cmd/yo-human holds no package matching jsonschema
+ok   go list fails after printing
+ok   grep fails
+ok   grep fails on the search
+ok   no pattern
+ok   the binary has no jsonschema
+ok   the config tests do import jsonschema
+nodeps_test: 1 case(s) failed
+[exit 1] KILLED
+
+=== nodeps: a failing grep passes as no match
+--- scripts/nodeps.sh
+- 1) echo "nodeps: go list $* holds no package matching $pattern"; exit 0 ;;
+*) echo "nodeps: grep failed" >&2; exit 2 ;;
++ *) echo "nodeps: go list $* holds no package matching $pattern"; exit 0 ;;
+$ sh scripts/nodeps_test.sh
+ok   a clean listing
+ok   a forbidden package
+ok   go list fails
+ok   an empty listing proves nothing
+ok   go list fails after printing
+ok   grep fails
+FAIL grep fails on the search: exit 0, want 2
+    grep: failed
+    nodeps: go list -deps ./cmd/yo-human holds no package matching jsonschema
+ok   no pattern
+ok   the binary has no jsonschema
+ok   the config tests do import jsonschema
+nodeps_test: 1 case(s) failed
+[exit 1] KILLED
+
+=== the binary-size budget (tools/perf) and its ratchet in CheckBase.
+
+=== CheckBase: the size check is not run
+--- tools/perf/budget.go
+- return append(vs, checkBinaryBase(cur, base)...)
++ return vs
+$ go test ./tools/perf
+--- FAIL: TestCheckBaseRejectsARaisedOrRemovedBinaryBudget (0.00s)
+    size_test.go:29: removed: got [], want exactly [binary_bytes: budget removed]
+    size_test.go:29: raised by a byte: got [], want exactly [binary_bytes: budget raised 1000 → 1001 bytes]
+    size_test.go:29: raised a lot: got [], want exactly [binary_bytes: budget raised 1000 → 9000000 bytes]
+--- FAIL: TestRunBaseRejectsARaisedBinaryBudget (0.01s)
+    size_test.go:94: raised over the base: exit 0, stdout "binary: 10 bytes, budget 101 bytes\nok: p95 2.3ms, budget 5000ms (ci=true)\n"; want 1 naming the raise
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	1.723s
+FAIL
+[exit 1] KILLED
+
+=== CheckBase: a raised size budget passes
+--- tools/perf/budget.go
+- case cur.BinaryBytes > base.BinaryBytes:
++ case false:
+$ go test ./tools/perf
+--- FAIL: TestCheckBaseRejectsARaisedOrRemovedBinaryBudget (0.00s)
+    size_test.go:29: raised by a byte: got [], want exactly [binary_bytes: budget raised 1000 → 1001 bytes]
+    size_test.go:29: raised a lot: got [], want exactly [binary_bytes: budget raised 1000 → 9000000 bytes]
+--- FAIL: TestRunBaseRejectsARaisedBinaryBudget (0.01s)
+    size_test.go:94: raised over the base: exit 0, stdout "binary: 10 bytes, budget 101 bytes\nok: p95 2.3ms, budget 5000ms (ci=true)\n"; want 1 naming the raise
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	1.699s
+FAIL
+[exit 1] KILLED
+
+=== CheckBase: a raise by one byte passes
+--- tools/perf/budget.go
+- case cur.BinaryBytes > base.BinaryBytes:
++ case cur.BinaryBytes > base.BinaryBytes+1:
+$ go test ./tools/perf
+--- FAIL: TestCheckBaseRejectsARaisedOrRemovedBinaryBudget (0.00s)
+    size_test.go:29: raised by a byte: got [], want exactly [binary_bytes: budget raised 1000 → 1001 bytes]
+--- FAIL: TestRunBaseRejectsARaisedBinaryBudget (0.01s)
+    size_test.go:94: raised over the base: exit 0, stdout "binary: 10 bytes, budget 101 bytes\nok: p95 2.4ms, budget 5000ms (ci=true)\n"; want 1 naming the raise
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	1.702s
+FAIL
+[exit 1] KILLED
+
+=== CheckBase: a removed size budget passes
+--- tools/perf/budget.go
+- case cur.BinaryBytes == 0:
+		return []Violation{{"binary_bytes", "budget removed"}}
++ 
+$ go test ./tools/perf
+--- FAIL: TestCheckBaseRejectsARaisedOrRemovedBinaryBudget (0.00s)
+    size_test.go:29: removed: got [], want exactly [binary_bytes: budget removed]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	1.712s
+FAIL
+[exit 1] KILLED
+
+=== CheckBase: a base with no size budget still checked
+--- tools/perf/budget.go
+- case base.BinaryBytes == 0:
+		return nil
++ 
+$ go test ./tools/perf
+--- FAIL: TestCheckBaseViolations (0.00s)
+    budget_test.go:182: budget raised: got [a: budget raised 10ms → 15ms binary_bytes: budget removed], want exactly [a: budget raised 10ms → 15ms]
+    budget_test.go:182: headroom raised: got [ci_headroom: raised 2.0 → 2.5 binary_bytes: budget removed], want exactly [ci_headroom: raised 2.0 → 2.5]
+    budget_test.go:182: runs lowered: got [runs: lowered 20 → 10 binary_bytes: budget removed], want exactly [runs: lowered 20 → 10]
+    budget_test.go:182: budget removed: got [b: budget removed binary_bytes: budget removed], want exactly [b: budget removed]
+--- FAIL: TestCheckBaseAllowsTighteningAndGrowth (0.00s)
+    budget_test.go:197: scenario added: got [binary_bytes: budget removed], want none
+    budget_test.go:197: unchanged: got [binary_bytes: budget removed], want none
+    budget_test.go:197: budget lowered: got [binary_bytes: budget removed], want none
+    budget_test.go:197: headroom lowered: got [binary_bytes: budget removed], want none
+    budget_test.go:197: runs raised: got [binary_bytes: budget removed], want none
+--- FAIL: TestRunBaseBudgets (0.02s)
+    budget_test.go:222: lowered: exit 1, stdout "ok: p95 2.3ms, budget 5000ms (ci=false)\nbinary_bytes: budget removed\n"; want 0
+--- FAIL: TestCheckBaseAllowsALowerOrANewBinaryBudget (0.00s)
+    size_test.go:43: new, no budget before: got [binary_bytes: budget raised 0 → 1000 bytes], want none
+    size_test.go:43: none in either: got [binary_bytes: budget removed], want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	1.724s
+FAIL
+[exit 1] KILLED
+
+=== CheckSize: at the budget fails
+--- tools/perf/budget.go
+- if fi.Size() > max {
++ if fi.Size() >= max {
+$ go test ./tools/perf
+--- FAIL: TestRunChecksTheBinarySizeWithoutHeadroom (0.01s)
+    size_test.go:80: at the budget: exit 1, stdout "binary: 100 bytes, budget 100 bytes\nok: p95 2.3ms, budget 5000ms (ci=true)\nbinary: 100 bytes > budget 100 bytes\n"; want 0 with the size printed
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	1.710s
+FAIL
+[exit 1] KILLED
+
+=== CheckSize: CI headroom applied
+--- tools/perf/budget.go
+- if fi.Size() > max {
++ if fi.Size() > 2*max {
+$ go test ./tools/perf
+--- FAIL: TestRunChecksTheBinarySizeWithoutHeadroom (0.01s)
+    size_test.go:83: a byte over, CI on: exit 0, stdout "binary: 100 bytes, budget 99 bytes\nok: p95 2.2ms, budget 5000ms (ci=true)\n"; want 1 naming the size (no headroom)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	1.706s
+FAIL
+[exit 1] KILLED
+
+=== run: the binary is never weighed
+--- tools/perf/main.go
+- if max == 0 {
+		return nil, nil
+	}
++ if max >= 0 {
+		return nil, nil
+	}
+$ go test ./tools/perf
+--- FAIL: TestRunChecksTheBinarySizeWithoutHeadroom (0.01s)
+    size_test.go:80: at the budget: exit 0, stdout "ok: p95 2.4ms, budget 5000ms (ci=true)\n"; want 0 with the size printed
+    size_test.go:83: a byte over, CI on: exit 0, stdout "ok: p95 2.1ms, budget 5000ms (ci=true)\n"; want 1 naming the size (no headroom)
+    size_test.go:86: no binary: exit 0, stderr ""; want 2 naming the path
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	1.710s
+FAIL
+[exit 1] KILLED
+
+=== ReadBudgets: a negative size budget read
+--- tools/perf/budget.go
+- if b.BinaryBytes < 0 {
++ if b.BinaryBytes < -1 {
+$ go test ./tools/perf
+--- FAIL: TestReadBudgetsRejectsANegativeBinaryBudget (0.00s)
+    size_test.go:51: err <nil>, want an error naming binary_bytes
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	1.733s
+FAIL
+[exit 1] KILLED
+
+=== perf-budgets.json: no size budget
+--- perf-budgets.json
+- ,
+  "binary_bytes": 10000000
++ 
+$ go test ./tools/perf
+--- FAIL: TestTheRepositoryBudgetsHoldABinaryBudget (0.00s)
+    size_test.go:105: perf-budgets.json: binary_bytes 0, err <nil>; want a budget
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	1.686s
+FAIL
+[exit 1] KILLED

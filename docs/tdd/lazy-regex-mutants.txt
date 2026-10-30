@@ -1,0 +1,71 @@
+=== yo-human#59 follow-up c (L4): the four production regexes compiled on first use (1afacd8)
+Behaviour is unchanged, so there is no RED; the existing tests are the net. inittrace of `yo-human version` (release build, GODEBUG=inittrace=1):
+--- before (a486a15)
+init gopkg.in/yaml%2ev3 @1.8 ms, 0.23 ms clock, 25680 bytes, 274 allocs
+init github.com/Exploded-views/yo-human/internal/secrets @2.1 ms, 0.14 ms clock, 51208 bytes, 722 allocs
+init github.com/Exploded-views/yo-human/internal/channel/logch @2.8 ms, 0.011 ms clock, 256 bytes, 2 allocs
+init github.com/Exploded-views/yo-human/internal/config @2.8 ms, 0.018 ms clock, 3392 bytes, 30 allocs
+init github.com/Exploded-views/yo-human/internal/channel/bark @3.0 ms, 0.045 ms clock, 60384 bytes, 864 allocs
+init github.com/Exploded-views/yo-human/internal/channel/ntfy @3.0 ms, 0.030 ms clock, 60288 bytes, 864 allocs
+init github.com/Exploded-views/yo-human/internal/channel/pagerduty @3.1 ms, 0.011 ms clock, 592 bytes, 4 allocs
+init github.com/Exploded-views/yo-human/internal/cli @3.1 ms, 0.001 ms clock, 2120 bytes, 16 allocs
+yo-human dev none
+--- after (1afacd8)
+init gopkg.in/yaml%2ev3 @5.7 ms, 0.27 ms clock, 25680 bytes, 274 allocs
+init github.com/Exploded-views/yo-human/internal/secrets @6.0 ms, 0.031 ms clock, 72 bytes, 2 allocs
+init github.com/Exploded-views/yo-human/internal/channel/logch @9.1 ms, 0.011 ms clock, 256 bytes, 2 allocs
+init github.com/Exploded-views/yo-human/internal/config @9.2 ms, 0.026 ms clock, 1088 bytes, 10 allocs
+init github.com/Exploded-views/yo-human/internal/channel/bark @9.4 ms, 0.015 ms clock, 664 bytes, 6 allocs
+init github.com/Exploded-views/yo-human/internal/channel/ntfy @9.4 ms, 0 ms clock, 584 bytes, 6 allocs
+init github.com/Exploded-views/yo-human/internal/channel/pagerduty @9.4 ms, 0.011 ms clock, 592 bytes, 4 allocs
+init github.com/Exploded-views/yo-human/internal/cli @9.4 ms, 0.001 ms clock, 2120 bytes, 16 allocs
+yo-human dev none
+
+--- mutants: each lazy pattern replaced, against its package's tests (yamlLine had no test of the line number; TestCheckLayerSyntaxErrorNamesTheLine was added and kills it)
+mutant: namePattern's lazy compile returns a match-anything pattern: --- FAIL: TestSecretsSetRefusesBadNames (0.10s);--- FAIL: TestSecretsValidName (0.00s);--- FAIL: TestSecretsInvalidStoredNamesAreNeverPrinted (0.00s);
+mutant: keyRE's lazy compile returns a match-anything pattern: --- FAIL: TestNewValidatesSettings (0.00s);FAIL;FAIL	github.com/Exploded-views/yo-human/internal/channel/bark	0.195s;
+mutant: topicRE's lazy compile returns a match-anything pattern: --- FAIL: TestNewValidatesSettings (0.00s);FAIL;FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.145s;
+mutant: yamlLine's lazy compile returns a pattern that never matches: --- FAIL: TestCheckLayerSyntaxErrorNamesTheLine (0.00s);FAIL;FAIL	github.com/Exploded-views/yo-human/internal/config	0.406s;
+
+--- perf (make perf, 20 runs, each under the heavy lock; before = a486a15, after = 1afacd8, alternated twice). Noisy: the host was shared, so the load average is printed with each run
+== perf pbefore round 1
+load at start: 23:22  up 5 days,  2:59, 1 user, load averages: 30.75 17.37 12.45
+binary: 8046386 bytes, budget 10000000 bytes
+version-startup: p95 14.5ms, budget 10ms (ci=false)
+levels: p95 16.2ms, budget 15ms (ci=false)
+status: p95 15.7ms, budget 15ms (ci=false)
+notify-usage-error: p95 12.1ms, budget 13ms (ci=false)
+notify-held-local: p95 34.8ms, budget 30ms (ci=false)
+notify-suppressed: p95 22.9ms, budget 30ms (ci=false)
+exit=2
+== perf pafter round 1
+load at start:  0:44  up 5 days,  4:21, 1 user, load averages: 10.78 17.11 19.19
+binary: 8063010 bytes, budget 10000000 bytes
+version-startup: p95 7.5ms, budget 10ms (ci=false)
+levels: p95 8.3ms, budget 15ms (ci=false)
+status: p95 8.7ms, budget 15ms (ci=false)
+notify-usage-error: p95 6.7ms, budget 13ms (ci=false)
+notify-held-local: p95 20.1ms, budget 30ms (ci=false)
+notify-suppressed: p95 23.0ms, budget 30ms (ci=false)
+exit=0
+== perf pbefore round 2
+load at start:  0:56  up 5 days,  4:34, 1 user, load averages: 14.52 14.40 15.96
+binary: 8046386 bytes, budget 10000000 bytes
+version-startup: p95 6.8ms, budget 10ms (ci=false)
+levels: p95 7.7ms, budget 15ms (ci=false)
+status: p95 8.2ms, budget 15ms (ci=false)
+notify-usage-error: p95 7.1ms, budget 13ms (ci=false)
+notify-held-local: p95 20.0ms, budget 30ms (ci=false)
+notify-suppressed: p95 19.0ms, budget 30ms (ci=false)
+exit=0
+== perf pafter round 2
+load at start:  1:41  up 5 days,  5:19, 1 user, load averages: 7.70 16.82 17.86
+binary: 8063010 bytes, budget 10000000 bytes
+version-startup: p95 6.4ms, budget 10ms (ci=false)
+levels: p95 7.2ms, budget 15ms (ci=false)
+status: p95 7.4ms, budget 15ms (ci=false)
+notify-usage-error: p95 6.2ms, budget 13ms (ci=false)
+notify-held-local: p95 18.0ms, budget 30ms (ci=false)
+notify-suppressed: p95 17.8ms, budget 30ms (ci=false)
+exit=0
+Round 1's before run (load 30.8) is noise. At similar load (round 2: 14.5 before, 7.7 after) version-startup p95 went 6.8 -> 6.4 ms, in line with the ~0.2 ms of init removed; the binary grew 16624 bytes (sync.OnceValue closures).

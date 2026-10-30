@@ -1,0 +1,18 @@
+skills used: ['yo-human-eval:yo-human']
+
+I would run one command:
+
+```
+yo-human resolve --dedup-key disk-full-build-FAKE --note "Disk cleaned; usage verified at 40%"
+```
+
+- **Same key:** I reuse `disk-full-build-FAKE` exactly, so the resolve matches the earlier nudge.
+- **No new notify:** I would not send another `notify` to say "fixed". `resolve` cancels anything still queued for the key and tells the channels the human was reached on that the problem is over.
+- **Optional `--json`:** I could add it to get one JSON object back. It isn't needed.
+
+Then I would read the output:
+
+- **Exit 0 (`RESULT resolved <id>` or `RESULT noop`):** I'm done and carry on. `noop` just means the key was unknown or already resolved.
+- **Exit 69:** a scheduled send couldn't be cancelled, so the human may still be paged for something already fixed. I would say so plainly in my handoff and not retry.
+- **Exit 64:** the call is wrong. I would read the `error`, `valid` and `fix` lines, correct the call and run it again.
+- **Exit 74, 70 or 78:** I would stop and tell the human in my session. For 78 I would quote the `error` and `fix` lines. I would not touch the config.

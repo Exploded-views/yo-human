@@ -1,0 +1,10 @@
+skills used: []
+
+I would run no more commands for this notification.
+
+- **Delivery is confirmed.** `yo-human flush` exited 0 with `RESULT ok` and `phone: sent`, so the siren went out. I wouldn't re-run `notify` or `flush`. A second send would only page the human again, and the `checkout-FAKE` dedup key exists to prevent that.
+- **I'd skip the fallback.** The "tell the human in your session" instruction only applies if the retries run out. They didn't.
+- **I'd still put a short note in my session output**, so the human sees it when they look: "Sent a siren, 'Checkout failing' (dedup key `checkout-FAKE`). The first attempt exited 75, and the retry via `yo-human flush` delivered it to the phone. The ask is to look at checkout now."
+- **Then I'd go back to the task I was working on.** The notification doesn't call for any other action, and I wouldn't change anything in checkout on my own. If I did more, I'd stick to read-only investigation.
+
+The only other command would be a new `yo-human notify` if something materially changed, for example the failure clearing or getting worse. I'd pick the level from `levels --json`: `murmur` for an all-clear, or a new dedup key for a distinct incident.

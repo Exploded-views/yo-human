@@ -1,0 +1,37 @@
+# what this is: task 12 fix round 1 (RED): page errors name notify flags (--title, --body, --dedup-key) that page does not have, a missing shim ask is a usage problem saying add --ask, an empty key argument is used as the key, and the usage fix does not mention --
+# note: message ids (ULIDs) and the time part of default dedup keys in the failing output were replaced by <ulid> and <time> so the file holds no gitleaks generic-api-key match; nothing else is edited
+# command: go test -count=1 -timeout 250s ./internal/cli -run TestPage
+--- FAIL: TestPageUsage (0.02s)
+    page_test.go:110: blank summary stderr = "error: --title is missing or blank\nvalid: a one-line title of 1 to 200 characters\nfix: add --title \"<what happened>\"\n", must not contain "--title"
+    page_test.go:110: key of 256 characters stderr = "error: --dedup-key is 256 characters (it is not echoed)\nvalid: at most 255 characters\nfix: use a shorter, stable key, such as a service name and a symptom\n", must not contain "--dedup-key"
+    page_test.go:110: resolve key of 256 characters stderr = "error: --dedup-key is 256 characters (it is not echoed)\nvalid: at most 255 characters\nfix: use a shorter, stable key, such as a service name and a symptom\n", must not contain "--dedup-key"
+    page_test.go:110: invalid utf-8 key stderr = "error: --dedup-key is not valid UTF-8 text\nvalid: UTF-8 text\nfix: re-encode the value as UTF-8\n", must not contain "--dedup-key"
+    page_test.go:110: invalid utf-8 summary stderr = "error: --title is not valid UTF-8 text\nvalid: UTF-8 text\nfix: re-encode the value as UTF-8\n", must not contain "--title"
+    page_test.go:110: body over 16 KB stderr = "error: the details is too long: 16385 bytes > 16384\nvalid: at most 16384 bytes\nfix: shorten it, or put the detail behind a --link\n", must not contain "--link"
+    page_test.go:110: control character in key stderr = "error: --dedup-key holds a control character (it is not echoed)\nvalid: printable characters only\nfix: remove the control characters from the key\n", must not contain "--dedup-key"
+--- FAIL: TestPageNamesItsOwnArgumentsInUsageErrors (0.02s)
+    page_test.go:165: stderr = "error: --title is missing or blank\nvalid: a one-line title of 1 to 200 characters\nfix: add --title \"<what happened>\"\n", want it to contain "the summary (first argument)"
+    page_test.go:165: stderr = "error: --title is 201 characters\nvalid: at most 200 characters\nfix: shorten the title and put the detail in --body\n", want it to contain "the summary (first argument)"
+    page_test.go:165: stderr = "error: --dedup-key is 256 characters (it is not echoed)\nvalid: at most 255 characters\nfix: use a shorter, stable key, such as a service name and a symptom\n", want it to contain "the dedup key (third argument)"
+    page_test.go:165: stderr = "error: --dedup-key is 256 characters (it is not echoed)\nvalid: at most 255 characters\nfix: use a shorter, stable key, such as a service name and a symptom\n", want it to contain "the dedup key after --resolve"
+    page_test.go:165: stderr = "error: the details is too long: 16385 bytes > 16384\nvalid: at most 16384 bytes\nfix: shorten it, or put the detail behind a --link\n", want it to contain "the details (second argument)"
+    page_test.go:165: stderr = "error: page takes a summary, then optional details and a dedup key\nvalid: yo-human page [--low] \"<summary>\" [details] [dedup-key]   or   yo-human page [--low] --resolve <dedup-key>\nfix: run yo-human page \"<summary>\" [\"<details>\" [<dedup-key>]]\n", want it to contain "use -- before a summary that starts with \"-\""
+--- FAIL: TestPageWithoutAnAskOnALevelThatNeedsOneIsAConfigProblem (0.05s)
+    page_test.go:179: [page x]: {code:64 out: err:error: level "page" needs --ask, and none was given
+        valid: a sentence saying what the human must do, or a level with "ask: optional"
+        fix: add --ask "<what the human must do>"
+        }; want exit 78
+    page_test.go:180: stderr = "error: level \"page\" needs --ask, and none was given\nvalid: a sentence saying what the human must do, or a level with \"ask: optional\"\nfix: add --ask \"<what the human must do>\"\n", want it to contain "shim.default.ask"
+    page_test.go:181: stderr = "error: level \"page\" needs --ask, and none was given\nvalid: a sentence saying what the human must do, or a level with \"ask: optional\"\nfix: add --ask \"<what the human must do>\"\n", must not contain "--ask"
+    page_test.go:179: [page --low x]: {code:64 out: err:error: level "page" needs --ask, and none was given
+        valid: a sentence saying what the human must do, or a level with "ask: optional"
+        fix: add --ask "<what the human must do>"
+        }; want exit 78
+    page_test.go:180: stderr = "error: level \"page\" needs --ask, and none was given\nvalid: a sentence saying what the human must do, or a level with \"ask: optional\"\nfix: add --ask \"<what the human must do>\"\n", want it to contain "shim.low.ask"
+    page_test.go:181: stderr = "error: level \"page\" needs --ask, and none was given\nvalid: a sentence saying what the human must do, or a level with \"ask: optional\"\nfix: add --ask \"<what the human must do>\"\n", must not contain "--ask"
+--- FAIL: TestPageEmptyKeyArgumentIsTheDefaultKey (0.05s)
+    page_test.go:190: sends = [{ID:<ulid> Level:page Title:x Ask:look now Body:d Link: Project:unknown Agent:orchestrator DedupKey: Actions:[] Created:2026-10-30 12:00:00 +0000 UTC Resolved:false}]; want the default key for an empty third argument
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	1.204s
+FAIL
+# exit: 1

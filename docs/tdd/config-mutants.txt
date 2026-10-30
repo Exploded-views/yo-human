@@ -1,0 +1,73 @@
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.154s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.145s
+exit=0
+=== mutant: merge picks the farthest layer instead of the closest (internal/config/merge.go: iterate layers closest first so farthest overwrites)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestLayerOrderClosestWins (0.01s)
+--- FAIL: TestUntrustedProjectIgnoredWithNotice (0.01s)
+    --- FAIL: TestUntrustedProjectIgnoredWithNotice/never_trusted (0.00s)
+    --- FAIL: TestUntrustedProjectIgnoredWithNotice/changed (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.080s
+FAIL
+exit=1
+=== mutant: trust check skipped (internal/config/load.go: if !ok { -> if !ok && false {)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestUntrustedProjectIgnoredWithNotice (0.01s)
+    --- FAIL: TestUntrustedProjectIgnoredWithNotice/never_trusted (0.00s)
+    --- FAIL: TestUntrustedProjectIgnoredWithNotice/changed (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.083s
+FAIL
+exit=1
+=== mutant: literal-secret check skipped in Check (internal/config/validate.go)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestLiteralInSecretFieldIsRefusedWithoutEcho (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.081s
+FAIL
+exit=1
+=== mutant: literal-secret check skipped in Instances (internal/config/validate.go)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestLiteralInSecretFieldIsRefusedWithoutEcho (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.084s
+FAIL
+exit=1
+=== mutant: secrets permission check skipped (internal/secrets/secrets.go: requireMode never refuses)
+--- FAIL: TestSecretsPermissionsRefused (0.04s)
+    --- FAIL: TestSecretsPermissionsRefused/file (0.01s)
+    --- FAIL: TestSecretsPermissionsRefused/directory (0.01s)
+    --- FAIL: TestSecretsPermissionsRefused/set_refuses_too (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.153s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.088s
+FAIL
+exit=1
+=== mutant: secrets Set does not trim (internal/secrets/secrets.go)
+--- FAIL: TestSecretsSetTrimsAndRefusesEmpty (0.02s)
+--- FAIL: TestSecretsMultilineValueRoundTrips (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.157s
+ok  	github.com/Exploded-views/yo-human/internal/config	(cached)
+FAIL
+exit=1
+=== mutant: layer schema validation skipped (internal/config/load.go: unknown keys accepted)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestLoadProblems (0.01s)
+    --- FAIL: TestLoadProblems/unknown_top-level_key (0.00s)
+    --- FAIL: TestLoadProblems/wrong_type (0.00s)
+    --- FAIL: TestLoadProblems/bad_version (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.086s
+FAIL
+exit=1
+=== mutant: trust hash computed over the wrong bytes (internal/config/load.go: sha256.Sum256(data) -> sha256.Sum256(nil))
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestLayerOrderClosestWins (0.01s)
+--- FAIL: TestProjectNearestAncestor (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.080s
+FAIL
+exit=1

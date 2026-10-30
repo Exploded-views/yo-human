@@ -1,0 +1,30 @@
+$ go test -race -count=1 -timeout 60s ./internal/problem ./internal/secrets ./internal/config 2>&1
+--- FAIL: TestShellQuote (0.00s)
+    quote_test.go:36: ShellQuote("=x") = "=x", want "'=x'"
+    quote_test.go:36: ShellQuote("a\xffb") = "'a\xffb'", want "$'a\\xffb'"
+    quote_test.go:36: ShellQuote("-flag") = "-flag", want "'-flag'"
+    quote_test.go:36: ShellQuote("\x9b") = "'\x9b'", want "$'\\x9b'"
+    quote_test.go:36: ShellQuote("q'\n") = "$'q\\'\\x0a'", want "$'q\\x27\\x0a'"
+    quote_test.go:36: ShellQuote("a'\xc3") = "'a'\\''\xc3'", want "$'a\\x27\\xc3'"
+    quote_test.go:36: ShellQuote("back\\slash\x01") = "$'back\\\\slash\\x01'", want "$'back\\x5cslash\\x01'"
+--- FAIL: TestShellQuoteExecutesNothing (0.06s)
+    quote_test.go:73: dash executed part of "a\xff';touch $TMPDIR/TestShellQuoteExecutesNothing1195262402/007/PWNED;#\n" (quoted "$'a�\\';touch $TMPDIR/TestShellQuoteExecutesNothing1195262402/007/PWNED;#\\x0a'")
+    quote_test.go:73: dash executed part of "b\\';touch $TMPDIR/TestShellQuoteExecutesNothing1195262402/010/PWNED;#\x01" (quoted "$'b\\\\\\';touch $TMPDIR/TestShellQuoteExecutesNothing1195262402/010/PWNED;#\\x01'")
+--- FAIL: TestShellQuoteBashRoundTrips (0.10s)
+    quote_test.go:85: bash printed "a�b\n" (<nil>) for "a\xffb\n", quoted "$'a�b\\x0a'"
+    quote_test.go:85: bash printed "a�';touch X;#\n" (<nil>) for "a\xff';touch X;#\n", quoted "$'a�\\';touch X;#\\x0a'"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/problem	0.171s
+--- FAIL: TestSecretsFIFORefusedWithoutHanging (3.01s)
+    secrets_fifo_test.go:29: Load hung on a FIFO
+--- FAIL: TestSecretsValidNameRefusesLikelyTokens (0.01s)
+    secrets_test.go:262: ValidName("abababababababab") = true, want a hex string of 16+ characters refused as a likely token
+    secrets_test.go:265: error = <nil>, want a Usage problem
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	3.221s
+--- FAIL: TestReferenceThatLooksLikeAHexTokenIsRefused (0.00s)
+    robust_test.go:209: error = <nil>, want a *problem.Problem
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.135s
+FAIL
+exit=1

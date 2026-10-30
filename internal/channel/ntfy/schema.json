@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "required": ["server", "topic"],
+  "properties": {
+    "server": {"type": "string", "pattern": "^https://[^/]", "description": "the ntfy server base URL, https only"},
+    "topic": {"type": "object", "required": ["secret"], "properties": {"secret": {"type": "string"}}, "additionalProperties": false},
+    "token": {"type": "object", "required": ["secret"], "properties": {"secret": {"type": "string"}}, "additionalProperties": false}
+  },
+  "additionalProperties": false
+}

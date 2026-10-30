@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{A: 0,00A: {A: {A: A,path: 000000000A}},levels: [{name: 000a,x: 0,send: [{00000A,000000A: A,00000A000000: 000000A}]}]}")

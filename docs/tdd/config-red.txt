@@ -1,0 +1,133 @@
+$ go test -race ./internal/secrets ./internal/config 2>&1
+--- FAIL: TestSecretsPermissionsRefused (0.00s)
+    --- FAIL: TestSecretsPermissionsRefused/file (0.00s)
+        secrets_test.go:48: chmod $TMPDIR/TestSecretsPermissionsRefusedfile1184014530/001/yo-human/secrets.yaml: no such file or directory
+    --- FAIL: TestSecretsPermissionsRefused/directory (0.00s)
+        secrets_test.go:64: error = <nil>, want a *problem.Problem
+    --- FAIL: TestSecretsPermissionsRefused/set_refuses_too (0.00s)
+        secrets_test.go:73: chmod $TMPDIR/TestSecretsPermissionsRefusedset_refuses_too3283921347/001/yo-human/secrets.yaml: no such file or directory
+--- FAIL: TestSecretsMissingFileIsEmpty (0.00s)
+    secrets_test.go:82: Load of a missing file = map[], <nil>; want an empty non-nil map
+--- FAIL: TestSecretsSetTrimsAndRefusesEmpty (0.00s)
+    secrets_test.go:98: value = "", want trailing whitespace trimmed
+    secrets_test.go:103: Set("") = <nil>, want a Usage problem
+    secrets_test.go:103: Set(" \n\t") = <nil>, want a Usage problem
+    secrets_test.go:107: refused values must not be stored: 0
+--- FAIL: TestSecretsSetRefusesBadNames (0.00s)
+    secrets_test.go:117: Set name "" = <nil>, want a Usage problem
+    secrets_test.go:117: Set name "-lead" = <nil>, want a Usage problem
+    secrets_test.go:117: Set name "Upper" = <nil>, want a Usage problem
+    secrets_test.go:117: Set name "has space" = <nil>, want a Usage problem
+    secrets_test.go:117: Set name "a/b" = <nil>, want a Usage problem
+    secrets_test.go:117: Set name "dot.name" = <nil>, want a Usage problem
+    secrets_test.go:117: Set name "a\nb" = <nil>, want a Usage problem
+    secrets_test.go:117: Set name "<hex>" = <nil>, want a Usage problem
+--- FAIL: TestSecretsSetWritesMode0600AndCreatesDir (0.00s)
+    secrets_test.go:132: file: <nil>, stat $TMPDIR/TestSecretsSetWritesMode0600AndCreatesDir2274808679/001/new/yo-human/secrets.yaml: no such file or directory; want mode 600
+--- FAIL: TestSecretsMultilineValueRoundTrips (0.00s)
+    secrets_test.go:151: round trip = "", <nil>
+--- FAIL: TestSecretsListNeverReturnsValues (0.00s)
+    secrets_test.go:165: List = [], want [{alpha 7} {zeta 15}] (sorted by name)
+--- FAIL: TestSecretsCorruptFileErrorHoldsNoValue (0.00s)
+    secrets_test.go:179: error = <nil>, want a *problem.Problem
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.018s
+--- FAIL: TestLayerOrderClosestWins (0.00s)
+    load_test.go:41: Deadline 0s, IncidentTTL 0s, Human ""; want 2s (project), 1h (explicit), Pat (user)
+    load_test.go:44: channels lack "desk" (channels merge by name): map[]
+    load_test.go:44: channels lack "phone" (channels merge by name): map[]
+    load_test.go:44: channels lack "journal" (channels merge by name): map[]
+    load_test.go:44: channels lack "repo" (channels merge by name): map[]
+    load_test.go:44: phone token = <nil>, want the user file's instance to replace the system one whole
+    load_test.go:46: Levels = [], want the project ladder alone
+    load_test.go:54: Origin["human"] = "", want "<worktree>/internal/config/testdata/user/config.yaml"
+    load_test.go:54: Origin["levels"] = "", want "<worktree>/internal/config/testdata/project/.yo-human.yaml"
+    load_test.go:54: Origin["channels.phone"] = "", want "<worktree>/internal/config/testdata/user/config.yaml"
+    load_test.go:54: Origin["channels.desk"] = "", want "<worktree>/internal/config/testdata/system.yaml"
+    load_test.go:54: Origin["deadline"] = "", want "<worktree>/internal/config/testdata/project/.yo-human.yaml"
+    load_test.go:54: Origin["incident_ttl"] = "", want "<worktree>/internal/config/testdata/explicit.yaml"
+--- FAIL: TestUntrustedProjectIgnoredWithNotice (0.00s)
+    --- FAIL: TestUntrustedProjectIgnoredWithNotice/changed (0.00s)
+        load_test.go:85: notices = [], want one naming the file and `yo-human config trust`
+        load_test.go:88: Deadline = 0s, want 3s: the project file must be ignored
+        load_test.go:91: an untrusted project file leaked: channels map[], 0 levels
+    --- FAIL: TestUntrustedProjectIgnoredWithNotice/never_trusted (0.00s)
+        load_test.go:85: notices = [], want one naming the file and `yo-human config trust`
+        load_test.go:88: Deadline = 0s, want 3s: the project file must be ignored
+        load_test.go:91: an untrusted project file leaked: channels map[], 0 levels
+--- FAIL: TestProjectNearestAncestor (0.00s)
+    load_test.go:114: Deadline = 0s from "", want 4s from "$TMPDIR/TestProjectNearestAncestor3173826756/001/a/.yo-human.json" (the nearest ancestor)
+--- FAIL: TestDefaults (0.00s)
+    load_test.go:121: Deadline 0s, IncidentTTL 0s, Version 0; want 1s, 24h, 1
+    load_test.go:124: Levels = [], want one
+--- FAIL: TestLevelFieldsDecoded (0.00s)
+    load_test.go:158: Levels = [], want one level with one send
+--- FAIL: TestRank (0.00s)
+    load_test.go:212: Rank(low) = 0, false
+    load_test.go:215: Rank(high) = 0, false
+--- FAIL: TestLoadProblems (0.01s)
+    --- FAIL: TestLoadProblems/unknown_top-level_key (0.00s)
+        load_test.go:238: error = <nil>, want a *problem.Problem
+    --- FAIL: TestLoadProblems/wrong_type (0.00s)
+        load_test.go:238: error = <nil>, want a *problem.Problem
+    --- FAIL: TestLoadProblems/bad_level_shape (0.00s)
+        load_test.go:238: error = <nil>, want a *problem.Problem
+    --- FAIL: TestLoadProblems/bad_duration (0.00s)
+        load_test.go:238: error = <nil>, want a *problem.Problem
+    --- FAIL: TestLoadProblems/bad_reminder (0.00s)
+        load_test.go:238: error = <nil>, want a *problem.Problem
+    --- FAIL: TestLoadProblems/bad_timezone (0.00s)
+        load_test.go:238: error = <nil>, want a *problem.Problem
+    --- FAIL: TestLoadProblems/bad_clock (0.00s)
+        load_test.go:238: error = <nil>, want a *problem.Problem
+    --- FAIL: TestLoadProblems/not_yaml (0.00s)
+        load_test.go:238: error = <nil>, want a *problem.Problem
+    --- FAIL: TestLoadProblems/not_a_mapping (0.00s)
+        load_test.go:238: error = <nil>, want a *problem.Problem
+    --- FAIL: TestLoadProblems/bad_version (0.00s)
+        load_test.go:238: error = <nil>, want a *problem.Problem
+--- FAIL: TestLoadMissingFiles (0.00s)
+    load_test.go:255: error = <nil>, want a *problem.Problem
+--- FAIL: TestDefaultPaths (0.00s)
+    load_test.go:270: DefaultPaths = {Explicit: Cwd: UserDir: System:}, want {Explicit:/x/explicit.yaml Cwd:/work UserDir:/xdg/yo-human System:/etc/yo-human/config.yaml}
+    load_test.go:276: fallback paths = {Explicit: Cwd: UserDir: System:}
+--- FAIL: TestCheckFindings (0.00s)
+    --- FAIL: TestCheckFindings/level_without_use_when (0.00s)
+        validate_test.go:71: Check = [], want exactly one problem
+    --- FAIL: TestCheckFindings/send_to_an_unknown_instance (0.00s)
+        validate_test.go:71: Check = [], want exactly one problem
+    --- FAIL: TestCheckFindings/unknown_channel_type (0.00s)
+        validate_test.go:71: Check = [], want exactly one problem
+    --- FAIL: TestCheckFindings/interruption_the_type_cannot_do (0.00s)
+        validate_test.go:71: Check = [], want exactly one problem
+    --- FAIL: TestCheckFindings/no_channel_reaches_a_human (0.00s)
+        validate_test.go:71: Check = [], want exactly one problem
+    --- FAIL: TestCheckFindings/level_with_no_sends (0.00s)
+        validate_test.go:71: Check = [], want exactly one problem
+    --- FAIL: TestCheckFindings/duplicate_level_names (0.00s)
+        validate_test.go:71: Check = [], want exactly one problem
+    --- FAIL: TestCheckFindings/shim_names_an_unknown_level (0.00s)
+        validate_test.go:71: Check = [], want exactly one problem
+    --- FAIL: TestCheckFindings/settings_violate_the_type's_schema (0.00s)
+        validate_test.go:71: Check = [], want exactly one problem
+--- FAIL: TestCheckWarningNamesTheTypesThatCan (0.00s)
+    validate_test.go:89: Check = [], want exactly one problem
+--- FAIL: TestCheckIsDeterministic (0.00s)
+    validate_test.go:104: Check = [], want a problem for each bad channel
+--- FAIL: TestLiteralInSecretFieldIsRefusedWithoutEcho (0.00s)
+    validate_test.go:132: Check = [], want exactly one problem
+--- FAIL: TestSchemaViolationsNeverEchoValues (0.00s)
+    validate_test.go:165: want schema findings
+--- FAIL: TestInstancesResolveSecrets (0.00s)
+    validate_test.go:181: phone = {Name: Type: Settings:map[] Secrets:map[]}
+    validate_test.go:187: instances = map[], want 3, the log-only one without secrets
+--- FAIL: TestInstancesMissingSecret (0.00s)
+    validate_test.go:196: error = <nil>, want a *problem.Problem
+--- FAIL: TestInstancesUnknownType (0.00s)
+    validate_test.go:209: error = <nil>, want a *problem.Problem
+--- FAIL: TestSchemaIsValidJSONAndRejectsUnknownKeys (0.00s)
+    validate_test.go:217: Schema is not JSON: unexpected end of JSON input
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.024s
+FAIL
+exit=1

@@ -1,0 +1,48 @@
+# M1 task 8 bark mutation checks. Each mutant is one textual change to internal/channel/bark, run with go test -count=1 -timeout 120s on the bark and config packages, then restored.
+# First pass: 5 mutants failed to build (an unused variable or import) and were rewritten; the rewrites are the second block. None survived.
+# Raw:
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/channel/bark	0.147s
+ok  	github.com/Exploded-views/yo-human/internal/config	0.056s
+exit=0
+KILLED critical level mapped to active (the brief's mutant) ['TestInterruptionLevels']
+KILLED envelope code ignored ['TestApplicationErrorIn200', 'TestNoSecretInErrors']
+KILLED envelope 4xx treated as transient ['TestApplicationErrorIn200', 'TestErrorKinds']
+KILLED call sent as true ['TestSendJSONShape']
+KILLED volume 0 omitted ['TestVolumeForms']
+KILLED volume limit 11 ['TestValidateOptions']
+KILLED volume negative allowed ['TestValidateOptions']
+KILLED raw client error returned ['TestNoSecretInErrors', 'TestTransportFailuresAreDescribedWithoutTheirText']
+KILLED redirects followed ['TestRedirectIsNotFollowed']
+KILLED userinfo allowed in links ['TestOnlyHTTPLinksReachThePhone']
+KILLED empty hostname allowed in links ['TestOnlyHTTPLinksReachThePhone']
+KILLED http server accepted ['TestNewValidatesSettings']
+KILLED server userinfo accepted ['TestNewValidatesSettings']
+KILLED server query accepted ['TestNewValidatesSettings']
+KILLED server fragment accepted ['TestNewValidatesSettings']
+KILLED default server http ['TestDefaultServer']
+KILLED cancellation permanent ['TestContextCancellationIsTransient', 'TestSendReturnsPromptlyWhenServerHangs']
+KILLED truncation keeps 4001 ['TestBodyTruncatedWithMarker']
+KILLED subtitle dropped ['TestSendJSONShape']
+KILLED actions dropped from body ['TestSendJSONShape']
+KILLED group dropped ['TestSendJSONShape']
+KILLED 429 permanent ['TestApplicationErrorIn200', 'TestErrorKinds']
+KILLED 408 permanent ['TestErrorKinds']
+KILLED device key accepts slash ['TestNewValidatesSettings']
+KILLED bad option ignored in Send ['TestValidateOptions']
+KILLED fractional volume accepted ['TestValidateOptions']
+KILLED Resolve succeeds ['TestResolveAndCancelUnsupported']
+KILLED Cancel succeeds ['TestResolveAndCancelUnsupported']
+KILLED unknown option accepted ['TestValidateOptions']
+KILLED user agent dropped ['TestSendJSONShape']
+KILLED dial error permanent ['TestDialErrorIsTransient']
+KILLED device key schema not required ['TestBarkSchemaAcceptsSecretReferences']
+--- rewritten mutants
+KILLED envelope message echoed ['TestApplicationErrorIn200', 'TestNoSecretInErrors']
+KILLED unparseable 200 treated as success ['TestApplicationErrorIn200']
+KILLED truncation cuts inside rune ['TestBodyTruncatedWithMarker']
+KILLED call non-bool accepted ['TestValidateOptions']
+KILLED sound non-string accepted ['TestValidateOptions']
+=== go test -race -count=20
+ok  	github.com/Exploded-views/yo-human/internal/channel/bark	7.383s
+exit=0

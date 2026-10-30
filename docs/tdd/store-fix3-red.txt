@@ -1,0 +1,8 @@
+--- FAIL: TestQuarantineLinkFailureLeavesSourceVisible (0.00s)
+    quarantine_test.go:150: source must stay in queue/ when it cannot be quarantined: stat $TMPDIR/TestQuarantineLinkFailureLeavesSourceVisible229478722/001/state/queue/bad.x.json: no such file or directory
+--- FAIL: TestDeadKeepsInstanceNameOfManyDigits (0.03s)
+    quarantine_test.go:187: DeadEntries = [{Pending:{Key:01A IncidentKey:i Data:[123 34 116 105 116 108 101 34 58 34 116 34 125] Attempts:0 NextAttempt:2026-10-26 12:00:00 +0000 UTC DeliverAt:2026-10-26 12:00:00 +0000 UTC} Reason:unreadable: file holds key "01A.123456789012345678", its name says "01A" At:2026-10-26 09:03:26.348994 +0000 UTC}], <nil>, want key "01A.123456789012345678"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.098s
+FAIL
+exit=1

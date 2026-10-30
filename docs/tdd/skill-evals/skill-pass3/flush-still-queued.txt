@@ -1,0 +1,21 @@
+skills used: []
+
+Next I would wait 60 seconds, as the tool instructs, and then run `yo-human flush` again. I'd repeat that wait-and-flush cycle each time it exits 75, until the attempts run out or a flush reports delivery.
+
+1. `sleep 60`
+2. `yo-human flush`
+3. If it still says `RESULT queued`, repeat steps 1 and 2 for as long as it reports attempts left. I'd stop as soon as a flush exits 0 with a delivered result.
+
+I would not:
+- re-run `notify`, since the message is already queued and a new call risks duplicates, even with the dedup key;
+- change the level (a siren shouldn't be downgraded to a nudge, which is held during quiet hours);
+- change the dedup key;
+- try some other channel I wasn't given.
+
+If the attempts are exhausted and it's still queued, the tool's instruction applies: tell the human directly in my session. I'd write something like this as plain output:
+
+> Siren "Checkout failing" (ask: look at checkout now) could not be delivered. The ntfy server was unreachable and the message is still queued after all flush retries. Please check checkout directly. I'll keep working or wait on your instruction.
+
+In that message I'd include the last flush output and the dedup key `checkout-FAKE`.
+
+If a later flush succeeds, I'd just note the delivery and continue.

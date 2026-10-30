@@ -1,0 +1,18 @@
+skills used: []
+
+I'd run the commands in this order. I don't want to guess the level names or the send syntax, so the first two commands are discovery.
+
+1. **`yo-human levels --json`**
+   I haven't run this yet this session, and I need it to learn which urgency levels are configured. I'd pick the highest one the output says is meant for interrupting the human right away, such as a page or critical level. I'd use the exact name it returns, not a name I assumed.
+
+2. **`yo-human --help`**
+   I'd run this only if I'm not sure of the send subcommand and its flags. It would give me the real syntax for sending a message at a chosen level.
+
+3. **The send command**
+   This would be `yo-human <send-subcommand> --level <<LONG-TOKEN>> "<message>"`. I'd fill in the subcommand and flag names from the help output.
+   The message would be short and self-contained. For example: "PRODUCTION OUTAGE: the production database has stopped responding and checkout is failing. Detected [time]. I have not changed anything in production. Waiting for your instructions."
+
+4. **Check the result**
+   I'd read the exit code and output to confirm the notification was accepted. If it failed, I'd retry once. If it still failed, I'd try the next-best channel or level from the `levels` output, and I'd record the failure in my final report.
+
+I would not start remediation, such as restarting the database or changing configuration, without the human's say-so. My job here is to get the human the information.

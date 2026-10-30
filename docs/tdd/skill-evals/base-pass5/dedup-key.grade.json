@@ -1,0 +1,14 @@
+{
+ "must": [
+  false,
+  false,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  true,
+  false
+ ],
+ "note": "The reply never gives an exact command, no --dedup-key or --ask, and relies on a local state file instead of reusing a key, so it sends without a dedup key.",
+ "pass": false
+}

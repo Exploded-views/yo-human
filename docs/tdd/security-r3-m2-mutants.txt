@@ -1,0 +1,61 @@
+KILLED  no command-first check
+  internal/cli/cli.go: 'if err := commandFirst(args); err != nil {
+		return nil, err
+	}' -> ''
+  --- FAIL: TestFlagsBeforeTheCommandAreRefused (0.03s)
+      cli_test.go:116: [--json secret set x]: {code:0 out:{"name":"x","status":"ok","version":1}
+           err:}; want exit 64, flags after the command
+  --- FAIL: TestJSONWithoutACommandIsAUsageObject (0.00s)
+      forge_test.go:146: code=64 out="" err="usage: yo-human <command> [flags]   (--json and --config <file> go after the command)\n\ncommands:\n  version                          print the version\n  levels                           the configured levels, quietest first\n  notify --level <name> --title <text> [--ask <text>] [flags]\n                                   send a message at a level; the 
+  [go test -count=1 ./internal/cli -run 'FlagsBefore|AfterTheCommand|JSONWithoutACommand|ErrorFormat|AnotherProject' exit 1]
+
+KILLED  groups take one word
+  internal/cli/cli.go: 'if len(args) > 0 && groups[args[0]] {
+		words = 2
+	}' -> 'if len(args) > 0 && groups[args[0]] && false {
+		words = 2
+	}'
+  --- FAIL: TestFlagsBeforeTheCommandAreRefused (0.02s)
+      cli_test.go:116: [config --json trust f.yaml]: {code:64 out:{"version":1,"error":{"what":"there is no file at \"$TMPDIR/TestFlagsBeforeTheCommandAreRefused1075541244/002/f.yaml\"","valid":"the path of a project config file","fix":"check the path, and that the file exists"}}
+           err:}; want exit 64, flags after the command
+  [go test -count=1 ./internal/cli -run 'FlagsBefore|AfterTheCommand|JSONWithoutACommand|ErrorFormat|AnotherProject' exit 1]
+
+KILLED  channel is not a group
+  internal/cli/cli.go: '"channel": true}' -> '"channel": false}'
+  --- FAIL: TestFlagsBeforeTheCommandAreRefused (0.00s)
+      cli_test.go:116: [channel --json test phone]: {code:78 out:{"version":1,"error":{"what":"secret \"ntfy-topic\", used by channels.phone.topic, is not set","valid":"a name listed by `yo-human secret list`","fix":"tell the human to run, in their own terminal: op read \"op://\u003cvault\u003e/\u003citem\u003e/\u003cfield\u003e\" | yo-human secret set ntfy-topic"}}
+           err:}; want exit 64, flags after the command
+  [go test -count=1 ./internal/cli -run 'FlagsBefore|AfterTheCommand|JSONWithoutACommand|ErrorFormat|AnotherProject' exit 1]
+
+BUILD   only the first word is checked
+  internal/cli/cli.go: 'for _, a := range args[:min(words, len(args))] {' -> 'for _, a := range args[:min(1, len(args))] {'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  internal/cli/cli.go:104:2: declared and not used: words
+  [go test -count=1 ./internal/cli -run 'FlagsBefore|AfterTheCommand|JSONWithoutACommand|ErrorFormat|AnotherProject' exit 1]
+
+KILLED  a refused --json call prints text
+  internal/cli/cli.go: 'e.asJSON = slices.Contains(args, "--json") // a refused call that asked for JSON still gets one object' -> '_ = slices.Contains(args, "--json")'
+  --- FAIL: TestJSONWithoutACommandIsAUsageObject (0.00s)
+      forge_test.go:146: code=64 out="" err="error: a flag was given before the command\nvalid: yo-human <command> [<subcommand>] [flags]: --json and --config <file> go after the command\nfix: put the flag after the command, for example `yo-human levels --json`\n" (unexpected end of JSON input)
+  [go test -count=1 ./internal/cli -run 'FlagsBefore|AfterTheCommand|JSONWithoutACommand|ErrorFormat|AnotherProject' exit 1]
+
+SURVIVED status --all checks the raw env
+  internal/cli/status.go: 'flatLine(os.Getenv("YO_HUMAN_PROJECT")) != ""' -> 'os.Getenv("YO_HUMAN_PROJECT") != ""'
+  [go test -count=1 ./internal/cli -run 'FlagsBefore|AfterTheCommand|JSONWithoutACommand|ErrorFormat|AnotherProject' exit 0]
+
+# Second pass: the word-count mutant rerun in a form that compiles; a test of a blank YO_HUMAN_PROJECT added for I3.
+
+KILLED  only the first word is checked (compilable)
+  internal/cli/cli.go: 'for _, a := range args[:min(words, len(args))] {' -> 'for _, a := range args[:min(1+0*words, len(args))] {'
+  --- FAIL: TestFlagsBeforeTheCommandAreRefused (0.02s)
+      cli_test.go:116: [config --json trust f.yaml]: {code:64 out:{"version":1,"error":{"what":"there is no file at \"$TMPDIR/TestFlagsBeforeTheCommandAreRefused3876987846/002/f.yaml\"","valid":"the path of a project config file","fix":"check the path, and that the file exists"}}
+           err:}; want exit 64, flags after the command
+  [go test -count=1 ./internal/cli -run 'FlagsBefore|AfterTheCommand|JSONWithoutACommand|ErrorFormat|AnotherProject' exit 1]
+
+KILLED  status --all checks the raw env
+  internal/cli/status.go: 'flatLine(os.Getenv("YO_HUMAN_PROJECT")) != ""' -> 'os.Getenv("YO_HUMAN_PROJECT") != ""'
+  --- FAIL: TestABlankProjectEnvNamesNoProject (0.02s)
+      namespace_test.go:111: status --all with a blank YO_HUMAN_PROJECT: {code:64 out: err:error: status lists only this project while YO_HUMAN_PROJECT names it
+          valid: this project's incidents only, while YO_HUMAN_PROJECT names it
+  [go test -count=1 ./internal/cli -run 'FlagsBefore|AfterTheCommand|JSONWithoutACommand|ErrorFormat|AnotherProject|BlankProjectEnv' exit 1]
+

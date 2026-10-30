@@ -1,0 +1,25 @@
+# what this is: task 11 fix round 3 (RED): Reached keeps one fingerprint per instance, so a scheduled send that went through one destination is cancelled through another and a delivery through the first destination gets no resolve note; ntfy treats a cancel of an already-gone message (404) as a failure; status does not label entries by kind
+# command: go test -count=1 -timeout 250s ./internal/core ./internal/cli ./internal/channel/ntfy ./internal/store
+--- FAIL: TestADeliveryAddsItsDestinationToTheRecord (0.00s)
+    cancel_test.go:325: reached = [{Instance:phone Delivered:[two] Scheduled:[]}]; want one record, delivered through both destinations
+--- FAIL: TestEachScheduledSendIsCancelledThroughItsOwnDestination (0.09s)
+    reached_test.go:58: under two first: Resolve error = <nil>; want a Config problem for the other send
+--- FAIL: TestAResolveNoteGoesThroughEveryDestinationThatDelivered (0.12s)
+    reached_test.go:124: queued 0; want the other destination's note waiting
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	20.743s
+--- FAIL: TestStatusLabelsEachEntryByKind (0.31s)
+    round2_test.go:146: status = "RESULT ok\nqueued: 1\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\nqueued 01M5WEQWESZ1RWAW9JKNBH0CXY phone attempts=0 next=2026-10-30T12:00:00Z reason: channel phone was not built by this command; the entry stays queued\n", want it to contain "kind=cancel"
+    round2_test.go:146: status = "RESULT ok\nqueued: 1\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\nqueued 01M5WEQWESZ1RWAW9JKNBH0CXY phone attempts=0 next=2026-10-30T12:00:00Z reason: channel phone was not built by this command; the entry stays queued\n", want it to contain "kind=send"
+    round2_test.go:154: kinds in the JSON = map[:true]; want cancel and send
+--- FAIL: TestStatusLabelsAResolveNote (0.31s)
+    round2_test.go:165: status = "RESULT ok\nqueued: 1\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\nqueued 01M5WEQWR7JJVAS9BPJW086X57 phone attempts=0 next=2026-10-30T12:00:00Z reason: channel phone is not configured in the config in force\n", want it to contain "kind=note"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	15.349s
+--- FAIL: TestCancelOfAMessageThatIsAlreadyGoneSucceeds (0.01s)
+    ntfy_test.go:332: cancel of a message that is already gone = ntfy answered HTTP 404; want success
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.135s
+ok  	github.com/Exploded-views/yo-human/internal/store	4.854s
+FAIL
+# exit code: 1

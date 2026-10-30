@@ -32,8 +32,9 @@ type goFile struct {
 var moduleLine = regexp.MustCompile(`(?m)^module\s+(\S+)\s*$`)
 
 // E2EOnly checks the module at root. Every *_e2e.go file must build only with the e2e tag
-// (`//go:build e2e`), and no non-test file that builds without the tag may import a package
-// whose every non-test file needs it. It skips testdata/, .cache/ and dist/ directories and
+// (`//go:build e2e`), every non-test file that builds only with it must be named *_e2e.go (so
+// depguard's *_e2e.go exclusion and this check see the same files), and no non-test file that
+// builds without the tag may import a package whose every non-test file needs it. It skips testdata/, .cache/ and dist/ directories and
 // nested modules. Findings are sorted by path.
 func E2EOnly(root string) ([]TagFinding, error) {
 	fsys := os.DirFS(root)
@@ -185,12 +186,23 @@ func importPath(module, dir string) string {
 	return module + "/" + dir
 }
 
+// nameFindings holds a file's name and its tag to each other: an _e2e.go file builds only with
+// the e2e tag, and a non-test file that builds only with it is named *_e2e.go.
+func nameFindings(f goFile) []TagFinding {
+	e2eName := strings.HasSuffix(f.path, "_e2e.go")
+	switch {
+	case e2eName && !f.e2eOnly:
+		return []TagFinding{{f.path, "an _e2e.go file must carry //go:build e2e"}}
+	case f.e2eOnly && !e2eName && !f.test:
+		return []TagFinding{{f.path, "a file that builds only with the e2e tag must be named *_e2e.go"}}
+	}
+	return nil
+}
+
 func tagFindings(files []goFile, e2eOnly map[string]bool) []TagFinding {
 	var found []TagFinding
 	for _, f := range files {
-		if strings.HasSuffix(f.path, "_e2e.go") && !f.e2eOnly {
-			found = append(found, TagFinding{f.path, "an _e2e.go file must carry //go:build e2e"})
-		}
+		found = append(found, nameFindings(f)...)
 		if f.test || f.e2eOnly {
 			continue
 		}
