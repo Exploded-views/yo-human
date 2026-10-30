@@ -493,3 +493,13 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.036s
 FAIL
 exit=1
+
+# H1 Task 5 RED, round 6, item 2 (HIGH-1 follow-up: a built binary rode in on a merge; TestNoBinariesInRepo and BinaryFiles: a NUL byte in the first 8000 bytes, or a Mach-O, ELF or PE header, outside testdata/ is a finding; BinaryFiles is a stub here), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/repolint/
+--- FAIL: TestBinaryFilesFindsExecutablesAndNULs (0.01s)
+    binaries_test.go:46: BinaryFiles = [], <nil>; want [data.bin deep/dir/blob elf fat macho32 mytestdata/c.bin perf tools/x.exe]
+    binaries_test.go:49: no error for a missing file
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.340s
+FAIL
+exit=1
