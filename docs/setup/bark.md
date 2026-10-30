@@ -45,6 +45,31 @@ Run this in your own terminal: it asks you to type `yes` before it stores anythi
 
 `yo-human secret list` shows names and byte counts, never values.
 
+## Self-hosted server with basic auth
+
+A self-hosted bark-server can run with basic auth. It then answers every push without credentials with HTTP 418 "I'm a teapot". Give the instance a `username` and a `password`, both secrets, and yo-human sends them as HTTP basic auth on each push:
+
+```yaml
+channels:
+  iphone:
+    type: bark
+    server: https://bark.example.com
+    device_key: { secret: bark-key }
+    username: { secret: bark-user }
+    password: { secret: bark-password }
+```
+
+Store both, in your own terminal:
+
+```sh
+op read "op://$OP_VAULT/$OP_ITEM/username" | yo-human secret set bark-user
+op read "op://$OP_VAULT/$OP_ITEM/password" | yo-human secret set bark-password
+```
+
+- Set both or neither. One without the other is refused with exit 78, and the message names the instance and both fields, never a value.
+- A 418 or 401 answer fails the page permanently, with a hint to set `username` and `password`. Fix the credentials and send again.
+- The public server needs none of this.
+
 ## Critical alerts need a permission
 
 The `critical` level reaches your phone through iOS critical alerts. These need the **critical-alerts permission for the Bark app**. Grant it in the Bark app's notification settings on the iPhone. Without it, a `critical` page still arrives, but as a normal notification: it respects the silent switch and Focus modes. If a critical page does not break through, check this permission first.

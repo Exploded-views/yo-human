@@ -45,7 +45,7 @@ func NewType(version string) channel.Type {
 	return channel.Type{
 		Name:           "bark",
 		Capabilities:   caps,
-		SecretFields:   []string{"device_key"},
+		SecretFields:   []string{"device_key", "username", "password"},
 		SettingsSchema: schema,
 		New: func(in channel.Instance) (channel.Channel, error) {
 			return newWithClient(in, version, nil)
@@ -58,11 +58,12 @@ var keyRE = sync.OnceValue(func() *regexp.Regexp { return regexp.MustCompile(`^[
 
 type barkChannel struct {
 	base, key, ua string
+	user, pass    string // basic auth for a self-hosted server; both set or both empty
 	client        *http.Client
 }
 
 // newWithClient builds a channel; a nil client means a default one. The client has no timeout:
-// the context carries the deadline. It never follows redirects, so the key is not forwarded.
+// the context carries the deadline. It never follows redirects, so the key and any basic-auth credentials are not forwarded.
 func newWithClient(in channel.Instance, version string, client *http.Client) (channel.Channel, error) {
 	base, err := parseServer(in.Settings["server"])
 	if err != nil {
@@ -73,7 +74,13 @@ func newWithClient(in channel.Instance, version string, client *http.Client) (ch
 		return nil, channel.Misconfigured(fmt.Errorf(
 			"bark instance %q: secret field device_key is missing or invalid (1 to 64 letters, digits, - or _)", in.Name))
 	}
-	return &barkChannel{base: base, key: key, ua: "yo-human/" + version, client: transport.NoRedirectClient(client)}, nil
+	user, pass := in.Secrets["username"], in.Secrets["password"]
+	if (user == "") != (pass == "") {
+		return nil, channel.Misconfigured(fmt.Errorf(
+			"bark instance %q: secret fields username and password go together; set both or neither", in.Name))
+	}
+	return &barkChannel{base: base, key: key, user: user, pass: pass, ua: "yo-human/" + version,
+		client: transport.NoRedirectClient(client)}, nil
 }
 
 // parseServer checks the server setting without echoing it; the text continues "setting server ...".
