@@ -123,6 +123,8 @@ func TestTimePostsRefusesTheWrongOutcome(t *testing.T) {
 	}
 }
 
+// seeded makes the one-off post that follows the bulk seed itself, so the first Post a scenario
+// times is already a steady-state one: the warm-up draft is already there (unchanged).
 func TestSeededWarmsUpBeforeReturning(t *testing.T) {
 	b, closeDB, err := seeded(filepath.Join(t.TempDir(), "data"), 5)
 	if err != nil {
@@ -138,6 +140,7 @@ func TestSeededWarmsUpBeforeReturning(t *testing.T) {
 	}
 }
 
+// A warm-up that fails is an error from the seed, not a bus that silently skipped it.
 func TestSeededReportsAWarmUpFailure(t *testing.T) {
 	b, closeDB, err := seededWarm(filepath.Join(t.TempDir(), "data"), 5, perfDraft("warm-up", ""))
 	if err == nil {
@@ -146,6 +149,8 @@ func TestSeededReportsAWarmUpFailure(t *testing.T) {
 	}
 }
 
+// The warm-up has to come after the seed: its event takes the sequence number after all the seed
+// events, since a warm-up before the seed would not absorb the post-seed cost.
 func TestWarmUpFollowsTheSeed(t *testing.T) {
 	const items = 5
 	b, closeDB, err := seeded(filepath.Join(t.TempDir(), "data"), items)

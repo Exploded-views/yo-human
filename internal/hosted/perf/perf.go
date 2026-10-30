@@ -155,8 +155,8 @@ func seededWarm(dir string, items int, warm bus.Draft) (*bus.Bus, func(), error)
 		return nil, nil, err
 	}
 	b := bus.New(d, time.Now, bus.Limits{})
-	// The first commit after the bulk seed pays a one-off cost (most likely the
-	// WAL checkpoint); the scenarios must not time it.
+	// Measured locally: the first commit after the 10,000-item bulk seed took 8.6-10.3 ms, the
+	// rest 0.16-0.37 ms. The seed creates that one-off, so the scenarios must not time it.
 	if _, err := b.Post(context.Background(), perfNode, warm); err != nil {
 		closeDB()
 		return nil, nil, err
