@@ -505,3 +505,24 @@ FAIL
 exit=1
 
 # Note, round 6, item 3 (P3-NIT-1): v01.2.3, v1.02.3, v1.2.03, v00.1.1, v12345.1.1, v1.2.3.4 and v1.2 were added to TestWalledRefAndTargetRefusals as ref cases that assert the field the error names (ref). They all passed on arrival, so this is a test-only commit with no RED and no fix: the semver grammar already refused them.
+
+# H1 Task 5 RED, round 6, item 4 (P3-LOW-1, LEAD RULING 2026-10-30: on a walled item pinned_commit and pinned_tree must be empty unless the action is merge or release; any other action with either set is invalid, naming the field; it holds for posts, revisions and Duet's post into the swarm; unwalled swarms are unchanged. The lead adds the matching plan line in #12), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestWalledPinsOnlyOnMergeAndRelease (0.01s)
+    --- FAIL: TestWalledPinsOnlyOnMergeAndRelease/none_with_a_pinned_commit (0.00s)
+        wall_test.go:394: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledPinsOnlyOnMergeAndRelease/none_with_a_pinned_tree (0.00s)
+        wall_test.go:394: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledPinsOnlyOnMergeAndRelease/none_with_both (0.00s)
+        wall_test.go:394: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledPinsOnlyOnMergeAndRelease/other_with_a_pinned_commit (0.00s)
+        wall_test.go:395: What = "action", want "pinned_commit"
+    --- FAIL: TestWalledPinsOnlyOnMergeAndRelease/deploy_with_a_pinned_tree (0.00s)
+        wall_test.go:395: What = "action", want "pinned_tree"
+    --- FAIL: TestWalledPinsOnlyOnMergeAndRelease/public-sync_with_a_pinned_tree (0.00s)
+        wall_test.go:395: What = "action", want "pinned_tree"
+    wall_test.go:405: err = <nil> (<nil>), want a *bus.Error with code invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.580s
+FAIL
+exit=1
