@@ -75,7 +75,7 @@ func walledDeploy() bus.Draft {
 func walledPublicSync() bus.Draft {
 	return bus.Draft{
 		Kind: bus.KindApproval, Severity: bus.SeverityHigh, To: "human", Handle: "ob-15", Title: "ob-15 deploy-ready",
-		Action: bus.ActionPublicSync, Repo: "cn:alpha", Ref: "main", PinnedCommit: strings.Repeat("0a", 20), PinnedTree: strings.Repeat("0b", 20),
+		Action: bus.ActionPublicSync, Repo: "cn:alpha", Ref: "main", Target: "prod", PinnedCommit: strings.Repeat("0a", 20), PinnedTree: strings.Repeat("0b", 20),
 		Urgency: bus.UrgencyPage,
 	}
 }

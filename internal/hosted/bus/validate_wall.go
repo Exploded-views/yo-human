@@ -2,6 +2,7 @@ package bus
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -67,15 +68,13 @@ func CheckWalledDraft(d Draft) error {
 	return checkNoFlags(d)
 }
 
-// checkWalledPins: a walled item carries pinned_commit and pinned_tree only on the actions that use
-// them, a merge and a release (lead ruling, 2026-10-30). A free-form 40-hex string is a channel.
+// checkWalledPins: a walled item carries pinned_commit and pinned_tree only where its action
+// requires them (lead ruling, 2026-10-30), as Validate's required map says: so the rule is read
+// from that map, not copied, and the two can't drift. A free-form 40-hex string is a channel.
 func checkWalledPins(d Draft) error {
-	if d.Action == ActionMerge || d.Action == ActionRelease {
-		return nil
-	}
 	for _, f := range []struct{ field, v string }{{"pinned_commit", d.PinnedCommit}, {"pinned_tree", d.PinnedTree}} {
-		if f.v != "" {
-			return wallInvalid(f.field, "empty: a walled item pins a commit or tree only on a merge or release approval")
+		if f.v != "" && !slices.Contains(required[d.Action], f.field) {
+			return wallInvalid(f.field, "empty unless the action requires it: a merge, release or deploy pins a commit, a public-sync a commit and a tree")
 		}
 	}
 	return nil
