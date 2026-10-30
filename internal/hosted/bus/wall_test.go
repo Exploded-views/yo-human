@@ -208,7 +208,8 @@ func TestWalledRefAndTargetRefusals(t *testing.T) {
 	}
 	refuse := func(name, field string, edit func(*bus.Draft)) { refuseOn(walledRelease, name, field, edit) }
 	for _, c := range []struct{ name, v string }{
-		{"letters in a PR id", "pr:4a"}, {"zero", "pr:0"}, {"a leading zero", "pr:042"}, {"letters after digits", "pr:4a4"}, {"a letter alone", "pr:a"}, {"seven digits", "pr:1234567"}, {"bare pr:", "pr:"}, {"a branch name", "feature/x"},
+		{"letters in a PR id", "pr:4a"}, {"leading zero in the major", "v01.2.3"}, {"leading zero in the minor", "v1.02.3"},
+		{"leading zero in the patch", "v1.2.03"}, {"double zero major", "v00.1.1"}, {"five digit major", "v12345.1.1"}, {"a fourth part", "v1.2.3.4"}, {"a v with two parts", "v1.2"}, {"zero", "pr:0"}, {"a leading zero", "pr:042"}, {"letters after digits", "pr:4a4"}, {"a letter alone", "pr:a"}, {"seven digits", "pr:1234567"}, {"bare pr:", "pr:"}, {"a branch name", "feature/x"},
 		{"a URL", "https://github.com/o/r/pull/7"}, {"capital PR", "PR:42"}, {"pr with a space", "pr: 42"}, {"two PR ids", "pr:4,pr:5"},
 		{"a bare number", "42"}, {"a pr: tag", "pr:42x"}, {"release with a letter", "release/1.x"},
 	} {

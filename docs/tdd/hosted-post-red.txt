@@ -503,3 +503,5 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.340s
 FAIL
 exit=1
+
+# Note, round 6, item 3 (P3-NIT-1): v01.2.3, v1.02.3, v1.2.03, v00.1.1, v12345.1.1, v1.2.3.4 and v1.2 were added to TestWalledRefAndTargetRefusals as ref cases that assert the field the error names (ref). They all passed on arrival, so this is a test-only commit with no RED and no fix: the semver grammar already refused them.
