@@ -1,0 +1,12 @@
+$ go test -race ./internal/core 2>&1
+--- FAIL: TestQuietSpringForwardGapEnd (0.00s)
+    quiet_test.go:145: QuietEnd(2026-03-08 01:40:00 -0600 CST) = 0001-01-01 00:00:00 +0000 UTC, false; want inside until 2026-03-08 03:00:00 -0500 CDT
+    quiet_test.go:145: QuietEnd(2026-03-07 23:00:00 -0600 CST) = 2026-03-08 01:30:00 -0600 CST, true; want inside until 2026-03-08 03:00:00 -0500 CDT
+--- FAIL: TestQuietSpringForwardGapStart (0.00s)
+    quiet_test.go:157: window with a start in the gap began before the gap
+--- FAIL: TestPlanOptionsAreCopied (0.00s)
+    router_test.go:123: mutating a planned send changed the config: map[extra:true tag:changed]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.029s
+FAIL
+exit=1

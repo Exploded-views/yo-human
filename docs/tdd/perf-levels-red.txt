@@ -1,0 +1,10 @@
+# what this is: go test ./tools/perf/ with no levels scenario and a fixture that writes nothing (RED)
+# command: go test -count=1 ./tools/perf/
+--- FAIL: TestLevelsScenarioRunsInAFixtureHome (0.00s)
+    budget_test.go:292: scenario levels = <nil>; want one that runs `yo-human levels` after a Setup
+--- FAIL: TestLevelsFixtureFailsWhereItCannotWrite (0.00s)
+    budget_test.go:316: levelsFixture under a file succeeded, want an error
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.217s
+FAIL
+# exit code: 1

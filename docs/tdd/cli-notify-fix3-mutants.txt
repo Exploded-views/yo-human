@@ -1,0 +1,152 @@
+# what this is: task 11 fix round 3 mutants: per-destination reach records (delivered fingerprints, scheduled sends with their own), notes per delivered destination, replaced-generation cancels, ntfy cancel of a gone message, status kinds; each run is bounded by a 300s timeout
+# test command: go test -count=1 -timeout 150s <package> (timeout 300s per run); the failing lines of each run are kept as printed
+# The "held text always says send" mutant is equivalent and was dropped: an entry is only held for a later delivery when it is a send (notes ignore quiet hours and a cancel is never held), so its label is always send.
+## baseline
+ok  	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.132s
+exit=0
+ok  	github.com/Exploded-views/yo-human/internal/cli	8.437s
+exit=0
+ok  	github.com/Exploded-views/yo-human/internal/core	16.840s
+exit=0
+# (the core baseline line above was re-run when assembling this record)
+
+## a destination is recorded as delivered twice
+# in internal/core/repeat.go: "if !slices.Contains(rs[i].Delivered, fingerprint) {" => "if true {"
+--- FAIL: TestADeliveryAddsItsDestinationToTheRecord (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	15.555s
+FAIL
+exit=1 (killed)
+
+## a scheduled send is recorded without its destination
+# in internal/core/repeat.go: "store.ScheduledSend{ID: res.ProviderID, Fingerprint: fingerprint})\n		}\n		return rs" => "store.ScheduledSend{ID: res.ProviderID})\n		}\n		return rs"
+--- FAIL: TestResolveCancelsAndNotesWhenDeliveredThenScheduled (0.16s)
+--- FAIL: TestResolveCancelsEveryHeldSendOnAnInstance (0.12s)
+--- FAIL: TestExpiredGenerationsEveryHeldSendIsCancelled (0.17s)
+--- FAIL: TestEachScheduledSendIsCancelledThroughItsOwnDestination (0.13s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	15.752s
+FAIL
+exit=1 (killed)
+
+## a replaced generation cancels without per-send destinations
+# in internal/core/repeat.go: "ProviderID: sc.ID, Scheduled: true}, sc.Fingerprint, inc.Generation}" => "ProviderID: sc.ID, Scheduled: true}, "", inc.Generation}"
+--- FAIL: TestResolveQueuesTheCancelOfAScheduledSendItCannotReach (0.10s)
+--- FAIL: TestAQueuedCancelRunsOnlyThroughTheSameDestination (0.12s)
+--- FAIL: TestAQueuedCancelSurvivesTheIncidentReopening (0.20s)
+--- FAIL: TestAQueuedCancelThatFailsPermanentlyGoesToTheDeadLetter (0.11s)
+--- FAIL: TestAQueuedCancelThatFailsTransientlyIsRetried (0.13s)
+--- FAIL: TestResolveCancelsAHeldPageAfterALouderOneWasDelivered (0.15s)
+--- FAIL: TestResolveCancelsAndNotesWhenDeliveredThenScheduled (0.14s)
+--- FAIL: TestResolveCancelsEveryHeldSendOnAnInstance (0.14s)
+--- FAIL: TestExpiredGenerationsHeldSendIsCancelled (0.11s)
+--- FAIL: TestExpiredGenerationsCancelFailureIsReported (0.08s)
+--- FAIL: TestExpiredGenerationsEveryHeldSendIsCancelled (0.17s)
+--- FAIL: TestEachScheduledSendIsCancelledThroughItsOwnDestination (0.15s)
+--- FAIL: TestAnExpiredGenerationsHeldSendsAreCancelledThroughTheirOwnDestination (0.13s)
+--- FAIL: TestResolveReportsACancelThatFailed (0.07s)
+--- FAIL: TestResolveCancelsPending (0.10s)
+--- FAIL: TestResolveCancelsWhatAChannelHolds (0.10s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	15.541s
+FAIL
+exit=1 (killed)
+
+## only the first delivering destination gets a note
+# in internal/core/resolve.go: "if round < len(r.Delivered) {" => "if round < 1 && len(r.Delivered) > 0 {"
+--- FAIL: TestAResolveNoteGoesThroughEveryDestinationThatDelivered (0.13s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	15.666s
+FAIL
+exit=1 (killed)
+
+## every note is pinned to the first destination
+# in internal/core/resolve.go: "Fingerprint: r.Delivered[round]}" => "Fingerprint: r.Delivered[0]}"
+--- FAIL: TestAResolveNoteGoesThroughEveryDestinationThatDelivered (0.17s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	15.479s
+FAIL
+exit=1 (killed)
+
+## notes of one instance share a queue key and overwrite each other
+# in internal/core/resolve.go: "		if round > 0 {\n			noteID = b.p.d.NewID()\n		}" => "		if false {\n			noteID = b.p.d.NewID()\n		}"
+--- FAIL: TestAResolveNoteGoesThroughEveryDestinationThatDelivered (0.15s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	15.648s
+FAIL
+exit=1 (killed)
+
+## a cancel of an already-gone message fails
+# in internal/channel/ntfy/client.go: "c.do(ctx, req, http.StatusNotFound)" => "c.do(ctx, req)"
+--- FAIL: TestCancelOfAMessageThatIsAlreadyGoneSucceeds (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.131s
+FAIL
+exit=1 (killed)
+
+## no status counts as success beside 2xx
+# in internal/channel/ntfy/client.go: "slices.Contains(alsoOK, resp.StatusCode)" => "slices.Contains(alsoOK, -1)"
+--- FAIL: TestCancelOfAMessageThatIsAlreadyGoneSucceeds (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.135s
+FAIL
+exit=1 (killed)
+
+## a forbidden cancel counts as done
+# in internal/channel/ntfy/client.go: "slices.Contains(alsoOK, resp.StatusCode) {" => "slices.Contains(alsoOK, resp.StatusCode) || resp.StatusCode == 403 {"
+--- FAIL: TestErrorKinds (0.02s)
+--- FAIL: TestCancelOfAMessageThatIsAlreadyGoneSucceeds (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.134s
+FAIL
+exit=1 (killed)
+
+## a queued cancel is labelled a send
+# in internal/cli/status.go: "	case p.Kind == "cancel":" => "	case false:"
+--- FAIL: TestStatusLabelsEachEntryByKind (0.23s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	7.542s
+FAIL
+exit=1 (killed)
+
+## a resolve note is labelled a send
+# in internal/cli/status.go: "	case p.Message.Resolved:" => "	case false:"
+--- FAIL: TestStatusLabelsAResolveNote (0.15s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	7.686s
+FAIL
+exit=1 (killed)
+
+## an unreadable entry is labelled a send
+# in internal/cli/status.go: "	case err != nil:\n		return "unreadable"" => "	case err != nil && false:\n		return "unreadable""
+--- FAIL: TestStatusCallsAnEntryItCannotReadUnreadable (0.06s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.222s
+FAIL
+exit=1 (killed)
+
+## queued text always says send
+# in internal/cli/status.go: "q.NextAttempt.Format(time.RFC3339), q.Kind)" => "q.NextAttempt.Format(time.RFC3339), "send")"
+--- FAIL: TestStatusLabelsEachEntryByKind (0.23s)
+--- FAIL: TestStatusLabelsAResolveNote (0.18s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.234s
+FAIL
+exit=1 (killed)
+
+## dead text always says send
+# in internal/cli/status.go: "d.ID, oneLine(d.Channel), d.Kind, oneLine(d.Reason))" => "d.ID, oneLine(d.Channel), "send", oneLine(d.Reason))"
+--- FAIL: TestStatusCallsAnEntryItCannotReadUnreadable (0.08s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.878s
+FAIL
+exit=1 (killed)
+
+## queued JSON always says send
+# in internal/cli/status.go: "s.Queued = append(s.Queued, queuedView{id, inst, p.Attempts, p.NextAttempt.UTC(), p.Reason, kindOf(p.Data)})" => "s.Queued = append(s.Queued, queuedView{id, inst, p.Attempts, p.NextAttempt.UTC(), p.Reason, "send"})"
+--- FAIL: TestStatusLabelsEachEntryByKind (0.24s)
+--- FAIL: TestStatusLabelsAResolveNote (0.18s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.397s
+FAIL
+exit=1 (killed)

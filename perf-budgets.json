@@ -3,7 +3,13 @@
   "ci_headroom": 2.0,
   "budgets": {
     "version-startup": { "p95_ms": 10 },
+    "levels": { "p95_ms": 15 },
+    "status": { "p95_ms": 15 },
+    "notify-usage-error": { "p95_ms": 13 },
+    "notify-held-local": { "p95_ms": 30 },
+    "notify-suppressed": { "p95_ms": 30 },
     "hosted-post": { "p95_ms": 10 },
     "hosted-revise": { "p95_ms": 10 }
-  }
+  },
+  "binary_bytes": 10000000
 }

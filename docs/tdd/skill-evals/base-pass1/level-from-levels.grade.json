@@ -1,0 +1,13 @@
+{
+ "must": [
+  true,
+  true,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  false
+ ],
+ "note": "Reply runs levels first and picks the level from its output, but never shows a notify command with --level, --title and --ask (it only describes the send generically).",
+ "pass": false
+}

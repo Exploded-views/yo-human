@@ -1,0 +1,109 @@
+# Mutation checks for the M1 task 5 send pipeline (internal/core). Each mutant is applied to the GREEN code, then 'go test -race -count=1 -timeout 60s ./internal/core' is run; output filtered to ok/FAIL/--- FAIL/panic lines.
+# First run: the 'send before enqueue' mutant was caught by seven tests but not by TestEnqueueBeforeSend, because its SendFunc kept the counts of the last call, not the first. The test now records the first call only. Final run below. A mutant that ends in "panic: test timed out" hangs the suite (a send that never sees a deadline); it is killed, and its own failing assertions are shown in the targeted run at the end.
+== baseline
+ok  	github.com/Exploded-views/yo-human/internal/core	4.268s
+== mutant: Summarize counts log channels (reachesHuman ignored)
+--- FAIL: TestSummarize (0.00s)
+--- FAIL: TestLogChannelNeverCountsAsDelivery (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	3.111s
+FAIL
+== mutant: send happens before the enqueue (channel sent first, entry written after)
+--- FAIL: TestClaimFailureIsReportedAndTheEntryKept (0.01s)
+--- FAIL: TestSettleFailureAfterASendIsReported (0.01s)
+--- FAIL: TestScheduledChannelGetsDeliverAt (0.01s)
+--- FAIL: TestFlushRetriesWithBackoffThenDeadLetters (0.02s)
+--- FAIL: TestBacklogEntryTakenByAnotherProcessIsSkipped (0.05s)
+--- FAIL: TestConcurrentFlushesNeverSendTwice (0.58s)
+--- FAIL: TestEnqueueBeforeSend (0.02s)
+panic: test timed out after 1m0s
+FAIL	github.com/Exploded-views/yo-human/internal/core	60.041s
+FAIL
+== mutant: deadline not applied
+panic: test timed out after 1m0s
+FAIL	github.com/Exploded-views/yo-human/internal/core	60.038s
+FAIL
+== mutant: NextAttempt does not cap
+--- FAIL: TestNextAttemptCurve (0.17s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	3.304s
+FAIL
+== mutant: backlog drained before the new message
+--- FAIL: TestSettleFailureAfterASendIsReported (0.02s)
+--- FAIL: TestLogFailureIsReportedWithTheResult (0.02s)
+--- FAIL: TestFlushRetriesWithBackoffThenDeadLetters (0.05s)
+--- FAIL: TestBacklogEntryTakenByAnotherProcessIsSkipped (0.08s)
+--- FAIL: TestConcurrentFlushesNeverSendTwice (0.82s)
+--- FAIL: TestStatuses (0.30s)
+--- FAIL: TestAllPermanentIsFailed (0.06s)
+--- FAIL: TestConfigErrorIsDeadLettered (0.03s)
+--- FAIL: TestLogChannelNeverCountsAsDelivery (0.06s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	4.846s
+FAIL
+== mutant: retries stop one early (attempts > Times)
+--- FAIL: TestFlushRetriesWithBackoffThenDeadLetters (0.07s)
+--- FAIL: TestNextAttemptCurve (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	3.273s
+FAIL
+== mutant: permanent errors are retried
+--- FAIL: TestStatuses (0.32s)
+--- FAIL: TestAllPermanentIsFailed (0.04s)
+--- FAIL: TestConfigErrorIsDeadLettered (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	3.498s
+FAIL
+== mutant: a sent entry is not removed
+--- FAIL: TestSettleFailureAfterASendIsReported (0.01s)
+--- FAIL: TestHeldLocallyIsNotSentUntilDue (0.01s)
+--- FAIL: TestScheduledChannelGetsDeliverAt (0.01s)
+--- FAIL: TestConcurrentFlushesNeverSendTwice (0.52s)
+--- FAIL: TestEnqueueBeforeSend (0.01s)
+--- FAIL: TestStatuses (0.22s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	3.051s
+FAIL
+== mutant: Recover not called
+--- FAIL: TestRecoverFailureStopsNotifyAndFlush (0.01s)
+--- FAIL: TestNotifyAndFlushRecoverStrandedSendsFirst (0.08s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	3.233s
+FAIL
+== mutant: scheduled receipt reported as sent
+--- FAIL: TestScheduledChannelGetsDeliverAt (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	3.531s
+FAIL
+== mutant: DeliverAt never passed to the channel
+--- FAIL: TestScheduledChannelGetsDeliverAt (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	3.366s
+FAIL
+== mutant: held-local sends are sent now
+--- FAIL: TestHeldLocallyIsNotSentUntilDue (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	3.322s
+FAIL
+== mutant: worker slot taken after the deadline
+--- FAIL: TestNewMessageBeforeBacklog (2.24s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	3.909s
+FAIL
+
+# Targeted runs of the two mutants that end in the timeout above
+== mutant (targeted run, -run 'TestEnqueueBeforeSend|TestDeadlineBoundsTheCall'): send happens before the enqueue (channel sent first, entry written after)
+--- FAIL: TestEnqueueBeforeSend (0.02s)
+    pipeline_test.go:27: during the send queued=1 inflight=0; want the entry written and claimed (0, 1) before the network call
+panic: test timed out after 1m0s
+FAIL	github.com/Exploded-views/yo-human/internal/core	60.034s
+FAIL
+== mutant (targeted run, -run 'TestEnqueueBeforeSend|TestDeadlineBoundsTheCall'): deadline not applied
+--- FAIL: TestDeadlineBoundsTheCall (5.02s)
+    pipeline_test.go:154: Notify took 5.019969417s; want within 300ms of a 200ms deadline
+    pipeline_test.go:159: the channel's context was not cancelled at the deadline
+    pipeline_test.go:165: got "delivered" [{Channel:slow Status:sent Error:}]; want the blocked channel queued
+    pipeline_test.go:168: queued = 0; want the timed-out send kept for retry
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	5.081s
+FAIL

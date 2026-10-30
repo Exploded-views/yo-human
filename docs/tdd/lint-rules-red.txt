@@ -1883,3 +1883,346 @@ mutant: lint.sh target passes on the host GOOS/GOARCH: exit=1, failing=1; first:
 10:38  up 4 days, 14:15, 1 user, load averages: 12.63 8.47 8.56
 mutant: drop linux/arm64 only: survived (exit 0); darwin/arm64 still lints the _arm64.go file, so this mutant was mis-specified; the next line drops both
 mutant: drop both arm64 targets from RELEASE_TARGETS (linux/arm64, darwin/arm64): exit=1, failing=1; first: FAIL internal/core/casearm64/x_arm64.go: core imports net/http in an _arm64.go file: want internal-no-network, got internal-no-network, but no pass with GOARCH=arm64 CGO_ENABLED=0 reported it
+
+=== (M1 task 1) core-no-network broadened from net/http to net; throwaway branch scratch/core-net, never pushed, deleted
+=== internal/core/casenet (want 1)
+$ golangci-lint run -c .golangci.yml ./internal/core/casenet/...
+internal/core/casenet/x.go:3:8: import 'net' is not allowed from list 'core-no-network': core makes no network calls (net, net/http, net/smtp and the rest); all outbound traffic goes through a channel (depguard)
+import _ "net"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/core/casesmtp (want 1)
+$ golangci-lint run -c .golangci.yml ./internal/core/casesmtp/...
+internal/core/casesmtp/x.go:3:8: import 'net/smtp' is not allowed from list 'core-no-network': core makes no network calls (net, net/http, net/smtp and the rest); all outbound traffic goes through a channel (depguard)
+import _ "net/smtp"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/core/casenet_test_ok (want 0 (control: a test may import net))
+$ golangci-lint run -c .golangci.yml ./internal/core/casenet_test_ok/...
+0 issues.
+exit=0
+--- cleanup: git checkout feat/m1-notify; git branch -D scratch/core-net
+
+=== (M1 task 1 fix) core-no-network: list-mode lax, allow net/url and net/netip (parse only); throwaway branch scratch/core-url, never pushed, deleted
+=== internal/core/caseurl (want 0)
+$ golangci-lint run -c .golangci.yml ./internal/core/caseurl/...
+0 issues.
+exit=0
+=== internal/core/casenetip (want 0)
+$ golangci-lint run -c .golangci.yml ./internal/core/casenetip/...
+0 issues.
+exit=0
+=== internal/core/casenet (want 1)
+$ golangci-lint run -c .golangci.yml ./internal/core/casenet/...
+internal/core/casenet/x.go:3:8: import 'net' is not allowed from list 'core-no-network': core makes no network calls (net, net/http, net/smtp and the rest); all outbound traffic goes through a channel (depguard)
+import _ "net"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/core/casehttp (want 1)
+$ golangci-lint run -c .golangci.yml ./internal/core/casehttp/...
+internal/core/casehttp/x.go:3:8: import 'net/http' is not allowed from list 'core-no-network': core makes no network calls (net, net/http, net/smtp and the rest); all outbound traffic goes through a channel (depguard)
+import _ "net/http"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/core/casetest (want 0)
+$ golangci-lint run -c .golangci.yml ./internal/core/casetest/...
+0 issues.
+exit=0
+--- cleanup: git checkout feat/m1-notify; git branch -D scratch/core-url
+
+=== (M1 layering pass) cli must not import store or a channel implementation; only internal/channel/registry imports one. Probe packages in a throwaway clone of feat/m1-notify at 5b48250 ($SCRATCH/probe), never committed. Before: the 5b48250 rules.
+=== internal/cli/casestore (want 1; RED: 0, the rule is missing)
+$ golangci-lint run -c .golangci.yml ./internal/cli/casestore/...
+0 issues.
+exit=0
+=== internal/cli/casentfy (want 1; RED: 0, the rule is missing)
+$ golangci-lint run -c .golangci.yml ./internal/cli/casentfy/...
+0 issues.
+exit=0
+=== internal/core/casentfy (want 1; RED: 0, the rule is missing)
+$ golangci-lint run -c .golangci.yml ./internal/core/casentfy/...
+internal/core/casentfy/x.go:3:8: import 'github.com/Exploded-views/yo-human/internal/channel/ntfy' is not allowed from list 'core-no-network': core uses the internal/channel interface, never an implementation (depguard)
+import _ "github.com/Exploded-views/yo-human/internal/channel/ntfy"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/config/casentfy (want 1; RED: 0, the rule is missing)
+$ golangci-lint run -c .golangci.yml ./internal/config/casentfy/...
+0 issues.
+exit=0
+=== internal/channel/registry (want 0 (control: registry imports the four implementations))
+$ golangci-lint run -c .golangci.yml ./internal/channel/registry/...
+internal/channel/registry/registry.go:8:2: import 'github.com/Exploded-views/yo-human/internal/channel/bark' is not allowed from list 'channel-implementations': a channel must not import another channel (depguard)
+	"github.com/Exploded-views/yo-human/internal/channel/bark"
+	^
+internal/channel/registry/registry.go:9:2: import 'github.com/Exploded-views/yo-human/internal/channel/logch' is not allowed from list 'channel-implementations': a channel must not import another channel (depguard)
+	"github.com/Exploded-views/yo-human/internal/channel/logch"
+	^
+internal/channel/registry/registry.go:10:2: import 'github.com/Exploded-views/yo-human/internal/channel/ntfy' is not allowed from list 'channel-implementations': a channel must not import another channel (depguard)
+	"github.com/Exploded-views/yo-human/internal/channel/ntfy"
+	^
+internal/channel/registry/registry.go:11:2: import 'github.com/Exploded-views/yo-human/internal/channel/pagerduty' is not allowed from list 'channel-implementations': a channel must not import another channel (depguard)
+	"github.com/Exploded-views/yo-human/internal/channel/pagerduty"
+	^
+4 issues:
+* depguard: 4
+exit=1
+=== internal/cli/caseregistry (want 0 (control: cli imports registry))
+$ golangci-lint run -c .golangci.yml ./internal/cli/caseregistry/...
+0 issues.
+exit=0
+=== internal/cli/casetest (want 0 (control: a cli test may import store and channeltest))
+$ golangci-lint run -c .golangci.yml ./internal/cli/casetest/...
+0 issues.
+exit=0
+
+--- after: .golangci.yml replaced by the M0 branch's file at 32bb71c, word for word
+=== internal/cli/casestore (want 1)
+$ golangci-lint run -c .golangci.yml ./internal/cli/casestore/...
+internal/cli/casestore/x.go:3:8: import 'github.com/Exploded-views/yo-human/internal/store' is not allowed from list 'cli-not-store-or-impls': cli must not import store; state goes through core (depguard)
+import _ "github.com/Exploded-views/yo-human/internal/store"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/cli/casentfy (want 1)
+$ golangci-lint run -c .golangci.yml ./internal/cli/casentfy/...
+internal/cli/casentfy/x.go:3:8: import 'github.com/Exploded-views/yo-human/internal/channel/ntfy' is not allowed from list 'channel-impls-only-via-registry': only internal/channel/registry may import a channel implementation (depguard)
+import _ "github.com/Exploded-views/yo-human/internal/channel/ntfy"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/core/casentfy (want 1)
+$ golangci-lint run -c .golangci.yml ./internal/core/casentfy/...
+internal/core/casentfy/x.go:3:8: import 'github.com/Exploded-views/yo-human/internal/channel/ntfy' is not allowed from list 'channel-impls-only-via-registry': only internal/channel/registry may import a channel implementation (depguard)
+import _ "github.com/Exploded-views/yo-human/internal/channel/ntfy"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/config/casentfy (want 1)
+$ golangci-lint run -c .golangci.yml ./internal/config/casentfy/...
+internal/config/casentfy/x.go:3:8: import 'github.com/Exploded-views/yo-human/internal/channel/ntfy' is not allowed from list 'channel-impls-only-via-registry': only internal/channel/registry may import a channel implementation (depguard)
+import _ "github.com/Exploded-views/yo-human/internal/channel/ntfy"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/channel/registry (want 0 (control: registry imports the four implementations))
+$ golangci-lint run -c .golangci.yml ./internal/channel/registry/...
+0 issues.
+exit=0
+=== internal/cli/caseregistry (want 0 (control: cli imports registry))
+$ golangci-lint run -c .golangci.yml ./internal/cli/caseregistry/...
+0 issues.
+exit=0
+=== internal/cli/casetest (want 0 (control: a cli test may import store and channeltest))
+$ golangci-lint run -c .golangci.yml ./internal/cli/casetest/...
+0 issues.
+exit=0
+
+=== the whole tree under the new rules, probes removed (the M0 text verbatim, before the ruling: helpers.go in the interface package and the e2e test hook are flagged, which led to the transport package and the *_e2e.go exclusion. The first exit line below is wrong: the script printed the status of a subshell, not of golangci-lint, which reported 3 issues and so exited 1)
+$ golangci-lint run
+internal/channel/helpers.go:5:2: import 'crypto/tls' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+	"crypto/tls"
+	^
+internal/channel/helpers.go:8:2: import 'net' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+	"net"
+	^
+internal/channel/helpers.go:9:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+	"net/http"
+	^
+3 issues:
+* depguard: 3
+exit=0
+$ golangci-lint run --build-tags e2e
+internal/channel/helpers.go:5:2: import 'crypto/tls' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+	"crypto/tls"
+	^
+internal/channel/helpers.go:8:2: import 'net' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+	"net"
+	^
+internal/channel/helpers.go:9:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+	"net/http"
+	^
+internal/cli/testhooks_e2e.go:6:2: import 'crypto/tls' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+	"crypto/tls"
+	^
+internal/cli/testhooks_e2e.go:8:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+	"net/http"
+	^
+5 issues:
+* depguard: 5
+exit=1
+
+=== (M1 layering pass) after: .golangci.yml is the M0 branch's file at 32bb71c with the ruled delta: channel-implementations gets list-mode: strict and an allow for internal/channel/transport$, channel-implementation-tests the same allow, internal-no-network skips **/*_e2e.go. The network helpers are in internal/channel/transport. Probe packages in a throwaway clone ($SCRATCH/probe) holding this pass's tree, never committed.
+=== internal/cli/casestore/ (want 1)
+$ golangci-lint run  ./internal/cli/casestore/
+internal/cli/casestore/x.go:3:8: import 'github.com/Exploded-views/yo-human/internal/store' is not allowed from list 'cli-not-store-or-impls': cli must not import store; state goes through core (depguard)
+import _ "github.com/Exploded-views/yo-human/internal/store"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/cli/casentfy/ (want 1)
+$ golangci-lint run  ./internal/cli/casentfy/
+internal/cli/casentfy/x.go:3:8: import 'github.com/Exploded-views/yo-human/internal/channel/ntfy' is not allowed from list 'channel-impls-only-via-registry': only internal/channel/registry may import a channel implementation (depguard)
+import _ "github.com/Exploded-views/yo-human/internal/channel/ntfy"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/cli/casetransport/ (want 1)
+$ golangci-lint run  ./internal/cli/casetransport/
+internal/cli/casetransport/x.go:3:8: import 'github.com/Exploded-views/yo-human/internal/channel/transport' is not allowed from list 'channel-impls-only-via-registry': only internal/channel/registry may import a channel implementation (depguard)
+import _ "github.com/Exploded-views/yo-human/internal/channel/transport"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/core/casentfy/ (want 1)
+$ golangci-lint run  ./internal/core/casentfy/
+internal/core/casentfy/x.go:3:8: import 'github.com/Exploded-views/yo-human/internal/channel/ntfy' is not allowed from list 'channel-impls-only-via-registry': only internal/channel/registry may import a channel implementation (depguard)
+import _ "github.com/Exploded-views/yo-human/internal/channel/ntfy"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/core/casetransport/ (want 1)
+$ golangci-lint run  ./internal/core/casetransport/
+internal/core/casetransport/x.go:3:8: import 'github.com/Exploded-views/yo-human/internal/channel/transport' is not allowed from list 'channel-impls-only-via-registry': only internal/channel/registry may import a channel implementation (depguard)
+import _ "github.com/Exploded-views/yo-human/internal/channel/transport"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/config/casentfy/ (want 1)
+$ golangci-lint run  ./internal/config/casentfy/
+internal/config/casentfy/x.go:3:8: import 'github.com/Exploded-views/yo-human/internal/channel/ntfy' is not allowed from list 'channel-impls-only-via-registry': only internal/channel/registry may import a channel implementation (depguard)
+import _ "github.com/Exploded-views/yo-human/internal/channel/ntfy"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/channel/ (want 1 (zz_probe.go: the interface package importing net/http))
+$ golangci-lint run  ./internal/channel/
+internal/channel/zz_probe.go:3:8: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+import _ "net/http"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/cli/casehttp/ (want 1 (a cli file not named *_e2e.go importing net/http))
+$ golangci-lint run  ./internal/cli/casehttp/
+internal/cli/casehttp/x.go:3:8: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+import _ "net/http"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/cli/casee2e/ (want 0 (control: a tagged *_e2e.go file importing net/http))
+$ golangci-lint run --build-tags=e2e ./internal/cli/casee2e/
+0 issues.
+exit=0
+=== internal/channel/ntfy/casebark/ (want 1 (an implementation importing another))
+$ golangci-lint run  ./internal/channel/ntfy/casebark/
+internal/channel/ntfy/casebark/x.go:3:8: import 'github.com/Exploded-views/yo-human/internal/channel/bark' is not allowed from list 'channel-implementations': a channel must not import another channel (depguard)
+import _ "github.com/Exploded-views/yo-human/internal/channel/bark"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/channel/ntfy/caseconfig/ (want 1 (strict mode keeps the allow list))
+$ golangci-lint run  ./internal/channel/ntfy/caseconfig/
+internal/channel/ntfy/caseconfig/x.go:3:8: import 'github.com/Exploded-views/yo-human/internal/config' is not allowed from list 'channel-implementations' (depguard)
+import _ "github.com/Exploded-views/yo-human/internal/config"
+       ^
+1 issues:
+* depguard: 1
+exit=1
+=== internal/channel/registry/ (want 0 (control: registry imports the four implementations))
+$ golangci-lint run  ./internal/channel/registry/
+0 issues.
+exit=0
+=== internal/channel/ntfy/ (want 0 (control: ntfy imports transport))
+$ golangci-lint run  ./internal/channel/ntfy/
+0 issues.
+exit=0
+=== internal/channel/transport/ (want 0 (control: transport imports net/http and crypto/tls))
+$ golangci-lint run  ./internal/channel/transport/
+0 issues.
+exit=0
+=== the repolint probe: internal/cli/x_e2e.go, untagged, importing net/http. depguard passes it (internal-no-network skips *_e2e.go by name); the repolint check fails it
+$ golangci-lint run ./internal/cli/
+0 issues.
+exit=0
+$ go test ./internal/repolint -run TestRepoE2EFilesAreTestOnly
+--- FAIL: TestRepoE2EFilesAreTestOnly (0.01s)
+    e2etag_test.go:107: internal/cli/x_e2e.go: e2e-constraint: a *_e2e.go file must carry exactly //go:build e2e, so only the test binary has it
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.019s
+FAIL
+exit=1
+--- the same file tagged //go:build e2e (want 0)
+$ go test ./internal/repolint -run TestRepoE2EFilesAreTestOnly
+ok  	github.com/Exploded-views/yo-human/internal/repolint	0.020s
+exit=0
+
+=== the whole tree, probes removed
+$ golangci-lint run
+0 issues.
+exit=0
+$ golangci-lint run --build-tags e2e
+0 issues.
+exit=0
+
+=== yo-human#59 follow-ups a and d: M1's reviewed modules and the release's GOAMD64/GOARM64 as harness cases; RED at f77411d (before the allow lists and the clearing)
+$ sh scripts/lint_rules_test.sh
+16:41  up 4 days, 20:18, 1 user, load averages: 24.27 31.01 27.16
+FAIL internal/config/caseyaml/x.go: config imports gopkg.in/yaml.v3 (reviewed for config, secrets and cli): want clean, got config-imports
+internal/config/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'config-imports' (depguard)
+internal/config/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'config-imports' (depguard)
+internal/config/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'config-imports' (depguard)
+internal/config/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'config-imports' (depguard)
+internal/config/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'config-imports' (depguard)
+FAIL internal/secrets/caseyaml/x.go: secrets imports gopkg.in/yaml.v3: want clean, got secrets-imports
+internal/secrets/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'secrets-imports' (depguard)
+internal/secrets/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'secrets-imports' (depguard)
+internal/secrets/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'secrets-imports' (depguard)
+internal/secrets/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'secrets-imports' (depguard)
+internal/secrets/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'secrets-imports' (depguard)
+FAIL internal/cli/caseyaml/x.go: cli imports gopkg.in/yaml.v3: want clean, got cli-imports
+internal/cli/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'cli-imports' (depguard)
+internal/cli/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'cli-imports' (depguard)
+internal/cli/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'cli-imports' (depguard)
+internal/cli/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'cli-imports' (depguard)
+internal/cli/caseyaml/x.go:4:2: import 'gopkg.in/yaml.v3' is not allowed from list 'cli-imports' (depguard)
+FAIL internal/cli/caseulid/x.go: cli imports github.com/oklog/ulid/v2 (reviewed for cli): want clean, got cli-imports
+internal/cli/caseulid/x.go:4:2: import 'github.com/oklog/ulid/v2' is not allowed from list 'cli-imports' (depguard)
+internal/cli/caseulid/x.go:4:2: import 'github.com/oklog/ulid/v2' is not allowed from list 'cli-imports' (depguard)
+internal/cli/caseulid/x.go:4:2: import 'github.com/oklog/ulid/v2' is not allowed from list 'cli-imports' (depguard)
+internal/cli/caseulid/x.go:4:2: import 'github.com/oklog/ulid/v2' is not allowed from list 'cli-imports' (depguard)
+internal/cli/caseulid/x.go:4:2: import 'github.com/oklog/ulid/v2' is not allowed from list 'cli-imports' (depguard)
+FAIL internal/core/caseamd64v3/x.go: core imports net/http in a !amd64.v3 file, with GOAMD64=v3 in the shell (the release is v1): want internal-no-network, got internal-no-network, but no pass with GOARCH=amd64 CGO_ENABLED=0 reported it
+internal/core/caseamd64v3/x.go:6:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/core/caseamd64v3/x.go:6:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/core/caseamd64v3/x.go:6:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+FAIL internal/core/casearm64v9/x.go: core imports net/http in a !arm64.v9.0 file, with GOARM64=v9.0 in the shell (the release is v8.0): want internal-no-network, got internal-no-network, but no pass with GOARCH=arm64 CGO_ENABLED=0 reported it
+internal/core/casearm64v9/x.go:6:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+internal/core/casearm64v9/x.go:6:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+lint_rules_test: a case failed
+exit=1
+19:34  up 4 days, 23:12, 1 user, load averages: 252.42 288.02 247.08
+(90 other cases ok, 96 in all)
+--- GREEN at 8d38038 (yaml.v3 and ulid allowed, lint.sh clearing GOAMD64/GOARM64, the GOFLAGS and go env file cases added)
+lint_rules_test: all 96 cases pass

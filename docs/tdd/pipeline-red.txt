@@ -1,0 +1,81 @@
+$ go test -race ./internal/core 2>&1
+--- FAIL: TestHeldLocallyIsNotSentUntilDue (0.00s)
+    pipeline_hold_test.go:27: result has 0 channels and 0 sends; want at least 1 and 0
+--- FAIL: TestScheduledChannelGetsDeliverAt (0.00s)
+    pipeline_hold_test.go:65: result has 0 channels and 0 sends; want at least 1 and 1
+--- FAIL: TestFlushRetriesWithBackoffThenDeadLetters (0.00s)
+    pipeline_hold_test.go:93: sent 0 at +59s; want no retry before +60s
+--- FAIL: TestNewMessageBeforeBacklog (0.00s)
+    pipeline_hold_test.go:144: first send after the backlog built up was 0; want the new message M051
+--- FAIL: TestBacklogEntryTakenByAnotherProcessIsSkipped (0.00s)
+    pipeline_hold_test.go:171: sent 0; want the cancelled entry not sent
+    pipeline_hold_test.go:180: results []; want one skipped
+--- FAIL: TestNextAttemptCurve (0.00s)
+    pipeline_pure_test.go:29: attempts 0: -2562047h47m16.854775808s, false; want +1m0s, true
+    pipeline_pure_test.go:29: attempts 1: -2562047h47m16.854775808s, false; want +2m0s, true
+    pipeline_pure_test.go:29: attempts 3: -2562047h47m16.854775808s, false; want +8m0s, true
+    pipeline_pure_test.go:29: attempts 10: -2562047h47m16.854775808s, false; want +1h0m0s, true
+    pipeline_pure_test.go:29: attempts 19: -2562047h47m16.854775808s, false; want +1h0m0s, true
+    pipeline_pure_test.go:36: huge attempts = -2562047h47m16.854775808s, false; want the cap, without overflow
+--- FAIL: TestSummarize (0.00s)
+    pipeline_pure_test.go:70: all sent: ""; want "delivered"
+    pipeline_pure_test.go:70: sent and queued: ""; want "partial"
+    pipeline_pure_test.go:70: sent and dead: ""; want "partial"
+    pipeline_pure_test.go:70: sent and held: ""; want "partial"
+    pipeline_pure_test.go:70: queued only: ""; want "queued"
+    pipeline_pure_test.go:70: queued and held: ""; want "queued"
+    pipeline_pure_test.go:70: held only: ""; want "held"
+    pipeline_pure_test.go:70: all dead: ""; want "failed"
+    pipeline_pure_test.go:70: log sent, human queued: ""; want "queued"
+    pipeline_pure_test.go:70: log sent, human dead: ""; want "failed"
+    pipeline_pure_test.go:70: log only sent: ""; want "failed"
+    pipeline_pure_test.go:70: skipped is ignored: ""; want "delivered"
+    pipeline_pure_test.go:70: nothing: ""; want "failed"
+--- FAIL: TestEnqueueBeforeSend (0.00s)
+    pipeline_test.go:23: during the send queued=0 inflight=0; want the entry written and claimed (0, 1) before the network call
+--- FAIL: TestStatuses (0.01s)
+    --- FAIL: TestStatuses/all_sent (0.00s)
+        pipeline_test.go:54: status "" a="" b=""; want "delivered" a="sent" b="sent"
+        pipeline_test.go:57: ID = ""; want the generated id
+    --- FAIL: TestStatuses/one_of_two (0.00s)
+        pipeline_test.go:54: status "" a="" b=""; want "partial" a="sent" b="queued"
+        pipeline_test.go:57: ID = ""; want the generated id
+        pipeline_test.go:61: queued=0 inflight=0 dead=0; want 1 0 0
+    --- FAIL: TestStatuses/none_reachable (0.00s)
+        pipeline_test.go:54: status "" a="" b=""; want "queued" a="queued" b="queued"
+        pipeline_test.go:57: ID = ""; want the generated id
+        pipeline_test.go:61: queued=0 inflight=0 dead=0; want 2 0 0
+        pipeline_test.go:64: Next = <nil> for status ""; want it exactly when queued
+    --- FAIL: TestStatuses/permanent_plus_transient (0.00s)
+        pipeline_test.go:54: status "" a="" b=""; want "queued" a="dead" b="queued"
+        pipeline_test.go:57: ID = ""; want the generated id
+        pipeline_test.go:61: queued=0 inflight=0 dead=0; want 1 0 1
+        pipeline_test.go:64: Next = <nil> for status ""; want it exactly when queued
+    --- FAIL: TestStatuses/all_permanent (0.00s)
+        pipeline_test.go:54: status "" a="" b=""; want "failed" a="dead" b="dead"
+        pipeline_test.go:57: ID = ""; want the generated id
+        pipeline_test.go:61: queued=0 inflight=0 dead=0; want 0 0 2
+    --- FAIL: TestStatuses/permanent_but_one_sent (0.00s)
+        pipeline_test.go:54: status "" a="" b=""; want "partial" a="dead" b="sent"
+        pipeline_test.go:57: ID = ""; want the generated id
+        pipeline_test.go:61: queued=0 inflight=0 dead=0; want 0 0 1
+--- FAIL: TestNoneReachableIsQueuedWithNext (0.00s)
+    pipeline_test.go:76: got "" <nil>; want queued &{Do:yo-human flush AfterSeconds:60 AttemptsLeft:5 Then:tell the human in your session}
+--- FAIL: TestAllPermanentIsFailed (0.00s)
+    pipeline_test.go:85: result has 0 channels and 0 sends; want at least 2 and 0
+--- FAIL: TestConfigErrorIsDeadLettered (0.00s)
+    pipeline_test.go:108: result has 0 channels and 0 sends; want at least 1 and 0
+--- FAIL: TestLogChannelNeverCountsAsDelivery (0.00s)
+    pipeline_test.go:120: got "" map[]; want queued although the log line was written
+--- FAIL: TestUnknownLevelStoresNothing (0.00s)
+    pipeline_test.go:127: Notify with an unknown level succeeded
+--- FAIL: TestDeadlineBoundsTheCall (0.00s)
+    pipeline_test.go:158: Notify returned without the channel having seen the deadline
+    pipeline_test.go:161: got "" []; want the blocked channel queued
+    pipeline_test.go:164: queued = 0; want the timed-out send kept for retry
+--- FAIL: TestSendSpecCarriesTheLevelsSettings (0.00s)
+    pipeline_test.go:174: result has 0 channels and 0 sends; want at least 0 and 1
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.054s
+FAIL
+exit=1

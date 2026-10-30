@@ -1,0 +1,108 @@
+NOTE (fix round 2): three entries below did not build ("[build failed]" is the raw output), so they proved nothing and are void.
+Their compilable reruns are in skill-fix2-mutants.txt: 'pending sends do not count' and 'nothing is ever stranded' were killed;
+'next ignores the entry's level' survives as an equivalent mutant now that the next step is built by nextFor (every level-dependent field is overwritten).
+
+KILLED  flush ignores a dead send
+  internal/core/flush.go: 'case r.Status == ChannelDead:' -> 'case false:'
+  --- FAIL: TestFlushThatBuriesASendFails (0.16s)
+  --- FAIL: TestADeadSendOutweighsAQueuedOne (0.23s)
+  --- FAIL: TestFlushThatBuriesASendExits69 (0.15s)
+  [go test exit 1]
+
+KILLED  flush counts a parked entry
+  internal/core/flush.go: 'case r.Status == ChannelQueued && !r.parked:' -> 'case r.Status == ChannelQueued:'
+  --- FAIL: TestParkedEntriesDoNotMakeAFlushQueued (0.10s)
+  --- FAIL: TestConcurrentRepeatsPageOnce (0.29s)
+  --- FAIL: TestFlushWithOnlyParkedEntriesExitsZero (0.19s)
+  --- FAIL: TestFlushLeavesAnUnbuildableChannelsEntriesQueued (0.19s)
+  [go test exit 1]
+
+KILLED  flush ignores a queued entry
+  internal/core/flush.go: 'case r.Status == ChannelQueued && !r.parked:' -> 'case r.Status == ChannelHeld && !r.parked:'
+  --- FAIL: TestFlushThatLeavesASendQueuedIsQueuedWithNext (0.16s)
+  --- FAIL: TestFlushNextUsesTheEntrysLevelRetry (0.18s)
+  --- FAIL: TestConcurrentRepeatsPageOnce (0.28s)
+  --- FAIL: TestFlushThatLeavesASendQueuedExits75WithNext (0.21s)
+  [go test exit 1]
+
+VOID (the mutant did not build; rerun as a compilable mutant in skill-fix2-mutants.txt)  next ignores the entry's level
+  internal/core/flush.go: 'res.Status, res.Next = StatusQueued, p.next(level)' -> 'res.Status, res.Next = StatusQueued, p.next("")'
+  FAIL	github.com/Exploded-views/yo-human/internal/core [build failed]
+  # github.com/Exploded-views/yo-human/internal/core [github.com/Exploded-views/yo-human/internal/core.test]
+  [go test exit 1]
+
+KILLED  queued outweighs dead
+  internal/core/flush.go: 'case dead:' -> 'case queued:'
+  --- FAIL: TestADeadSendOutweighsAQueuedOne (0.19s)
+  --- FAIL: TestFlushThatBuriesASendExits69 (0.15s)
+  [go test exit 1]
+
+KILLED  park does not mark the result
+  internal/core/deliver.go: 'attempts: c.Attempts, parked: true}' -> 'attempts: c.Attempts}'
+  --- FAIL: TestParkedEntriesDoNotMakeAFlushQueued (0.10s)
+  --- FAIL: TestConcurrentRepeatsPageOnce (0.26s)
+  --- FAIL: TestFlushWithOnlyParkedEntriesExitsZero (0.19s)
+  --- FAIL: TestFlushLeavesAnUnbuildableChannelsEntriesQueued (0.16s)
+  [go test exit 1]
+
+KILLED  finish does not record the level
+  internal/core/deliver.go: 'res.level = pl.Message.Level' -> '(line deleted)'
+  --- FAIL: TestFlushNextUsesTheEntrysLevelRetry (0.08s)
+  [go test exit 1]
+
+KILLED  a changed repeat is not unstranded
+  internal/core/repeat.go: 'if dec == Suppress || dec == UpdateNative {' -> 'if dec == Suppress {'
+  --- FAIL: TestAChangedRepeatAfterADeadSendIsSentToo (0.06s)
+  [go test exit 1]
+
+KILLED  a same repeat is not unstranded
+  internal/core/repeat.go: 'if dec == Suppress || dec == UpdateNative {' -> 'if dec == UpdateNative {'
+  --- FAIL: TestRepeatAfterADeadFirstSendIsSent (0.07s)
+  --- FAIL: TestAQuieterOrSameLevelRepeatAfterADeadSendIsSentToo (0.06s)
+  --- FAIL: TestADeliveryToANonHumanChannelDoesNotCount (0.09s)
+  [go test exit 1]
+
+KILLED  a non-human delivery counts
+  internal/core/repeat.go: 'if p.d.Caps[r.Instance].ReachesHuman && (len(r.Delivered)' -> 'if (len(r.Delivered)'
+  --- FAIL: TestADeliveryToANonHumanChannelDoesNotCount (0.08s)
+  [go test exit 1]
+
+KILLED  a scheduled send does not count
+  internal/core/repeat.go: '(len(r.Delivered) > 0 || len(r.Scheduled) > 0)' -> '(len(r.Delivered) > 0)'
+  --- FAIL: TestAScheduledSendCountsAsReached (0.10s)
+  [go test exit 1]
+
+KILLED  a delivery does not count
+  internal/core/repeat.go: '(len(r.Delivered) > 0 || len(r.Scheduled) > 0)' -> '(len(r.Scheduled) > 0)'
+  --- FAIL: TestRepeatsFromSeparateStoreHandlesPageOnce (0.32s)
+  --- FAIL: TestSuppressedSendsNothing (0.10s)
+  --- FAIL: TestSameLevelRepeatIsSuppressed (0.09s)
+  --- FAIL: TestSuppressedStillDrainsTheBacklog (0.17s)
+  [go test exit 1]
+
+VOID (the mutant did not build; rerun as a compilable mutant in skill-fix2-mutants.txt)  pending sends do not count
+  internal/core/repeat.go: 'return !pending, err' -> 'return true, err'
+  FAIL	github.com/Exploded-views/yo-human/internal/core [build failed]
+  # github.com/Exploded-views/yo-human/internal/core [github.com/Exploded-views/yo-human/internal/core.test]
+  [go test exit 1]
+
+VOID (the mutant did not build; rerun as a compilable mutant in skill-fix2-mutants.txt)  nothing is ever stranded
+  internal/core/repeat.go: 'return !pending, err' -> 'return false, err'
+  FAIL	github.com/Exploded-views/yo-human/internal/core [build failed]
+  # github.com/Exploded-views/yo-human/internal/core [github.com/Exploded-views/yo-human/internal/core.test]
+  [go test exit 1]
+
+KILLED  inflight is not pending
+  internal/store/queue.go: '[]string{"queue", "inflight"}' -> '[]string{"queue"}'
+  --- FAIL: TestHasPendingSeesQueuedAndInflightEntriesOfThatIncident (0.02s)
+  [go test exit 1]
+
+KILLED  dead is pending
+  internal/store/queue.go: '[]string{"queue", "inflight"}' -> '[]string{"queue", "dead"}'
+  --- FAIL: TestHasPendingSeesQueuedAndInflightEntriesOfThatIncident (0.02s)
+  [go test exit 1]
+
+KILLED  any incident's entry is pending
+  internal/store/queue.go: 'if w.IncidentKey == incidentKey {' -> 'if w.IncidentKey != "" {'
+  --- FAIL: TestHasPendingSeesQueuedAndInflightEntriesOfThatIncident (0.02s)
+  [go test exit 1]

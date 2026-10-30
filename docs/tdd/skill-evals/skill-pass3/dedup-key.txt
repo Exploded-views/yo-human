@@ -1,0 +1,32 @@
+skills used: ['yo-human-eval:yo-human']
+
+Nothing is run in this dry run. This is the plan.
+
+**Level:** I'd use `nudge`. A build host at 95% needs a look within the hour, but nothing says production is impaired. `siren` would wake the human for something that can wait, and `murmur` is too quiet for a disk that keeps filling. I already have the level list from `levels --json`, so I won't run it again.
+
+**Pass 1 (first notify):**
+```
+YO_HUMAN_PROJECT=<this repo> YO_HUMAN_AGENT=<this agent> yo-human notify --level nudge \
+  --title "Build host disk 95% full" \
+  --ask "Free space on the build host (clear old build artifacts or caches, or grow the disk) before it fills and builds start failing." \
+  --body "Disk usage on the build host is at 95% on consecutive checks. I have not deleted anything." \
+  --dedup-key disk-full-build-host
+```
+The body has no secrets. The dedup key is stable and names the problem, not a timestamp.
+
+**Exit codes:**
+- **0:** done. `held` just means it waits for quiet hours to end, which is intended.
+- **64:** fix the call using the `error`, `valid` and `fix` lines, then rerun it.
+- **75:** wait `after_seconds`, then run the printed `next.do` exactly as shown, at most `attempts_left` times. I won't re-run `notify`. If the attempts run out, I'll tell the human in my session with the title and the ask.
+- **69, 78, 74, 70:** stop. I won't retry, change levels or edit config. I'll tell the human in my session with the ask and the error text.
+
+**Later passes (every minute, disk still full):**
+- I keep checking disk usage, but I don't need a new alert. A repeat `notify` at the same level with the same key is suppressed (exit 0), so it won't page twice. I'd rather not call it every minute at all, and only repeat the identical command if the `nudge` reminder interval seems due.
+- If it gets worse, for example the disk hits 100%, builds fail, or production is affected, I'd send the same command with `--level siren` and the same `--dedup-key`. A louder repeat goes through.
+- I won't create new keys and won't send "still full" messages.
+
+**When the disk is fixed:** once usage is back to a healthy level and I've verified it, I run:
+```
+yo-human resolve --dedup-key disk-full-build-host --note "Disk usage back to normal"
+```
+I don't send a new `notify` to say it's fixed. If `resolve` exits 69, I tell the human that a scheduled send couldn't be cancelled and they may still be paged.

@@ -1,0 +1,15 @@
+skills used: []
+
+Next I'd wait the 120 seconds the CLI asked for, then run `yo-human flush` again. I wouldn't re-run `notify`, change the level, or pick a new dedup key. The alert is already queued under `checkout-FAKE`, and a second `notify` could duplicate it.
+
+In order:
+
+1. `sleep 120`
+2. `yo-human flush`
+3. Check the result:
+   - If it reports delivered (exit 0), I stop. I don't need to do anything else for the alert.
+   - If it exits 75 with `queued` again, I wait the new interval it prints and run `yo-human flush` again. I do this for as long as it gives attempts, and I follow whatever delay it prints.
+   - If it exits with a different code, or the attempts run out, I go to step 4.
+4. If delivery never succeeds, I stop retrying and tell the human directly in my session output, as the CLI says to. The message would be something like: "SIREN: Checkout failing. I could not deliver the page because the ntfy server was unreachable after all retries. Please look at checkout now. Dedup key: checkout-FAKE."
+
+I would keep the siren level and wouldn't try other channels. While waiting, I'd continue any unrelated work that doesn't depend on the human's reply.

@@ -1,0 +1,104 @@
+KILLED  a queued cancel is Unavailable (exit 69), as before
+  internal/core/cancel.go: 'kind, fix := problem.Queued, "the cancel is queued' -> 'kind, fix := problem.Unavailable, "the cancel is queued'
+  --- FAIL: TestResolveRetriesACancelThatFailedForNow (0.16s)
+      cancel_dead_test.go:65: problem the scheduled send on phone could not be cancelled: provider refused; want its fix to say the cancel is retried
+  --- FAIL: TestAResolveWhoseCancelIsQueuedSaysToFlush (0.08s)
+      resolve_exit_test.go:37: problems [4] (the scheduled send on phone could not be cancelled: provider refused); want one Queued problem
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  a dead cancel is Queued
+  internal/core/cancel.go: 'kind, fix = problem.Unavailable, "the human may still be paged: the cancel is in the dead letter' -> 'kind, fix = problem.Queued, "the human may still be paged: the cancel is in the dead letter'
+  --- FAIL: TestAnExpiredGenerationsRefusedCancelDoesNotFailADeliveredPage (0.18s)
+      expired_cancel_test.go:66: warning the scheduled send on n could not be cancelled: provider refused; want the cancel problem
+  --- FAIL: TestAResolveWhoseCancelIsDeadHasNoNext (0.09s)
+      resolve_exit_test.go:50: problems [5], next <nil>; want one Unavailable problem and no next
+  --- FAIL: TestADeadCancelOutranksAQueuedClose (0.17s)
+      resolve_exit_test.go:116: problems [5 5] (the scheduled send on sched could not be cancelled: provider refused
+  --- FAIL: TestResolveAndStatusShowACancelTheProviderRefused (0.24s)
+      round4_test.go:43: resolve: {code:75 out:RESULT resolved <ULID>
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  Queued maps to 69
+  internal/cli/exit.go: 'case problem.Queued:\n\t\treturn ExitQueued' -> 'case problem.Queued:\n\t\treturn ExitFailed'
+  --- FAIL: TestExitCodeTable (0.00s)
+      exit_test.go:24: exitForProblem(kind 5) = 69, want 75
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  no next for a queued cancel
+  internal/core/resolve_exit.go: 'if c.Status == ChannelQueued {\n\t\t\tqueued(c)\n\t\t}' -> '_ = c'
+  --- FAIL: TestAResolveWhoseCancelIsQueuedSaysToFlush (0.08s)
+      resolve_exit_test.go:40: result "resolved" next <nil>; want resolved, with a next step that flushes
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  no next at all
+  internal/core/resolve.go: 'res.Next = b.closeOutcome(inc.Key, cancels, closes)' -> '_ = b.closeOutcome(inc.Key, cancels, closes)'
+  --- FAIL: TestAResolveWhoseCancelIsQueuedSaysToFlush (0.09s)
+      resolve_exit_test.go:40: result "resolved" next <nil>; want resolved, with a next step that flushes
+  --- FAIL: TestAResolveWhoseCloseIsQueuedSaysToFlush (0.17s)
+      resolve_exit_test.go:76: result "resolved" next <nil>; want resolved, with a next step that flushes
+  --- FAIL: TestResolveQueuesANoteThatFailed (0.11s)
+      resolve_fault_test.go:75: err = the close of incident k on pd is queued: provider down, {Status:resolved ID:N001 Channels:[{Channel:pd Status:queued Error:provider down ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false level:page retryAt:{wall:0 ext:63928958460 loc:<n
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  every channel is a close
+  internal/core/resolve_exit.go: 'if !b.p.d.Caps[c.Channel].Resolve {' -> 'if false {'
+  --- FAIL: TestAResolveNoteWaitsForTheSameDestination (0.13s)
+      cancel_test.go:196: Resolve: the close of incident disk on phone is queued: channel phone is not configured in the config in force
+  --- FAIL: TestAProjectsResolveNoteIsDroppedWhenItsIncidentReopens (0.17s)
+      namespace_test.go:131: Resolve: the close of incident disk-7 on a is queued: down
+  --- FAIL: TestAResolveNoteGoesThroughEveryDestinationThatDelivered (0.26s)
+      reached_test.go:131: Resolve: the close of incident disk on phone is queued: channel phone now points somewhere else than when this message was queued; it is not sent to a different destination
+  --- FAIL: TestAResolveWhoseNoteIsQueuedIsDone (0.18s)
+      resolve_exit_test.go:97: resolve = {Status:resolved ID:M002 Channels:[{Channel:pd Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false level:page retryAt:{wall:0 ext:0 loc:<nil>}} {Channel:n Status:queued Error:down ProviderID: Scheduled:false attempts
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  no channel is a close
+  internal/core/resolve_exit.go: 'if !b.p.d.Caps[c.Channel].Resolve {' -> 'if true {'
+  --- FAIL: TestStaleResolveNoteDoesNotCloseTheReopenedIncident (0.16s)
+      generation_test.go:211: <nil> {Status:resolved ID:N001 Channels:[{Channel:pd Status:queued Error:down ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false level:page retryAt:{wall:0 ext:63928958460 loc:<nil>}}] Next:<nil> Warnings:[]}; want resolved, with the close queue
+  --- FAIL: TestAResolveWhoseCloseIsQueuedSaysToFlush (0.16s)
+      resolve_exit_test.go:73: problems [] (<nil>); want one Queued problem naming pd
+      resolve_exit_test.go:76: result "resolved" next <nil>; want resolved, with a next step that flushes
+  --- FAIL: TestAResolveWhoseCloseIsRefusedIsUnavailable (0.17s)
+      resolve_exit_test.go:86: problems [] (<nil>), next <nil>; want one Unavailable problem and no next
+  --- FAIL: TestADeadCancelOutranksAQueuedClose (0.17s)
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  a queued close is no problem
+  internal/core/resolve_exit.go: 'queued(c)\n\t\t\tb.fail(&problem.Problem{Kind: problem.Queued,' -> 'queued(c)\n\t\t\t_ = (&problem.Problem{Kind: problem.Queued,'
+  --- FAIL: TestStaleResolveNoteDoesNotCloseTheReopenedIncident (0.13s)
+      generation_test.go:211: <nil> {Status:resolved ID:N001 Channels:[{Channel:pd Status:queued Error:down ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false level:page retryAt:{wall:0 ext:63928958460 loc:<nil>}}] Next:0x336b4f899b0 Warnings:[]}; want resolved, with the clo
+  --- FAIL: TestAResolveWhoseCloseIsQueuedSaysToFlush (0.17s)
+      resolve_exit_test.go:73: problems [] (<nil>); want one Queued problem naming pd
+  --- FAIL: TestADeadCancelOutranksAQueuedClose (0.16s)
+      resolve_exit_test.go:116: problems [4] (the scheduled send on sched could not be cancelled: provider refused); want the dead cancel first, then the queued close
+  --- FAIL: TestResolveQueuesANoteThatFailed (0.11s)
+      resolve_fault_test.go:75: err = <nil>, {Status:resolved ID:N001 Channels:[{Channel:pd Status:queued Error:provider down ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false level:page retryAt:{wall:0 ext:63928958460 loc:<nil>}}] Next:0x336b4f881b0 Warnings:[]}; want reso
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  a refused close is no problem
+  internal/core/resolve_exit.go: 'b.fail(&problem.Problem{Kind: problem.Unavailable,' -> '_ = (&problem.Problem{Kind: problem.Unavailable,'
+  --- FAIL: TestAResolveWhoseCloseIsRefusedIsUnavailable (0.14s)
+      resolve_exit_test.go:86: problems [] (<nil>), next <nil>; want one Unavailable problem and no next
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+SURVIVED  queued problems not put last
+  internal/core/pipeline.go: 'if pr, ok := problem.As(one); ok && pr.Kind == problem.Queued {' -> 'if false {'
+  [go test -count=1 ./internal/core ./internal/cli exit 0]
+
+SURVIVED  the later queued entry chosen for next
+  internal/core/resolve_exit.go: 'if soonest == nil || r.retryAt.Before(soonest.retryAt) {' -> 'if soonest == nil || soonest.retryAt.Before(r.retryAt) {'
+  [go test -count=1 ./internal/core ./internal/cli exit 0]
+
+KILLED  queued problems not put last (rerun after a test where the queued cancel comes first)
+  internal/core/pipeline.go: 'if pr, ok := problem.As(one); ok && pr.Kind == problem.Queued {' -> 'if false {'
+  --- FAIL: TestARefusedCloseOutranksAQueuedCancel (0.13s)
+      resolve_exit_test.go:147: problems [5 4] (the scheduled send on sched could not be cancelled: provider refused
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  the later queued entry chosen for next (rerun after a test with two due times)
+  internal/core/resolve_exit.go: 'if soonest == nil || r.retryAt.Before(soonest.retryAt) {' -> 'if soonest == nil || soonest.retryAt.Before(r.retryAt) {'
+  --- FAIL: TestAResolvesNextIsForWhatIsDueFirst (0.19s)
+      resolve_exit_test.go:158: next &{Do:yo-human flush AfterSeconds:60 AttemptsLeft:5 Then:tell the human in your session}; want the flush now, for the cancel due at once
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+

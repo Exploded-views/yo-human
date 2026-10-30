@@ -1,0 +1,15 @@
+skills used: []
+
+I'd send one follow-up so the human knows the nudge no longer needs action. I haven't run it, since this is a dry run.
+
+```
+yo-human notify --level murmur --title "Build host disk resolved" --dedup-key disk-full-build-FAKE-resolved
+```
+
+I'd also add a short body or message flag saying the disk was cleaned and is now at 40%, and that no action is needed. I only know the flags from the earlier command (`--level`, `--title`, `--ask`, `--dedup-key`), so I'd check `yo-human notify --help` for the body flag before using it.
+
+- **Level:** `murmur` fits because nothing is wrong and nothing is needed. Its `ask` is optional, so I'd leave `--ask` off. A `nudge` or `siren` would require an ask and would interrupt the human for no reason.
+- **Dedup key:** I'd use a new key, not `disk-full-build-FAKE`. Reusing the old key could make the resolution notice collapse into the original notification, or be suppressed.
+- **No resolve command:** `levels --json` doesn't show a resolve or cancel subcommand, so I wouldn't invent one.
+
+After that I'd check that the output is `RESULT delivered <id>` with exit 0. If it isn't, I'd report the failure and not retry blindly.

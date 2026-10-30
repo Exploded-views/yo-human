@@ -1,0 +1,27 @@
+skills used: ['yo-human-eval:yo-human']
+
+Per the skill, a migrated caller doesn't need `yo-human levels --json`. The `page` form takes no `--level`, and the config's `shim:` block maps `--low` to a level. I would also set `YO_HUMAN_PROJECT` and `YO_HUMAN_AGENT` in the environment so the page says who sent it.
+
+**1. CI is broken and production is up.** This is the "CI/CD broken while production is up" case, so I'd use `--low`. It goes before the summary, and the dedup key goes last. I'd pass `""` for the details because I have none.
+
+```
+/opt/bin/page.sh --low "CI broken on main; production is unaffected" "" ci-main-FAKE
+```
+
+The script runs `exec yo-human page "$@"`, so this becomes `yo-human page --low "CI broken on main; production is unaffected" "" ci-main-FAKE`.
+
+I'd then check the exit code:
+- **Exit 0:** done. `held` (waiting for quiet hours) and `suppressed` (an earlier page for this key is already pending or delivered) are both fine.
+- **Exit 75 (queued):** I'd follow the printed `next`. That means waiting `after_seconds`, then running `next.do` exactly as printed, at most `attempts_left` times. I'd stop at the first `sent` or exit 69. If the attempts run out, I'd tell the human directly in my session with the title and ask. I wouldn't re-run the page.
+- **Exit 69, 74, 78 or 70:** stop. I'd tell the human in the session and quote the `error` and `fix` lines. I wouldn't edit the config or secrets.
+- **Exit 64:** my call was wrong. I'd read the `error`, `valid` and `fix` lines, fix the call and run it again.
+
+**2. Later, when CI is fixed and I've verified it.** I'd resolve the same key. I wouldn't send a new page saying it's fixed.
+
+```
+/opt/bin/page.sh --low --resolve ci-main-FAKE
+```
+
+This becomes `yo-human page --low --resolve ci-main-FAKE`. Exit 0 with `resolved` or `noop` means done. Exit 75 means a cancel is still queued, so I'd follow `next` the same way as above. Exit 69 means I'd tell the human the page may still fire.
+
+I wouldn't put any secrets in the summary or details. I also wouldn't run `config trust`, `secret set`, or pass `--config`.

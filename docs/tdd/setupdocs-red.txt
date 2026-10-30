@@ -1,0 +1,40 @@
+# what this is: task 14 RED: the setup-page lint tests against a CheckSetupPage stub that reports nothing (every rule fixture passes silently, the repo test finds no pages)
+# command: go test -count=1 ./internal/repolint -run 'SetupPage|RepoSetupPages' (home path redacted)
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/inputs_not_first (0.00s)
+        setupdocs_test.go:72: rules = "", want "inputs-first" (findings [])
+    --- FAIL: TestSetupPageRules/no_h2_at_all (0.00s)
+        setupdocs_test.go:72: rules = "", want "inputs-first" (findings [])
+    --- FAIL: TestSetupPageRules/bullet_shape (0.00s)
+        setupdocs_test.go:72: rules = "", want "input-format" (findings [])
+    --- FAIL: TestSetupPageRules/bullet_without_placeholder (0.00s)
+        setupdocs_test.go:72: rules = "", want "input-format" (findings [])
+    --- FAIL: TestSetupPageRules/bullet_without_description (0.00s)
+        setupdocs_test.go:72: rules = "", want "input-format" (findings [])
+    --- FAIL: TestSetupPageRules/already_set_not_second (0.00s)
+        setupdocs_test.go:72: rules = "", want "already-set-second" (findings [])
+    --- FAIL: TestSetupPageRules/unused_input (0.00s)
+        setupdocs_test.go:72: rules = "", want "input-unused" (findings [])
+    --- FAIL: TestSetupPageRules/unused_input,_similar_name (0.00s)
+        setupdocs_test.go:72: rules = "", want "input-unused" (findings [])
+    --- FAIL: TestSetupPageRules/assigned_again (0.00s)
+        setupdocs_test.go:72: rules = "", want "input-reassigned" (findings [])
+    --- FAIL: TestSetupPageRules/exported_again (0.00s)
+        setupdocs_test.go:72: rules = "", want "input-reassigned" (findings [])
+    --- FAIL: TestSetupPageRules/tilde_in_a_shell_block (0.00s)
+        setupdocs_test.go:72: rules = "", want "tilde-home" (findings [])
+    --- FAIL: TestSetupPageRules/tilde_in_an_unlabelled_block (0.00s)
+        setupdocs_test.go:72: rules = "", want "tilde-home" (findings [])
+    --- FAIL: TestSetupPageRules/op_without_a_pipe (0.00s)
+        setupdocs_test.go:72: rules = "", want "op-unpiped" (findings [])
+    --- FAIL: TestSetupPageRules/op_piped_elsewhere (0.00s)
+        setupdocs_test.go:72: rules = "", want "op-unpiped" (findings [])
+--- FAIL: TestRepoSetupPages (0.00s)
+    setupdocs_test.go:126: docs/setup/ntfy.md is missing
+    setupdocs_test.go:126: docs/setup/bark.md is missing
+    setupdocs_test.go:126: docs/setup/pagerduty.md is missing
+    setupdocs_test.go:126: docs/setup/cron-flush.md is missing
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.006s
+FAIL
+exit=1

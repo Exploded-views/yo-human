@@ -1,0 +1,27 @@
+skills used: ['yo-human-eval:yo-human']
+
+Exit 64 means my call was wrong, not that delivery failed. The error text and the `levels` output I already have are enough to fix it, so I wouldn't run `levels` again.
+
+**Level choice:** "urgent" isn't one of the human's levels. The valid ones are `murmur`, `nudge` and `siren`. A failing checkout means production is impaired and can't wait, which matches `siren`'s `use_when`. `nudge` would be held during quiet hours, so it isn't right here. `siren` requires `--ask`, and I already have one.
+
+**Command (the only one I'd run next):**
+
+```
+YO_HUMAN_PROJECT=<this project> YO_HUMAN_AGENT=<this agent> \
+yo-human notify --level siren \
+  --title "Checkout failing" \
+  --ask "Look at checkout now" \
+  --dedup-key checkout-failing
+```
+
+- I'd keep the title and ask as they were.
+- I'd add a stable `--dedup-key` (`checkout-failing`). It stops a repeat from paging the human twice, and I need it later for `resolve`.
+- I'd put no secrets in the arguments. If I have detail from logs, it would go in `--body` as a description with no credentials.
+
+**Then I'd branch on the exit code:**
+- **0:** Done. `held` or `suppressed` is fine and I'd carry on.
+- **75 (queued):** I'd wait `after_seconds` and run the printed `next.do` exactly as given, usually `yo-human flush`. I'd run it at most `attempts_left` times. I'd stop at the first exit 0 with `sent`, or at exit 69. If the attempts run out, I would not re-run `notify`. I'd tell the human directly in my session with the title and the ask.
+- **69, 74, 78 or 70:** I'd stop, not retry or switch levels, and tell the human in my session what I tried, the ask and the error text.
+- **64 again:** I'd read the `error`, `valid` and `fix` lines and correct the call.
+
+Once checkout is fixed and verified, I'd run `yo-human resolve --dedup-key checkout-failing --note "<short note>"`. I wouldn't send a new notify to say it's fixed.

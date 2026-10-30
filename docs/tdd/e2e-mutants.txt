@@ -1,0 +1,485 @@
+=== MUTANT: ntfy cancel drops the topic from the DELETE path
+file: internal/channel/ntfy/client.go
+from: c.base+"/"+url.PathEscape(c.topic)+"/"+url.PathEscape(r.ProviderID)
+to:   c.base+"/"+url.PathEscape(r.ProviderID)
+run:  go test -tags e2e ./test/e2e/ -count=1 -run 'ResolveCancelsHeld'
+--- FAIL: TestResolveCancelsHeldPagesLocallyAndAtNtfy (<DUR>)
+    resolve_test.go:65: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT held <ULID>
+        phone: held
+        bell: held
+        pager: held
+    resolve_test.go:66: yo-human resolve --dedup-key disk-7 -> exit 0
+        RESULT resolved <ULID>
+        bell: cancelled
+        pager: cancelled
+        phone: cancelled
+    resolve_test.go:73: ntfy must cancel the scheduled page with DELETE /<topic>/<sequence_id>: [POST / DELETE /<ULID>]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	<DUR>
+FAIL
+exit code: 1
+
+=== MUTANT: an untrusted project config is applied
+file: internal/config/load.go
+from: 	if !ok {
+		return nil, &Notice{
+to:   	if !ok && false {
+		return nil, &Notice{
+run:  go test -tags e2e ./test/e2e/ -count=1 -run 'Untrusted'
+--- FAIL: TestUntrustedProjectConfigIsIgnoredUntilTrusted (<DUR>)
+    shim_trust_test.go:65: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester -> exit 0
+        RESULT delivered <ULID>
+        evil: sent
+    shim_trust_test.go:68: an ignored project file is announced:
+    shim_trust_test.go:70: ntfy fake received 1 requests, want 0: [POST /]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	<DUR>
+FAIL
+exit code: 1
+
+=== MUTANT: the secrets file mode check is skipped
+file: internal/secrets/secrets.go
+from: if fi.Mode().Perm()&^0o600 != 0 {
+to:   if false {
+run:  go test -tags e2e ./test/e2e/ -count=1 -run '0644'
+--- FAIL: TestSecretsFileAt0644IsRefused (<DUR>)
+    shim_trust_test.go:95: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    shim_trust_test.go:96: exit code 0, want 78
+        stdout:
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+        stderr:
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	<DUR>
+FAIL
+exit code: 1
+
+=== MUTANT: PagerDuty resolve ignores the trigger dedup key
+file: internal/channel/pagerduty/client.go
+from: DedupKey: dedupKey})
+to:   DedupKey: "x"})
+run:  go test -tags e2e ./test/e2e/ -count=1 -run 'Resolve|Shim'
+--- FAIL: TestResolveSendsPagerDutyResolveAndPassiveNotes (<DUR>)
+    resolve_test.go:14: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    resolve_test.go:15: yo-human resolve --dedup-key disk-7 --note Freed 40 GB -> exit 0
+        RESULT resolved <ULID>
+        bell: sent
+        phone: sent
+        pager: sent
+    resolve_test.go:22: the resolve carries the trigger's dedup key: dedup_key is x, want disk-7
+    resolve_test.go:41: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[],"inflight":0,"queued":[],"status":"ok","version":1}
+    resolve_test.go:45: yo-human resolve --dedup-key disk-7 -> exit 0
+        RESULT noop <ULID>
+--- FAIL: TestPageShimTriggerAndResolve (<DUR>)
+    shim_trust_test.go:15: yo-human page Disk is full on build-7 df says 100% disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    shim_trust_test.go:25: yo-human page --resolve disk-7 -> exit 0
+        RESULT resolved <ULID>
+        pager: sent
+        bell: sent
+        phone: sent
+    shim_trust_test.go:31: shim resolve: map[dedup_key:x event_action:resolve routing_key:ROUTINGKEY-FAKE-ONE]
+    shim_trust_test.go:34: yo-human page --low Cache is cold  cache-1 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	<DUR>
+FAIL
+exit code: 1
+
+=== MUTANT: a repeat at the same level is sent again
+file: internal/core/repeat.go
+from: 	case contentHash != inc.ContentHash:
+		return UpdateNative
+	}
+	return Suppress
+to:   	}
+	return SendNew
+run:  go test -tags e2e ./test/e2e/ -count=1 -run 'Repeat'
+--- FAIL: TestRepeatSuppressedAndLouderEscalates (<DUR>)
+    quiet_test.go:64: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    quiet_test.go:66: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    quiet_test.go:66: RESULT delivered, want suppressed
+        stdout:
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	<DUR>
+FAIL
+exit code: 1
+
+=== MUTANT: a resolve note goes to a channel that delivered nothing
+file: internal/core/resolve.go
+from: if round < len(r.Delivered) {
+to:   if round < len(r.Delivered)+1 {
+run:  go test -tags e2e ./test/e2e/ -count=1 -run 'Resolve'
+--- FAIL: TestResolveSendsPagerDutyResolveAndPassiveNotes (<DUR>)
+    resolve_test.go:14: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    resolve_test.go:15: yo-human resolve --dedup-key disk-7 --note Freed 40 GB -> exit 2
+        panic: runtime error: index out of range [1] with length 1
+        
+        goroutine 1 [running]:
+        github.com/Exploded-views/yo-human/internal/core.(*batch).enqueueNotes(0x7b28397fcac0, {0x7b283990e440, 0x1a}, {0x7b283980dae0, 0xb}, {{0x7b28398eaf68, 0x6}, 0x1, {0x0, 0x0}, ...})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:139 +0x57c
+        github.com/Exploded-views/yo-human/internal/core.(*Pipeline).Resolve(0x7b28398c5490, {0x10157b5a0?, 0x101610580?}, {0x16efffb4e, 0x6}, {0x7b283980dae0, 0xb})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:38 +0x39c
+        github.com/Exploded-views/yo-human/internal/cli.(*env).resolveWith(0x7b28395c8d80, 0x7b2839912180, 0x7b28398103d0, {0x16efffb4e, 0x6}, {0x7b283980dae0, 0xb}, {0x7b2839676000, 0x3, 0x84?})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:75 +0x7d0
+        github.com/Exploded-views/yo-human/internal/cli.(*env).closeIncident(0x7b28395c8d80, 0x7b2839912180, 0x7b28398103d0, {0x16efffb4e, 0x6}, {0x7b283980dae0, 0xb})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:48 +0x94
+        github.com/Exploded-views/yo-human/internal/cli.cmdResolve(0x7b28395c8d80, {0x7b28395c8e10, 0x4, 0x7})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:39 +0x23c
+        github.com/Exploded-views/yo-human/internal/cli.run({0x7b2839580190, 0x5, 0x5}, {0x1015781e8, 0x7b283958a010}, {0x1015781c8, 0x7b283958a018}, {0x1015781c8, 0x7b283958a020})
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:93 +0x290
+        github.com/Exploded-views/yo-human/internal/cli.Run(...)
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:69
+        main.main()
+        	github.com/Exploded-views/yo-human/cmd/yo-human/main.go:12 +0x7c
+    resolve_test.go:16: exit code 2, want 0
+        stdout:
+        stderr:
+        panic: runtime error: index out of range [1] with length 1
+        
+        goroutine 1 [running]:
+        github.com/Exploded-views/yo-human/internal/core.(*batch).enqueueNotes(0x7b28397fcac0, {0x7b283990e440, 0x1a}, {0x7b283980dae0, 0xb}, {{0x7b28398eaf68, 0x6}, 0x1, {0x0, 0x0}, ...})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:139 +0x57c
+        github.com/Exploded-views/yo-human/internal/core.(*Pipeline).Resolve(0x7b28398c5490, {0x10157b5a0?, 0x101610580?}, {0x16efffb4e, 0x6}, {0x7b283980dae0, 0xb})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:38 +0x39c
+        github.com/Exploded-views/yo-human/internal/cli.(*env).resolveWith(0x7b28395c8d80, 0x7b2839912180, 0x7b28398103d0, {0x16efffb4e, 0x6}, {0x7b283980dae0, 0xb}, {0x7b2839676000, 0x3, 0x84?})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:75 +0x7d0
+        github.com/Exploded-views/yo-human/internal/cli.(*env).closeIncident(0x7b28395c8d80, 0x7b2839912180, 0x7b28398103d0, {0x16efffb4e, 0x6}, {0x7b283980dae0, 0xb})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:48 +0x94
+        github.com/Exploded-views/yo-human/internal/cli.cmdResolve(0x7b28395c8d80, {0x7b28395c8e10, 0x4, 0x7})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:39 +0x23c
+        github.com/Exploded-views/yo-human/internal/cli.run({0x7b2839580190, 0x5, 0x5}, {0x1015781e8, 0x7b283958a010}, {0x1015781c8, 0x7b283958a018}, {0x1015781c8, 0x7b283958a020})
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:93 +0x290
+        github.com/Exploded-views/yo-human/internal/cli.Run(...)
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:69
+        main.main()
+        	github.com/Exploded-views/yo-human/cmd/yo-human/main.go:12 +0x7c
+--- FAIL: TestResolveNotesGoOnlyToChannelsThatDelivered (<DUR>)
+    resolve_test.go:56: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT partial <ULID>
+        phone: sent
+        bell: sent
+        pager: dead (pagerduty answered HTTP 400)
+    resolve_test.go:57: yo-human resolve --dedup-key disk-7 -> exit 2
+        panic: runtime error: index out of range [1] with length 1
+        
+        goroutine 1 [running]:
+        github.com/Exploded-views/yo-human/internal/core.(*batch).enqueueNotes(0x1a5c35282a80, {0x1a5c3537e6c0, 0x1a}, {0x0, 0x0}, {{0x1a5c35373070, 0x6}, 0x1, {0x0, 0x0}, ...})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:139 +0x57c
+        github.com/Exploded-views/yo-human/internal/core.(*Pipeline).Resolve(0x1a5c3534f490, {0x10481b5a0?, 0x1048b0580?}, {0x16bd5fb5e, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:38 +0x39c
+        github.com/Exploded-views/yo-human/internal/cli.(*env).resolveWith(0x1a5c35054d80, 0x1a5c353ae100, 0x1a5c3529a3d0, {0x16bd5fb5e, 0x6}, {0x0, 0x0}, {0x1a5c353ae780, 0x2, 0x82?})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:75 +0x7d0
+        github.com/Exploded-views/yo-human/internal/cli.(*env).closeIncident(0x1a5c35054d80, 0x1a5c353ae100, 0x1a5c3529a3d0, {0x16bd5fb5e, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:48 +0x94
+        github.com/Exploded-views/yo-human/internal/cli.cmdResolve(0x1a5c35054d80, {0x1a5c35282890, 0x2, 0x3})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:39 +0x23c
+        github.com/Exploded-views/yo-human/internal/cli.run({0x1a5c35012050, 0x3, 0x3}, {0x1048181e8, 0x1a5c35002018}, {0x1048181c8, 0x1a5c35002020}, {0x1048181c8, 0x1a5c35002028})
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:93 +0x290
+        github.com/Exploded-views/yo-human/internal/cli.Run(...)
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:69
+        main.main()
+        	github.com/Exploded-views/yo-human/cmd/yo-human/main.go:12 +0x7c
+    resolve_test.go:57: exit code 2, want 0
+        stdout:
+        stderr:
+        panic: runtime error: index out of range [1] with length 1
+        
+        goroutine 1 [running]:
+        github.com/Exploded-views/yo-human/internal/core.(*batch).enqueueNotes(0x1a5c35282a80, {0x1a5c3537e6c0, 0x1a}, {0x0, 0x0}, {{0x1a5c35373070, 0x6}, 0x1, {0x0, 0x0}, ...})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:139 +0x57c
+        github.com/Exploded-views/yo-human/internal/core.(*Pipeline).Resolve(0x1a5c3534f490, {0x10481b5a0?, 0x1048b0580?}, {0x16bd5fb5e, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:38 +0x39c
+        github.com/Exploded-views/yo-human/internal/cli.(*env).resolveWith(0x1a5c35054d80, 0x1a5c353ae100, 0x1a5c3529a3d0, {0x16bd5fb5e, 0x6}, {0x0, 0x0}, {0x1a5c353ae780, 0x2, 0x82?})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:75 +0x7d0
+        github.com/Exploded-views/yo-human/internal/cli.(*env).closeIncident(0x1a5c35054d80, 0x1a5c353ae100, 0x1a5c3529a3d0, {0x16bd5fb5e, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:48 +0x94
+        github.com/Exploded-views/yo-human/internal/cli.cmdResolve(0x1a5c35054d80, {0x1a5c35282890, 0x2, 0x3})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:39 +0x23c
+        github.com/Exploded-views/yo-human/internal/cli.run({0x1a5c35012050, 0x3, 0x3}, {0x1048181e8, 0x1a5c35002018}, {0x1048181c8, 0x1a5c35002020}, {0x1048181c8, 0x1a5c35002028})
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:93 +0x290
+        github.com/Exploded-views/yo-human/internal/cli.Run(...)
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:69
+        main.main()
+        	github.com/Exploded-views/yo-human/cmd/yo-human/main.go:12 +0x7c
+--- FAIL: TestResolveCancelsHeldPagesLocallyAndAtNtfy (<DUR>)
+    resolve_test.go:65: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT held <ULID>
+        phone: held
+        bell: held
+        pager: held
+    resolve_test.go:66: yo-human resolve --dedup-key disk-7 -> exit 2
+        panic: runtime error: index out of range [0] with length 0
+        
+        goroutine 1 [running]:
+        github.com/Exploded-views/yo-human/internal/core.(*batch).enqueueNotes(0x3c71b553f000, {0x3c71b56211a0, 0x1a}, {0x0, 0x0}, {{0x3c71b552f0f0, 0x6}, 0x1, {0x0, 0x0}, ...})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:139 +0x57c
+        github.com/Exploded-views/yo-human/internal/core.(*Pipeline).Resolve(0x3c71b5610e70, {0x1017435a0?, 0x1017d8580?}, {0x16ee37b6e, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:38 +0x39c
+        github.com/Exploded-views/yo-human/internal/cli.(*env).resolveWith(0x3c71b56c8d80, 0x3c71b56c8580, 0x3c71b59103d0, {0x16ee37b6e, 0x6}, {0x0, 0x0}, {0x3c71b553eb00, 0x1, 0x7f?})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:75 +0x7d0
+        github.com/Exploded-views/yo-human/internal/cli.(*env).closeIncident(0x3c71b56c8d80, 0x3c71b56c8580, 0x3c71b59103d0, {0x16ee37b6e, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:48 +0x94
+        github.com/Exploded-views/yo-human/internal/cli.cmdResolve(0x3c71b56c8d80, {0x3c71b58f8890, 0x2, 0x3})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:39 +0x23c
+        github.com/Exploded-views/yo-human/internal/cli.run({0x3c71b5684050, 0x3, 0x3}, {0x1017401e8, 0x3c71b568a010}, {0x1017401c8, 0x3c71b568a018}, {0x1017401c8, 0x3c71b568a020})
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:93 +0x290
+        github.com/Exploded-views/yo-human/internal/cli.Run(...)
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:69
+        main.main()
+        	github.com/Exploded-views/yo-human/cmd/yo-human/main.go:12 +0x7c
+    resolve_test.go:67: exit code 2, want 0
+        stdout:
+        stderr:
+        panic: runtime error: index out of range [0] with length 0
+        
+        goroutine 1 [running]:
+        github.com/Exploded-views/yo-human/internal/core.(*batch).enqueueNotes(0x3c71b553f000, {0x3c71b56211a0, 0x1a}, {0x0, 0x0}, {{0x3c71b552f0f0, 0x6}, 0x1, {0x0, 0x0}, ...})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:139 +0x57c
+        github.com/Exploded-views/yo-human/internal/core.(*Pipeline).Resolve(0x3c71b5610e70, {0x1017435a0?, 0x1017d8580?}, {0x16ee37b6e, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:38 +0x39c
+        github.com/Exploded-views/yo-human/internal/cli.(*env).resolveWith(0x3c71b56c8d80, 0x3c71b56c8580, 0x3c71b59103d0, {0x16ee37b6e, 0x6}, {0x0, 0x0}, {0x3c71b553eb00, 0x1, 0x7f?})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:75 +0x7d0
+        github.com/Exploded-views/yo-human/internal/cli.(*env).closeIncident(0x3c71b56c8d80, 0x3c71b56c8580, 0x3c71b59103d0, {0x16ee37b6e, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:48 +0x94
+        github.com/Exploded-views/yo-human/internal/cli.cmdResolve(0x3c71b56c8d80, {0x3c71b58f8890, 0x2, 0x3})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:39 +0x23c
+        github.com/Exploded-views/yo-human/internal/cli.run({0x3c71b5684050, 0x3, 0x3}, {0x1017401e8, 0x3c71b568a010}, {0x1017401c8, 0x3c71b568a018}, {0x1017401c8, 0x3c71b568a020})
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:93 +0x290
+        github.com/Exploded-views/yo-human/internal/cli.Run(...)
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:69
+        main.main()
+        	github.com/Exploded-views/yo-human/cmd/yo-human/main.go:12 +0x7c
+--- FAIL: TestResolveCancelAnswered404IsPermanent (<DUR>)
+    resolve_test.go:93: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT held <ULID>
+        phone: held
+        bell: held
+        pager: held
+    resolve_test.go:95: yo-human resolve --dedup-key disk-7 -> exit 2
+        panic: runtime error: index out of range [0] with length 0
+        
+        goroutine 1 [running]:
+        github.com/Exploded-views/yo-human/internal/core.(*batch).enqueueNotes(0x5304e1103000, {0x5304e1246bc0, 0x1a}, {0x0, 0x0}, {{0x5304e11f1180, 0x6}, 0x1, {0x0, 0x0}, ...})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:139 +0x57c
+        github.com/Exploded-views/yo-human/internal/core.(*Pipeline).Resolve(0x5304e11d1490, {0x1016875a0?, 0x10171c580?}, {0x16eef3b76, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:38 +0x39c
+        github.com/Exploded-views/yo-human/internal/cli.(*env).resolveWith(0x5304e0ed4d80, 0x5304e0ed4580, 0x5304e111a3d0, {0x16eef3b76, 0x6}, {0x0, 0x0}, {0x5304e1102ac0, 0x1, 0x7c?})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:75 +0x7d0
+        github.com/Exploded-views/yo-human/internal/cli.(*env).closeIncident(0x5304e0ed4d80, 0x5304e0ed4580, 0x5304e111a3d0, {0x16eef3b76, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:48 +0x94
+        github.com/Exploded-views/yo-human/internal/cli.cmdResolve(0x5304e0ed4d80, {0x5304e1102890, 0x2, 0x3})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:39 +0x23c
+        github.com/Exploded-views/yo-human/internal/cli.run({0x5304e0e92050, 0x3, 0x3}, {0x1016841e8, 0x5304e0e82018}, {0x1016841c8, 0x5304e0e82020}, {0x1016841c8, 0x5304e0e82028})
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:93 +0x290
+        github.com/Exploded-views/yo-human/internal/cli.Run(...)
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:69
+        main.main()
+        	github.com/Exploded-views/yo-human/cmd/yo-human/main.go:12 +0x7c
+    resolve_test.go:96: exit code 2, want 69
+        stdout:
+        stderr:
+        panic: runtime error: index out of range [0] with length 0
+        
+        goroutine 1 [running]:
+        github.com/Exploded-views/yo-human/internal/core.(*batch).enqueueNotes(0x5304e1103000, {0x5304e1246bc0, 0x1a}, {0x0, 0x0}, {{0x5304e11f1180, 0x6}, 0x1, {0x0, 0x0}, ...})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:139 +0x57c
+        github.com/Exploded-views/yo-human/internal/core.(*Pipeline).Resolve(0x5304e11d1490, {0x1016875a0?, 0x10171c580?}, {0x16eef3b76, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:38 +0x39c
+        github.com/Exploded-views/yo-human/internal/cli.(*env).resolveWith(0x5304e0ed4d80, 0x5304e0ed4580, 0x5304e111a3d0, {0x16eef3b76, 0x6}, {0x0, 0x0}, {0x5304e1102ac0, 0x1, 0x7c?})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:75 +0x7d0
+        github.com/Exploded-views/yo-human/internal/cli.(*env).closeIncident(0x5304e0ed4d80, 0x5304e0ed4580, 0x5304e111a3d0, {0x16eef3b76, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:48 +0x94
+        github.com/Exploded-views/yo-human/internal/cli.cmdResolve(0x5304e0ed4d80, {0x5304e1102890, 0x2, 0x3})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:39 +0x23c
+        github.com/Exploded-views/yo-human/internal/cli.run({0x5304e0e92050, 0x3, 0x3}, {0x1016841e8, 0x5304e0e82018}, {0x1016841c8, 0x5304e0e82020}, {0x1016841c8, 0x5304e0e82028})
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:93 +0x290
+        github.com/Exploded-views/yo-human/internal/cli.Run(...)
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:69
+        main.main()
+        	github.com/Exploded-views/yo-human/cmd/yo-human/main.go:12 +0x7c
+--- FAIL: TestResolveCancelFailingTransientlyIsRetriedByFlush (<DUR>)
+    resolve_test.go:113: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT held <ULID>
+        phone: held
+        bell: held
+        pager: held
+    resolve_test.go:115: yo-human resolve --dedup-key disk-7 -> exit 2
+        panic: runtime error: index out of range [0] with length 0
+        
+        goroutine 1 [running]:
+        github.com/Exploded-views/yo-human/internal/core.(*batch).enqueueNotes(0x434227df91c0, {0x434228019140, 0x1a}, {0x0, 0x0}, {{0x43422801f0b0, 0x6}, 0x1, {0x0, 0x0}, ...})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:139 +0x57c
+        github.com/Exploded-views/yo-human/internal/core.(*Pipeline).Resolve(0x434227ec53b0, {0x1033375a0?, 0x1033cc580?}, {0x16d243b4e, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:38 +0x39c
+        github.com/Exploded-views/yo-human/internal/cli.(*env).resolveWith(0x434227bc8d80, 0x434227bc8580, 0x434227e103d0, {0x16d243b4e, 0x6}, {0x0, 0x0}, {0x434227df8cc0, 0x1, 0x88?})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:75 +0x7d0
+        github.com/Exploded-views/yo-human/internal/cli.(*env).closeIncident(0x434227bc8d80, 0x434227bc8580, 0x434227e103d0, {0x16d243b4e, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:48 +0x94
+        github.com/Exploded-views/yo-human/internal/cli.cmdResolve(0x434227bc8d80, {0x434227df8890, 0x2, 0x3})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:39 +0x23c
+        github.com/Exploded-views/yo-human/internal/cli.run({0x434227b84050, 0x3, 0x3}, {0x1033341e8, 0x434227b8a010}, {0x1033341c8, 0x434227b8a018}, {0x1033341c8, 0x434227b8a020})
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:93 +0x290
+        github.com/Exploded-views/yo-human/internal/cli.Run(...)
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:69
+        main.main()
+        	github.com/Exploded-views/yo-human/cmd/yo-human/main.go:12 +0x7c
+    resolve_test.go:115: exit code 2, want 69
+        stdout:
+        stderr:
+        panic: runtime error: index out of range [0] with length 0
+        
+        goroutine 1 [running]:
+        github.com/Exploded-views/yo-human/internal/core.(*batch).enqueueNotes(0x434227df91c0, {0x434228019140, 0x1a}, {0x0, 0x0}, {{0x43422801f0b0, 0x6}, 0x1, {0x0, 0x0}, ...})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:139 +0x57c
+        github.com/Exploded-views/yo-human/internal/core.(*Pipeline).Resolve(0x434227ec53b0, {0x1033375a0?, 0x1033cc580?}, {0x16d243b4e, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:38 +0x39c
+        github.com/Exploded-views/yo-human/internal/cli.(*env).resolveWith(0x434227bc8d80, 0x434227bc8580, 0x434227e103d0, {0x16d243b4e, 0x6}, {0x0, 0x0}, {0x434227df8cc0, 0x1, 0x88?})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:75 +0x7d0
+        github.com/Exploded-views/yo-human/internal/cli.(*env).closeIncident(0x434227bc8d80, 0x434227bc8580, 0x434227e103d0, {0x16d243b4e, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:48 +0x94
+        github.com/Exploded-views/yo-human/internal/cli.cmdResolve(0x434227bc8d80, {0x434227df8890, 0x2, 0x3})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:39 +0x23c
+        github.com/Exploded-views/yo-human/internal/cli.run({0x434227b84050, 0x3, 0x3}, {0x1033341e8, 0x434227b8a010}, {0x1033341c8, 0x434227b8a018}, {0x1033341c8, 0x434227b8a020})
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:93 +0x290
+        github.com/Exploded-views/yo-human/internal/cli.Run(...)
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:69
+        main.main()
+        	github.com/Exploded-views/yo-human/cmd/yo-human/main.go:12 +0x7c
+--- FAIL: TestPageShimTriggerAndResolve (<DUR>)
+    shim_trust_test.go:15: yo-human page Disk is full on build-7 df says 100% disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    shim_trust_test.go:25: yo-human page --resolve disk-7 -> exit 2
+        panic: runtime error: index out of range [1] with length 1
+        
+        goroutine 1 [running]:
+        github.com/Exploded-views/yo-human/internal/core.(*batch).enqueueNotes(0x59495acfaf40, {0x59495a9463e0, 0x1a}, {0x0, 0x0}, {{0x59495adef180, 0x6}, 0x1, {0x0, 0x0}, ...})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:139 +0x57c
+        github.com/Exploded-views/yo-human/internal/core.(*Pipeline).Resolve(0x59495ae94e70, {0x1035ef5a0?, 0x103684580?}, {0x16cf8bba1, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:38 +0x39c
+        github.com/Exploded-views/yo-human/internal/cli.(*env).resolveWith(0x59495aac6d80, 0x59495aac6580, 0x59495ad123c0, {0x16cf8bba1, 0x6}, {0x0, 0x0}, {0x59495ab76000, 0x3, 0x72?})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:75 +0x7d0
+        github.com/Exploded-views/yo-human/internal/cli.(*env).closeIncident(0x59495aac6d80, 0x59495aac6580, 0x59495ad123c0, {0x16cf8bba1, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:48 +0x94
+        github.com/Exploded-views/yo-human/internal/cli.cmdPage(0x59495aac6d80, {0x59495acfa890?, 0x16cf8bb92?, 0x4?})
+        	github.com/Exploded-views/yo-human/internal/cli/page.go:116 +0x224
+        github.com/Exploded-views/yo-human/internal/cli.run({0x59495aa84050, 0x3, 0x3}, {0x1035ec1e8, 0x59495aa8a010}, {0x1035ec1c8, 0x59495aa8a018}, {0x1035ec1c8, 0x59495aa8a020})
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:93 +0x290
+        github.com/Exploded-views/yo-human/internal/cli.Run(...)
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:69
+        main.main()
+        	github.com/Exploded-views/yo-human/cmd/yo-human/main.go:12 +0x7c
+    shim_trust_test.go:25: exit code 2, want 0
+        stdout:
+        stderr:
+        panic: runtime error: index out of range [1] with length 1
+        
+        goroutine 1 [running]:
+        github.com/Exploded-views/yo-human/internal/core.(*batch).enqueueNotes(0x59495acfaf40, {0x59495a9463e0, 0x1a}, {0x0, 0x0}, {{0x59495adef180, 0x6}, 0x1, {0x0, 0x0}, ...})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:139 +0x57c
+        github.com/Exploded-views/yo-human/internal/core.(*Pipeline).Resolve(0x59495ae94e70, {0x1035ef5a0?, 0x103684580?}, {0x16cf8bba1, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/core/resolve.go:38 +0x39c
+        github.com/Exploded-views/yo-human/internal/cli.(*env).resolveWith(0x59495aac6d80, 0x59495aac6580, 0x59495ad123c0, {0x16cf8bba1, 0x6}, {0x0, 0x0}, {0x59495ab76000, 0x3, 0x72?})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:75 +0x7d0
+        github.com/Exploded-views/yo-human/internal/cli.(*env).closeIncident(0x59495aac6d80, 0x59495aac6580, 0x59495ad123c0, {0x16cf8bba1, 0x6}, {0x0, 0x0})
+        	github.com/Exploded-views/yo-human/internal/cli/resolve.go:48 +0x94
+        github.com/Exploded-views/yo-human/internal/cli.cmdPage(0x59495aac6d80, {0x59495acfa890?, 0x16cf8bb92?, 0x4?})
+        	github.com/Exploded-views/yo-human/internal/cli/page.go:116 +0x224
+        github.com/Exploded-views/yo-human/internal/cli.run({0x59495aa84050, 0x3, 0x3}, {0x1035ec1e8, 0x59495aa8a010}, {0x1035ec1c8, 0x59495aa8a018}, {0x1035ec1c8, 0x59495aa8a020})
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:93 +0x290
+        github.com/Exploded-views/yo-human/internal/cli.Run(...)
+        	github.com/Exploded-views/yo-human/internal/cli/cli.go:69
+        main.main()
+        	github.com/Exploded-views/yo-human/cmd/yo-human/main.go:12 +0x7c
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	<DUR>
+FAIL
+exit code: 1
+
+=== MUTANT: bark held in quiet hours is sent at once (the queue does not hold it)
+file: internal/core/router.go
+from: p.HoldLocally = !deliverAt.IsZero() && !caps[s.Channel].Schedule
+to:   p.HoldLocally = false
+run:  go test -tags e2e ./test/e2e/ -count=1 -run 'Held'
+--- FAIL: TestHeldInQuietHoursThenFlushAfterTheWindow (<DUR>)
+    quiet_test.go:22: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT partial <ULID>
+        phone: held
+        bell: sent
+        pager: sent
+    quiet_test.go:23: RESULT partial, want held
+        stdout:
+        RESULT partial <ULID>
+        phone: held
+        bell: sent
+        pager: sent
+--- FAIL: TestResolveCancelsHeldPagesLocallyAndAtNtfy (<DUR>)
+    resolve_test.go:65: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT partial <ULID>
+        phone: held
+        bell: sent
+        pager: sent
+    resolve_test.go:65: RESULT partial, want held
+        stdout:
+        RESULT partial <ULID>
+        phone: held
+        bell: sent
+        pager: sent
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	<DUR>
+FAIL
+exit code: 1
+
+=== MUTANT: a channel error quotes the request path, which holds the secret topic
+file: internal/channel/ntfy/client.go
+from: err = fmt.Errorf("ntfy answered HTTP %d", resp.StatusCode)
+to:   err = fmt.Errorf("ntfy answered HTTP %d from %s", resp.StatusCode, req.URL.Path)
+run:  go test -tags e2e ./test/e2e/ -count=1 -run 'ResolveCancelFailing'
+--- FAIL: TestResolveCancelFailingTransientlyIsRetriedByFlush (<DUR>)
+    resolve_test.go:113: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT held <ULID>
+        phone: held
+        bell: held
+        pager: held
+    resolve_test.go:115: the value of secret ntfy-topic appears in the output of [resolve --dedup-key disk-7]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	<DUR>
+FAIL
+exit code: 1
+

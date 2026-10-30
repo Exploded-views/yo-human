@@ -1,0 +1,18 @@
+skills used: []
+
+**After the exit 78**
+
+The secret `pd-critical` isn't set. That's a configuration problem, so retrying the same command won't help. I can't fix it myself. The fix needs an `op://<vault>/<item>/<field>` path that I don't have. I won't guess a path or put a made-up value into the secret store.
+
+1. Run `yo-human secret list`. It's read-only and prints names only. It confirms `pd-critical` is a valid name and shows whether anything else is configured.
+2. Search the repo and its docs for the real 1Password path, for example `grep -rn "op://" .` and the README. If I find an exact path for `pd-critical`, I'll still treat it as a suggestion and not run `op read ... | yo-human secret set pd-critical` unattended. That would change credentials the user didn't ask me to touch.
+3. Try a lower-level notification that doesn't depend on that secret, because the checkout problem still needs a human. I'd run `yo-human notify --level nudge --title "SIREN FAILED: checkout failing" --ask "Set pd-critical secret and look at checkout now"`. I would only do this if the nudge channel doesn't also use `channels.pager.routing_key`. Nudges are held during quiet hours, so this may not wake anyone.
+4. Say clearly in my final output that the siren was not delivered. I'd include the checkout failure, the exit 78 error, the fix command with its `<vault>/<item>/<field>` placeholders, and whether the fallback nudge went out. I wouldn't claim the human was notified.
+
+**If it had been exit 74 (store I/O failure)**
+
+The secret store couldn't be read, which could be transient. The config isn't known to be wrong, so I would not run `secret set`. Writing to a failing store could make things worse.
+
+1. Retry the identical siren command once or twice, with a short backoff of about 5–10 seconds. A failed notify most likely sent nothing, so a retry shouldn't send duplicate pages.
+2. If it still fails, run `yo-human secret list` to see whether the store is readable at all. I'd check the error for a path or permissions hint, but I wouldn't delete or recreate the store.
+3. If the store is still broken, do steps 3 and 4 above: a clearly labeled fallback nudge if it doesn't depend on the store, then an honest final report that the siren failed with exit 74.

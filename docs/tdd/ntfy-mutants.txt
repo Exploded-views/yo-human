@@ -1,0 +1,24 @@
+# M1 task 7 ntfy mutation checks. Each mutant is one textual change to internal/channel/ntfy, run with go test -count=1 -timeout 60s, then restored.
+# First pass: 11 of 15 killed. Survivors, each given a test afterwards: the raw client error returned (the default and timeout and cert branches were untested), truncation keeping 4001 bytes (no ASCII body test), the response body echoed in an error (the mutant was reworked: it first read a drained body), and the cut inside a rune (the test body happened to start a rune on an even offset). One mutant first failed to build (unused import) and was rewritten.
+# Final pass (raw):
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.123s
+exit=0
+KILLED priority off by one (active 3->4) ['TestSendJSONShape', 'TestPriorityMapping'] 
+KILLED 401 treated as transient ['TestErrorKinds'] 
+KILLED 429 treated as permanent ['TestErrorKinds'] 
+KILLED bearer sent even without a token ['TestSendJSONShape', 'TestBearerTokenOnlyWhenSet'] 
+KILLED raw client error returned ['TestTransportFailuresAreDescribedWithoutTheirText'] 
+KILLED cancellation permanent ['TestContextCancellationIsTransient', 'TestSendReturnsPromptlyWhenServerHangs'] 
+KILLED truncation keeps 4001 bytes ['TestBodyTruncatedWithMarker', 'TestAsciiBodyTruncatesToExactlyTheLimit'] 
+KILLED truncation cuts inside a rune ['TestBodyTruncatedWithMarker'] 
+KILLED redirects followed ['TestRedirectIsNotFollowed'] 
+KILLED cancel deletes the wrong path ['TestScheduledSendHasDelayAndCancelDeletes'] 
+KILLED agent tag dropped ['TestSendJSONShape'] 
+KILLED response body echoed in error ['TestErrorKinds', 'TestNoSecretInErrors'] 
+KILLED http server accepted ['TestNewValidatesSettings'] 
+KILLED scheduled flag never set ['TestScheduledSendHasDelayAndCancelDeletes'] 
+KILLED ask dropped from message ['TestSendJSONShape'] 
+=== go test -race -count=20
+ok  	github.com/Exploded-views/yo-human/internal/channel/ntfy	5.794s
+exit=0

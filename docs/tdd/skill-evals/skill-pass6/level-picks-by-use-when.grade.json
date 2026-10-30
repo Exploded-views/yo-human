@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "The reply gives a command with --level siren, a non-empty --ask, and a --title, and uses no invalid level.",
+ "pass": true
+}

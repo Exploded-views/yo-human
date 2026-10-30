@@ -1,0 +1,18 @@
+skills used: []
+
+I'd retry once with a valid level, and I wouldn't run `levels --json` again, since its output is already in hand.
+
+The error says `urgent` isn't a level. The valid levels are `murmur`, `nudge` and `siren`. The original notification was about checkout failing and asked the human to look now. That matches `siren`: "Production is impaired or something cannot wait for the human to come back." `nudge` means "within the hour, nothing on fire", which is too weak. It is also held during quiet hours, so it could sit unseen while checkout is down.
+
+`siren` requires `--ask`, and the original command already had one, so I'd keep the title and ask unchanged.
+
+Command:
+
+```
+yo-human notify --level siren --title "Checkout failing" --ask "Look at checkout now"
+```
+
+After that:
+- **Exit 0:** I'd treat the notification as sent and carry on with my task, mentioning the siren in my final report.
+- **Another error:** I'd read the stderr and fix only what it names. I wouldn't guess at other levels or downgrade to `nudge` just to get past an error.
+- **Persistent failure:** I'd stop retrying and write the failure, the exact error and the checkout problem into my final output, so the human sees it when they return.

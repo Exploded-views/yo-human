@@ -1,0 +1,38 @@
+KILLED  no project check
+  internal/cli/bodyfile.go: 'if !e.insideProject(file) {' -> 'if false && !e.insideProject(file) {'
+  --- FAIL: TestBodyFileStaysInsideTheProject (0.15s)
+      bodyfile_test.go:193: --body-file $TMPDIR/TestBodyFileStaysInsideTheProject543235083/001/.ssh/id_ed25519: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "--body-file" on stderr
+      bodyfile_test.go:194: fix = "", want it to contain "copy the text into the project"
+  [go test -count=1 ./internal/cli -run 'BodyFile|NotifyReads' -timeout 120s exit 1]
+
+KILLED  the project root is not a root
+  internal/cli/bodyfile.go: 'roots = append(roots, filepath.Dir(proj))' -> '_ = proj'
+  --- FAIL: TestBodyFileStaysInsideTheProject (0.05s)
+      bodyfile_test.go:207: a file in the project root, from a subdirectory: {code:64 out: err:error: --body-file $TMPDIR/TestBodyFileSta... (116 characters) is outside the working directory and the project
+          valid: a file inside the working directory or the project (the directory holding .yo-human.yaml)
+  [go test -count=1 ./internal/cli -run 'BodyFile|NotifyReads' -timeout 120s exit 1]
+
+KILLED  the project file itself is the root
+  internal/cli/bodyfile.go: 'roots = append(roots, filepath.Dir(proj))' -> 'roots = append(roots, proj)'
+  --- FAIL: TestBodyFileStaysInsideTheProject (0.05s)
+      bodyfile_test.go:207: a file in the project root, from a subdirectory: {code:64 out: err:error: --body-file $TMPDIR/TestBodyFileSta... (116 characters) is outside the working directory and the project
+          valid: a file inside the working directory or the project (the directory holding .yo-human.yaml)
+  [go test -count=1 ./internal/cli -run 'BodyFile|NotifyReads' -timeout 120s exit 1]
+
+KILLED  the working directory is not a root
+  internal/cli/bodyfile.go: 'roots := []string{p.Cwd}' -> 'roots := []string{}'
+  --- FAIL: TestBodyFileStaysInsideTheProject (0.05s)
+      bodyfile_test.go:199: a file in the working directory: {code:64 out: err:error: --body-file $TMPDIR/TestBodyFileSta... (111 characters) is outside the working directory and the project
+          valid: a file inside the working directory or the project (the directory holding .yo-human.yaml)
+  --- FAIL: TestNotifyReadsTheBodyFromAFileOrStdin (0.09s)
+      notify_input_test.go:73: body-file
+      notify_input_test.go:80: bodies = ["from stdin" "literal"]
+  [go test -count=1 ./internal/cli -run 'BodyFile|NotifyReads' -timeout 120s exit 1]
+
+KILLED  the root is the parent of the working directory
+  internal/cli/bodyfile.go: 'roots := []string{p.Cwd}' -> 'roots := []string{filepath.Dir(p.Cwd)}'
+  --- FAIL: TestBodyFileStaysInsideTheProject (0.19s)
+      bodyfile_test.go:193: --body-file $TMPDIR/TestBodyFileStaysInsideTheProject1961522794/001/.ssh/id_ed25519: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "--body-file" on stderr
+      bodyfile_test.go:194: fix = "", want it to contain "copy the text into the project"
+  [go test -count=1 ./internal/cli -run 'BodyFile|NotifyReads' -timeout 120s exit 1]
+

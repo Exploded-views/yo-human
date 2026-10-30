@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "Command uses --level siren and a non-empty --ask, but has no --title flag (message is positional), so the title requirement is unmet.",
+ "pass": false
+}

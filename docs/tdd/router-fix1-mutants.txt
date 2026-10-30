@@ -1,0 +1,14 @@
+# Fix round 1 mutation checks (task 4); ok/FAIL/--- FAIL lines
+== baseline
+ok  	github.com/Exploded-views/yo-human/internal/core	(cached)
+== mutant: gap correction dropped
+--- FAIL: TestQuietSpringForwardGapEnd (0.00s)
+--- FAIL: TestQuietSpringForwardGapStart (0.00s)
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.010s
+== mutant: gap resolved by a fixed +1h
+--- FAIL: TestQuietSpringForwardGapEnd (0.00s)
+--- FAIL: TestQuietSpringForwardGapStart (0.00s)
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.010s
+== mutant: options shared, not cloned
+--- FAIL: TestPlanOptionsAreCopied (0.00s)
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.010s

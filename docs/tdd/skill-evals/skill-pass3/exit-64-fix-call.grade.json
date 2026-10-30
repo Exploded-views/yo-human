@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "Reply reruns notify with --level siren keeping the title and ask (conditional on confirming production impact, with extras added), and does not blame the tool, keep an invalid level, or give up.",
+ "pass": true
+}

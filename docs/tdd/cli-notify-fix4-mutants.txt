@@ -1,0 +1,219 @@
+# what this is: task 11 fix round 4 mutants: ntfy's 404 on a cancel (permanent, explained), a failed resolve-time or late cancel kept in the queue (retried or dead-lettered) and returned as an exit-69 problem, the late resolve note pinned to its own destination; each run is bounded by a 300s timeout
+# test command: go test -count=1 -timeout 150s <package> (timeout 300s per run); the failing lines of each run are kept as printed
+# runs 1-18 are the first pass; three survived (the two fix-text mutants, and the late cancel with no destination) and got tests (TestResolveDeadLettersACancelTheProviderRefused and TestResolveRetriesACancelThatFailedForNow now check the fix text; TestALateScheduledSendWhoseCancelFailedForNowIsCancelledByAFlush); their re-runs follow the first pass.
+# "a failed claim of the kept cancel is not reported" survives and is kept as equivalent in what a caller sees: the cancel stays in the queue, and every caller of cancelNow (resolve, notify, flush) then runs the backlog, which claims the same entry and reports the same store failure.
+## baseline (after the tests added for the first-run survivors)
+ok  	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.139s
+exit=0
+ok  	github.com/Exploded-views/yo-human/internal/core	16.268s
+exit=0
+
+## a 404 on a cancel is not explained
+# in internal/channel/ntfy/client.go: 'if channel.KindOf(err) == channel.PermanentError && errors.Is(err, errNotFound) {' => 'if false && errors.Is(err, errNotFound) {'
+# command: go test -count=1 -timeout 150s ./internal/channel/ntfy
+--- FAIL: TestCancelThatAnswers404IsPermanentAndSaysThePageMayStillFire (0.00s)
+    ntfy_test.go:340: cancel answered 404: "ntfy answered HTTP 404"; want the status and "the scheduled send may already be gone, or this ntfy server cannot cancel scheduled messages (needs v2.16 or later); the human may still be paged"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.136s
+FAIL
+exit=1 (killed)
+
+## a 404 on a cancel counts as success again
+# in internal/channel/ntfy/client.go: 'return channel.Permanent(fmt.Errorf("%w: %s", err, cancelUnsure))' => 'return nil'
+# command: go test -count=1 -timeout 150s ./internal/channel/ntfy
+--- FAIL: TestCancelThatAnswers404IsPermanentAndSaysThePageMayStillFire (0.00s)
+    ntfy_test.go:336: cancel answered 404: err <nil>; want a permanent error (an old server or a proxy may not route DELETE)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.146s
+FAIL
+exit=1 (killed)
+
+## a 404 on a cancel becomes transient
+# in internal/channel/ntfy/client.go: 'return channel.Permanent(fmt.Errorf("%w: %s", err, cancelUnsure))' => 'return channel.Transient(fmt.Errorf("%w: %s", err, cancelUnsure))'
+# command: go test -count=1 -timeout 150s ./internal/channel/ntfy
+--- FAIL: TestCancelThatAnswers404IsPermanentAndSaysThePageMayStillFire (0.00s)
+    ntfy_test.go:336: cancel answered 404: err ntfy answered HTTP 404: the scheduled send may already be gone, or this ntfy server cannot cancel scheduled messages (needs v2.16 or later); the human may still be paged; want a permanent error (an old server or a proxy may not route DELETE)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.152s
+FAIL
+exit=1 (killed)
+
+## a 404 is not marked
+# in internal/channel/ntfy/client.go: 'if resp.StatusCode == http.StatusNotFound {' => 'if false {'
+# command: go test -count=1 -timeout 150s ./internal/channel/ntfy
+--- FAIL: TestCancelThatAnswers404IsPermanentAndSaysThePageMayStillFire (0.00s)
+    ntfy_test.go:340: cancel answered 404: "ntfy answered HTTP 404"; want the status and "the scheduled send may already be gone, or this ntfy server cannot cancel scheduled messages (needs v2.16 or later); the human may still be paged"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.151s
+FAIL
+exit=1 (killed)
+
+## a failed cancel is not kept in the queue
+# in internal/core/cancel.go: 'res, err := b.keepFailedCancel(ctx, h, cerr, time.Since(started))' => 'res, err := ChannelResult{Channel: h.Instance, Status: ChannelDead, Error: cerr.Error()}, error(nil)'
+# command: go test -count=1 -timeout 150s ./internal/core
+FAIL	github.com/Exploded-views/yo-human/internal/core [build failed]
+FAIL
+internal/core/cancel.go:40:2: declared and not used: started
+exit=1 (killed)
+
+## a failed cancel is always dead-lettered
+# in internal/core/cancel.go: 'return b.settle(ctx, sendOutcome{c: c, pl: pl, err: cerr, took: took})' => 'return b.bury(c, pl, cerr.Error(), false)'
+# command: go test -count=1 -timeout 150s ./internal/core
+--- FAIL: TestResolveRetriesACancelThatFailedForNow (0.07s)
+    cancel_dead_test.go:59: resolve = phone:dead:provider refused;, the scheduled send on phone could not be cancelled: provider refused; want the failed cancel reported and queued for a retry
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	15.205s
+FAIL
+exit=1 (killed)
+
+## an unclaimed kept cancel is reported dead
+# in internal/core/cancel.go: '\t\tres.Status = ChannelQueued\n\t\treturn res, err' => '\t\treturn res, err'
+# command: go test -count=1 -timeout 150s ./internal/core
+--- FAIL: TestAFailedCancelThatCannotBeKeptIsStillReported (0.15s)
+    cancel_dead_test.go:154: inflight locked: resolve = phone:dead:provider refused;, the scheduled send on phone could not be cancelled: provider refused
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	16.787s
+FAIL
+exit=1 (killed)
+
+## a failed enqueue of the kept cancel is not reported
+# in internal/core/cancel.go: '\tif err := b.p.d.Store.Enqueue(pd); err != nil {\n\t\treturn res, err' => '\tif err := b.p.d.Store.Enqueue(pd); err != nil {\n\t\treturn res, nil'
+# command: go test -count=1 -timeout 150s ./internal/core
+--- FAIL: TestAFailedCancelThatCannotBeKeptIsStillReported (0.14s)
+    cancel_dead_test.go:157: queue locked: the scheduled send on phone could not be cancelled: provider refused; want the store failure reported too
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	17.076s
+FAIL
+exit=1 (killed)
+
+## a failed claim of the kept cancel is not reported
+# in internal/core/cancel.go: '\t\tres.Status = ChannelQueued\n\t\treturn res, err' => '\t\tres.Status = ChannelQueued\n\t\treturn res, nil'
+# command: go test -count=1 -timeout 150s ./internal/core
+ok  	github.com/Exploded-views/yo-human/internal/core	16.538s
+exit=0 (SURVIVED)
+
+## the problem never says the cancel is dead-lettered
+# in internal/core/cancel.go: 'if res.Status == ChannelDead {' => 'if false {'
+# command: go test -count=1 -timeout 150s ./internal/core
+ok  	github.com/Exploded-views/yo-human/internal/core	16.788s
+exit=0 (SURVIVED)
+
+## the problem says dead-lettered for a retried cancel
+# in internal/core/cancel.go: 'if res.Status == ChannelDead {' => 'if true {'
+# command: go test -count=1 -timeout 150s ./internal/core
+ok  	github.com/Exploded-views/yo-human/internal/core	16.776s
+exit=0 (SURVIVED)
+
+## the cancel problem is internal (exit 70)
+# in internal/core/cancel.go: 'Kind: problem.Unavailable' => 'Kind: problem. Internal'
+# command: go test -count=1 -timeout 150s ./internal/core
+--- FAIL: TestResolveDeadLettersACancelTheProviderRefused (0.08s)
+    cancel_dead_test.go:44: resolve = phone:dead:provider refused;, the scheduled send on phone could not be cancelled: provider refused; want resolved, the failed cancel reported as dead
+--- FAIL: TestResolveRetriesACancelThatFailedForNow (0.07s)
+    cancel_dead_test.go:59: resolve = phone:queued:provider refused;, the scheduled send on phone could not be cancelled: provider refused; want the failed cancel reported and queued for a retry
+--- FAIL: TestAFailedCancelThatCannotBeKeptIsStillReported (0.12s)
+    cancel_dead_test.go:154: queue locked: resolve = phone:dead:provider refused;, the scheduled send on phone could not be cancelled: provider refused
+    cancel_dead_test.go:154: inflight locked: resolve = phone:queued:provider refused;, the scheduled send on phone could not be cancelled: provider refused
+--- FAIL: TestExpiredGenerationsCancelFailureIsReported (0.11s)
+    landing_test.go:280: err the scheduled send on n could not be cancelled: provider down status "held"; the new page still goes out, and the failed cancel is reported
+--- FAIL: TestResolveReportsACancelThatFailed (0.08s)
+    resolve_fault_test.go:55: err = the scheduled send on sched could not be cancelled: provider down status "resolved"; a scheduled page we could not cancel is the human's to know about
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	16.265s
+FAIL
+exit=1 (killed)
+
+## the cancel problem is dropped
+# in internal/core/cancel.go: 'return res, errors.Join(cancelProblem(res, cerr), err)' => 'return res, err'
+# command: go test -count=1 -timeout 150s ./internal/core
+FAIL	github.com/Exploded-views/yo-human/internal/core [build failed]
+FAIL
+internal/core/cancel.go:6:2: "errors" imported and not used
+exit=1 (killed)
+
+## a late scheduled send is cancelled directly again
+# in internal/core/deliver.go: '_, err = b.cancelNow(ctx, b.p.d.Channels[l.cancel.Instance], *l.cancel)' => 'err = b.p.d.Channels[l.cancel.Instance].Cancel(ctx, l.cancel.Receipt)'
+# command: go test -count=1 -timeout 150s ./internal/core
+--- FAIL: TestALateScheduledSendWhoseCancelIsRefusedIsDeadLettered (0.06s)
+    cancel_dead_test.go:112: dead letter []; a scheduled page that landed after the resolve and could not be cancelled must be visible
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	16.185s
+FAIL
+exit=1 (killed)
+
+## the late note is not pinned
+# in internal/core/repeat.go: ', Pinned: true, Fingerprint: pl.Fingerprint}})' => '}})'
+# command: go test -count=1 -timeout 150s ./internal/core
+--- FAIL: TestALateResolveNoteIsPinnedToTheDestinationTheSendWentThrough (0.08s)
+    cancel_dead_test.go:122: notes sent 1; the late page went through one.example, its note must not go to two.example
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	17.016s
+FAIL
+exit=1 (killed)
+
+## the late note is pinned to the destination in force
+# in internal/core/repeat.go: ', Pinned: true, Fingerprint: pl.Fingerprint}})' => ', Pinned: true, Fingerprint: p.fingerprint(res.Channel)}})'
+# command: go test -count=1 -timeout 150s ./internal/core
+--- FAIL: TestALateResolveNoteIsPinnedToTheDestinationTheSendWentThrough (0.08s)
+    cancel_dead_test.go:122: notes sent 1; the late page went through one.example, its note must not go to two.example
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	18.445s
+FAIL
+exit=1 (killed)
+
+## resolve ignores the cancel failure
+# in internal/core/resolve.go: '\t\t\tres, err := b.cancelNow(ctx, ch, h)\n\t\t\tif err != nil {\n\t\t\t\tb.fail(err)\n\t\t\t}' => '\t\t\tres, _ := b.cancelNow(ctx, ch, h)'
+# command: go test -count=1 -timeout 150s ./internal/core
+--- FAIL: TestResolveDeadLettersACancelTheProviderRefused (0.10s)
+    cancel_dead_test.go:44: resolve = phone:dead:provider refused;, <nil>; want resolved, the failed cancel reported as dead
+--- FAIL: TestResolveRetriesACancelThatFailedForNow (0.08s)
+    cancel_dead_test.go:59: resolve = phone:queued:provider refused;, <nil>; want the failed cancel reported and queued for a retry
+--- FAIL: TestAFailedCancelThatCannotBeKeptIsStillReported (0.13s)
+    cancel_dead_test.go:154: queue locked: resolve = phone:dead:provider refused;, <nil>; want "phone:dead:provider refused" and the human told a page may still fire
+    cancel_dead_test.go:157: queue locked: <nil>; want the store failure reported too
+    cancel_dead_test.go:154: inflight locked: resolve = phone:queued:provider refused;, cannot claim $TMPDIR/TestAFailedCancelThatCannotBeKeptIsStillReported2927228601/002/state/inflight/Z3.phone.77602.json: rename $TMPDIR/TestAFailedCancelThatCannotBeKeptIsStillReported2927228601/002/state/queue/Z3.phone.json $TMPDIR/TestAFailedCancelThatCannotBeKeptIsStillReported2927228601/002/state/inflight/Z3.phone.77602.json: permission denied; want "phone:queued:provider refused" and the human told a page may still fire
+--- FAIL: TestExpiredGenerationsCancelFailureIsReported (0.13s)
+    landing_test.go:280: err <nil> status "held"; the new page still goes out, and the failed cancel is reported
+--- FAIL: TestResolveReportsACancelThatFailed (0.08s)
+    resolve_fault_test.go:55: err = <nil> status "resolved"; a scheduled page we could not cancel is the human's to know about
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	17.423s
+FAIL
+exit=1 (killed)
+
+## a late cancel keeps no destination
+# in internal/core/repeat.go: 'Scheduled: true}, pl.Fingerprint, pl.Generation}' => 'Scheduled: true}, "", pl.Generation}'
+# command: go test -count=1 -timeout 150s ./internal/core
+ok  	github.com/Exploded-views/yo-human/internal/core	19.571s
+exit=0 (SURVIVED)
+
+## the problem never says the cancel is dead-lettered
+# in internal/core/cancel.go: 'if res.Status == ChannelDead {' => 'if false {'
+# command: go test -count=1 -timeout 150s ./internal/core
+--- FAIL: TestResolveDeadLettersACancelTheProviderRefused (0.08s)
+    cancel_dead_test.go:47: problem the scheduled send on phone could not be cancelled: provider refused; want its fix to point at the dead letter
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	16.460s
+FAIL
+exit=1 (killed)
+
+## the problem says dead-lettered for a retried cancel
+# in internal/core/cancel.go: 'if res.Status == ChannelDead {' => 'if true {'
+# command: go test -count=1 -timeout 150s ./internal/core
+--- FAIL: TestResolveRetriesACancelThatFailedForNow (0.09s)
+    cancel_dead_test.go:65: problem the scheduled send on phone could not be cancelled: provider refused; want its fix to say the cancel is retried
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	16.730s
+FAIL
+exit=1 (killed)
+
+## a late cancel keeps no destination
+# in internal/core/repeat.go: 'Scheduled: true}, pl.Fingerprint, pl.Generation}' => 'Scheduled: true}, "", pl.Generation}'
+# command: go test -count=1 -timeout 150s ./internal/core
+--- FAIL: TestALateScheduledSendWhoseCancelFailedForNowIsCancelledByAFlush (0.10s)
+    cancel_dead_test.go:183: flush: <nil>, cancelled map[]; want the late page's cancel retried through the destination it went to
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	16.499s
+FAIL
+exit=1 (killed)
+

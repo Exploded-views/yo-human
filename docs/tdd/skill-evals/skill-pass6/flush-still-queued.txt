@@ -1,0 +1,18 @@
+skills used: ['yo-human-eval:yo-human']
+
+Next I'd wait 120 seconds, then run `yo-human flush` exactly as printed. It exited 75 with `RESULT queued`, so this is the second of the 5 attempts the first `next` allowed. 4 attempts are left, and each new `next` counts down from there.
+
+1. `sleep 120`
+2. `yo-human flush`
+3. Read the result:
+   - **Exit 0 with a `sent` channel line:** it was delivered. Stop. If the incident is later fixed and verified, I'd run `yo-human resolve --dedup-key checkout-FAKE`.
+   - **Exit 0 with no channel lines:** nothing was due yet, which doesn't mean delivered. I'd treat it as not delivered and keep following the schedule.
+   - **Exit 69 (`failed`):** stop. I wouldn't retry or switch levels. I'd tell the human in my session.
+   - **Exit 75 (`queued`):** wait the new `after_seconds` from the printed `next` and run `yo-human flush` again. I'd repeat this until the attempts run out, never more than the 5 the first `next` allowed.
+   - **Exit 64, 74, 78 or 70:** stop and tell the human in my session. For 78 I'd quote the `error` and `fix` lines.
+
+Throughout, I would not re-run `notify`, which would make a duplicate. I would not change the dedup key `checkout-FAKE` or the level. I would not touch config or secrets.
+
+If the last allowed flush still exits 75, the attempts are used up and I stop running `flush` for this message. I'd then tell the human directly in my session, something like this:
+
+> I tried to page you at level **siren**: "Checkout failing". Ask: "Look at checkout now". Dedup key: `checkout-FAKE`. The ntfy server could not be reached, so the page was never delivered after 5 attempts. The notification is still queued.

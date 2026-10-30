@@ -1,0 +1,13 @@
+{
+ "must": [
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "Runs resolve with the same dedup key and a short note; no new notify, no key change, incident not left open.",
+ "pass": true
+}

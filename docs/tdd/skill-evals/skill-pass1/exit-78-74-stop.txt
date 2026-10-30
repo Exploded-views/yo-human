@@ -1,0 +1,20 @@
+skills used: ['yo-human-eval:yo-human']
+
+**After the exit 78 (what I do next)**
+
+Exit 78 is a config error. The `pd-critical` secret isn't set, so the pager channel can't send. Only the human can fix that. I don't run `op read ... | yo-human secret set pd-critical` myself. I don't know the vault, item or field, and I'm not to edit config or secrets. I also don't retry `notify`, change the level, or send the page some other way.
+
+So I run no more yo-human commands for this. The next step is a plain message in my session reply or handoff:
+
+> **I could not reach you through yo-human, so I'm telling you here.**
+> - **Title:** Checkout failing
+> - **Level:** siren (production impaired)
+> - **Ask:** Look at checkout now.
+> - **Failure:** `yo-human notify` exited 78. stderr: `error: secret "pd-critical", used by channels.pager.routing_key, is not set`. The fix line was: `op read "op://<vault>/<item>/<field>" | yo-human secret set pd-critical`.
+> - **What you need to do:** Look at checkout now. Separately, set the `pd-critical` secret with the fix command above (fill in your own vault, item and field), so paging works again.
+
+I'd keep investigating checkout within my normal task scope. I wouldn't call `yo-human resolve`, because nothing was sent.
+
+**If the exit code had been 74 (store I/O failure)**
+
+The handling is the same. I stop and don't retry `notify`, because a retry could create duplicates or hit the same broken store. I don't try to repair the store or work around it with another tool. The human hasn't been reached, so I send the same session message: title, siren level, ask, and the exact stderr text from the 74. The only differences are that the error text is about store I/O and there's no secret to set. I'd tell them the notification store needs checking, for example its permissions, disk space or path, and that the page may not have been recorded.

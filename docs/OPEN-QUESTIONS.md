@@ -1,6 +1,8 @@
 # Open questions for the owner
 
-**All eight answered by the owner on 2026-10-25.** Each question keeps its original suggestion for the record; the owner's answer follows it as **Decided**.
+**None open.** The first eight were answered by the owner on 2026-10-25; the M1 questions below them on 2026-10-26.
+
+Each question keeps its original suggestion for the record; the owner's answer follows it as **Decided**.
 
 From an independent "builder check" of the design (2026-10-26): places where a builder would have to guess and a wrong guess changes the plan. Most important first. Each has a suggested answer that is ONLY a suggestion; the owner decides. Record the answer here and in the design doc's "Decided by the owner" section.
 
@@ -36,3 +38,30 @@ From an independent "builder check" of the design (2026-10-26): places where a b
 8. **Which agent runtimes at launch?**
    - Suggested: Claude Code first (skill plus MCP), with the CLI as the runtime-neutral contract every other agent can use. Answers come back through the CLI (`yo-human wait <question-id>` with bitc-style exit codes) so nothing depends on one runtime's messaging.
    - **Decided:** Claude Code skill plus the CLI; no MCP server in v1 (add one later only if a runtime needs it). Language: Go.
+
+## M1 questions (answered 2026-10-26)
+
+Raised while M1 was built and answered by the owner, or handed by the owner to the controller's ruling. Each is closed; the spec's amendments record the shipped behaviour.
+
+9. **What does `resolve` exit when a scheduled send could not be cancelled?** The page may still fire for something fixed.
+   - **Decided** (owner deferred to the controller's ruling): 75 with `next` when the cancel is queued for another try, 69 when it is dead. The same holds for a PagerDuty close that is queued (75) or refused (69). Spec amendments 8 and 34.
+
+10. **Do parked entries age out?** An entry queued under a project config waits until that config flushes again, possibly weeks later.
+    - **Decided** (owner deferred to the controller's ruling): keep them forever. Nothing is ever lost; `status` shows each with its reason.
+
+11. **May trusted project files reference secrets and override channel endpoints?**
+    - **Decided:** yes, as built. `config trust` shows every endpoint and secret reference before it records the trust, and a project file may not define a `log` channel.
+
+12. **How do the human's own scripts skip the `config trust` / `secret set` prompt?**
+    - **Decided:** the owner first asked for a `--yes` flag; the security review replaced it with the environment variable `YO_HUMAN_NONINTERACTIVE=1`, which an agent allowed only to run `yo-human …` cannot set. Every such run is audited in `log.jsonl`, and no output of the binary names it. Spec amendment 14.
+
+13. **Where do flags go?**
+    - **Decided:** after the command (`yo-human status --json`), never before it, so a harness's prefix rule matches every form of a command. Spec amendment 30.
+
+14. **Should `--help`, `-h` and `help` work?** Agents try them first.
+    - **Decided:** yes. They print the usage to stdout and exit 0, also after a command (`yo-human notify --help`). Supersedes amendment 3's "`--help` exits 64". Spec amendment 35.
+
+15. **Which agent harnesses, and what keeps an agent out of the human's commands?**
+    - **Decided:** only Claude Code today, but the toolkit will plug into opencode, Codex, Claude Code and other backends, so yo-human stays agent-driven and scriptable. The harness's own permission rules are the primary boundary (allow `notify`, `resolve`, `status`, `flush`, `levels`, `page`; deny `config trust`, `config init --config`, `secret set`); the terminal prompt is defence in depth. Proposed for after M1: an integration pack per harness, and an out-of-band confirmation for trust and secret changes that holds under pseudo-terminal harnesses.
+
+16. **Smaller ones.** ntfy servers must be v2.16.0 or later (the owner's is newer). The 10 ms startup budget stays; it is re-evaluated only if it is actually hit. The feature branch's history is rewritten once before merge to drop the scanner's findings and local paths.

@@ -3,7 +3,37 @@
     "github.com/Exploded-views/yo-human/cmd/yo-human": "one-line main that only calls cli.Run; the logic is covered in internal/cli",
     "github.com/Exploded-views/yo-human/cmd/yo-human-hosted": "one-line main that only calls app.Run; the logic is covered in internal/hosted/app"
   },
+  "github.com/Exploded-views/yo-human/internal/channel": {
+    "statements": 100.0
+  },
+  "github.com/Exploded-views/yo-human/internal/channel/bark": {
+    "statements": 98.1
+  },
+  "github.com/Exploded-views/yo-human/internal/channel/channeltest": {
+    "statements": 100.0
+  },
+  "github.com/Exploded-views/yo-human/internal/channel/logch": {
+    "statements": 87.3
+  },
+  "github.com/Exploded-views/yo-human/internal/channel/ntfy": {
+    "statements": 95.9
+  },
+  "github.com/Exploded-views/yo-human/internal/channel/pagerduty": {
+    "statements": 97.4
+  },
+  "github.com/Exploded-views/yo-human/internal/channel/registry": {
+    "statements": 100.0
+  },
+  "github.com/Exploded-views/yo-human/internal/channel/transport": {
+    "statements": 100.0
+  },
   "github.com/Exploded-views/yo-human/internal/cli": {
+    "statements": 100.0
+  },
+  "github.com/Exploded-views/yo-human/internal/config": {
+    "statements": 95.5
+  },
+  "github.com/Exploded-views/yo-human/internal/core": {
     "statements": 100.0
   },
   "github.com/Exploded-views/yo-human/internal/hosted/app": {
@@ -18,14 +48,23 @@
   "github.com/Exploded-views/yo-human/internal/hosted/policy": {
     "statements": 100.0
   },
+  "github.com/Exploded-views/yo-human/internal/problem": {
+    "statements": 100.0
+  },
   "github.com/Exploded-views/yo-human/internal/repolint": {
-    "statements": 87.1
+    "statements": 95.8
+  },
+  "github.com/Exploded-views/yo-human/internal/secrets": {
+    "statements": 93.1
+  },
+  "github.com/Exploded-views/yo-human/internal/store": {
+    "statements": 87.2
   },
   "github.com/Exploded-views/yo-human/tools/coverfloors": {
     "statements": 85.6
   },
   "github.com/Exploded-views/yo-human/tools/perf": {
-    "statements": 97.9
+    "statements": 98.2
   },
   "github.com/Exploded-views/yo-human/internal/hosted/perf": {
     "statements": 91.4

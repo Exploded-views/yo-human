@@ -1,0 +1,19 @@
+skills used: []
+
+Next steps, in order:
+
+1. **Wait 60 seconds** (the `next:` hint tells me to), then run:
+   `yo-human flush`
+
+2. **Repeat that wait-then-flush cycle** while it keeps exiting 75 with "queued". I have 5 attempts left, so up to 5 more flushes, each after a 60s wait. I won't change the notify command or send a duplicate `notify`. The dedup key `checkout-FAKE` is already queued, so flush is the correct retry.
+
+3. **If a flush succeeds** (exit 0, "delivered" or similar), I stop. The siren went out, and I note it in my session.
+
+4. **If all attempts are used up and it's still queued**, I stop retrying and tell the human directly in my session. The message would say:
+   - A siren-level alert, "Checkout failing", could not be delivered. The ntfy server was unreachable after the initial attempt and all flush retries.
+   - What I was asking: "Look at checkout now".
+   - The alert is still queued locally under dedup key `checkout-FAKE`, so a later `yo-human flush` can send it once the server is reachable.
+
+I wouldn't try to get around the failure by switching to a lower level like `nudge` or `murmur`. They have different semantics, and `nudge` would be held during quiet hours. I also wouldn't try other channels I wasn't set up to use.
+
+Since the dedup key says "FAKE", this may be a test. I'd still follow the same procedure and say in my session message that the key looked like a placeholder.

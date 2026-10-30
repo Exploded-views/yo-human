@@ -1,0 +1,38 @@
+$ go test -count=1 ./internal/cli -run 'Redact'
+--- FAIL: TestStoredSecretValuesAreRedactedBeforeEnqueue (0.21s)
+    bodyfile_test.go:44: stderr = "warning: the message held the value of secret pd-critical; it was replaced with REDACTED before it was queued\nvalid: a message that says where a secret is, never its value\nfix: never put a secret in a message; tell the human which secret was exposed so they can rotate it\n", want it to contain "held the value of a secret"
+    bodyfile_test.go:45: stderr = "warning: the message held the value of secret pd-critical; it was replaced with REDACTED before it was queued\nvalid: a message that says where a secret is, never its value\nfix: never put a secret in a message; tell the human which secret was exposed so they can rotate it\n", must not contain "pd-critical"
+--- FAIL: TestRedactionWarnsOnlyWhenSomethingIsSent (0.13s)
+    bodyfile_test.go:174: a noop resolve with a secret in its note: {code:0 out:RESULT noop <ULID>
+         err:warning: the message held the value of secret pd-critical; it was replaced with REDACTED before it was queued
+        valid: a message that says where a secret is, never its value
+        fix: never put a secret in a message; tell the human which secret was exposed so they can rotate it
+        }; want no warning
+    bodyfile_test.go:177: a suppressed repeat with a secret: {code:0 out:RESULT suppressed <ULID>
+         err:warning: the message held the value of secret pd-critical; it was replaced with REDACTED before it was queued
+        valid: a message that says where a secret is, never its value
+        fix: never put a secret in a message; tell the human which secret was exposed so they can rotate it
+        }; want no warning
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.355s
+FAIL
+[exit 1]
+
+$ go test -tags e2e -count=1 ./test/e2e -run IsRedacted
+--- FAIL: TestASecretValueInAMessageIsRedacted (0.04s)
+    bodyfile_test.go:50: yo-human notify --level note --title Disk is full on build-7 --ask Free some space --project proj --agent tester --body the routing key is ROUTINGKEY-FAKE-ONE -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        warning: the message held the value of secret pd-key; it was replaced with REDACTED before it was queued
+        valid: a message that says where a secret is, never its value
+        fix: never put a secret in a message; tell the human which secret was exposed so they can rotate it
+    bodyfile_test.go:60: the warning must say a secret was redacted, never which:
+        warning: the message held the value of secret pd-key; it was replaced with REDACTED before it was queued
+        valid: a message that says where a secret is, never its value
+        fix: never put a secret in a message; tell the human which secret was exposed so they can rotate it
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	0.403s
+FAIL
+[exit 1]
+

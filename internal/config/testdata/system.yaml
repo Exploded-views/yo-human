@@ -1,0 +1,14 @@
+version: 1
+deadline: 5s
+incident_ttl: 48h
+channels:
+  phone:
+    type: pager
+    token: { secret: system-token }
+  desk:
+    type: pager
+levels:
+  - name: system-level
+    use_when: from the system file
+    send:
+      - { channel: phone, interruption: active }

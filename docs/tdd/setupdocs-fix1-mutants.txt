@@ -1,0 +1,405 @@
+# what this is: task 14 fix round 1 mutation checks for CheckSetupPage's new rules (fence scanning, tilde, the op:// pipe, Inputs bullets, reassignment forms): 32 mutants, all killed, each mutated line with its raw failing output (home path redacted)
+# test command: go test -count=1 -timeout 120s ./internal/repolint
+# first pass: 34 mutants, 9 survived. Seven got tests (TestSetupPageFenceEdges, TestSetupPageOneBadBulletIsOneFinding): a shorter run or the other fence character closing a fence, inline triple backticks opening a fence, tab-indented blocks, $( inside the op reference, a bullet inside an Inputs fence, a bad bullet counted. Two were equivalent and the code was simplified: splitting on || as two pipes (the empty stage between them is never a secret-set stage; the ReplaceAll was removed) and a trailing || not continuing a line (shell continues on || too; the special case was removed). The 32 below are the re-run against the final code and tests.
+
+## lang not lower-cased
+# in internal/repolint/setupdocs.go: 'lang = strings.ToLower(f[0])' => 'lang = f[0]'
+--- FAIL: TestSetupPageTildeAllowedInDataLanguages (0.00s)
+    setupdocs_evasion_test.go:43: YAML fence: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.021s
+FAIL
+exit=1
+
+## lang is the whole info string
+# in internal/repolint/setupdocs.go: 'lang = strings.ToLower(f[0])' => 'lang = strings.ToLower(info)'
+--- FAIL: TestSetupPageTildeAllowedInDataLanguages (0.00s)
+    setupdocs_evasion_test.go:43: yaml title="x" fence: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.020s
+FAIL
+exit=1
+
+## tilde fences not recognised
+# in internal/repolint/setupdocs.go: "(t[0] != '`' && t[0] != '~')" => "(t[0] != '`')"
+--- FAIL: TestSetupPageTildeEvasions (0.00s)
+    --- FAIL: TestSetupPageTildeEvasions/tilde_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.021s
+FAIL
+exit=1
+
+## fence size floor
+# in internal/repolint/setupdocs.go: 'if size < 3 {' => 'if size < 4 {'
+--- FAIL: TestSetupPageTildeEvasions (0.00s)
+    --- FAIL: TestSetupPageTildeEvasions/text_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/fish_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/ksh_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/shell-session_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/upper-case_SH_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/info_string_with_attributes (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/tilde_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/cd_to_home (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/cd_to_home_then_more (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+--- FAIL: TestSetupPageFenceEdges (0.00s)
+    --- FAIL: TestSetupPageFenceEdges/the_other_fence_character_does_not_close (0.00s)
+        setupdocs_evasion_test.go:120: rules = "", want "tilde-home"
+    --- FAIL: TestSetupPageFenceEdges/a_bullet_inside_an_Inputs_fence_is_not_a_bullet (0.00s)
+        setupdocs_evasion_test.go:120: rules = "input-format", want ""
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/tilde_in_a_shell_block (0.00s)
+        setupdocs_test.go:70: rules = "", want "tilde-home" (findings [])
+    --- FAIL: TestSetupPageRules/tilde_in_an_unlabelled_block (0.00s)
+        setupdocs_test.go:70: rules = "", want "tilde-home" (findings [])
+--- FAIL: TestSetupPageHeadingsInsideFencesIgnored (0.00s)
+    setupdocs_test.go:108: heading inside a fence: [{Path:p.md Lines:0 Line:4 Rule:inputs-first Msg:the first ## heading must be "## Inputs"}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.020s
+FAIL
+exit=1
+
+## any run closes a longer fence
+# in internal/repolint/setupdocs.go: 'len(t) >= f.size && ' => ''
+--- FAIL: TestSetupPageFenceEdges (0.00s)
+    --- FAIL: TestSetupPageFenceEdges/a_shorter_run_does_not_close_a_longer_fence (0.00s)
+        setupdocs_evasion_test.go:120: rules = "", want "tilde-home"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.021s
+FAIL
+exit=1
+
+## close character not compared
+# in internal/repolint/setupdocs.go: 'strings.Trim(t, string(f.char)) == ""' => 'strings.Trim(t, "`~") == ""'
+--- FAIL: TestSetupPageFenceEdges (0.00s)
+    --- FAIL: TestSetupPageFenceEdges/the_other_fence_character_does_not_close (0.00s)
+        setupdocs_evasion_test.go:120: rules = "", want "tilde-home"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.021s
+FAIL
+exit=1
+
+## backtick info check dropped
+# in internal/repolint/setupdocs.go: 't[0] == \'`\' && strings.Contains(info, "`")' => 'false'
+--- FAIL: TestSetupPageFenceEdges (0.00s)
+    --- FAIL: TestSetupPageFenceEdges/inline_triple_backticks_open_no_fence (0.00s)
+        setupdocs_evasion_test.go:120: rules = "tilde-home", want ""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.021s
+FAIL
+exit=1
+
+## indented blocks not seen
+# in internal/repolint/setupdocs.go: 'l.indented = strings.HasPrefix(text, "    ") || strings.HasPrefix(text, "\\t")' => 'l.indented = false'
+--- FAIL: TestSetupPageTildeEvasions (0.00s)
+    --- FAIL: TestSetupPageTildeEvasions/indented_block (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+--- FAIL: TestSetupPageFenceEdges (0.00s)
+    --- FAIL: TestSetupPageFenceEdges/tab-indented_block (0.00s)
+        setupdocs_evasion_test.go:120: rules = "", want "tilde-home"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.021s
+FAIL
+exit=1
+
+## tab-indented blocks not seen
+# in internal/repolint/setupdocs.go: ' || strings.HasPrefix(text, "\\t")' => ''
+--- FAIL: TestSetupPageFenceEdges (0.00s)
+    --- FAIL: TestSetupPageFenceEdges/tab-indented_block (0.00s)
+        setupdocs_evasion_test.go:120: rules = "", want "tilde-home"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.023s
+FAIL
+exit=1
+
+## yaml not a data language
+# in internal/repolint/setupdocs.go: '"yaml": true, ' => ''
+--- FAIL: TestSetupPageTildeAllowedInDataLanguages (0.00s)
+    setupdocs_evasion_test.go:43: yaml fence: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+    setupdocs_evasion_test.go:43: YAML fence: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+    setupdocs_evasion_test.go:43: yaml title="x" fence: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+--- FAIL: TestSetupPageTildeOutsideShellIsFine (0.00s)
+    setupdocs_test.go:84: tilde in prose and yaml: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.023s
+FAIL
+exit=1
+
+## json not a data language
+# in internal/repolint/setupdocs.go: '"json": true, ' => ''
+--- FAIL: TestSetupPageTildeAllowedInDataLanguages (0.00s)
+    setupdocs_evasion_test.go:43: json fence: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.021s
+FAIL
+exit=1
+
+## md not a data language
+# in internal/repolint/setupdocs.go: '"md": true, ' => ''
+--- FAIL: TestSetupPageTildeAllowedInDataLanguages (0.00s)
+    setupdocs_evasion_test.go:43: md fence: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.021s
+FAIL
+exit=1
+
+## toml not a data language
+# in internal/repolint/setupdocs.go: '"toml": true}' => '}'
+--- FAIL: TestSetupPageTildeAllowedInDataLanguages (0.00s)
+    setupdocs_evasion_test.go:43: toml fence: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.020s
+FAIL
+exit=1
+
+## data languages all flagged
+# in internal/repolint/setupdocs.go: 'if (!l.fenced || dataLangs[l.lang]) && !l.indented {' => 'if !l.fenced && !l.indented {'
+--- FAIL: TestSetupPageTildeAllowedInDataLanguages (0.00s)
+    setupdocs_evasion_test.go:43: yaml fence: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+    setupdocs_evasion_test.go:43: YAML fence: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+    setupdocs_evasion_test.go:43: json fence: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+    setupdocs_evasion_test.go:43: md fence: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+    setupdocs_evasion_test.go:43: toml fence: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+    setupdocs_evasion_test.go:43: yaml title="x" fence: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+--- FAIL: TestSetupPageTildeOutsideShellIsFine (0.00s)
+    setupdocs_test.go:84: tilde in prose and yaml: [{Path:p.md Lines:0 Line:22 Rule:tilde-home Msg:no ~/ or cd ~ in a code block: use $HOME, or $XDG_CONFIG_HOME for yo-human's own files}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.020s
+FAIL
+exit=1
+
+## cd ~ not flagged
+# in internal/repolint/setupdocs.go: ' || cdHome.MatchString(l.text)' => ''
+--- FAIL: TestSetupPageTildeEvasions (0.00s)
+    --- FAIL: TestSetupPageTildeEvasions/cd_to_home (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/cd_to_home_then_more (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.034s
+FAIL
+exit=1
+
+## ~/ not flagged
+# in internal/repolint/setupdocs.go: 'strings.Contains(l.text, "~/") || ' => ''
+--- FAIL: TestSetupPageTildeEvasions (0.00s)
+    --- FAIL: TestSetupPageTildeEvasions/text_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/fish_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/ksh_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/shell-session_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/upper-case_SH_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/info_string_with_attributes (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/four-backtick_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/tilde_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/indented_block (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+--- FAIL: TestSetupPageFenceEdges (0.00s)
+    --- FAIL: TestSetupPageFenceEdges/a_shorter_run_does_not_close_a_longer_fence (0.00s)
+        setupdocs_evasion_test.go:120: rules = "", want "tilde-home"
+    --- FAIL: TestSetupPageFenceEdges/the_other_fence_character_does_not_close (0.00s)
+        setupdocs_evasion_test.go:120: rules = "", want "tilde-home"
+    --- FAIL: TestSetupPageFenceEdges/tab-indented_block (0.00s)
+        setupdocs_evasion_test.go:120: rules = "", want "tilde-home"
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/tilde_in_a_shell_block (0.00s)
+        setupdocs_test.go:70: rules = "", want "tilde-home" (findings [])
+    --- FAIL: TestSetupPageRules/tilde_in_an_unlabelled_block (0.00s)
+        setupdocs_test.go:70: rules = "", want "tilde-home" (findings [])
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.020s
+FAIL
+exit=1
+
+## backslash continuation dropped
+# in internal/repolint/setupdocs.go: 'case strings.HasSuffix(t, `\\`):' => 'case false:'
+--- FAIL: TestSetupPageOpPipeEvasions (0.00s)
+    setupdocs_evasion_test.go:69: "op read \"op://v/i/f\" \\\n  | yo-human secret set x": [{Path:p.md Lines:0 Line:22 Rule:op-unpiped Msg:an op:// line must pipe straight into `yo-human secret set <name>`: a secret never reaches a variable or a screen}]; want none
+--- FAIL: TestSetupPageOpContinuation (0.00s)
+    setupdocs_test.go:101: continued pipe: [{Path:p.md Lines:0 Line:15 Rule:op-unpiped Msg:an op:// line must pipe straight into `yo-human secret set <name>`: a secret never reaches a variable or a screen}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.023s
+FAIL
+exit=1
+
+## pipe continuation dropped
+# in internal/repolint/setupdocs.go: 'case !strings.HasSuffix(t, "|"):' => 'case true:'
+--- FAIL: TestSetupPageOpPipeEvasions (0.00s)
+    setupdocs_evasion_test.go:69: "op read \"op://v/i/f\" |\n  yo-human secret set x": [{Path:p.md Lines:0 Line:22 Rule:op-unpiped Msg:an op:// line must pipe straight into `yo-human secret set <name>`: a secret never reaches a variable or a screen}]; want none
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.020s
+FAIL
+exit=1
+
+## op stage need not start with op read
+# in internal/repolint/setupdocs.go: '!opStage.MatchString(st) || ' => ''
+--- FAIL: TestSetupPageOpPipeEvasions (0.00s)
+    setupdocs_evasion_test.go:59: "echo \"op://v/i/f\" | yo-human secret set x": rules = "", want op-unpiped
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.021s
+FAIL
+exit=1
+
+## op stage may hold ; & ` > <
+# in internal/repolint/setupdocs.go: 'strings.ContainsAny(st, ";&`><") || ' => ''
+--- FAIL: TestSetupPageOpPipeEvasions (0.00s)
+    setupdocs_evasion_test.go:59: "op read \"op://v/i/f\" > out; echo hi | yo-human secret set x": rules = "", want op-unpiped
+    setupdocs_evasion_test.go:59: "op read \"op://v/i/f\" && echo | yo-human secret set x": rules = "", want op-unpiped
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.020s
+FAIL
+exit=1
+
+## op stage may hold $(
+# in internal/repolint/setupdocs.go: ' || strings.Contains(st, "$(")' => ''
+--- FAIL: TestSetupPageFenceEdges (0.00s)
+    --- FAIL: TestSetupPageFenceEdges/command_substitution_inside_the_op_reference (0.00s)
+        setupdocs_evasion_test.go:120: rules = "", want "op-unpiped"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.021s
+FAIL
+exit=1
+
+## next stage not checked
+# in internal/repolint/setupdocs.go: ' || !secretStage.MatchString(stages[k+1])' => ''
+--- FAIL: TestSetupPageOpPipeEvasions (0.00s)
+    setupdocs_evasion_test.go:59: "op read \"op://v/i/f\" | tee out | yo-human secret set x": rules = "", want op-unpiped
+--- FAIL: TestSetupPageFenceEdges (0.00s)
+    --- FAIL: TestSetupPageFenceEdges/||_is_not_a_pipe_into_secret_set (0.00s)
+        setupdocs_evasion_test.go:120: rules = "", want "op-unpiped"
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/op_piped_elsewhere (0.00s)
+        setupdocs_test.go:70: rules = "", want "op-unpiped" (findings [])
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.020s
+FAIL
+exit=1
+
+## op as the last stage passes
+# in internal/repolint/setupdocs.go: 'k+1 >= len(stages) || ' => ''
+--- FAIL: TestSetupPageRules (0.00s)
+    --- FAIL: TestSetupPageRules/op_without_a_pipe (0.00s)
+panic: runtime error: index out of range [1] with length 1 [recovered, repanicked]
+
+goroutine 23 [running]:
+testing.tRunner.func1.2({0x100f27038, 0x3424376ee1b0})
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2125 +0x1a0
+testing.tRunner.func1()
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2128 +0x2c8
+panic({0x100f27038?, 0x3424376ee1b0?})
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/runtime/panic.go:859 +0x120
+github.com/Exploded-views/yo-human/internal/repolint.pipesIntoSecretSet({0x3424374e01b2?, 0x1f?})
+	<home>/code/yo-human-m1/internal/repolint/setupdocs.go:264 +0x1bc
+github.com/Exploded-views/yo-human/internal/repolint.(*pageCheck).opLines(0x342437561db8)
+	<home>/code/yo-human-m1/internal/repolint/setupdocs.go:246 +0x84
+github.com/Exploded-views/yo-human/internal/repolint.CheckSetupPage({0x100db6c51, 0x6}, {0x3424374e0000?, 0x44?, 0x100dc3659?})
+	<home>/code/yo-human-m1/internal/repolint/setupdocs.go:50 +0x78
+github.com/Exploded-views/yo-human/internal/repolint.TestSetupPageRules.func1(0x342437846b48)
+	<home>/code/yo-human-m1/internal/repolint/setupdocs_test.go:68 +0x1bc
+testing.tRunner(0x342437846b48, 0x34243785cc80)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2195 +0xc4
+created by testing.(*T).Run in goroutine 65
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2260 +0x3b8
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.020s
+FAIL
+exit=1
+
+## continued lines re-read
+# in internal/repolint/setupdocs.go: '\t\ti = last\n' => ''
+FAIL	github.com/Exploded-views/yo-human/internal/repolint [build failed]
+FAIL
+# github.com/Exploded-views/yo-human/internal/repolint [github.com/Exploded-views/yo-human/internal/repolint.test]
+internal/repolint/setupdocs.go:245:8: declared and not used: last
+exit=1
+
+## star bullets ignored
+# in internal/repolint/setupdocs.go: 'if l.fenced || !bulletLine.MatchString(l.text) {' => 'if l.fenced || !strings.HasPrefix(l.text, "- ") {'
+--- FAIL: TestSetupPageInputsBullets (0.00s)
+    setupdocs_evasion_test.go:98: star bullet: rules = "", want input-format
+    setupdocs_evasion_test.go:102: indented bullet: rules = "", want input-format
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.021s
+FAIL
+exit=1
+
+## fenced bullets read
+# in internal/repolint/setupdocs.go: 'if l.fenced || !bulletLine' => 'if !bulletLine'
+--- FAIL: TestSetupPageFenceEdges (0.00s)
+    --- FAIL: TestSetupPageFenceEdges/a_bullet_inside_an_Inputs_fence_is_not_a_bullet (0.00s)
+        setupdocs_evasion_test.go:120: rules = "input-format", want ""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.021s
+FAIL
+exit=1
+
+## no-bullet check dropped
+# in internal/repolint/setupdocs.go: 'len(names) == 0 && bad == 0' => 'false'
+--- FAIL: TestSetupPageInputsBullets (0.00s)
+    setupdocs_evasion_test.go:94: no bullets: rules = "", want input-format
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.022s
+FAIL
+exit=1
+
+## bad bullet not counted
+# in internal/repolint/setupdocs.go: '\t\t\tbad++\n' => ''
+--- FAIL: TestSetupPageOneBadBulletIsOneFinding (0.00s)
+    setupdocs_evasion_test.go:129: rules = "input-format,input-format", want one input-format
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.020s
+FAIL
+exit=1
+
+## += not caught
+# in internal/repolint/setupdocs.go: '`\\+?=|' => '`=|'
+--- FAIL: TestSetupPageReassignmentForms (0.00s)
+    setupdocs_evasion_test.go:77: "TOPIC_NAME+=x": rules = "", want input-reassigned
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.024s
+FAIL
+exit=1
+
+## read NAME not caught
+# in internal/repolint/setupdocs.go: '(read|set)' => '(set)'
+--- FAIL: TestSetupPageReassignmentForms (0.00s)
+    setupdocs_evasion_test.go:77: "read TOPIC_NAME": rules = "", want input-reassigned
+    setupdocs_evasion_test.go:77: "read -r TOPIC_NAME": rules = "", want input-reassigned
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.021s
+FAIL
+exit=1
+
+## set NAME not caught
+# in internal/repolint/setupdocs.go: '(read|set)' => '(read)'
+--- FAIL: TestSetupPageReassignmentForms (0.00s)
+    setupdocs_evasion_test.go:77: "set TOPIC_NAME x": rules = "", want input-reassigned
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.021s
+FAIL
+exit=1
+
+## read flags not skipped
+# in internal/repolint/setupdocs.go: '(-\\S+\\s+)*' => ''
+--- FAIL: TestSetupPageReassignmentForms (0.00s)
+    setupdocs_evasion_test.go:77: "read -r TOPIC_NAME": rules = "", want input-reassigned
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.020s
+FAIL
+exit=1
+

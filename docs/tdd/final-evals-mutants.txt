@@ -1,0 +1,12 @@
+KILLED  no re-sample
+  tools/run_evals.py: 'MAX_SAMPLES = 3' -> 'MAX_SAMPLES = 1'
+  [python3 -I tools/run_evals_test.py exit 1]
+
+KILLED  an INVALID reply is graded
+  tools/run_evals.py: 'if raw.startswith("INVALID"):' -> 'if False:'
+  [python3 -I tools/run_evals_test.py exit 1]
+
+KILLED  an unloaded reply is not marked
+  tools/run_evals.py: 'if mode == "skill" and not any("yo-human" in (s or "") for s in skills):' -> 'if False:'
+  [python3 -I tools/run_evals_test.py exit 1]
+

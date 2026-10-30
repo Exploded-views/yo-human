@@ -1,0 +1,359 @@
+$ go test -tags e2e ./test/e2e/ -count=1 -v   (output redacted: ULIDs, timestamps, temp paths, ports, durations)
+=== RUN   TestDeliveredOnAllThree
+    delivery_test.go:15: yo-human --json notify --level page --title Disk is full on build-7 --ask Free some space --body df says 100% --link https://example.com/runbook --dedup-key disk-7 --project proj --agent tester -> exit 0
+        {"version":1,"status":"delivered","id":"<ULID>","channels":[{"channel":"phone","status":"sent"},{"channel":"bell","status":"sent"},{"channel":"pager","status":"sent"}]}
+    delivery_test.go:24: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[{"key":"disk-7","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full on build-7"}],"inflight":0,"queued":[],"status":"ok","version":1}
+--- PASS: TestDeliveredOnAllThree (<DUR>)
+=== RUN   TestPartialWhenPagerDutyReturns503
+    delivery_test.go:34: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT partial <ULID>
+        phone: sent
+        bell: sent
+        pager: queued (pagerduty answered HTTP 503)
+    delivery_test.go:42: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[{"key":"disk-7","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full on build-7"}],"inflight":0,"queued":[{"id":"<ULID>","channel":"pager","attempts":1,"next_attempt":"<TIME>","kind":"send"}],"status":"ok","version":1}
+--- PASS: TestPartialWhenPagerDutyReturns503 (<DUR>)
+=== RUN   TestQueuedWhenEverythingIsDownThenFlushDelivers
+    delivery_test.go:55: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 75
+        RESULT queued <ULID>
+        phone: queued (ntfy answered HTTP 503)
+        bell: queued (bark answered HTTP 503)
+        pager: queued (pagerduty answered HTTP 503)
+        next: yo-human flush in 60s, 5 attempts left, then tell the human in your session
+    delivery_test.go:57: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[{"key":"disk-7","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full on build-7"}],"inflight":0,"queued":[{"id":"<ULID>","channel":"bell","attempts":1,"next_attempt":"<TIME>","kind":"send"},{"id":"<ULID>","channel":"pager","attempts":1,"next_attempt":"<TIME>","kind":"send"},{"id":"<ULID>","channel":"phone","attempts":1,"next_attempt":"<TIME>","kind":"send"}],"status":"ok","version":1}
+    delivery_test.go:64: yo-human flush -> exit 0
+        RESULT ok
+    delivery_test.go:69: yo-human flush -> exit 0
+        RESULT ok
+        bell: sent
+        pager: sent
+        phone: sent
+    delivery_test.go:76: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[{"key":"disk-7","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full on build-7"}],"inflight":0,"queued":[],"status":"ok","version":1}
+--- PASS: TestQueuedWhenEverythingIsDownThenFlushDelivers (<DUR>)
+=== RUN   TestFailedWhenEverythingReturns400
+    delivery_test.go:87: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 69
+        RESULT failed <ULID>
+        phone: dead (ntfy answered HTTP 400)
+        bell: dead (bark answered HTTP 400)
+        pager: dead (pagerduty answered HTTP 400)
+    delivery_test.go:92: yo-human --json status -> exit 0
+        {"dead":[{"id":"<ULID>","channel":"phone","reason":"ntfy answered HTTP 400","at":"2026-10-26T19:01:40.<N>Z","kind":"send"},{"id":"<ULID>","channel":"pager","reason":"pagerduty answered HTTP 400","at":"2026-10-26T19:01:40.<N>Z","kind":"send"},{"id":"<ULID>","channel":"bell","reason":"bark answered HTTP 400","at":"2026-10-26T19:01:40.<N>Z","kind":"send"}],"held":[],"incidents":[{"key":"disk-7","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full on build-7"}],"inflight":0,"queued":[],"status":"ok","version":1}
+    delivery_test.go:100: yo-human flush -> exit 0
+        RESULT ok
+--- PASS: TestFailedWhenEverythingReturns400 (<DUR>)
+=== RUN   TestRepeatOfAnIncidentThatReachedNoOneIsSent
+    delivery_test.go:113: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 69
+        RESULT failed <ULID>
+        phone: dead (ntfy answered HTTP 400)
+        bell: dead (bark answered HTTP 400)
+        pager: dead (pagerduty answered HTTP 400)
+    delivery_test.go:117: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+--- PASS: TestRepeatOfAnIncidentThatReachedNoOneIsSent (<DUR>)
+=== RUN   TestNoRealNetworkGuard
+    delivery_test.go:140: yo-human notify --level note --title guard -> exit 75
+        RESULT queued <ULID>
+        bell: queued (bark server could not be reached)
+        next: yo-human flush in 60s, 5 attempts left, then tell the human in your session
+--- PASS: TestNoRealNetworkGuard (<DUR>)
+=== RUN   TestVersionRuns
+    e2e_test.go:42: yo-human version -> exit 0
+        yo-human dev none
+--- PASS: TestVersionRuns (<DUR>)
+=== RUN   TestParallelNotifiesWithTheSameKeyPageOnce
+    parallel_test.go:25: yo-human notify --level page --title Disk is full --ask Free some space --dedup-key disk-0 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    parallel_test.go:25: yo-human notify --level page --title Disk is full --ask Free some space --dedup-key disk-0 -> exit 0
+        RESULT suppressed <ULID>
+    parallel_test.go:25: yo-human notify --level page --title Disk is full --ask Free some space --dedup-key disk-1 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    parallel_test.go:25: yo-human notify --level page --title Disk is full --ask Free some space --dedup-key disk-1 -> exit 0
+        RESULT suppressed <ULID>
+    parallel_test.go:25: yo-human notify --level page --title Disk is full --ask Free some space --dedup-key disk-2 -> exit 0
+        RESULT suppressed <ULID>
+    parallel_test.go:25: yo-human notify --level page --title Disk is full --ask Free some space --dedup-key disk-2 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    parallel_test.go:25: yo-human notify --level page --title Disk is full --ask Free some space --dedup-key disk-3 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    parallel_test.go:25: yo-human notify --level page --title Disk is full --ask Free some space --dedup-key disk-3 -> exit 0
+        RESULT suppressed <ULID>
+    parallel_test.go:39: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[{"key":"disk-0","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full"},{"key":"disk-1","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full"},{"key":"disk-2","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full"},{"key":"disk-3","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full"}],"inflight":0,"queued":[],"status":"ok","version":1}
+--- PASS: TestParallelNotifiesWithTheSameKeyPageOnce (<DUR>)
+=== RUN   TestHeldInQuietHoursThenFlushAfterTheWindow
+    quiet_test.go:22: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT held <ULID>
+        phone: held
+        bell: held
+        pager: held
+    quiet_test.go:30: yo-human --json status -> exit 0
+        {"dead":[],"held":[{"id":"<ULID>","channel":"bell","deliver_at":"<TIME>","kind":"send"},{"id":"<ULID>","channel":"pager","deliver_at":"<TIME>","kind":"send"}],"incidents":[{"key":"disk-7","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full on build-7"}],"inflight":0,"queued":[],"status":"ok","version":1}
+    quiet_test.go:41: yo-human flush -> exit 0
+        RESULT ok
+    quiet_test.go:46: yo-human flush -> exit 0
+        RESULT ok
+        bell: sent
+        pager: sent
+    quiet_test.go:50: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[{"key":"disk-7","level":"page","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full on build-7"}],"inflight":0,"queued":[],"status":"ok","version":1}
+--- PASS: TestHeldInQuietHoursThenFlushAfterTheWindow (<DUR>)
+=== RUN   TestUrgentIgnoresQuietHours
+    quiet_test.go:57: yo-human notify --level urgent --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+--- PASS: TestUrgentIgnoresQuietHours (<DUR>)
+=== RUN   TestRepeatSuppressedAndLouderEscalates
+    quiet_test.go:64: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    quiet_test.go:66: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT suppressed <ULID>
+    quiet_test.go:67: yo-human notify --level note --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT suppressed <ULID>
+    quiet_test.go:72: yo-human notify --level urgent --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    quiet_test.go:80: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[{"key":"disk-7","level":"urgent","generation":1,"opened":"<TIME>","last_sent":"<TIME>","latest":"Disk is full on build-7"}],"inflight":0,"queued":[],"status":"ok","version":1}
+--- PASS: TestRepeatSuppressedAndLouderEscalates (<DUR>)
+=== RUN   TestResolveSendsPagerDutyResolveAndPassiveNotes
+    resolve_test.go:14: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    resolve_test.go:15: yo-human resolve --dedup-key disk-7 --note Freed 40 GB -> exit 0
+        RESULT resolved <ULID>
+        pager: sent
+        phone: sent
+        bell: sent
+    resolve_test.go:41: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[],"inflight":0,"queued":[],"status":"ok","version":1}
+    resolve_test.go:45: yo-human resolve --dedup-key disk-7 -> exit 0
+        RESULT noop <ULID>
+--- PASS: TestResolveSendsPagerDutyResolveAndPassiveNotes (<DUR>)
+=== RUN   TestResolveNotesGoOnlyToChannelsThatDelivered
+    resolve_test.go:56: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT partial <ULID>
+        phone: sent
+        bell: sent
+        pager: dead (pagerduty answered HTTP 400)
+    resolve_test.go:57: yo-human resolve --dedup-key disk-7 -> exit 0
+        RESULT resolved <ULID>
+        bell: sent
+        phone: sent
+--- PASS: TestResolveNotesGoOnlyToChannelsThatDelivered (<DUR>)
+=== RUN   TestResolveCancelsHeldPagesLocallyAndAtNtfy
+    resolve_test.go:65: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT held <ULID>
+        phone: held
+        bell: held
+        pager: held
+    resolve_test.go:66: yo-human resolve --dedup-key disk-7 -> exit 0
+        RESULT resolved <ULID>
+        bell: cancelled
+        pager: cancelled
+        phone: cancelled
+    resolve_test.go:80: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[],"inflight":0,"queued":[],"status":"ok","version":1}
+    resolve_test.go:84: yo-human flush -> exit 0
+        RESULT ok
+--- PASS: TestResolveCancelsHeldPagesLocallyAndAtNtfy (<DUR>)
+=== RUN   TestResolveCancelAnswered404IsPermanent
+    resolve_test.go:93: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT held <ULID>
+        phone: held
+        bell: held
+        pager: held
+    resolve_test.go:95: yo-human resolve --dedup-key disk-7 -> exit 69
+        RESULT resolved <ULID>
+        bell: cancelled
+        pager: cancelled
+        phone: dead (ntfy answered HTTP 404: the scheduled send may already be gone, or this ntfy server cannot cancel scheduled messages (needs v2.16 or later); the human may still be paged)
+        error: the scheduled send on phone could not be cancelled: ntfy answered HTTP 404: the scheduled send may already be gone, or this ntfy server cannot cancel scheduled messages (needs v2.16 or later); the human may still be paged
+        valid: a cancel the provider accepts
+        fix: the human may still be paged: the cancel is in the dead letter (see `yo-human status`); delete the scheduled message at the provider if it is still there
+--- PASS: TestResolveCancelAnswered404IsPermanent (<DUR>)
+=== RUN   TestResolveCancelFailingTransientlyIsRetriedByFlush
+    resolve_test.go:113: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT held <ULID>
+        phone: held
+        bell: held
+        pager: held
+    resolve_test.go:115: yo-human resolve --dedup-key disk-7 -> exit 69
+        RESULT resolved <ULID>
+        bell: cancelled
+        pager: cancelled
+        phone: queued (ntfy answered HTTP 503)
+        error: the scheduled send on phone could not be cancelled: ntfy answered HTTP 503
+        valid: a cancel the provider accepts
+        fix: the cancel is queued and `yo-human flush` retries it; until it succeeds the human may still be paged
+    resolve_test.go:116: yo-human --json status -> exit 0
+        {"dead":[],"held":[],"incidents":[],"inflight":0,"queued":[{"id":"<ULID>","channel":"phone","attempts":1,"next_attempt":"<TIME>","kind":"cancel"}],"status":"ok","version":1}
+    resolve_test.go:122: yo-human flush -> exit 0
+        RESULT ok
+        phone: cancelled
+--- PASS: TestResolveCancelFailingTransientlyIsRetriedByFlush (<DUR>)
+=== RUN   TestPageShimTriggerAndResolve
+    shim_trust_test.go:15: yo-human page Disk is full on build-7 df says 100% disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    shim_trust_test.go:25: yo-human page --resolve disk-7 -> exit 0
+        RESULT resolved <ULID>
+        pager: sent
+        bell: sent
+        phone: sent
+    shim_trust_test.go:34: yo-human page --low Cache is cold  cache-1 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+--- PASS: TestPageShimTriggerAndResolve (<DUR>)
+=== RUN   TestUntrustedProjectConfigIsIgnoredUntilTrusted
+    shim_trust_test.go:65: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+        notice: ignoring the project config "<TMP>": it is not trusted, or has changed since it was; read it, then run `yo-human config trust <TMP>
+    shim_trust_test.go:74: yo-human config trust <TMP> -> exit 0
+        RESULT ok
+        trusting "<TMP>"
+        channel "evil" has type "ntfy"
+        channel "evil" server "https://127.0.0.1:<PORT>"
+        channel "evil" topic uses secret "ntfy-topic"
+        level "page" use_when "Needs a human soon."
+        level "page" sends to "evil" (active)
+        trusted; a change to the file un-trusts it until you run this again
+    shim_trust_test.go:75: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester -> exit 0
+        RESULT delivered <ULID>
+        evil: sent
+    shim_trust_test.go:82: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+        notice: ignoring the project config "<TMP>": it is not trusted, or has changed since it was; read it, then run `yo-human config trust <TMP>
+--- PASS: TestUntrustedProjectConfigIsIgnoredUntilTrusted (<DUR>)
+=== RUN   TestSecretsFileAt0644IsRefused
+    shim_trust_test.go:95: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 78
+        error: the secrets file "<TMP>" is mode 644; secrets must not be readable by others
+        valid: mode 600 or tighter
+        fix: chmod 600 <TMP>
+    shim_trust_test.go:107: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+--- PASS: TestSecretsFileAt0644IsRefused (<DUR>)
+PASS
+ok  	github.com/Exploded-views/yo-human/test/e2e	<DUR>
+exit code: 0
+
+$ make nohooks   (a plain release-flags build holds neither hook name)
+scripts/nohooks.sh dist/yo-human
+nohooks: dist/yo-human holds no test-only hook name
+exit code: 0
+
+$ scripts/nohooks.sh <tmp>/yo-human-e2e   (positive control: a build with -tags e2e is caught)
+nohooks: <TMP> holds a test-only hook name (4 strings)
+exit code: 1
+
+$ scripts/nohooks.sh dist/yo-human_*.tar.gz dist/*/yo-human   (after make release-check: the 4 snapshot archives and the 4 binaries)
+nohooks: dist/yo-human_0.0.1-snapshot_darwin_amd64.tar.gz holds no test-only hook name
+nohooks: dist/yo-human_0.0.1-snapshot_darwin_arm64.tar.gz holds no test-only hook name
+nohooks: dist/yo-human_0.0.1-snapshot_linux_amd64.tar.gz holds no test-only hook name
+nohooks: dist/yo-human_0.0.1-snapshot_linux_arm64.tar.gz holds no test-only hook name
+nohooks: dist/yo-human_darwin_amd64_v1/yo-human holds no test-only hook name
+nohooks: dist/yo-human_darwin_arm64_v8.0/yo-human holds no test-only hook name
+nohooks: dist/yo-human_linux_amd64_v1/yo-human holds no test-only hook name
+nohooks: dist/yo-human_linux_arm64_v8.0/yo-human holds no test-only hook name
+exit code: 0
+
+
+## A genuine RED (EV item 3)
+
+Task 16 (e2e), a genuine RED. The e2e suite was written after the code it drives, so it has no RED commit of its own. This record runs it against a binary with one behaviour deliberately broken, then against the real one.
+
+Broken: internal/cli/exit.go maps a Queued problem to 69 (ExitFailed) instead of 75 (ExitQueued):
+  case problem.Queued:
+-		return ExitQueued
++		return ExitFailed
+
+Against the broken binary (head 56a5d0f with that edit):
+
+$ go test -tags e2e -count=1 ./test/e2e/
+--- FAIL: TestResolveCancelFailingTransientlyIsRetriedByFlush (0.14s)
+    resolve_test.go:110: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT held <ULID>
+        phone: held
+        bell: held
+        pager: held
+    resolve_test.go:112: yo-human resolve --dedup-key disk-7 -> exit 69
+        RESULT resolved <ULID>
+        bell: cancelled
+        pager: cancelled
+        phone: queued (ntfy answered HTTP 503)
+        next: yo-human flush in 60s, 5 attempts left, then tell the human in your session
+        error: the scheduled send on phone could not be cancelled: ntfy answered HTTP 503
+        valid: a cancel the provider accepts
+        fix: the cancel is queued: run the next step (`yo-human flush`), which retries it; until it succeeds the human may still be paged
+    resolve_test.go:113: exit code 69, want 75
+        stdout:
+        RESULT resolved <ULID>
+        bell: cancelled
+        pager: cancelled
+        phone: queued (ntfy answered HTTP 503)
+        next: yo-human flush in 60s, 5 attempts left, then tell the human in your session
+        stderr:
+        error: the scheduled send on phone could not be cancelled: ntfy answered HTTP 503
+        valid: a cancel the provider accepts
+        fix: the cancel is queued: run the next step (`yo-human flush`), which retries it; until it succeeds the human may still be paged
+--- FAIL: TestResolveWhilePagerDutyIsDownSaysToFlush (0.27s)
+    resolve_test.go:135: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    resolve_test.go:137: yo-human resolve --dedup-key disk-7 --json -> exit 69
+        {"version":1,"status":"resolved","id":"<ULID>","channels":[{"channel":"pager","status":"queued","error":"pagerduty answered HTTP 503"},{"channel":"phone","status":"sent"},{"channel":"bell","status":"sent"}],"next":{"do":"yo-human flush","after_seconds":60,"attempts_left":5,"then":"tell the human in your session"},"errors":[{"what":"the close of incident disk-7 on pager is queued: pagerduty answered HTTP 503","valid":"a close the provider accepts","fix":"run the next step (`yo-human flush`), which retries it; until it gets through, pager keeps the alert open and may page the human again"}]}
+    resolve_test.go:138: exit code 69, want 75
+        stdout:
+        {"version":1,"status":"resolved","id":"<ULID>","channels":[{"channel":"pager","status":"queued","error":"pagerduty answered HTTP 503"},{"channel":"phone","status":"sent"},{"channel":"bell","status":"sent"}],"next":{"do":"yo-human flush","after_seconds":60,"attempts_left":5,"then":"tell the human in your session"},"errors":[{"what":"the close of incident disk-7 on pager is queued: pagerduty answered HTTP 503","valid":"a close the provider accepts","fix":"run the next step (`yo-human flush`), which retries it; until it gets through, pager keeps the alert open and may page the human again"}]}
+        stderr:
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	7.795s
+FAIL
+[exit 1]
+
+Against the real binary (the edit undone):
+
+$ go test -tags e2e -count=1 ./test/e2e/
+ok  	github.com/Exploded-views/yo-human/test/e2e	7.034s
+[exit 0]
+

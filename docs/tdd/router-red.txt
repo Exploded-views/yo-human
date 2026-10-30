@@ -1,0 +1,26 @@
+$ go test -race ./internal/core 2>&1
+--- FAIL: TestQuietWindowAcrossMidnightAndDST (0.00s)
+    quiet_test.go:43: before midnight on the night DST ends: QuietEnd = 0001-01-01 00:00:00 +0000 UTC, false; want 2026-11-01 07:00:00 -0600 CST, true
+    quiet_test.go:43: after the fall-back hour: QuietEnd = 0001-01-01 00:00:00 +0000 UTC, false; want 2026-11-01 07:00:00 -0600 CST, true
+    quiet_test.go:43: at the start: QuietEnd = 0001-01-01 00:00:00 +0000 UTC, false; want 2026-11-02 07:00:00 -0600 CST, true
+    quiet_test.go:43: asked in UTC: QuietEnd = 0001-01-01 00:00:00 +0000 UTC, false; want 2026-11-01 07:00:00 -0600 CST, true
+--- FAIL: TestQuietEndIsInTheConfiguredLocation (0.00s)
+    quiet_test.go:52: end = 0001-01-01 00:00:00 +0000 UTC (UTC), inside = false; want 07:00 in America/Chicago
+--- FAIL: TestQuietDaysFilter (0.00s)
+    quiet_test.go:67: Friday noon: 0001-01-01 00:00:00 +0000 UTC, false; want inside until 17:00
+--- FAIL: TestQuietDayIsTheDayTheWindowStarts (0.00s)
+    quiet_test.go:76: Saturday 03:00 is the tail of Friday's window
+--- FAIL: TestQuietLaterEndingWindowWins (0.00s)
+    quiet_test.go:109: end = 0001-01-01 00:00:00 +0000 UTC, inside = false; want 08:00
+--- FAIL: TestPlanFansOutEverySend (0.00s)
+    router_test.go:35: Plan = [], <nil>; want 3 sends
+--- FAIL: TestPlanUnknownLevelListsLevels (0.00s)
+    router_test.go:58: err = <nil>; want a usage problem
+--- FAIL: TestPlanHoldInQuietHours (0.00s)
+    router_test.go:83: Plan = [], <nil>
+--- FAIL: TestPlanSendLevelIgnoresQuietHours (0.00s)
+    router_test.go:101: Plan = [], <nil>
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.030s
+FAIL
+exit=1

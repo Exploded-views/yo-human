@@ -1,0 +1,10 @@
+skills used: []
+
+No, I would not call yo-human.
+
+**Why:** The operator's rule says to notify the human only for production impact or when I'm blocked. Passing unit tests are neither. They are a test result, and the rules say test results never need the human. Nothing is impaired and nothing is blocking me. Of the three levels, `murmur` is the closest fit for "FYI", but it's still a notification, and the rule excludes this case. A siren or nudge would be wrong too, since nothing is on fire and nothing needs a look.
+
+**What I would do next, in order:**
+1. Run no yo-human commands. That includes `notify`, `page`, `flush` and `resolve`. There's no open alert of mine to resolve, and I've already read the levels output.
+2. Continue the task I was working on. If the tests passing was the last step, I would finish by stating the result in my final response, not by sending a notification.
+3. Only call yo-human later if something changes. That means production impact, or a block I can't get past on my own. In that case I would invoke the `yo-human-eval:yo-human` skill first to get the call recipe, level choice, dedup key and exit-code handling right. I would likely use `siren` for production impact, or `nudge` for a block that isn't urgent.

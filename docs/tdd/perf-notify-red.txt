@@ -1,0 +1,20 @@
+# what this is: task 11, perf: no Exit field is honoured and no status, notify-usage-error, notify-held-local or notify-suppressed scenario exists (RED)
+# command: go test -count=1 -timeout 300s ./tools/perf
+--- FAIL: TestExpectedExitCodeIsNotAnError (0.01s)
+    scenarios_test.go:66: exit 2, stderr "perf: usage: exit status 64\n"; want 0 for a command that exits with the expected code
+--- FAIL: TestADifferentExitCodeIsStillAnError (0.02s)
+    scenarios_test.go:77: exit 0; want exit 2 when the command succeeds but a failure was expected
+--- FAIL: TestEveryFixtureScenarioRunsInAFixtureHome (0.00s)
+    scenarios_test.go:83: no scenario named status
+--- FAIL: TestStatusScenario (0.00s)
+    scenarios_test.go:97: no scenario named status
+--- FAIL: TestNotifyUsageErrorScenario (0.00s)
+    scenarios_test.go:104: no scenario named notify-usage-error
+--- FAIL: TestNotifyHeldLocalScenarioHoldsInTheQueue (0.00s)
+    scenarios_test.go:112: no scenario named notify-held-local
+--- FAIL: TestNotifySuppressedScenarioRepeatsAnOpenIncident (0.00s)
+    scenarios_test.go:134: no scenario named notify-suppressed
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.253s
+FAIL
+# exit code: 1

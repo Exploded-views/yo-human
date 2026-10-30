@@ -1,0 +1,25 @@
+--- FAIL: TestDueQuarantinesUnreadableFileAndKeepsListing (0.01s)
+    quarantine_test.go:35: Due = [], cannot parse $TMPDIR/TestDueQuarantinesUnreadableFileAndKeepsListing1054651664/001/state/queue/bad.x.json: invalid character 'n' looking for beginning of object key string, want only good.x
+--- FAIL: TestDueQuarantinesKeyMismatch (0.03s)
+    quarantine_test.go:50: Due = [{good.x i [123 34 116 105 116 108 101 34 58 34 116 34 125] 0 2026-10-26 12:00:00 +0000 UTC 2026-10-26 12:00:00 +0000 UTC} {real.x i [123 34 116 105 116 108 101 34 58 34 116 34 125] 0 2026-10-26 12:00:00 +0000 UTC 2026-10-26 12:00:00 +0000 UTC}], <nil>, want only good.x
+--- FAIL: TestCancelIncidentSurvivesCorruptFile (0.01s)
+    quarantine_test.go:62: CancelIncident = [], cannot parse $TMPDIR/TestCancelIncidentSurvivesCorruptFile2437557411/001/state/queue/bad.x.json: unexpected end of JSON input, want good.x
+--- FAIL: TestDeadEntriesListsUnreadableDeadFile (0.00s)
+    quarantine_test.go:70: DeadEntries = [], cannot parse $TMPDIR/TestDeadEntriesListsUnreadableDeadFile196374505/001/state/dead/junk.x.json: invalid character '\x00' looking for beginning of value, want exactly one
+--- FAIL: TestClaimQuarantinesUnreadableEntry (0.00s)
+    quarantine_test.go:78: Claim = ok false, err cannot parse $TMPDIR/TestClaimQuarantinesUnreadableEntry3927087524/001/state/inflight/bad.x.6935.json: invalid character 'n' looking for beginning of object key string, want false nil
+--- FAIL: TestRecoverIncrementsAttempts (0.02s)
+    recover_test.go:99: due = [{Key:A.x IncidentKey:i Data:[123 34 116 105 116 108 101 34 58 34 116 34 125] Attempts:0 NextAttempt:2026-10-26 12:00:00 +0000 UTC DeliverAt:2026-10-26 12:00:00 +0000 UTC}], want Attempts 1 (a crash counts as an attempt)
+--- FAIL: TestRecoverNeverOverwritesNewerQueueEntry (0.02s)
+    recover_test.go:111: Recover = 1, <nil>, want 0
+--- FAIL: TestRecoverQuarantinesUnreadableInflight (0.00s)
+    recover_test.go:129: Recover = 1, <nil>, want 0
+--- FAIL: TestRecoverRemovesStaleTempFiles (0.00s)
+    recover_test.go:151: "": stale temp file still present (<nil>)
+    recover_test.go:151: "queue": stale temp file still present (<nil>)
+    recover_test.go:151: "inflight": stale temp file still present (<nil>)
+    recover_test.go:151: "dead": stale temp file still present (<nil>)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.041s
+FAIL
+exit=1

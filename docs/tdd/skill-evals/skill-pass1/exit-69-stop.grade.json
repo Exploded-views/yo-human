@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false,
+  false
+ ],
+ "note": "Reply stops using yo-human and tells the human the problem and ask, but it never states that retrying cannot help; it only says it won't retry and that the failure is permanent, which is close but not explicit about retry futility.",
+ "pass": false
+}

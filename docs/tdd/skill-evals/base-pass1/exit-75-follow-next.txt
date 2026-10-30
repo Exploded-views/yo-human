@@ -1,0 +1,26 @@
+skills used: []
+
+Exit 75 with `queued` means the siren is not lost. The journal has it, but the phone push hasn't gone out. The ntfy server was unreachable, so the human hasn't been woken yet. I should treat it as undelivered.
+
+**Next, in order:**
+
+1. Wait about 60 seconds, as the tool instructs.
+2. Run `yo-human flush`. This retries the queued notification (FAKE-ID-2).
+3. Check the result. If it reports the phone as sent or delivered, I'm done with the alert. I note it and carry on with the checkout work.
+4. If it fails again, wait another 60 seconds and run `yo-human flush` again. I keep this up for the 5 attempts the tool reported.
+
+I don't re-run `notify` for this. That would create a duplicate, and the queued item is already tracked. If I ever did re-send, I'd reuse `--dedup-key checkout-FAKE`.
+
+**If all 5 attempts fail:**
+
+The tool says to "tell the human in your session." So I would:
+
+1. Stop retrying. More attempts won't help.
+2. Put a clear message in my session output, where the human will see it when they next look. It would say:
+   - Checkout is failing, and I raised a siren to say so.
+   - The phone push never went out because the ntfy server was unreachable, even after 5 flush attempts.
+   - The alert is recorded in the journal (id FAKE-ID-2), and `yo-human flush` can be run once the server is back.
+   - The ask: look at checkout now.
+3. Not downgrade to a lower level to get around the failure. `nudge` is held during quiet hours, so it would be less likely to reach them. It would also misstate how urgent this is.
+4. Not try another channel I haven't been set up to use, such as emailing or posting to an external service. Nobody authorized that.
+5. Keep working on anything within my task that's safe and in scope, and leave the unresolved alert at the top of my final report.

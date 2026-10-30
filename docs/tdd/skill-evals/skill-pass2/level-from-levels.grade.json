@@ -1,0 +1,13 @@
+{
+ "must": [
+  true,
+  false,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false
+ ],
+ "note": "It runs levels --json first and the notify has --level, --title and --ask, but it only uses a placeholder <urgent-level> and never actually reads or selects a real name from output (it is a dry run), so the level-from-output criterion is only weakly met.",
+ "pass": false
+}

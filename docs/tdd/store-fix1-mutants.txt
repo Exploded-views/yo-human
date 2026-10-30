@@ -1,0 +1,45 @@
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/store	2.024s
+exit=0
+=== mutant: Recover replaces an existing queue entry (internal/store/quarantine.go: os.Link(tmp, dst) -> os.Rename(tmp, dst))
+--- FAIL: TestRecoverNeverOverwritesNewerQueueEntry (0.04s)
+    recover_test.go:111: Recover = 1, <nil>, want 0
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.053s
+FAIL
+exit=1
+=== mutant: Recover does not count the attempt (internal/store/recover.go: w.Attempts++ -> w.Attempts += 0)
+--- FAIL: TestRecoverIncrementsAttempts (0.02s)
+    recover_test.go:99: due = [{Key:A.x IncidentKey:i Data:[123 34 116 105 116 108 101 34 58 34 116 34 125] Attempts:0 NextAttempt:2026-10-26 12:00:00 +0000 UTC DeliverAt:2026-10-26 12:00:00 +0000 UTC}], want Attempts 1 (a crash counts as an attempt)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	1.960s
+FAIL
+exit=1
+=== mutant: queue listing does not quarantine (internal/store/quarantine.go: case bad != "" && sub == "queue": -> case false:)
+--- FAIL: TestDueQuarantinesUnreadableFileAndKeepsListing (0.01s)
+    quarantine_test.go:35: Due = [{bad.x  [] 0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC} {good.x i [123 34 116 105 116 108 101 34 58 34 116 34 125] 0 2026-10-26 12:00:00 +0000 UTC 2026-10-26 12:00:00 +0000 UTC}], <nil>, want only good.x
+--- FAIL: TestDueQuarantinesKeyMismatch (0.02s)
+    quarantine_test.go:50: Due = [{good.x i [123 34 116 105 116 108 101 34 58 34 116 34 125] 0 2026-10-26 12:00:00 +0000 UTC 2026-10-26 12:00:00 +0000 UTC} {other.x i [123 34 116 105 116 108 101 34 58 34 116 34 125] 0 2026-10-26 12:00:00 +0000 UTC 2026-10-26 12:00:00 +0000 UTC}], <nil>, want only good.x
+--- FAIL: TestCancelIncidentSurvivesCorruptFile (0.02s)
+    quarantine_test.go:64: counts = 1 0 0, want 0 0 1
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	1.970s
+FAIL
+exit=1
+=== mutant: key mismatch is accepted (internal/store/quarantine.go: case w.Key != key: -> case false:)
+--- FAIL: TestDueQuarantinesKeyMismatch (0.02s)
+    quarantine_test.go:50: Due = [{good.x i [123 34 116 105 116 108 101 34 58 34 116 34 125] 0 2026-10-26 12:00:00 +0000 UTC 2026-10-26 12:00:00 +0000 UTC} {other.x i [123 34 116 105 116 108 101 34 58 34 116 34 125] 0 2026-10-26 12:00:00 +0000 UTC 2026-10-26 12:00:00 +0000 UTC}], <nil>, want only good.x
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	1.990s
+FAIL
+exit=1
+=== mutant: Recover skips the temp sweep (internal/store/recover.go: if err := s.sweepTemps(now, staleAfter); err != nil { -> if err := error(nil); err != nil {)
+--- FAIL: TestRecoverRemovesStaleTempFiles (0.00s)
+    recover_test.go:151: "": stale temp file still present (<nil>)
+    recover_test.go:151: "queue": stale temp file still present (<nil>)
+    recover_test.go:151: "inflight": stale temp file still present (<nil>)
+    recover_test.go:151: "dead": stale temp file still present (<nil>)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	1.911s
+FAIL
+exit=1

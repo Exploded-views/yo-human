@@ -1,0 +1,5 @@
+KILLED  the /var/folders/ rule is dropped
+  evals/leakcheck.sh: '|/Users/|/var/folders/|session_' -> '|/Users/|session_'
+  FAIL macos-temp (exit 0)
+  FAIL macos-private-temp (exit 0)
+  [bash evals/leakcheck_test.sh exit 1]

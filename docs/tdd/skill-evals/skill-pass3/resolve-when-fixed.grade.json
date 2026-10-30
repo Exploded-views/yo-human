@@ -1,0 +1,13 @@
+{
+ "must": [
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "The reply runs `yo-human resolve` with the same dedup key and a short note, sends no new notify, and does not leave the incident open.",
+ "pass": true
+}

@@ -123,6 +123,24 @@ checkenv=GOENV=$t/goenv
 check "GOFLAGS=-tags=e2e in a go env file is ignored" 0
 checkenv=
 
+# GOAMD64 and GOARM64 select feature build tags (amd64.v3, arm64.v9.0); the release is built
+# with the defaults (v1, v8.0), so the caller's settings must not change the graph either way.
+newmod amd64v3
+put internal/core/x.go "//go:build amd64.v3\n\npackage core\n\nimport _ \"net/http\"\n"
+checkenv=GOAMD64=v3
+check "an amd64.v3-only file, with GOAMD64=v3 in the caller's environment, is outside the release graph" 0
+checkenv=
+newmod amd64v1
+put internal/core/x.go "//go:build !amd64.v3\n\npackage core\n\nimport _ \"net/http\"\n"
+checkenv=GOAMD64=v3
+check "a !amd64.v3 file, with GOAMD64=v3 in the caller's environment" 1 "linux/amd64: $M/internal/core imports net/http"
+checkenv=
+newmod arm64v8
+put internal/core/x.go "//go:build !arm64.v9.0\n\npackage core\n\nimport _ \"net/http\"\n"
+checkenv=GOARM64=v9.0
+check "a !arm64.v9.0 file, with GOARM64=v9.0 in the caller's environment" 1 "linux/arm64: $M/internal/core imports net/http"
+checkenv=
+
 # A go.work changes what the go tool builds; the check refuses to guess.
 newmod gowork
 put go.work "go 1.27\n\nuse .\n"

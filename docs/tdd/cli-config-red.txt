@@ -1,0 +1,125 @@
+# what this is: go test ./internal/cli/ against stubs: only the version command, no registry, output, exit mapping, or config/secret/levels commands (RED)
+# command: go test -count=1 ./internal/cli/
+--- FAIL: TestErrorFormat (0.00s)
+    cli_test.go:44: code=64 out="" err="yo-human: unknown command \"bogus\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want three lines error:/valid:/fix: and exit 64
+--- FAIL: TestGlobalFlagsComeFromAnywhere (0.00s)
+    cli_test.go:69: [--config $TMPDIR/TestGlobalFlagsComeFromAnywhere3335239009/001/other.yaml levels --json]: code=64 out="" err="yo-human: unknown command \"--config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want the levels as JSON
+    cli_test.go:69: [levels --config=$TMPDIR/TestGlobalFlagsComeFromAnywhere3335239009/001/other.yaml --json]: code=64 out="" err="yo-human: unknown command \"levels\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want the levels as JSON
+    cli_test.go:69: [--json levels --config $TMPDIR/TestGlobalFlagsComeFromAnywhere3335239009/001/other.yaml]: code=64 out="" err="yo-human: unknown command \"--json\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want the levels as JSON
+    cli_test.go:74: --config with no file: code=64 err="yo-human: unknown command \"levels\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+--- FAIL: TestSubcommandsNeedAKnownName (0.00s)
+    cli_test.go:83: [config]: code=64 err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+    cli_test.go:83: [config frob]: code=64 err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+    cli_test.go:83: [secret]: code=64 err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+    cli_test.go:83: [secret frob]: code=64 err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+    cli_test.go:89: levels extra: code=64 err="yo-human: unknown command \"levels\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+--- FAIL: TestConfigInitWritesStarterAndRefusesOverwrite (0.00s)
+    config_test.go:17: init: code=64 out="" err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestConfigInitHonoursConfigFlagAndFailures (0.00s)
+    config_test.go:60: init --config: code=64 err="yo-human: unknown command \"--config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestConfigCheckReportsOrigins (0.00s)
+    config_test.go:90: code=64 out="" err="yo-human: unknown command \"--config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestConfigCheckMissingSecretsAreWarningsNotErrors (0.00s)
+    config_test.go:110: code=64 out="" err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 0
+--- FAIL: TestConfigCheckAppliesEachChannelsOwnValidation (0.00s)
+    config_test.go:138: code=64 out="" err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 78 and no RESULT
+--- FAIL: TestConfigCheckStructureErrorsExit78 (0.00s)
+    config_test.go:159: no config: code=64 out="" err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"
+    config_test.go:166: unknown type: code=64 out="" err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"
+    config_test.go:174: loose secrets file: code=64 err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 78 with the chmod
+--- FAIL: TestConfigCheckPrintsCapabilityWarningsAsWarnings (0.00s)
+    config_test.go:188: code=64 out="" err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 0
+--- FAIL: TestConfigSchemaPrintsTheEmbeddedSchema (0.00s)
+    config_test.go:198: text: code=64 out=""
+    config_test.go:208: json: code=64 out="" (unexpected end of JSON input)
+--- FAIL: TestExitCodeTable (0.00s)
+    exit_test.go:17: exitFor("failed") = 0, want 69
+    exit_test.go:17: exitFor("bogus") = 0, want 70
+    exit_test.go:17: exitFor("queued") = 0, want 75
+    exit_test.go:24: exitForProblem(kind 3) = 0, want 70
+    exit_test.go:24: exitForProblem(kind 4) = 0, want 69
+    exit_test.go:24: exitForProblem(kind 99) = 0, want 70
+    exit_test.go:24: exitForProblem(kind 0) = 0, want 64
+    exit_test.go:24: exitForProblem(kind 1) = 0, want 78
+    exit_test.go:24: exitForProblem(kind 2) = 0, want 74
+--- FAIL: TestLevelsJSON (0.00s)
+    levels_test.go:25: code=64 out="" err="yo-human: unknown command \"levels\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n" (unexpected end of JSON input)
+--- FAIL: TestLevelsText (0.00s)
+    levels_test.go:40: code=64 out="", want "RESULT ok\nnote (ask optional, quiet hours send): FYI only\npage (ask required, quiet hours send): production is down\n"
+--- FAIL: TestLevelsWithoutAConfigExits78 (0.00s)
+    levels_test.go:48: code=64 out="" err="yo-human: unknown command \"levels\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestWriteResultText (0.00s)
+    output_test.go:27: got "", want "RESULT queued 01ABC\nphone: queued (timed out second line)\njournal: sent\nnext: yo-human flush in 60s, 5 attempts left, then tell the human\n"
+    output_test.go:32: no id: got "", want "RESULT noop\n"
+--- FAIL: TestWriteResultJSON (0.00s)
+    output_test.go:52: got "" (unexpected end of JSON input); want the spec's object with version 1
+--- FAIL: TestWriteProblemsRendersEveryProblemInAJoin (0.00s)
+    output_test.go:67: code=0 got ""; want exit 78 (the first problem's) and "error: first went wrong\nvalid: valid one\nfix: fix one\nerror: second\nvalid: valid two\nfix: fix two\nerror: third\nvalid: valid three\nfix: fix three\n"
+    output_test.go:78: json: code=0 got "" (unexpected end of JSON input)
+--- FAIL: TestWriteProblemKeepsThreeLines (0.00s)
+    output_test.go:90: code=0 got ""; want exactly three lines
+--- FAIL: TestWriteProblemsTreatsAPlainErrorAsInternal (0.00s)
+    output_test.go:97: code=0 got ""; want exit 70
+--- FAIL: TestWriteWarningsAndNotices (0.00s)
+    output_test.go:106: warnings: got "", want "warning: level \"page\" is loud\nvalid: v\nfix: f\nwarning: plain\nvalid: v2\nfix: f2\n"
+    output_test.go:111: notices: got ""
+--- FAIL: TestWriteOKTextAndJSON (0.00s)
+    output_test.go:119: text: got ""
+    output_test.go:124: json: got ""
+--- FAIL: TestFinishPrintsTheResultThenTheProblemsAndExitsWithTheProblem (0.00s)
+    output_test.go:147: result only, queued: code=0 out="" err=""; want 75 and "RESULT queued 01ABC\n"
+    output_test.go:147: result only, delivered: code=0 out="" err=""; want 0 and "RESULT delivered x\n"
+    output_test.go:147: result and a store problem: code=0 out="" err=""; want 74 and "RESULT queued 01ABC\n"
+    output_test.go:147: result and a config problem: code=0 out="" err=""; want 78 and "RESULT queued 01ABC\n"
+    output_test.go:147: problem only: code=0 out="" err=""; want 64 and ""
+--- FAIL: TestSecretSetReadsStdinOnly (0.00s)
+    secret_test.go:15: extra argument: code=64 out="" err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+--- FAIL: TestSecretSetRefusesBadNamesWithoutEchoingThem (0.00s)
+    secret_test.go:51: name "Bad_Name": code=64 out="" err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+    secret_test.go:51: name "FAKE-PASTED-VALUE": code=64 out="" err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+    secret_test.go:51: name "<hex>": code=64 out="" err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+    secret_test.go:51: name "-lead": code=64 out="" err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+    secret_test.go:51: name "a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-a-": code=64 out="" err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+    secret_test.go:51: name "": code=64 out="" err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+--- FAIL: TestSecretSetStdinProblems (0.00s)
+    secret_test.go:72: empty value: code=64 err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+    secret_test.go:75: huge value: code=64 err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+    secret_test.go:79: unreadable stdin: code=64 err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+    secret_test.go:89: [secret set fine-name]: code=64 err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 78 with the chmod
+    secret_test.go:89: [secret list]: code=64 err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 78 with the chmod
+--- FAIL: TestSecretListShowsInvalidStoredNamesAsPlaceholders (0.00s)
+    secret_test.go:103: code=64 err="yo-human: unknown command \"secret\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestConfigTrustThenChange (0.00s)
+    trust_test.go:38: stderr = "yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n", want it to contain "ignoring the project config"
+    trust_test.go:38: stderr = "yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n", want it to contain "not trusted"
+    trust_test.go:38: stderr = "yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n", want it to contain "yo-human config trust .yo-human.yaml"
+    trust_test.go:43: trust: code=64 out="" err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestConfigTrustThroughASymlinkedCwd (0.00s)
+    trust_test.go:68: trust: code=64 err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestConfigTrustShowsEndpointsAndSecretNamesNotValues (0.00s)
+    trust_test.go:91: code=64 err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestConfigTrustRefusals (0.00s)
+    trust_test.go:127: no argument: code=64 out="" err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want 64 and "error: config trust takes one file"
+    trust_test.go:127: two arguments: code=64 out="" err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want 64 and "error: config trust takes one file"
+    trust_test.go:127: missing file: code=64 out="" err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want 64 and "error: there is no file at"
+    trust_test.go:127: a directory: code=64 out="" err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want 64 and "is not a regular file"
+    trust_test.go:127: over 1 MiB: code=64 out="" err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want 78 and "larger than 1 MiB"
+    trust_test.go:127: a list: code=64 out="" err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want 78 and "is not a YAML or JSON mapping"
+    trust_test.go:127: broken yaml: code=64 out="" err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want 78 and "is not a YAML or JSON mapping"
+    trust_test.go:136: unreadable: code=64 err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"
+    trust_test.go:141: state dir blocked: code=64 err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 74
+    trust_test.go:144: levels with the state dir blocked: code=64 err="yo-human: unknown command \"levels\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 74
+--- FAIL: TestConfigTrustWithoutAWorkingDirectory (0.00s)
+    trust_test.go:160: code=64 err="yo-human: unknown command \"config\"\n\nusage: yo-human <command>\n\ncommands:\n  version  print the version\n"; want exit 64
+--- FAIL: TestRegistryHoldsTheFourTypes (0.00s)
+    wire_test.go:24: registry = [], want bark log ntfy pagerduty
+--- FAIL: TestBuildChannelsBuildsOnlyTheNamedInstances (0.00s)
+    wire_test.go:43: got map[], <nil>; want only journal and no error (pager's secret is unset but unused)
+--- FAIL: TestBuildChannelsRejectsAnUnknownName (0.00s)
+    wire_test.go:62: err = <nil>; want a Config problem naming ghost
+--- FAIL: TestBuildChannelsReportsEveryRefusalNamingTheInstance (0.00s)
+    wire_test.go:75: err = <nil>; want both refusals joined
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.031s
+FAIL
+# exit code: 1

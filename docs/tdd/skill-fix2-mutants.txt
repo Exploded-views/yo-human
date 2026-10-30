@@ -1,0 +1,111 @@
+KILLED  Park moves the entry without the incident lock
+  internal/store/queue.go: 'return s.withLock(func() error { return s.requeueClaimed(c, p) })' -> 'return s.requeueClaimed(c, p)'
+  --- FAIL: TestHasPendingSeesAnEntryParkedBetweenItsScans (0.17s)
+      pending_gap_test.go:39: HasPending = false for an entry that was queued or in flight throughout
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/store	2.798s
+  FAIL
+  [go test ./internal/store exit 1]
+
+KILLED  Recover requeues without the incident lock
+  internal/store/recover.go: 'err = s.withLock(func() error {' -> 'err = func(fn func() error) error { return fn() }(func() error {'
+  --- FAIL: TestHasPendingSeesAnEntryRecoveredBetweenItsScans (0.17s)
+      pending_gap_test.go:46: HasPending = false for an entry that was queued or in flight throughout
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/store	2.700s
+  FAIL
+  [go test ./internal/store exit 1]
+
+KILLED  landed removes the entry before taking the incident lock (complete() before the lock)
+  internal/core/repeat.go: insert the line '_ = complete()' before the line 'if p.beforeLand != nil {' (that line and its hook call are kept)
+  internal/core/repeat.go: 'cerr, done = complete(), true' -> 'cerr, done = nil, true'
+  --- FAIL: TestASentEntryStaysPendingUntilItsReachIsRecorded (0.06s)
+      land_race_test.go:49: the sent entry left inflight/ before the incident lock recorded its reach; a repeat in that gap pages again
+  --- FAIL: TestARepeatBetweenSendAndRecordIsSuppressed (0.10s)
+      land_race_test.go:78: repeat = "delivered", sent 2; want suppressed and one page
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/core	18.380s
+  FAIL
+  [go test ./internal/core exit 1]
+
+KILLED  flush next keeps the level's AfterSeconds
+  internal/core/flush.go: 'n.AfterSeconds = max(0, int((r.retryAt.Sub(now)+time.Second-1)/time.Second))' -> '(deleted)'
+  --- FAIL: TestFlushThatLeavesASendQueuedIsQueuedWithNext (0.17s)
+      flush_status_test.go:37: flush = {Status:queued ID: Channels:[{Channel:a Status:queued Error:down ProviderID: Scheduled:false attempts:2 config:false buried:false parked:false level:page retryAt:{wall:0 ext:63928958640 loc:<nil>}}] Next:0x1cd8e0ce1680}; want queued with next in 120s and 3 attempts left (2 of 5 spent; the backoff doubles)
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/core	26.449s
+  --- FAIL: TestFlushThatLeavesASendQueuedExits75WithNext (0.21s)
+      flush_exit_test.go:29: stdout = "RESULT queued\npager: queued (provider said no)\nphone: queued (provider said no)\nnext: yo-human flush in 60s, 3 attempts left, then tell the human in your session\n", want it to contain "next: yo-human flush in 120s, 3 attempts left, then tell the human in your session"
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/cli	20.317s
+  FAIL
+  [go test ./internal/core ./internal/cli exit 1]
+
+KILLED  flush next keeps the level's AttemptsLeft
+  internal/core/flush.go: 'n.AttemptsLeft = max(0, p.retryFor(r.level).Times-r.attempts)' -> '(deleted)'
+  --- FAIL: TestFlushThatLeavesASendQueuedIsQueuedWithNext (0.12s)
+      flush_status_test.go:37: flush = {Status:queued ID: Channels:[{Channel:a Status:queued Error:down ProviderID: Scheduled:false attempts:2 config:false buried:false parked:false level:page retryAt:{wall:0 ext:63928958640 loc:<nil>}}] Next:0x777793500000}; want queued with next in 120s and 3 attempts left (2 of 5 spent; the backoff doubles)
+  --- FAIL: TestFlushNextUsesTheEntrysLevelRetry (0.12s)
+      flush_status_test.go:80: flush = {Status:queued ID: Channels:[{Channel:a Status:queued Error:down ProviderID: Scheduled:false attempts:2 config:false buried:false parked:false level:page retryAt:{wall:0 ext:63928958640 loc:<nil>}}] Next:0x77779351b1a0}; want next with 2 of the page level's 4 attempts left
+  --- FAIL: TestDeadlineBoundsTheCall (0.31s)
+      pipeline_test.go:179: Notify took 301.136958ms; want within 300ms of a 200ms deadline
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/core	26.456s
+  --- FAIL: TestFlushThatLeavesASendQueuedExits75WithNext (0.21s)
+      flush_exit_test.go:29: stdout = "RESULT queued\npager: queued (provider said no)\nphone: queued (provider said no)\nnext: yo-human flush in 120s, 5 attempts left, then tell the human in your session\n", want it to contain "next: yo-human flush in 120s, 3 attempts left, then tell the human in your session"
+  [go test ./internal/core ./internal/cli exit 1]
+
+KILLED  a retried entry records no due time
+  internal/core/deliver.go: 'res.Status, res.retryAt = b.waiting(o.c.Pending), next' -> 'res.Status = b.waiting(o.c.Pending)'
+  --- FAIL: TestFlushThatLeavesASendQueuedIsQueuedWithNext (0.13s)
+      flush_status_test.go:37: flush = {Status:queued ID: Channels:[{Channel:a Status:queued Error:down ProviderID: Scheduled:false attempts:2 config:false buried:false parked:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:0xe99829fef90}; want queued with next in 120s and 3 attempts left (2 of 5 spent; the backoff doubles)
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/core	23.661s
+  --- FAIL: TestFlushThatLeavesASendQueuedExits75WithNext (0.17s)
+      flush_exit_test.go:29: stdout = "RESULT queued\npager: queued (provider said no)\nphone: queued (provider said no)\nnext: yo-human flush in 0s, 3 attempts left, then tell the human in your session\n", want it to contain "next: yo-human flush in 120s, 3 attempts left, then tell the human in your session"
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/cli	17.019s
+  FAIL
+  [go test ./internal/core ./internal/cli exit 1]
+
+KILLED  the attempts left ignore the entry's level (uses the default retry)
+  internal/core/flush.go: 'p.retryFor(r.level).Times-r.attempts' -> 'defaultRetry.Times-r.attempts'
+  --- FAIL: TestFlushNextUsesTheEntrysLevelRetry (0.13s)
+      flush_status_test.go:80: flush = {Status:queued ID: Channels:[{Channel:a Status:queued Error:down ProviderID: Scheduled:false attempts:2 config:false buried:false parked:false level:page retryAt:{wall:0 ext:63928958640 loc:<nil>}}] Next:0x6962ba25fd10}; want next with 2 of the page level's 4 attempts left
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/core	20.732s
+  FAIL
+  [go test ./internal/core exit 1]
+
+SURVIVED (equivalent: nextFor overwrites every level-dependent field of p.next)  [rerun of round 1 #4, now compilable] flush next ignores the entry's level
+  internal/core/flush.go: 'n := p.next(r.level)' -> 'n := p.next("")'
+  
+  [go test ./internal/core exit 0]
+
+KILLED  [rerun of round 1 #13, now compilable] pending sends do not count
+  internal/core/repeat.go: 'return !pending, err' -> '_ = pending'
+  --- FAIL: TestRepeatsFromSeparateStoreHandlesPageOnce (0.84s)
+      generation_test.go:106: sent 20 times, want once
+  --- FAIL: TestARepeatBetweenSendAndRecordIsSuppressed (0.10s)
+      land_race_test.go:78: repeat = "delivered", sent 2; want suppressed and one page
+  --- FAIL: TestConcurrentRepeatsPageOnce (0.80s)
+      repeat_notify_test.go:173: sent 20 times; one incident pages once
+      repeat_notify_test.go:176: statuses = map[delivered:20]; want 1 delivered and 19 suppressed
+  --- FAIL: TestPendingSendsStillSuppressARepeat (0.12s)
+      repeat_stranded_test.go:61: repeat = "delivered"; a send is still pending, so suppress
+  FAIL
+  [go test ./internal/core exit 1]
+
+KILLED  [rerun of round 1 #14, now compilable] nothing is ever stranded
+  internal/core/repeat.go: 'return !pending, err' -> '_ = pending'
+  --- FAIL: TestRepeatAfterADeadFirstSendIsSent (0.05s)
+      repeat_stranded_test.go:24: repeat = {Status:suppressed ID:M002 Channels:[] Next:<nil>}, sent 1; want it sent
+  --- FAIL: TestAQuieterOrSameLevelRepeatAfterADeadSendIsSentToo (0.06s)
+      repeat_stranded_test.go:40: quieter repeat = "suppressed"; want sent, no human has been reached
+  --- FAIL: TestADeliveryToANonHumanChannelDoesNotCount (0.08s)
+      repeat_stranded_test.go:51: repeat = {Status:suppressed ID:M002 Channels:[] Next:<nil>}; the log line reached no human
+  --- FAIL: TestAChangedRepeatAfterADeadSendIsSentToo (0.06s)
+      repeat_stranded_test.go:90: changed repeat = "suppressed"; want sent
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/core	18.488s
+  [go test ./internal/core exit 1]

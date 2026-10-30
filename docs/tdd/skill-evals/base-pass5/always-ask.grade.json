@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "Uses --level nudge and --ask with a concrete sentence, but the example command has no --title (body is positional), and the syntax is hedged as unconfirmed.",
+ "pass": false
+}

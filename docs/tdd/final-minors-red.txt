@@ -1,0 +1,138 @@
+$ go test -count=1 ./internal/cli -run Help|LevelsFlushesFirst|LevelsJSONFlattens|PagePrintsItsKey|FlushSendsARecovered|ConfigCheckPrintsTheMerged|ResolveOfAnExpired|ConfigTrustRefusesAFileThatBreaks|ConfigTrustAllowsNewlines
+--- FAIL: TestConfigCheckPrintsTheMergedConfig (0.04s)
+    config_test.go:278: stdout = "RESULT ok\nconfig ok: 3 channels, 2 levels\nchannels.journal <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml\nchannels.pager <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml\nchannels.phone <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml\nlevels <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml\nversion <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml\n", want it to contain "channels.pager = {\"routing_key\":{\"secret\":\"pd-critical\"},\"type\":\"pagerduty\"} <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml"
+    config_test.go:278: stdout = "RESULT ok\nconfig ok: 3 channels, 2 levels\nchannels.journal <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml\nchannels.pager <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml\nchannels.phone <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml\nlevels <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml\nversion <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml\n", want it to contain "levels = [{\"name\":\"note\""
+    config_test.go:287: config check --json: {"channels":3,"levels":2,"origins":{"channels.journal":"$TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml","channels.pager":"$TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml","channels.phone":"$TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml","levels":"$TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml","version":"$TMPDIR/TestConfigCheckPrintsTheMergedConfig1843440447/001/.config/yo-human/config.yaml"},"status":"ok","version":1,"warnings":[{"what":"secret \"ntfy-topic\", used by channels.phone.topic, is not set","valid":"a name listed by `yo-human secret list`","fix":"tell the human to run, in their own terminal: op read \"op://\u003cvault\u003e/\u003citem\u003e/\u003cfield\u003e\" | yo-human secret set ntfy-topic"}]}
+        ; want the merged config and its origins
+--- FAIL: TestFlushSendsARecoveredEntryAtOnce (0.13s)
+    flush_test.go:118: flush: {code:0 out:RESULT ok
+        pager: queued (channel pager was not built by this command; the entry stays queued)
+         err:}; want the recovered entry sent
+--- FAIL: TestConfigTrustAllowsNewlinesAndTabsInValues (0.04s)
+    forge_test.go:71: newline in interruption: code=0 out="RESULT ok\ntrusting \"$TMPDIR/TestConfigTrustAllowsNewlinesAndTabsInValues1680337752/003/p/.yo-human.yaml\"\nversion 1\nchannel \"office\" has type \"ntfy\"\nchannel \"office\" server <not a valid URL>\nlevel \"page\" use_when \"x\"\nlevel \"page\" sends to \"office\" (x\\nchannel \\\"office\\\" server \\\"https://trusted.example\\\")\ntrusted; a change to the file un-trusts it until you run this again\n" err=""; want exit 78, no stdout and "breaks the config schema" on stderr
+--- FAIL: TestHelpPrintsTheUsageAndExits0 (0.00s)
+    help_test.go:20: [help]: {code:64 out: err:error: unknown command
+        valid: commands: channel, config, flush, levels, notify, page, resolve, secret, status, version
+        fix: run one of them; `yo-human` with no arguments prints the usage
+        }; want the usage on stdout, exit 0
+    help_test.go:20: [--help]: {code:64 out: err:error: a flag was given before the command
+        valid: yo-human <command> [<subcommand>] [flags]: --json and --config <file> go after the command
+        fix: put the flag after the command, for example `yo-human levels --json`
+        }; want the usage on stdout, exit 0
+    help_test.go:20: [-h]: {code:64 out: err:error: a flag was given before the command
+        valid: yo-human <command> [<subcommand>] [flags]: --json and --config <file> go after the command
+        fix: put the flag after the command, for example `yo-human levels --json`
+        }; want the usage on stdout, exit 0
+    help_test.go:20: [notify --help]: {code:64 out: err:error: notify was given a flag it does not know, or a flag with no value (the text is not echoed)
+        valid: yo-human notify --level <name> --title <text> [--ask <text>] [--body <text> | --body-file <path> | --body -] [--link <url>] [--action "<label>=<url>" (up to 3)] [--project <name>] [--agent <name>] [--dedup-key <key>]
+        fix: check the spelling of each flag against the valid line
+        }; want the usage on stdout, exit 0
+    help_test.go:20: [notify --level page -h]: {code:64 out: err:error: notify was given a flag it does not know, or a flag with no value (the text is not echoed)
+        valid: yo-human notify --level <name> --title <text> [--ask <text>] [--body <text> | --body-file <path> | --body -] [--link <url>] [--action "<label>=<url>" (up to 3)] [--project <name>] [--agent <name>] [--dedup-key <key>]
+        fix: check the spelling of each flag against the valid line
+        }; want the usage on stdout, exit 0
+    help_test.go:20: [levels --help]: {code:64 out: err:error: levels takes no arguments
+        valid: yo-human levels
+        fix: run `yo-human levels` on its own
+        }; want the usage on stdout, exit 0
+    help_test.go:20: [flush -h]: {code:64 out: err:error: flush takes no arguments
+        valid: yo-human flush
+        fix: run `yo-human flush` on its own
+        }; want the usage on stdout, exit 0
+    help_test.go:20: [status --help]: {code:64 out: err:error: status was given a flag it does not know, or a flag with no value (the text is not echoed)
+        valid: yo-human status [--project <name>] [--all]
+        fix: check the spelling of each flag against the valid line
+        }; want the usage on stdout, exit 0
+    help_test.go:20: [resolve --help]: {code:64 out: err:error: resolve was given a flag it does not know, or a flag with no value (the text is not echoed)
+        valid: yo-human resolve --dedup-key <key> [--note <text>] [--project <name>]
+        fix: check the spelling of each flag against the valid line
+        }; want the usage on stdout, exit 0
+    help_test.go:20: [page --help]: {code:64 out: err:error: page was given a flag it does not know, or a flag with no value (the text is not echoed)
+        valid: yo-human page [--low] "<summary>" [details] [dedup-key]   or   yo-human page [--low] --resolve <dedup-key>
+        fix: use only --low and --resolve <dedup-key>, before the summary; use -- before a summary that starts with "-"
+        }; want the usage on stdout, exit 0
+    help_test.go:20: [version --help]: {code:0 out:yo-human dev none
+         err:}; want the usage on stdout, exit 0
+    help_test.go:20: [config --help]: {code:64 out: err:error: a flag was given before the command
+        valid: yo-human <command> [<subcommand>] [flags]: --json and --config <file> go after the command
+        fix: put the flag after the command, for example `yo-human levels --json`
+        }; want the usage on stdout, exit 0
+    help_test.go:20: [config check --help]: {code:64 out: err:error: config check takes no arguments
+        valid: yo-human config check
+        fix: run `yo-human config check` on its own
+        }; want the usage on stdout, exit 0
+    help_test.go:20: [secret set --help]: {code:64 out: err:error: that is not a valid secret name (it is not echoed: a pasted value must never be printed)
+        valid: lower-case letters, digits and hyphens, starting with a letter or digit, 63 characters at most, and not a run of 16 or more hex digits
+        fix: choose a descriptive name such as pd-critical, and pipe the value in on stdin
+        }; want the usage on stdout, exit 0
+    help_test.go:20: [channel test -h]: {code:78 out: err:error: no config file was found
+        valid: a file at --config or YO_HUMAN_CONFIG, a trusted .yo-human.yaml, "$TMPDIR/TestHelpPrintsTheUsageAndExits02325953556/001/.config/yo-human/config.yaml" or "/etc/yo-human/config.yaml"
+        fix: run `yo-human config init` to write a starter config
+        }; want the usage on stdout, exit 0
+    help_test.go:26: --help --json: {code:64 out:{"version":1,"error":{"what":"a flag was given before the command","valid":"yo-human \u003ccommand\u003e [\u003csubcommand\u003e] [flags]: --json and --config \u003cfile\u003e go after the command","fix":"put the flag after the command, for example `yo-human levels --json`"}}
+         err:}; want one object carrying the usage
+--- FAIL: TestLevelsFlushesFirst (0.07s)
+    levels_test.go:81: levels: {code:0 out:RESULT ok
+        note (ask optional, quiet hours send): FYI only
+        night (ask required, quiet hours hold): can wait until morning
+        page (ask required, quiet hours send): production is down
+         err:}, phone sent 1; want the due note sent first
+--- FAIL: TestLevelsJSONFlattensUseWhen (0.01s)
+    levels_test.go:92: levels --json: [{Name:note UseWhen:FYI‮ only
+        fix: run x Ask:optional QuietHours:send} {Name:page UseWhen:production is down Ask:required QuietHours:send}]; want use_when as one plain line
+--- FAIL: TestPagePrintsItsKey (0.22s)
+    page_test.go:210: page: {code:0 out:RESULT delivered <ULID>
+        phone: sent
+        pager: sent
+         err:}; want a key: line with the default key
+    page_test.go:215: stdout = "{\"version\":1,\"status\":\"delivered\",\"id\":\"<ULID>\",\"channels\":[{\"channel\":\"phone\",\"status\":\"sent\"},{\"channel\":\"pager\",\"status\":\"sent\"}]}\n", want it to contain "\"dedup_key\":\"my-key\""
+--- FAIL: TestResolveOfAnExpiredIncidentIsANoop (0.20s)
+    resolve_test.go:70: resolve: {code:0 out:RESULT resolved <ULID>
+        pager: sent
+        phone: sent
+         err:}; want noop, nothing closed or noted
+--- FAIL: TestConfigTrustRefusesAFileThatBreaksTheSchema (0.02s)
+    trust_test.go:247: trust of a file that breaks the schema: code=0 out="RESULT ok\ntrusting \"$TMPDIR/TestConfigTrustRefusesAFileThatBreaksTheSchema3367562616/001/proj/.yo-human.yaml\"\nversion 1\nalso sets (not shown; read the file): colour\ntrusted; a change to the file un-trusts it until you run this again\n" err=""; want exit 78, no stdout and "breaks the config schema" on stderr
+    trust_test.go:248: the prompt was shown: "trusting \"$TMPDIR/TestConfigTrustRefusesAFileThatBreaksTheSchema3367562616/001/proj/.yo-human.yaml\"\nversion 1\nalso sets (not shown; read the file): colour\nTrust this file? Type yes to confirm: "
+    trust_test.go:250: a trust record was written: <nil>
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.785s
+FAIL
+[exit 1]
+
+$ go test -count=1 ./internal/core -run AQueuedCancelThatHangs
+--- FAIL: TestAQueuedCancelThatHangsSpendsAnAttempt (0.30s)
+    expired_cancel_test.go:104: 1 queued, attempts [0]; want the cancel back with one attempt spent
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.316s
+FAIL
+[exit 1]
+
+$ go test -count=1 ./internal/channel ./internal/channel/ntfy -run ServerURL|NewValidatesSettings
+--- FAIL: TestServerURL (0.00s)
+    helpers_test.go:158: ServerURL("http://x.example") = "http://x.example", true; want ""
+    helpers_test.go:158: ServerURL("https://") = "https://", true; want ""
+    helpers_test.go:158: ServerURL("https://:443") = "https://:443", true; want ""
+    helpers_test.go:158: ServerURL("https://x.example?a=1") = "https://x.example?a=1", true; want ""
+    helpers_test.go:158: ServerURL("https://x.example#f") = "https://x.example#f", true; want ""
+    helpers_test.go:158: ServerURL("https://<userinfo>@x.example") = "https://<userinfo>@x.example", true; want ""
+    helpers_test.go:158: ServerURL("://") = "://", true; want ""
+    helpers_test.go:158: ServerURL("https://x.example/base/") = "https://x.example/base/", true; want "https://x.example/base"
+    helpers_test.go:158: ServerURL("") = "", true; want ""
+    helpers_test.go:158: ServerURL("https://x.example?") = "https://x.example?", true; want ""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel	0.016s
+--- FAIL: TestNewValidatesSettings (0.00s)
+    ntfy_config_test.go:62: an empty query: err=<nil> kind=0
+    ntfy_config_test.go:62: a port and no host: err=<nil> kind=0
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.016s
+FAIL
+[exit 1]
+
+
+Note (follow-up pass): after this RED commit (648b9b9), the m9 test TestConfigCheckPrintsTheMergedConfig
+was edited in the green commit 829eb74. Only the form of its expected lines changed, from
+"<setting> = <value> <- <file>" to "<setting> <- <file> = <value>", and the levels line gained the
+"ask" field the merged value carries. The behaviour it pins, that config check prints the merged
+values, was RED here: the run above prints only origins.

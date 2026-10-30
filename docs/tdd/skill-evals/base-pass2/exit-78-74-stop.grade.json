@@ -1,0 +1,15 @@
+{
+ "must": [
+  true,
+  false,
+  false
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  true,
+  false
+ ],
+ "note": "For 78 it reports the error to the human in its final output and doesn't retry, but it keeps working in the meantime rather than stopping; for 74 it retries notify once, which violates the no-retry rules and the stop-and-tell requirement.",
+ "pass": false
+}

@@ -1,0 +1,8 @@
+$ go test -race -count=1 -timeout 120s -run ExpiredGenerationsHeld ./internal/core 2>&1
+--- FAIL: TestExpiredGenerationsHeldSendIsCancelled (0.09s)
+    landing_test.go:258: Cancelled map[]; the expired generation's held page must be cancelled when it is replaced
+    landing_test.go:262: Cancelled map[SCHED-FAKE-2:1]; want each held page cancelled once
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.125s
+FAIL
+exit=1

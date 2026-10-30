@@ -1,0 +1,21 @@
+skills used: ['yo-human-eval:yo-human']
+
+Exit 64 means my call was wrong, not that anything broke. "urgent" isn't one of this human's levels. I'd fix the call and run it again.
+
+**Choosing the level.** "Checkout failing" most likely means production is impaired, which matches `siren` ("Production is impaired or something cannot wait"). `nudge` is for "look soon, nothing on fire", and that doesn't fit a failing checkout. `siren` wakes the human, so I'd first confirm from what I actually observed that checkout really is failing in production. If it's only failing in CI or staging, I'd use `nudge` instead. The `levels` output is already in this session, so I won't re-run it.
+
+**Command, assuming production is impaired:**
+
+1. `YO_HUMAN_PROJECT=<project> YO_HUMAN_AGENT=<agent> yo-human notify --level siren --title "Checkout failing" --ask "Look at checkout now" --body "<what I observed: errors, since when, where the logs are>" --dedup-key checkout-failing`
+
+   I'm adding two things to the original call:
+   - A stable `--dedup-key`, so a repeat doesn't page twice and I can resolve it later.
+   - A `--body` with the real detail. It would contain no secrets, only the location of the logs.
+
+**After that, by exit code:**
+- **0:** done. `held` or `suppressed` is fine.
+- **64:** read the `error`, `valid` and `fix` lines, correct the call and retry.
+- **75:** wait `after_seconds`, then run the printed `next.do` command exactly as given. I'd repeat at most `attempts_left` times and never re-run `notify`. If the attempts run out, I'd tell the human directly in my session with the title and the ask.
+- **69, 74, 78 or 70:** stop. I'd tell the human in my session what I tried, the ask, and the error text. I wouldn't retry, switch levels or edit the config.
+
+**When checkout is fixed and verified:** `yo-human resolve --dedup-key checkout-failing --note "<short note>"`. I'd use this instead of sending a new "fixed" notification.

@@ -1,0 +1,19 @@
+skills used: []
+
+**Level:** `nudge`. A build host at 95% disk needs a human within the hour, but production isn't impaired, so `siren` would be wrong. `murmur` would be too quiet. `nudge` has `ask: required`, so the message must include a concrete question. Quiet hours are `hold`, so a night-time nudge waits for the human instead of waking them. That's the right behavior here.
+
+**Before the first send:** `levels --json` only gave me the level names and rules. It didn't show the send syntax, and I won't guess flags. In order:
+
+1. `yo-human --help`, and `yo-human <send-subcommand> --help` if the help shows one. This tells me the exact flags for level, message, and ask.
+2. Check my local state file, for example `./.disk-alert-state` in my own working directory, to see whether I already nudged for this condition. "Again" suggests I may have, but I can't confirm that from here.
+3. If no nudge is recorded, send one with `yo-human` at level `nudge`, using the syntax from step 1. The message would be roughly: "Build host disk is 95% full (was 95% on the last check). Can I delete build caches and artifacts older than N days, or do you want to handle it?" It would include the mount point and the top space consumers if I've measured them with read-only `du`.
+4. Write the state file with the level sent, the timestamp, and the usage percentage.
+
+**Later passes, with the disk still full:**
+- I still check usage every minute, but I send nothing while the state file says the same condition was already reported. That avoids 60 nudges an hour.
+- I escalate only if something changes materially:
+  - Usage reaches about 100%, or builds start failing. I'd send one `siren`, because production-impacting work can no longer wait.
+  - Usage rises meaningfully, for example 5 or more points. I'd send one updated `nudge`.
+- If the human hasn't responded after a long interval, such as 4 hours, I'd send at most one reminder `nudge`. I'd update the state file each time.
+- I don't delete anything on my own while waiting for an answer. The question asked permission, and no reply isn't a yes.
+- When usage drops below the threshold, I send one `murmur` saying it recovered, then clear the state file.

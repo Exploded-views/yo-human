@@ -10,10 +10,10 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </p>
 
-yo-human is a Go CLI that AI agents call when they need their human: to notify, to ask, and to escalate ("yo, human!"). It will deliver through the channels you configure (PagerDuty, ntfy and Bark first, Heeler later), at the level the agent picks, and return within a deadline so the agent never stalls. It runs on your machine when called. There is no daemon and no hosted service.
+yo-human is a Go CLI that AI agents call when they need their human: to notify, to ask, and to escalate ("yo, human!"). It delivers through the channels you configure (PagerDuty, ntfy and Bark first, Heeler later), at the level the agent picks, and return within a deadline so the agent never stalls. It runs on your machine when called. There is no daemon and no hosted service.
 
 > [!IMPORTANT]
-> **Early days.** `main` holds the M0 scaffold: the Go module, one command (`yo-human version`) and the CI gates. Notifications come with M1, which is in progress and not merged. Everything below about notify, ask and escalate is design, not shipped behavior.
+> **Early days.** v1 (M0 and M1) is built: `notify`, `resolve`, `flush`, `status`, `levels`, `page`, `channel test` and the config and secret commands, over PagerDuty, ntfy and Bark. It is not released yet (`v0.1.0` has no tag), so build it from source. Ask (M2) and everything after it is design, not shipped behavior.
 
 ## Why
 
@@ -27,10 +27,10 @@ yo-human gives every agent one tool for this. The agent decides whether you are 
 
 The [constitution](constitution.md) binds the design to a few promises. A message is written to a local queue before any send and leaves it only when a channel confirms delivery; sends that run out of retries go to a dead letter that `status` shows. The same dedup key at the same level is recorded, not sent twice. Every call returns within a deadline you set (default 1 s); if no channel answers in time, the message stays queued and the call exits 75. Levels, channels and quiet hours are configuration you own, and the core runs on free services. Config files name secrets but never hold them; values live in one local file at mode 0600 and are piped in on stdin.
 
-## Planned usage (M1)
+## Usage
 
 > [!NOTE]
-> None of these commands exist yet, and names may change while M1 is built. The [M1 contract](docs/specs/2026-10-26-m1-contract-design.md) has the full CLI, exit codes, config format and the `page` shim for existing PagerDuty scripts. Level names come from your config; `heads-up` and `wake-me` are examples.
+> `yo-human help` lists every command. The [M1 contract](docs/specs/2026-10-26-m1-contract-design.md) has the full CLI, exit codes, config format and the `page` shim for existing PagerDuty scripts. Level names come from your config (`yo-human levels` lists them, quietest first); `heads-up` and `wake-me` are examples.
 
 ```console
 $ yo-human notify --level heads-up --title "Checkout API error rate rising" \
@@ -45,7 +45,17 @@ $ yo-human resolve --dedup-key checkout-errors --note "Rolled back"
 RESULT resolved 01JBQ3X7M1T5G9B3J8Q2N6W4ZC
 ```
 
-The first stdout line is always `RESULT <status> <id>`, and `--json` prints one object instead. Agents act on the exit code, among them 0 done, 64 bad call, 75 queued, 69 every channel refused and 78 config problem.
+The first stdout line is always `RESULT <status> <id>`, and `--json` (after the command) prints one versioned object instead. Agents act on the exit code:
+
+| Exit | Meaning | What the agent does |
+|---|---|---|
+| 0 | Done: `delivered`, `partial`, `held` for quiet hours, `suppressed` as a repeat, `resolved`, `noop` or `ok` | Carry on |
+| 64 | The call is wrong (a bad flag, level or argument) | Fix the call |
+| 69 | Failed for good: no channel can take it, or a service the call needs cannot be used | Don't retry the same call |
+| 70 | Internal error in yo-human | Report it |
+| 74 | The local store could not be read or written | Tell the human |
+| 75 | Queued: the next call or `yo-human flush` retries it | Follow `next` |
+| 78 | A config problem only the human can fix, such as a missing secret | Tell the human |
 
 ```mermaid
 flowchart TD
@@ -74,7 +84,7 @@ Solid lines are M1; dashed lines come later. Re-paging until someone acknowledge
 
 ## Build from source
 
-Today this builds the scaffold. You need Go 1.27 (CI pins 1.27.3), `make` and `git`, on Linux or macOS.
+You need Go 1.27 (CI pins 1.27.3), `make` and `git`, on Linux or macOS.
 
 ```sh
 git clone https://github.com/Exploded-views/yo-human.git
@@ -83,6 +93,8 @@ make build            # dist/yo-human
 dist/yo-human version # prints: yo-human <version> <commit>
 make test             # go test -race ./...
 ```
+
+Then set it up: `yo-human config init` writes a starter config, the pages in [docs/setup/](docs/setup/README.md) set up each channel (secrets go in with `yo-human secret set <name>`, piped on stdin), `yo-human config check` validates the result, `yo-human channel test <instance>` sends one test message, and a [cron flush](docs/setup/cron-flush.md) sends what quiet hours held and retries what failed. Agents learn the contract from the skill in [skills/yo-human/SKILL.md](skills/yo-human/SKILL.md).
 
 `make tools` installs the pinned linters and scanners, and `make ci` runs every gate in CI's order. [CONTRIBUTING.md](CONTRIBUTING.md) covers the rest, including `make ci-base` before a push.
 
@@ -93,7 +105,7 @@ v1 is M0 plus M1: mostly silence, then a page that reaches you when something br
 | Milestone | Delivers | Status |
 |---|---|---|
 | M0 Scaffold | Go module, `yo-human version`, CI on Linux and macOS, lint, coverage and perf ratchets, secret scan | On `main`; branch protection pending |
-| M1 Notify (v1) | `notify`, `resolve`, `status`, `flush`, `levels`, config and secret commands, the `page` shim; PagerDuty, ntfy and Bark; an agent skill; `v0.1.0` | In progress, not on `main` |
+| M1 Notify (v1) | `notify`, `resolve`, `status`, `flush`, `levels`, config and secret commands, the `page` shim; PagerDuty, ntfy and Bark; an agent skill; `v0.1.0` | Built; `v0.1.0` not yet tagged |
 | M2 Ask | `ask` and `wait`, answers relayed to the asker | Planned |
 | M3 Living rules | Scoped, expiring rules set by talking to an agent; escalation of unanswered questions | Planned |
 | M4 Channel SDK | Out-of-process channel plugins holding only their own secrets; Pushover first | Planned |

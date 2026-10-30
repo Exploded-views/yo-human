@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  false,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "Waits 120s and reruns flush and hands off in session when attempts run out, but miscounts attempts ('attempt 3 of 5 remaining, 3 attempts left' rather than 4 more) and is vague on bounding, though it does say 'if the attempts run out'.",
+ "pass": false
+}

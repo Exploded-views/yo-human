@@ -23,7 +23,9 @@ M=github.com/Exploded-views/yo-human
 # (M/ = this module; alias=path imports path under alias, dot=path is a dot import)|what it
 # shows|code (optional; when set, the imports are plain, not blank)|build constraint (optional)|
 # pass (optional: text that the header of at least one lint.sh pass reporting the case must
-# contain, such as GOOS=darwin, so a case only some pass can see proves that pass ran)
+# contain, such as GOOS=darwin, so a case only some pass can see proves that pass ran)|
+# only (optional: text every one of the case's issue lines must contain, and at least one must
+# exist, so a case can tell which call in a file with two is the flagged one)
 cases='
 cmd/yo-human/casecore|cmd-only-cli|x.go|M/internal/core|cmd imports core
 cmd/yo-human/caseok|clean|x.go|M/internal/cli M/internal/version os|cmd imports cli, version and the standard library
@@ -109,6 +111,18 @@ internal/channel/registry/casenetrpc|registry-no-network|x.go|net/rpc|registry i
 internal/channel/registry/casestore|registry-imports|x.go|M/internal/store|registry imports store
 internal/channel/registry/casecore|registry-imports|x.go|M/internal/core|registry imports core
 internal/channel/registry/caseconfig|registry-imports|x.go|M/internal/config|registry imports config
+internal/config/caseyaml|clean|x.go|gopkg.in/yaml.v3|config imports gopkg.in/yaml.v3 (reviewed for config, secrets and cli)
+internal/secrets/caseyaml|clean|x.go|gopkg.in/yaml.v3|secrets imports gopkg.in/yaml.v3
+internal/cli/caseyaml|clean|x.go|gopkg.in/yaml.v3|cli imports gopkg.in/yaml.v3
+internal/core/caseyaml|core-imports|x.go|gopkg.in/yaml.v3|core imports gopkg.in/yaml.v3 (reviewed only for config, secrets and cli)
+internal/store/caseyaml|store-imports|x.go|gopkg.in/yaml.v3|store imports gopkg.in/yaml.v3
+internal/cli/caseulid|clean|x.go|github.com/oklog/ulid/v2|cli imports github.com/oklog/ulid/v2 (reviewed for cli)
+internal/config/caseulid|config-imports|x.go|github.com/oklog/ulid/v2|config imports github.com/oklog/ulid/v2 (reviewed only for cli)
+internal/core/caseulid|core-imports|x.go|github.com/oklog/ulid/v2|core imports github.com/oklog/ulid/v2
+internal/core/caseamd64v3|internal-no-network|x.go|net/http|core imports net/http in a !amd64.v3 file, with GOAMD64=v3 in the shell (the release is v1)||!amd64.v3|GOARCH=amd64 CGO_ENABLED=0
+internal/core/casearm64v9|internal-no-network|x.go|net/http|core imports net/http in a !arm64.v9.0 file, with GOARM64=v9.0 in the shell (the release is v8.0)||!arm64.v9.0|GOARCH=arm64 CGO_ENABLED=0
+internal/core/caseshellflags|internal-no-network|x.go|net/http|core imports net/http in a !shellprobe file, with GOFLAGS=-tags=shellprobe in the shell||!shellprobe
+internal/core/caseenvfile|internal-no-network|x.go|net/http|core imports net/http in a !envfileprobe file, with a go env file setting GOFLAGS=-tags=envfileprobe||!envfileprobe
 internal/hosted/bus/casesql|hosted-bus-imports|x.go|database/sql|hosted bus imports database/sql
 internal/hosted/bus/casehttp|internal-no-network|x.go|net/http|hosted bus imports net/http
 internal/hosted/bus/casestore|hosted-imports|x.go|M/internal/store|hosted bus imports the CLI store
@@ -138,6 +152,9 @@ internal/hosted/web/casehttp|clean|x.go|net/http|hosted web imports net/http (in
 internal/hosted/oauth/casehttp|clean|x.go|net/http|hosted oauth imports net/http (inbound)
 internal/hosted/web/caseegress|hosted-egress-only-via-app|x.go|M/internal/hosted/egress/bark|hosted web imports an egress package
 internal/hosted/app/caseegress|clean|x.go|M/internal/hosted/egress/bark M/internal/hosted/web M/internal/version|hosted app imports egress, web and version
+internal/cli/casetransport|forbidigo internal-no-network|x.go|net/http|cli uses http.DefaultTransport outside the e2e hook file|var _ = http.DefaultTransport
+internal/cli|forbidigo|testhooks_e2e.go|net/http syscall|the e2e hook file is excused for http.DefaultTransport only: its syscall.Socket is still flagged, and nothing else is|var _ = http.DefaultTransport; var _ = syscall.Socket|||opens sockets
+internal/core|forbidigo|x_e2e.go|net/http|an _e2e.go file outside the hook (core) still may not use http.DefaultTransport|var _ = http.DefaultTransport
 internal/hosted/web/caseclient|forbidigo|x.go|net/http|hosted web builds an http.Client (outbound only in egress)|var _ = &http.Client{}
 internal/hosted/oauth/caseget|forbidigo|x.go|net/http|hosted oauth calls http.Get (outbound only in egress)|var _ = http.Get
 internal/hosted/web/casedefault|forbidigo|x.go|net/http|hosted web uses http.DefaultClient|var _ = http.DefaultClient
@@ -182,7 +199,7 @@ for s in internal/cli internal/version internal/core internal/store internal/con
   internal/hosted/notify internal/hosted/egress/bark internal/hosted/policy; do
   mkdir -p "$d/$s" && echo "package $(basename "$s")" > "$d/$s/stub.go" || exit 2
 done
-echo "$cases" | while IFS='|' read -r dir want file imps what code tag pass; do
+echo "$cases" | while IFS='|' read -r dir want file imps what code tag pass only; do
   [ -z "$dir" ] && continue
   pkg=$(basename "$dir")
   mkdir -p "$d/$dir" || exit 2
@@ -228,8 +245,12 @@ if ! go vet ./... > "$d/vet.log" 2>&1; then
   echo "lint_rules_test: the probe module does not build:"; sed "s#$d/##g" "$d/vet.log"; exit 2
 fi
 # scripts/lint.sh, as make lint runs it: once per RELEASE_TARGETS target with cgo off, then once
-# on the host with cgo on. A case's issues are the union over every pass.
-sh "$root/scripts/lint.sh" --enable-only depguard,forbidigo --uniq-by-line=false \
+# on the host with cgo on. A case's issues are the union over every pass. It runs in a hostile
+# shell, as a developer's might be: settings that change which files a build sees must not reach
+# a pass (the release is built without them). The go env file's GOFLAGS is a separate tag: an
+# empty GOFLAGS does not override it, only GOENV=off does.
+printf 'GOFLAGS=-tags=envfileprobe\n' > "$d/goenv" || exit 2
+env GOAMD64=v3 GOARM64=v9.0 GOFLAGS=-tags=shellprobe GOENV="$d/goenv" sh "$root/scripts/lint.sh" --enable-only depguard,forbidigo --uniq-by-line=false \
   --max-issues-per-linter 0 --max-same-issues 0 --output.text.print-issued-lines=false \
   --show-stats=false ./... > "$d/lint.log" 2>&1
 status=$?
@@ -250,7 +271,7 @@ rules() {
 }
 
 total=0
-while IFS='|' read -r dir want file imps what code tag pass; do
+while IFS='|' read -r dir want file imps what code tag pass only; do
   [ -z "$dir" ] && continue
   total=$((total + 1))
   # Anchored at the line start, dots escaped: one case's issues never match another's file.
@@ -260,6 +281,10 @@ while IFS='|' read -r dir want file imps what code tag pass; do
   if [ "$rc" -gt 1 ]; then echo "lint_rules_test: grep failed (exit $rc)"; exit 2; fi
   got=clean
   if [ "$rc" -eq 0 ]; then got=$(rules "$d/case.log"); fi
+  if [ "$got" = "$want" ] && [ -n "$only" ]; then
+    other=$(grep -v -F -e "$only" "$d/case.log" | wc -l | tr -d ' ')
+    [ "$other" -ne 0 ] && got="$got, but $other issue lines lack '$only'"
+  fi
   if [ "$got" = "$want" ] && [ -n "$pass" ] && ! awk -v pat="$dir/$file:" -v need="$pass" '
       /^== golangci-lint / { inpass = index($0, need) > 0; next }
       inpass && index($0, pat) == 1 { found = 1 }

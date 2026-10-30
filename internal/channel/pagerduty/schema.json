@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "required": ["routing_key"],
+  "properties": {
+    "events_url": {"type": "string", "pattern": "^https://[^/]", "description": "the Events API v2 enqueue URL, https only; default https://events.pagerduty.com/v2/enqueue"},
+    "routing_key": {"type": "object", "required": ["secret"], "properties": {"secret": {"type": "string"}}, "additionalProperties": false}
+  },
+  "additionalProperties": false
+}

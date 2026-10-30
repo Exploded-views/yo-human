@@ -1,0 +1,7 @@
+version: 2
+builds:
+  - id: yo-human
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]

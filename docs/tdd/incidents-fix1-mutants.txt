@@ -1,0 +1,21 @@
+# Task 6 fix round 1 mutation checks (baseline `go test -race -count=1 ./internal/core` passes). Each run used -timeout 60s on a clean tree restored after.
+# A first script bug (read after truncate) emptied the source and made every mutant "fail" with no test named; those results are void and the run was repeated.
+MUTANT close and cancel in separate lock holds: KILLED ['TestReopenDuringResolveKeepsTheNewMessage']
+MUTANT claim path does not check the incident: KILLED ['TestReopenDuringResolveKeepsTheNewMessage', 'TestFlushClaimingDuringResolveDoesNotPage', 'TestStaleResolveNoteDoesNotCloseTheReopenedIncident']
+MUTANT requeue ignores the generation: KILLED ['TestResolveQueuesANoteThatFailed']
+MUTANT a resolve note outlives a reopen: KILLED ['TestReopenDuringResolveKeepsTheNewMessage', 'TestStaleResolveNoteDoesNotCloseTheReopenedIncident']
+MUTANT generation ignored everywhere: KILLED ['TestReopenDuringResolveKeepsTheNewMessage', 'TestStaleInflightSendIsNotRequeuedIntoTheReopenedIncident', 'TestStaleResolveNoteDoesNotCloseTheReopenedIncident']
+MUTANT delivered flag lost when scheduled first: KILLED ['TestResolveCancelsAHeldPageAfterALouderOneWasDelivered', 'TestLaterReceiptsAccumulateOnTheInstance']
+MUTANT notes to every reached instance: KILLED ['TestResolveCancelsPending', 'TestResolveCancelsWhatAChannelHolds']
+MUTANT late delivered landing gets no note: KILLED ['TestDeliveredSendLandingAfterResolveIsResolved']
+MUTANT late scheduled landing not cancelled: KILLED ['TestScheduledSendLandingAfterResolveIsCancelled']
+MUTANT generation not bumped on reopen: KILLED ['TestGenerationBumpsOnEveryOpen', 'TestReopenDuringResolveKeepsTheNewMessage', 'TestStaleInflightSendIsNotRequeuedIntoTheReopenedIncident']
+MUTANT lost claim always skipped: KILLED ['TestNotifyResolvedAndReopenedMidCallReportsResolved', 'TestNotifyResolvedMidCallReportsResolved']
+# first run: three survived; tests added (TestResolveCancelsEveryHeldSendOnAnInstance, a Scheduled check in TestLateLandingOfAnOlderGenerationDoesNotTouchTheNewOne); rerun:
+MUTANT scheduled ids overwrite: KILLED ['TestResolveCancelsEveryHeldSendOnAnInstance']
+MUTANT only the first scheduled id cancelled: KILLED ['TestResolveCancelsEveryHeldSendOnAnInstance']
+MUTANT late landing ignores the generation: KILLED ['TestLateLandingOfAnOlderGenerationDoesNotTouchTheNewOne']
+
+# -count=20 run of the concurrency, race and landing tests (after the last test addition, see below)
+$ go test -race -count=20 -timeout 500s -run "Concurrent|Separate|Reopen|Flush|Stale|Late|Landing|Resolve|Generation|Inflight|Expired|Mid|Held" ./internal/core
+ok  	github.com/Exploded-views/yo-human/internal/core	107.677s

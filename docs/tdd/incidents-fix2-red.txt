@@ -1,0 +1,20 @@
+$ go test -race -count=1 -timeout 120s ./internal/core 2>&1
+--- FAIL: TestFlushClaimingDuringResolveDoesNotPage (0.19s)
+    generation_test.go:164: no log line naming the cause (resolved) for the dropped entry
+--- FAIL: TestStaleInflightSendIsNotRequeuedIntoTheReopenedIncident (0.10s)
+    generation_test.go:200: the dropped requeue's log line must say reopened
+--- FAIL: TestExpiredIncidentsQueuedRetryIsDropped (0.12s)
+    generation_test.go:246: the dropped entry's log line must say expired (superseded)
+--- FAIL: TestOldGenerationHeldSendLandingIsCancelledWhileTheNewOneIsOpen (0.13s)
+    landing_test.go:122: Cancelled map[]; the old held page must be cancelled when it lands
+    landing_test.go:129: Cancelled map[] after the final resolve; it must not fire
+--- FAIL: TestOldGenerationHeldSendLandingIsCancelledWhileTheNewOneIsClosed (0.12s)
+    landing_test.go:136: Cancelled map[]; the old held page must be cancelled when it lands
+--- FAIL: TestOldGenerationDeliveredLandingIsNotedOnTheNewResolve (0.12s)
+    landing_test.go:144: incident &{Key:k Generation:2 Level:page Rank:1 Open:true Reached:[] ContentHash:<hex> Latest:new Opened:2026-10-30 12:00:00 +0000 UTC LastSent:2026-10-30 12:00:00 +0000 UTC Updated:2026-10-30 12:00:00 +0000 UTC}; want the delivery recorded on the open generation
+--- FAIL: TestOldGenerationDeliveredLandingIsNotedAtOnceWhileTheNewOneIsClosed (0.13s)
+    landing_test.go:155: notes 0; the late delivery needs a resolve note
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	13.459s
+FAIL
+exit=1

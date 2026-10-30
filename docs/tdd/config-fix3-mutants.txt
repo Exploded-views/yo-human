@@ -1,0 +1,64 @@
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/problem	1.478s
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.185s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.163s
+exit=0
+=== mutant: ShellQuote back to greedy \xHH escapes (internal/problem/problem.go)
+--- FAIL: TestShellQuote (0.00s)
+--- FAIL: TestShellQuoteRoundTrips (0.31s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/problem	0.413s
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+ok  	github.com/Exploded-views/yo-human/internal/config	(cached)
+FAIL
+exit=1
+=== mutant: Load keeps invalid names (internal/secrets/secrets.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+--- FAIL: TestSecretsInvalidStoredNamesAreNeverPrinted (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.186s
+ok  	github.com/Exploded-views/yo-human/internal/config	(cached)
+FAIL
+exit=1
+=== mutant: List prints invalid names (internal/secrets/secrets.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+--- FAIL: TestSecretsInvalidStoredNamesAreNeverPrinted (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.181s
+ok  	github.com/Exploded-views/yo-human/internal/config	(cached)
+FAIL
+exit=1
+=== mutant: Set drops entries it does not understand (internal/secrets/secrets.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+--- FAIL: TestSecretsSetKeepsEntriesItDoesNotUnderstand (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.184s
+ok  	github.com/Exploded-views/yo-human/internal/config	(cached)
+FAIL
+exit=1
+=== mutant: config FIFO open can block (internal/config/load.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestFIFOProjectFileIsANotice (3.01s)
+--- FAIL: TestFIFOExplicitFileIsAConfigProblem (3.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	6.171s
+FAIL
+exit=1
+=== mutant: non-regular config file read anyway (internal/config/load.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestFIFOProjectFileIsANotice (0.01s)
+--- FAIL: TestFIFOExplicitFileIsAConfigProblem (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.135s
+FAIL
+exit=1
+=== mutant: project search skips non-regular files (internal/config/paths.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	(cached)
+--- FAIL: TestFIFOProjectFileIsANotice (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.133s
+FAIL
+exit=1

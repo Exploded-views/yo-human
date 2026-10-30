@@ -1,0 +1,106 @@
+$ go test -count=1 -timeout 120s ./internal/core -run WaitingMessageClaimed|WaitingRepeat|LandingIsRecorded|ExpiredIncidentStops|QueuedCancelsNext
+--- FAIL: TestAWaitingMessageClaimedBeforeAResolveDoesNotPage (0.31s)
+    followup_test.go:33: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 1; want the waiting message dropped, nothing sent
+    followup_test.go:36: incident &{Key:k Project: Generation:1 Previous: Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex> Latest:t Opened:2026-10-30 12:00:00 +0000 UTC LastSent:2026-10-30 12:00:00 +0000 UTC Updated:2026-10-30 12:00:00 +0000 UTC}; the resolve must leave it closed
+--- FAIL: TestAWaitingRepeatClaimedBeforeAResolveDoesNotReopen (0.36s)
+    followup_test.go:53: sent [t Resolved: t louder]; want the first page and the resolve note, never the louder repeat
+    followup_test.go:56: incident &{Key:k Project: Generation:2 Previous:resolved Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex> Latest:louder Opened:2026-10-30 12:00:00 +0000 UTC LastSent:2026-10-30 12:00:00 +0000 UTC Updated:2026-10-30 12:00:00 +0000 UTC}; the late repeat reopened it
+--- FAIL: TestAWaitingRepeatOfAStrandedIncidentIsSent (0.29s)
+    followup_test.go:72: flush = {Status:ok ID: Channels:[] Next:<nil> DedupKey: Warnings:[]}; want the repeat sent: the incident reached no one
+--- FAIL: TestALandingIsRecordedBehindABusyLock (0.46s)
+    followup_test.go:109: Notify = "delivered", another yo-human process held the incident lock past this call's deadline, next &{Do:yo-human flush AfterSeconds:60 AttemptsLeft:5 Then:tell the human in your session}; want delivered, no error, no next
+    followup_test.go:112: incident &{Key:k Project: Generation:1 Previous: Level:page Rank:1 Open:true Reached:[] ContentHash:<hex> Latest:t Opened:2026-10-30 12:00:00 +0000 UTC LastSent:2026-10-30 12:00:00 +0000 UTC Updated:2026-10-30 12:00:00 +0000 UTC}; the landing must be recorded
+--- FAIL: TestResolvingAnExpiredIncidentStopsItsHeldPages (0.09s)
+    followup_test.go:145: cancelled map[]; want the scheduled page cancelled
+    followup_test.go:150: local got 1 sends after the window; the resolved page must not fire
+--- FAIL: TestAQueuedCancelsNextUsesTheLevelsRetry (0.09s)
+    followup_test.go:163: next &{Do:yo-human flush AfterSeconds:60 AttemptsLeft:5 Then:tell the human in your session}; want 2 attempts left, from the level's retry (2)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	1.609s
+FAIL
+[exit 1]
+
+$ go test -count=1 ./internal/cli -run HelpAfterACommand
+--- FAIL: TestHelpAfterACommandShowsItsFlags (0.00s)
+    help_test.go:43: status --help: {code:0 out:usage: yo-human <command> [flags]   (--json and --config <file> go after the command)
+               yo-human help                prints this
+        
+        commands:
+          version                          print the version
+          levels                           the configured levels, quietest first
+          notify --level <name> --title <text> [--ask <text>] [flags]
+                                           send a message at a level; the other flags are in the error a bad call prints
+          resolve --dedup-key <key>        close an incident
+          page [--low] <summary> [details] [dedup-key] | page [--low] --resolve <dedup-key>
+                                           the drop-in for the old paging script, mapped by the config's shim: block
+          flush                            send whatever is queued and due
+          status                           the queue, the dead letter and the open incidents
+          channel test <instance>          send one test message through one channel
+          config init|check|schema         write, validate or print the schema of a config
+          config trust [<file>]            the human trusts a project file, typing yes at their own terminal
+          secret set <name>                the human stores a secret piped in on stdin, typing yes at their own terminal
+          secret list                      list secret names and sizes
+         err:}; want its usage, with --all
+    help_test.go:43: notify --level x -h: {code:0 out:usage: yo-human <command> [flags]   (--json and --config <file> go after the command)
+               yo-human help                prints this
+        
+        commands:
+          version                          print the version
+          levels                           the configured levels, quietest first
+          notify --level <name> --title <text> [--ask <text>] [flags]
+                                           send a message at a level; the other flags are in the error a bad call prints
+          resolve --dedup-key <key>        close an incident
+          page [--low] <summary> [details] [dedup-key] | page [--low] --resolve <dedup-key>
+                                           the drop-in for the old paging script, mapped by the config's shim: block
+          flush                            send whatever is queued and due
+          status                           the queue, the dead letter and the open incidents
+          channel test <instance>          send one test message through one channel
+          config init|check|schema         write, validate or print the schema of a config
+          config trust [<file>]            the human trusts a project file, typing yes at their own terminal
+          secret set <name>                the human stores a secret piped in on stdin, typing yes at their own terminal
+          secret list                      list secret names and sizes
+         err:}; want its usage, with --body-file
+    help_test.go:43: resolve -h: {code:0 out:usage: yo-human <command> [flags]   (--json and --config <file> go after the command)
+               yo-human help                prints this
+        
+        commands:
+          version                          print the version
+          levels                           the configured levels, quietest first
+          notify --level <name> --title <text> [--ask <text>] [flags]
+                                           send a message at a level; the other flags are in the error a bad call prints
+          resolve --dedup-key <key>        close an incident
+          page [--low] <summary> [details] [dedup-key] | page [--low] --resolve <dedup-key>
+                                           the drop-in for the old paging script, mapped by the config's shim: block
+          flush                            send whatever is queued and due
+          status                           the queue, the dead letter and the open incidents
+          channel test <instance>          send one test message through one channel
+          config init|check|schema         write, validate or print the schema of a config
+          config trust [<file>]            the human trusts a project file, typing yes at their own terminal
+          secret set <name>                the human stores a secret piped in on stdin, typing yes at their own terminal
+          secret list                      list secret names and sizes
+         err:}; want its usage, with --note
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.014s
+FAIL
+[exit 1]
+
+$ go test -tags e2e -count=1 ./test/e2e -run ResolvingAnExpiredHeld
+--- FAIL: TestResolvingAnExpiredHeldPageStopsIt (0.19s)
+    resolve_test.go:160: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT held <ULID>
+        phone: held
+        bell: held
+        pager: held
+    resolve_test.go:162: yo-human resolve --dedup-key disk-7 -> exit 0
+        RESULT noop <ULID>
+    resolve_test.go:164: ntfy got [POST /]; want the held page deleted
+    resolve_test.go:167: yo-human flush -> exit 0
+        RESULT ok
+        bell: sent
+        pager: sent
+    resolve_test.go:168: bark fake received 1 requests, want 0: [POST /push]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	1.472s
+FAIL
+[exit 1]
+

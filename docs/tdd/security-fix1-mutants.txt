@@ -1,0 +1,155 @@
+KILLED  an explicit file in the user dir skips the ownership check
+  internal/config/private.go: 'if !within(real, p.UserDir) || !usersOwn(real) {' -> 'if !within(real, p.UserDir) {'
+  --- FAIL: TestExplicitFileInTheUserDirWritableByOthersNeedsTrust (0.00s)
+      explicit_test.go:101: error = <nil>, want a *problem.Problem
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  an explicit file never needs trust
+  internal/config/private.go: 'if !within(real, p.UserDir) || !usersOwn(real) {' -> 'if false {'
+  --- FAIL: TestOriginLayerRecordsTheKindOfEachLayer (0.00s)
+      containment_test.go:118: OriginLayer = map[channels.desk:1 channels.journal:2 channels.phone:2 channels.repo:3 deadline:3 human:2 incident_ttl:4 levels:3 version:2], want channels.repo from the project and incident_ttl from the explicit file outside the user directory
+  --- FAIL: TestExplicitFileOutsideTheUserDirNeedsTrust (0.00s)
+      explicit_test.go:52: error = <nil>, want a *problem.Problem
+  --- FAIL: TestExplicitFileOutsideTheUserDirMayNotDefineALogChannel (0.00s)
+      explicit_test.go:71: error = <nil>, want a *problem.Problem
+  --- FAIL: TestExplicitFileInTheUserDirWritableByOthersNeedsTrust (0.00s)
+      explicit_test.go:101: error = <nil>, want a *problem.Problem
+  --- FAIL: TestExplicitLinkFromTheUserDirToOutsideNeedsTrust (0.00s)
+      explicit_test.go:114: error = <nil>, want a *problem.Problem
+  --- FAIL: TestExplicitConfigFromTheCallerCannotExfiltrateASecret (0.05s)
+      humanonly_test.go:131: notify under a hostile --config: code=0 out="RESULT delivered <ULID>\nx: sent\n" err=""; want exit 78, no stdout and "not trusted" on stderr
+      humanonly_test.go:134: notify under a hostile YO_HUMAN_CONFIG: code=0 out="RESULT delivered <ULID>\nx: sent\n" err=""; want exit 78, no stdout and "not trusted" on stderr
+  --- FAIL: TestExplicitConfigFromTheCallerCannotAppendToAFile (0.05s)
+      humanonly_test.go:163: notify under a trusted --config with a log channel: code=0 out="RESULT delivered <ULID>\nj: sent\nphone: sent\n" err=""; want exit 78, no stdout and "log channel" on stderr
+      humanonly_test.go:165: the log channel wrote $TMPDIR/TestExplicitConfigFromTheCallerCannotAppendToAFile812365605/001/.zshrc: <nil>
+  [go test -count=1 ./internal/config ./internal/cli exit 1]
+
+KILLED  group-writable counts as the user's own
+  internal/config/private.go: 'fi.Mode().Perm()&0o022 != 0' -> 'fi.Mode().Perm()&0o002 != 0'
+  --- FAIL: TestExplicitFileInTheUserDirWritableByOthersNeedsTrust (0.00s)
+      explicit_test.go:101: error = <nil>, want a *problem.Problem
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  the directory's ownership is not checked
+  internal/config/private.go: 'for _, p := range []string{path, filepath.Dir(path)} {' -> 'for _, p := range []string{path} {'
+  --- FAIL: TestExplicitFileInTheUserDirWritableByOthersNeedsTrust (0.00s)
+      explicit_test.go:101: error = <nil>, want a *problem.Problem
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  within accepts any path
+  internal/config/private.go: 'return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))' -> 'return err == nil'
+  FAIL	github.com/Exploded-views/yo-human/internal/config [build failed]
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  the explicit path is not resolved
+  internal/config/private.go: 'real := resolved(p.Explicit)' -> 'real := p.Explicit'
+  --- FAIL: TestLoadReturnsEveryFindingJoined (0.00s)
+      containment_test.go:125: err = the config file "$TMPDIR/TestLoadReturnsEveryFindingJoined611853605/001/c.yaml", named by --config or YO_HUMAN_CONFIG, is not trusted, or has changed since it was; want a join of every finding
+  --- FAIL: TestWarningNoticesCarryTheirProblem (0.00s)
+      containment_test.go:137: notices = [], err the config file "$TMPDIR/TestWarningNoticesCarryTheirProblem2397905015/001/c.yaml", named by --config or YO_HUMAN_CONFIG, is not trusted, or has changed since it was; want one warning notice carrying its problem
+  --- FAIL: TestExplicitLinkFromTheUserDirToOutsideNeedsTrust (0.00s)
+      explicit_test.go:114: error = <nil>, want a *problem.Problem
+  --- FAIL: TestDefaults (0.00s)
+      load_test.go:124: Load: the config file "$TMPDIR/TestDefaults2303580571/001/c.yaml", named by --config or YO_HUMAN_CONFIG, is not trusted, or has changed since it was
+  --- FAIL: TestLevelFieldsDecoded (0.00s)
+      load_test.go:141: Load: the config file "$TMPDIR/TestLevelFieldsDecoded402589551/001/c.yaml", named by --config or YO_HUMAN_CONFIG, is not trusted, or has changed since it was
+  --- FAIL: TestJSONConfigAccepted (0.00s)
+      load_test.go:196: Load: the config file "$TMPDIR/TestJSONConfigAccepted4011818478/001/c.yaml", named by --config or YO_HUMAN_CONFIG, is not trusted, or has changed since it was
+  --- FAIL: TestLoadProblems (0.00s)
+      --- FAIL: TestLoadProblems/unknown_top-level_key (0.00s)
+          load_test.go:245: What = "the config file \"$TMPDIR/TestLoadProblemsunknown_top-level_key1389958325/001/c.yaml\", named by --config or YO_HUMAN_CONFIG, is not trusted, or has changed since it was", want it to contain "colour"
+      --- FAIL: TestLoadProblems/wrong_type (0.00s)
+          load_test.go:245: What = "the config file \"$TMPDIR/TestLoadProblemswrong_type1245822763/001/c.yaml\", named by --config or YO_HUMAN_CONFIG, is not trusted, or has changed since it was", want it to contain "deadline"
+      --- FAIL: TestLoadProblems/bad_level_shape (0.00s)
+          load_test.go:245: What = "the config file \"$TMPDIR/TestLoadProblemsbad_level_shape1512727732/001/c.yaml\", named by --config or YO_HUMAN_CONFIG, is not trusted, or has changed since it was", want it to contain "levels.0.send.0.interruption"
+      --- FAIL: TestLoadProblems/bad_duration (0.00s)
+          load_test.go:245: What = "the config file \"$TMPDIR/TestLoadProblemsbad_duration3328085755/001/c.yaml\", named by --config or YO_HUMAN_CONFIG, is not trusted, or has changed since it was", want it to contain "deadline"
+      --- FAIL: TestLoadProblems/bad_clock (0.00s)
+          load_test.go:245: What = "the config file \"$TMPDIR/TestLoadProblemsbad_clock2380192557/001/c.yaml\", named by --config or YO_HUMAN_CONFIG, is not trusted, or has changed since it was", want it to contain "windows"
+      --- FAIL: TestLoadProblems/not_yaml (0.00s)
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  a trusted explicit file outside may define a log channel
+  internal/config/containment.go: '(kind != LayerProject && kind != LayerExplicitOutside)' -> 'kind != LayerProject'
+  --- FAIL: TestExplicitFileOutsideTheUserDirMayNotDefineALogChannel (0.00s)
+      explicit_test.go:71: error = <nil>, want a *problem.Problem
+  --- FAIL: TestExplicitConfigFromTheCallerCannotAppendToAFile (0.05s)
+      humanonly_test.go:163: notify under a trusted --config with a log channel: code=0 out="RESULT delivered <ULID>\nj: sent\nphone: sent\n" err=""; want exit 78, no stdout and "log channel" on stderr
+      humanonly_test.go:165: the log channel wrote $TMPDIR/TestExplicitConfigFromTheCallerCannotAppendToAFile3255931891/001/.zshrc: <nil>
+  [go test -count=1 ./internal/config ./internal/cli exit 1]
+
+KILLED  the untrusted-project notice tells the agent to trust
+  internal/config/load.go: '"tell the human: they can read it and run `yo-human config trust %s` in their own terminal"' -> '"read it, then run `yo-human config trust %s`"'
+  --- FAIL: TestUntrustedProjectNoticeTellsTheHuman (0.00s)
+      explicit_test.go:129: notice = "ignoring the project config \"$TMPDIR/TestUntrustedProjectNoticeTellsTheHuman301894839/001/cwd/.yo-human.yaml\": it is not trusted, or has changed since it was; read it, then run `yo-human config trust $TMPDIR/TestUntrustedProjectNoticeTellsTheHuman301894839/001/cwd
+  [go test -count=1 ./internal/config exit 1]
+
+KILLED  any answer confirms
+  internal/cli/tty.go: 'if strings.TrimSpace(answer) != "yes" {' -> 'if false {'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  [go test -count=1 ./internal/cli exit 1]
+
+KILLED  no terminal means go ahead
+  internal/cli/tty.go: 'return humanOnly(command)' -> 'return nil'
+  --- FAIL: TestConfigTrustNeedsTheHumansTerminal (0.01s)
+      humanonly_test.go:55: trust with no terminal: code=0 out="RESULT ok\ntrusting \"$TMPDIR/TestConfigTrustNeedsTheHumansTerminal2230706135/002/.yo-human.yaml\"\ntrusted; a change to the file un-trusts it until you run this again\n" err=""; want exit 64, no stdout and "error: " on stderr
+      humanonly_test.go:55: trust with no terminal stderr = "", want it to contain "ask the human to run"
+  --- FAIL: TestSecretSetNeedsTheHumansTerminal (0.01s)
+      humanonly_test.go:88: secret set with no terminal: code=0 out="RESULT ok\nstored secret pd-critical\n" err=""; want exit 64, no stdout and "error: " on stderr
+      humanonly_test.go:88: secret set with no terminal stderr = "", want it to contain "ask the human to run"
+  [go test -count=1 ./internal/cli exit 1]
+
+KILLED  --yes is not audited
+  internal/cli/tty.go: 'return audit(event, record)' -> 'return nil'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  [go test -count=1 ./internal/cli exit 1]
+
+KILLED  trust always counts as scripted
+  internal/cli/trustcmd.go: 'approve(scripted, "config trust"' -> 'approve(true, "config trust"'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  [go test -count=1 ./internal/cli exit 1]
+
+KILLED  secret set always counts as scripted
+  internal/cli/secretcmd.go: 'approve(scripted, "secret set "+name' -> 'approve(true, "secret set "+name'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  [go test -count=1 ./internal/cli exit 1]
+
+KILLED  the refusal names the bypass
+  internal/cli/tty.go: '"stop and ask the human to run `yo-human "+command+"` in their terminal; never run it for them"' -> '"stop and ask the human to run `yo-human "+command+"` in their terminal, or pass --yes"'
+  --- FAIL: TestConfigTrustNeedsTheHumansTerminal (0.00s)
+      humanonly_test.go:55: trust with no terminal stderr = "error: config trust changes what yo-human trusts, so only the human may run it, at their own terminal, and this process has none\nvalid: the human running yo-human config trust in their own terminal, where they type yes to confirm\nfix: stop and ask the human to run `yo-human config trust` in their terminal, or pass --yes\n", must not cont
+  --- FAIL: TestSecretSetNeedsTheHumansTerminal (0.00s)
+      humanonly_test.go:88: secret set with no terminal stderr = "error: secret set pd-critical changes what yo-human trusts, so only the human may run it, at their own terminal, and this process has none\nvalid: the human running yo-human secret set pd-critical in their own terminal, where they type yes to confirm\nfix: stop and ask the human to run `yo-human secret set pd-critical` in their termin
+  --- FAIL: TestYesAppearsOnlyInTheUsage (0.00s)
+      humanonly_test.go:235: ../../internal/cli/tty.go:32 mentions --yes outside the usage: "stop and ask the human to run `yo-human "+command+"` in their terminal, or pass --yes", command)
+  [go test -count=1 ./internal/cli exit 1]
+
+KILLED  --yes is not recognised
+  internal/cli/tty.go: 'return a == "-"+"-yes"' -> 'return a == "-"+"-yess"'
+  --- FAIL: TestConfigTrustWithYesNeedsNoTerminalAndIsAudited (0.00s)
+      humanonly_test.go:203: trust --yes with no terminal: code=64 out="" err="error: config trust takes at most one file\nvalid: yo-human config trust [<path to .yo-human.yaml or .yo-human.json>]\nfix: read the file, then run `yo-human config trust ./.yo-human.yaml`\n"; want exit 0 and RESULT ok
+      humanonly_test.go:204: stdout = "", want it to contain "trusting"
+  --- FAIL: TestSecretSetWithYesNeedsNoTerminalAndIsAuditedWithoutTheValue (0.00s)
+      humanonly_test.go:213: secret set --yes with no terminal: code=64 out="" err="error: secret set takes one name and reads the value from stdin; a value is never accepted as an argument\nvalid: yo-human secret set <name>, with the value piped in: op read \"op://<vault>/<item>/<field>\" | yo-human secret set <name>\nfix: remove the extra arguments and pipe the value in on stdin\n"; want exit 0 an
+      humanonly_test.go:215: secrets file = "", want it to contain "pd-critical: FAKE-SCRIPTED-VALUE"
+  [go test -count=1 ./internal/cli exit 1]
+
+KILLED  e2e: the binary trusts a caller's --config outside the user dir
+  internal/config/private.go: 'if !within(real, p.UserDir) || !usersOwn(real) {' -> 'if false {'
+  --- FAIL: TestCallerConfigCannotExfiltrateASecret (0.04s)
+      humanonly_test.go:68: yo-human --config $TMPDIR/TestCallerConfigCannotExfiltrateASecret2136836277/001/work/hostile.yaml notify --level x --title t -> exit 0
+          RESULT delivered <ULID>
+  --- FAIL: TestCallerConfigCannotAppendToAShellStartupFile (0.06s)
+      humanonly_test.go:92: yo-human config trust $TMPDIR/TestCallerConfigCannotAppendToAShellStartupFile272793712/001/work/hostile.yaml -> exit 0
+          RESULT ok
+  [go test -tags e2e -count=1 ./test/e2e -run 'Caller|HumanOnly|FromAPipe|YesIsFor|UntrustedProject' exit 1]
+
+KILLED  e2e: no terminal means go ahead
+  internal/cli/tty.go: 'return humanOnly(command)' -> 'return nil'
+  --- FAIL: TestHumanOnlyCommandsRefuseWithoutATerminal (0.02s)
+      humanonly_test.go:111: yo-human config trust $TMPDIR/TestHumanOnlyCommandsRefuseWithoutATerminal2246553475/001/work/.yo-human.yaml -> exit 0
+          RESULT ok
+  [go test -tags e2e -count=1 ./test/e2e -run 'Caller|HumanOnly|FromAPipe|YesIsFor|UntrustedProject' exit 1]
+
+
+# Erratum (added in the fix4 round): entries above whose output is only "[build failed]" did not compile, so they were not killed by a test. The mutation runner now marks them BUILD. Each was rerun as a compilable mutant (or, where the code was replaced since, on the code that replaced it) in security-fix4-mutants.txt, "Reruns" section.

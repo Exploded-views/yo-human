@@ -1,0 +1,21 @@
+skills used: ['yo-human-eval:yo-human']
+
+Next I'd run one command, using the same dedup key as the original notify:
+
+```
+yo-human resolve --dedup-key disk-full-build-FAKE --note "Disk cleaned, now at 40%"
+```
+
+I'd set `YO_HUMAN_PROJECT` and `YO_HUMAN_AGENT` in the environment for this call, as for the earlier notify. I'd add `--json` only if I needed to parse the output.
+
+Why `resolve` and not another `notify`:
+- The skill says to resolve once the problem is fixed and verified, and not to send a new notify to say "fixed". Both conditions are met here: I cleaned the disk and confirmed it is at 40%.
+- `resolve` cancels anything still queued for that key. It also tells the channels the human was reached on that the issue is over.
+
+What I'd do with the result:
+- **Exit 0** with `RESULT resolved <id>` or `RESULT noop`: done. I'd carry on, because `noop` just means the key was unknown or already resolved.
+- **Exit 69**: a scheduled send couldn't be cancelled, so the human may still be paged for something already fixed. I'd tell them directly in my session.
+- **Exit 64**: my call was wrong. I'd read the `error`, `valid` and `fix` lines, correct the call and re-run it.
+- **Exit 78, 74 or 70**: I'd stop and tell the human in my session, quoting the error text. I wouldn't retry or edit the config.
+
+I wouldn't re-run `levels`, send a new `notify`, or change the dedup key.

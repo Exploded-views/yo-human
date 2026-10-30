@@ -1,0 +1,64 @@
+# what this is: task 11 mutation checks: input limits and validation, lazy channel building, the backlog rules, result-with-problem handling, status, channel test, the clock/registry hooks, core noChannel and the perf Exit field; each run is `go test -count=1 -timeout 150s <package>` under a 300s harness timeout
+# test command: go test -count=1 -timeout 150s ./internal/cli (or ./internal/core, ./tools/perf for the mutants there); baseline passes
+# Mutants that survived at first (an action label that is not UTF-8, a source flag that is not flattened, two body sources, a missing --level, an incident key and title that are not flattened) got tests; mutants that did not build (BUILD-ERR) were rewritten and re-run. Final status below.
+
+now ignores the clock hook -> killed by TestChannelTestFlushesWhatIsDueFirst
+backlog channels are never built -> killed by TestChannelTestFlushesWhatIsDueFirst
+a must channel that cannot be built is ignored -> killed by TestChannelTestUsageAndConfigErrors
+a backlog build failure is dropped -> killed by TestChannelTestWithABrokenBacklogOnlyWarns
+secrets read even with nothing to build -> killed by TestFlushWithNothingDueReadsNoSecrets
+a result with a problem is replaced by the problem -> killed by TestChannelTestReportsAFailure
+status writes the incidents back -> killed by TestStatusIsEmptyAndNeedsNeitherSecretsNorChannels
+capabilities left empty -> killed by TestNotifyAlsoSendsTheBacklogOfOtherChannels  (first run: BUILD-ERR)
+the pipeline ignores the clock hook -> killed by TestChannelTestFlushesWhatIsDueFirst
+no due instances are named -> killed by TestChannelTestFlushesWhatIsDueFirst
+body limit one too high -> killed by TestNotifyInputLimits
+body limit one too low -> killed by TestNotifyAcceptsTheLimits
+title limit one too high -> killed by TestNotifyInputLimits
+four actions allowed -> killed by TestNotifyInputLimits
+key limit one too high -> killed by TestNotifyInputLimits
+key limit one too low -> killed by TestNotifyAcceptsTheLimits
+links are not checked for safety -> killed by TestNotifyInputLimits
+an action may have no label -> killed by TestNotifyInputLimits
+an action may be non-UTF-8 -> killed by TestNotifyInputLimits  (first run: SURVIVED)
+a non-UTF-8 body is accepted -> killed by TestNotifyInputLimits
+an oversized body is sized by what was read -> killed by TestNotifyReadsTheBodyFromAFileOrStdin
+the environment is not read for the source -> killed by TestDefaultsFromEnv
+a source flag is not flattened -> killed by TestDefaultsFromEnv  (first run: SURVIVED)
+a positional argument is accepted -> killed by TestNotifyInputLimits
+a control character in a key is accepted -> killed by TestNotifyInputLimits  (first run: BUILD-ERR)
+a title is not flattened -> killed by TestNotifyFlattensTitleAndAsk
+an ask is not flattened -> killed by TestNotifyFlattensTitleAndAsk
+two body sources accepted -> killed by TestNotifyInputLimits  (first run: SURVIVED)
+a body of - is a literal -> killed by TestNotifyInputLimits
+ask is never required -> killed by TestCommandsFailOnAnUnreadableQueue  (first run: BUILD-ERR)
+a missing ask passes -> killed by TestNotifyAskRequiredUnlessOptional
+notify builds every channel -> killed by TestNotifyWarnsOfABacklogChannelItCannotBuild
+notify drops the backlog warnings -> killed by TestNotifyWarnsOfABacklogChannelItCannotBuild  (first run: BUILD-ERR)
+a missing level passes the flag check -> killed by TestNotifyRequiredFlags  (first run: SURVIVED)
+a blank title passes -> killed by TestNotifyRequiredFlags
+a closed incident still builds its channels -> killed by TestResolveClosesTheIncidentAndNotesWhereItReached
+resolve builds nothing -> killed by TestResolveClosesTheIncidentAndNotesWhereItReached
+resolve accepts no key -> killed by TestResolveUsage
+a resolve note is not checked -> killed by TestResolveUsage  (first run: BUILD-ERR)
+flush drops the backlog problems -> killed by TestFlushLeavesAnUnbuildableChannelsEntriesQueued  (first run: BUILD-ERR)
+the test message is not passive -> killed by TestChannelTestSendsOneTestMessage
+config errors are not problems -> killed by TestChannelTestReportsAFailure
+channel test does not flush -> killed by TestChannelTestFlushesWhatIsDueFirst  (first run: BUILD-ERR)
+a failed test is reported queued -> killed by TestChannelTestReportsAFailure
+the test spec names no instance -> killed by TestChannelTestSendsOneTestMessage
+held and queued swapped -> killed by TestStatusShowsQueuedHeldDeadIncidents
+resolved incidents shown -> killed by TestResolveClosesTheIncidentAndNotesWhereItReached
+expired incidents shown -> killed by TestStatusDoesNotShowAnExpiredIncident
+a dead reason is not flattened -> killed by TestStatusSurvivesAHostileDedupKeyAndReason
+an incident key is not flattened -> killed by TestStatusFlattensWhatTheIncidentFileHolds  (first run: SURVIVED)
+an incident title is not flattened -> killed by TestStatusFlattensWhatTheIncidentFileHolds  (first run: SURVIVED)
+status lists only what is due -> killed by TestStatusShowsQueuedHeldDeadIncidents
+flush is not a command -> killed by TestCommandsFailOnAnUnusableStateDirectory
+channel is not a command -> killed by TestChannelTestSendsOneTestMessage
+core buries a configured channel -> killed by TestUnreadableOrOrphanedEntriesGoToTheDeadLetter
+core leaves the claimed entry in flight -> killed by TestAnEntryForAChannelNotBuiltStaysQueued
+core reports an unbuilt channel dead -> killed by TestAnEntryForAChannelNotBuiltStaysQueued
+perf: the expected exit is an error -> killed by TestNonZeroExitOfScenarioIsError
+perf: success accepted when a failure is expected -> killed by TestADifferentExitCodeIsStillAnError
+perf: a nil error returned for a wrong exit -> killed by TestADifferentExitCodeIsStillAnError

@@ -1,0 +1,10 @@
+$ go test -count=1 ./internal/channel/ntfy/ -run 'OnlyHTTPLinks|RedirectIsNotFollowed'
+--- FAIL: TestOnlyHTTPLinksReachThePhone (0.01s)
+    ntfy_test.go:281: #6: err=<nil> requests=1
+    ntfy_test.go:281: #6: err=<nil> requests=1
+    ntfy_test.go:281: #7: err=<nil> requests=1
+    ntfy_test.go:281: #7: err=<nil> requests=1
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.024s
+FAIL
+exit=1

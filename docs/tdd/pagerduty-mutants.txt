@@ -1,0 +1,54 @@
+# M1 task 9 pagerduty mutation checks. Each mutant is one textual change to internal/channel/pagerduty, run with go test -count=1 -timeout 120s on the pagerduty and config packages, then restored.
+# First pass: one survived (the ask was not truncated; the body test now also sends an oversized ask) and two failed to build (rewritten). None survive now.
+# Raw:
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/channel/pagerduty	0.214s
+ok  	github.com/Exploded-views/yo-human/internal/config	0.057s
+exit=0
+KILLED resolve sent as trigger (brief's mutant) ['TestResolveShape']
+KILLED critical mapped to error ['TestSeverities']
+KILLED passive mapped to warning ['TestSeverities']
+KILLED dedup key ignored, id always used ['TestTriggerShape']
+KILLED source default dropped ['TestDefaultsAndOmissions']
+KILLED component dropped ['TestTriggerShape']
+KILLED summary not truncated ['TestSummaryTruncatedTo1024']
+KILLED body not truncated ['TestBodyTruncatedKeepsLinks']
+KILLED ask not truncated ['TestBodyTruncatedKeepsLinks']
+KILLED action links dropped ['TestBodyTruncatedKeepsLinks', 'TestTriggerShape']
+KILLED link dropped ['TestBodyTruncatedKeepsLinks', 'TestTriggerShape']
+KILLED link unchecked ['TestNoSecretInErrors', 'TestOnlySafeLinksAreSent']
+KILLED action unchecked ['TestNoSecretInErrors', 'TestOnlySafeLinksAreSent']
+KILLED link error quotes URL ['TestNoSecretInErrors', 'TestOnlySafeLinksAreSent']
+KILLED 202 transient ['TestBodyTruncatedKeepsLinks', 'TestDefaultsAndOmissions', 'TestErrorKinds', 'TestResolveShape']
+KILLED 400 transient ['TestErrorKinds']
+KILLED 429 permanent ['TestErrorKinds']
+KILLED 408 permanent ['TestErrorKinds']
+KILLED 5xx permanent ['TestErrorKinds']
+KILLED 200 accepted ['TestErrorKinds']
+KILLED status text includes body ['TestNoSecretInErrors']
+KILLED raw client error ['TestNoSecretInErrors']
+KILLED user agent dropped ['TestResolveShape', 'TestTriggerShape']
+KILLED content type dropped ['TestTriggerShape']
+KILLED resolve empty key allowed ['TestResolveNeedsKey']
+KILLED receipt provider id dropped ['TestTriggerShape']
+KILLED send ignores options ['TestValidateOptions']
+KILLED cancel succeeds ['TestCancelUnsupported']
+KILLED validate accepts options ['TestValidateOptions']
+KILLED redirects followed ['TestRedirectIsNotFollowed']
+KILLED http url accepted ['TestNewValidatesSettings']
+KILLED empty hostname accepted ['TestNewValidatesSettings']
+KILLED userinfo accepted ['TestNewValidatesSettings']
+KILLED query accepted ['TestNewValidatesSettings']
+KILLED force query accepted ['TestNewValidatesSettings']
+KILLED fragment accepted ['TestNewValidatesSettings']
+KILLED default url http ['TestDefaultEventsURL']
+KILLED empty key accepted ['TestNewValidatesSettings']
+KILLED key whitespace accepted ['TestNewValidatesSettings']
+KILLED MaxTitle wrong ['TestTypeDeclaration']
+KILLED NativeDedup dropped ['TestTypeDeclaration']
+KILLED Resolve cap dropped ['TestTypeDeclaration']
+KILLED schema key not required ['TestPagerDutySchemaAcceptsSecretReferences']
+KILLED schema http allowed ['TestPagerDutySchemaAcceptsSecretReferences']
+=== count=20
+ok  	github.com/Exploded-views/yo-human/internal/channel/pagerduty	8.877s
+exit=0

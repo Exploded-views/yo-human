@@ -1,0 +1,31 @@
+$ go test -race -count=1 -timeout 120s ./internal/core 2>&1
+--- FAIL: TestGenerationBumpsOnEveryOpen (0.06s)
+    generation_test.go:68: first open = 0, want 1
+--- FAIL: TestReopenDuringResolveKeepsTheNewMessage (5.06s)
+    generation_test.go:127: timed out: a hook or goroutine the test waits for never ran
+--- FAIL: TestFlushClaimingDuringResolveDoesNotPage (5.07s)
+    generation_test.go:156: timed out: a hook or goroutine the test waits for never ran
+--- FAIL: TestStaleInflightSendIsNotRequeuedIntoTheReopenedIncident (0.12s)
+    generation_test.go:194: sent [old new old]; the old page must not be sent again into the new incident
+    generation_test.go:197: queue 1/0/0
+--- FAIL: TestStaleResolveNoteDoesNotCloseTheReopenedIncident (0.11s)
+    generation_test.go:219: Resolved [k]; the old note must not close the reopened incident's alert
+--- FAIL: TestExpiredIncidentsQueuedRetryIsDropped (0.10s)
+    generation_test.go:237: sent [old new old]; the old queued retry must be dropped, not sent after the new page
+--- FAIL: TestNotifyResolvedAndReopenedMidCallReportsResolved (0.08s)
+    generation_test.go:255: got "queued" next=&{Do:yo-human flush AfterSeconds:60 AttemptsLeft:5 Then:tell the human in your session}; its incident was resolved under it
+--- FAIL: TestDeliveredSendLandingAfterResolveIsResolved (0.05s)
+    landing_test.go:43: Resolved []; the alert that landed after the resolve must be closed
+--- FAIL: TestScheduledSendLandingAfterResolveIsCancelled (0.05s)
+    landing_test.go:57: Cancelled [], want {Instance:pd ProviderID:PD-FAKE-1 Scheduled:true}
+--- FAIL: TestResolveCancelsAHeldPageAfterALouderOneWasDelivered (0.10s)
+    landing_test.go:121: Cancelled [], want the held page
+--- FAIL: TestResolveCancelsAndNotesWhenDeliveredThenScheduled (0.09s)
+    landing_test.go:143: sent 2; want two pages and a note
+--- FAIL: TestLaterReceiptsAccumulateOnTheInstance (0.20s)
+    repeat_notify_test.go:245: pd = {Instance:pd Delivered:false Scheduled:[PD-FAKE-2]}; want delivered, with the later held send
+    repeat_notify_test.go:248: sched = {Instance:sched Delivered:true Scheduled:[]}; want the earlier held send kept, and delivered
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	21.166s
+FAIL
+exit=1

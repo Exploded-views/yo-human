@@ -4,13 +4,15 @@ You must follow the constitution in [constitution.md](constitution.md) when doin
 
 The one way AI agents reach their human: a Go CLI, called on demand (no daemon), delivering through channels (PagerDuty, ntfy, Bark; Heeler later).
 
-Status: M0 scaffold (Go module, `yo-human version`, CI gates). No notify yet: that is M1. Hosted mode (H1, `docs/plans/2026-10-27-hosted-h1.md`) has its skeleton: `yo-human-hosted version`, its own layer rules and the token leak rule.
+Status: the M0 scaffold and M1 (v1 notify) exist: `notify`, `resolve`, `flush`, `status`, `levels`, `page`, `channel test`, `config init|check|schema|trust` and `secret set|list`, over ntfy, Bark and PagerDuty. The contract is `docs/specs/2026-10-26-m1-contract-design.md` with its amendments; the agent skill is `skills/yo-human/SKILL.md`. Hosted mode (H1, `docs/plans/2026-10-27-hosted-h1.md`) has its skeleton: `yo-human-hosted version`, its own layer rules and the token leak rule.
 
 ## Commands
 
 - `make build`: `dist/yo-human` and `dist/yo-human-hosted`, `CGO_ENABLED=0 -trimpath`
 - `make test`: `go test -race ./...`
-- `make lint`: `gofmt` check, `go vet ./...`, and `scripts/lint.sh` (golangci-lint per `RELEASE_TARGETS` target with cgo off and on; depguard enforces the layers, the CLI's and hosted mode's: `internal/hosted/` never imports the CLI side or the reverse, and only `internal/hosted/egress` makes outbound HTTP calls)
+- `make e2e`: the real binary (built with `-tags e2e`) against fake ntfy, Bark and PagerDuty servers
+- `make nohooks`: builds every `RELEASE_TARGETS` target as the release does and checks that none holds either e2e test hook; `make nodeps`: no target's binary links the JSON Schema library
+- `make lint`: `gofmt` check, `go vet ./...`, and `scripts/lint.sh` (golangci-lint per `RELEASE_TARGETS` target with cgo off and on; depguard enforces the layers, the CLI's and hosted mode's: `internal/hosted/` never imports the CLI side or the reverse, and only `internal/hosted/egress` makes outbound HTTP calls), then `go vet` and `golangci-lint` with `-tags e2e`
 - `make lint-rules-test`: each depguard and forbidigo rule against its probes in a temp module, through `scripts/lint.sh`
 - `make release-net-check`: per release target, `go list -deps ./cmd/yo-human` with the release settings imports no network package outside the channel implementations
 - `RELEASE_TARGETS`: the release GOOS/GOARCH list every release-side gate reads
@@ -18,6 +20,7 @@ Status: M0 scaffold (Go module, `yo-human version`, CI gates). No notify yet: th
 - `make perf`: p95 of each scenario against `perf-budgets.json`
 - `make secrets` / `make secrets-test`: gitleaks over full history / its tests
 - `make vuln`: govulncheck (advisory per PR, blocking at release)
+- `make release-check`: a goreleaser snapshot, each archive checked against `checksums.txt` and for test hooks (needs the network and a clone with its git history; not in `make ci`)
 - `make workflows`: lint `.github/workflows`
 - `make tools`: install the pinned tools; `make hooks`: install the lefthook pre-commit hook
 - `make smoke`: build, then run `dist/yo-human version` and `dist/yo-human-hosted version`

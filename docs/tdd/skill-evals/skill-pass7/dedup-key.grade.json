@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "Uses nudge with --ask and a stable --dedup-key 'disk-full-build-host', and states later passes reuse the same key; no timestamp/counter and the level is valid.",
+ "pass": true
+}

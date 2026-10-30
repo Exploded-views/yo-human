@@ -1,0 +1,99 @@
+# what this is: task 11 fix round 1 (RED): resolve is blocked by an unbuildable reached channel, entries are buried or sent under another config or type, status does not flush, rejected input is echoed whole, no ask or label limits, channel test has no transient status or shared deadline; the store, core and problem stubs (Park, ConfigPath, Clip) do nothing
+# command: go test -count=1 -timeout 300s ./internal/cli ./internal/core ./internal/store ./internal/problem
+--- FAIL: TestResolveStillCancelsWhenAReachedChannelCannotBeBuilt (0.34s)
+    round1_test.go:21: resolve: {code:78 out: err:error: secret "ntfy-topic", used by channels.phone.topic, is not set
+        valid: a name listed by `yo-human secret list`
+        fix: op read "op://<vault>/<item>/<field>" | yo-human secret set ntfy-topic
+        }; want the result, then exit 78
+    round1_test.go:22: stdout = "", want it to contain "pager: cancelled"
+    round1_test.go:23: stderr = "error: secret \"ntfy-topic\", used by channels.phone.topic, is not set\nvalid: a name listed by `yo-human secret list`\nfix: op read \"op://<vault>/<item>/<field>\" | yo-human secret set ntfy-topic\n", want it to contain "resolve note"
+    round1_test.go:29: the pager was paged for a resolved incident (1 new sends)
+    round1_test.go:31: stdout = "{\"version\":1,\"error\":{\"what\":\"secret \\\"ntfy-topic\\\", used by channels.phone.topic, is not set\",\"valid\":\"a name listed by `yo-human secret list`\",\"fix\":\"op read \\\"op://\\u003cvault\\u003e/\\u003citem\\u003e/\\u003cfield\\u003e\\\" | yo-human secret set ntfy-topic\"}}\n", want it to contain "\"status\":\"noop\""
+--- FAIL: TestResolveStillCancelsWhenAReachedChannelIsNoLongerConfigured (0.28s)
+    round1_test.go:43: resolve: {code:78 out: err:error: level "note" has no channel that reaches a human
+        valid: at least one send to a channel whose type reaches a human (a log does not)
+        fix: add a send to a channel of a type such as bark, ntfy, pagerduty
+        }; want the result, then exit 78
+    round1_test.go:44: stderr = "error: level \"note\" has no channel that reaches a human\nvalid: at least one send to a channel whose type reaches a human (a log does not)\nfix: add a send to a channel of a type such as bark, ntfy, pagerduty\n", want it to contain "channel phone is no longer configured"
+    round1_test.go:44: stderr = "error: level \"note\" has no channel that reaches a human\nvalid: at least one send to a channel whose type reaches a human (a log does not)\nfix: add a send to a channel of a type such as bark, ntfy, pagerduty\n", want it to contain "queued sends were cancelled"
+    round1_test.go:47: stdout = "{\"version\":1,\"error\":{\"what\":\"level \\\"note\\\" has no channel that reaches a human\",\"valid\":\"at least one send to a channel whose type reaches a human (a log does not)\",\"fix\":\"add a send to a channel of a type such as bark, ntfy, pagerduty\"}}\n", want it to contain "\"status\":\"noop\""
+--- FAIL: TestFlushUnderAnotherConfigParksEntriesInsteadOfBurying (0.25s)
+    round1_test.go:81: notify = "{\"version\":1,\"status\":\"queued\",\"id\":\"01M5WBHEAK35FV9PQ76DBAK003\",\"channels\":[{\"channel\":\"pager2\",\"status\":\"queued\",\"error\":\"provider said no\"}],\"next\":{\"do\":\"yo-human flush\",\"after_seconds\":60,\"attempts_left\":5,\"then\":\"tell the human in your session\"}}\n", want it to contain "\"do\":\"yo-human flush --config "
+    round1_test.go:83: flush: {code:78 out:RESULT ok
+        pager2: dead (channel pager2 is not configured)
+         err:error: there is no channel named "pager2"
+        valid: a name under channels:
+        fix: add a channels entry named pager2, or use an existing one
+        }; want ok (the entry belongs to another config)
+    round1_test.go:84: stdout = "RESULT ok\npager2: dead (channel pager2 is not configured)\n", want it to contain "pager2: queued"
+    round1_test.go:85: queued 0, dead 1; want the page kept
+    round1_test.go:87: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 1\ninflight: 0\nincidents: 0\ndead 01M5WBHEAK35FV9PQ76DBAK003 pager2: channel pager2 is not configured\n", want it to contain "queued: 1"
+    round1_test.go:87: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 1\ninflight: 0\nincidents: 0\ndead 01M5WBHEAK35FV9PQ76DBAK003 pager2: channel pager2 is not configured\n", want it to contain "dead: 0"
+    round1_test.go:87: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 1\ninflight: 0\nincidents: 0\ndead 01M5WBHEAK35FV9PQ76DBAK003 pager2: channel pager2 is not configured\n", want it to contain "reason: "
+    round1_test.go:91: flush = "RESULT ok\n", want it to contain "pager2: sent"
+    round1_test.go:92: under its own config the page was not sent
+--- FAIL: TestFlushNeverSendsAnEntryToAChannelOfAnotherType (0.19s)
+    round1_test.go:107: flush = "RESULT ok\nphone: sent\n", want it to contain "phone: queued"
+    round1_test.go:108: the page went to a channel of another type or was buried (sent 1, queued 0, dead 0)
+--- FAIL: TestStatusFlushesWhatIsDueFirst (0.15s)
+    round1_test.go:119: status: {code:0 out:RESULT ok
+        queued: 1
+        held: 0
+        dead: 0
+        inflight: 0
+        incidents: 0
+        queued 01M5WBHER3NMA1MA7HSDMWJG8P pager attempts=1 next=2026-10-30T12:01:00Z
+         err:}; pager got 0 new sends; want the older page flushed first
+    round1_test.go:120: status = "RESULT ok\nqueued: 1\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\nqueued 01M5WBHER3NMA1MA7HSDMWJG8P pager attempts=1 next=2026-10-30T12:01:00Z\n", want it to contain "queued: 0"
+--- FAIL: TestStatusOnlyWarnsOfADueChannelItCannotBuild (0.16s)
+    round1_test.go:131: stderr = "", want it to contain "warning:"
+    round1_test.go:131: stderr = "", want it to contain "pd-critical"
+--- FAIL: TestRejectedInputIsNotEchoedInFull (0.07s)
+    round1_test.go:144: level: {code:64 out: err:error: unknown level "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        valid: levels, quietest first: note (use when FYI only), night (use when can wait until morning), page (use when production is down)
+        fix: retry with --level <name>; run "yo-human levels --json" to read them
+        }; want the input clipped to 64 characters with its length
+    round1_test.go:144: channel name: {code:78 out: err:error: there is no channel named "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        valid: a name under channels:
+        fix: add a channels entry named xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx, or use an existing one
+        }; want the input clipped to 64 characters with its length
+    round1_test.go:144: body file: {code:64 out: err:error: --body-file /nonexistent/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx cannot be opened
+        valid: the path of a readable file
+        fix: check the path
+        }; want the input clipped to 64 characters with its length
+--- FAIL: TestAskAndActionLabelLimits (0.23s)
+    round1_test.go:152: long ask: code=0 out="RESULT delivered 01M5WBHF5MKBEXJVV3XHVRVKSJ\njournal: sent\nphone: sent\n" err=""; want exit 64, no stdout and "1000" on stderr
+    round1_test.go:153: long label: code=0 out="RESULT delivered 01M5WBHF75D0ZMPA9G2Y9TTEG4\njournal: sent\nphone: sent\n" err=""; want exit 64, no stdout and "64" on stderr
+--- FAIL: TestChannelTestTransientFailureSaysTryAgain (0.08s)
+    round1_test.go:161: stdout = "RESULT failed 01M5WBHFBBMV0K0RR786S7F29M\nphone: dead (provider said no)\n", want it to contain "phone: transient"
+    round1_test.go:161: stdout = "RESULT failed 01M5WBHFBBMV0K0RR786S7F29M\nphone: dead (provider said no)\n", want it to contain "try again"
+--- FAIL: TestChannelTestSharesOneDeadlineWithItsFlush (0.17s)
+    round1_test.go:184: flush deadline 2026-10-26 07:58:56.623238 -0700 PDT m=+13.554113418, test deadline 2026-10-26 07:58:56.637018 -0700 PDT m=+13.567892835; want one shared deadline
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	14.291s
+--- FAIL: TestEntryForAChannelThisConfigDoesNotNameIsParked (0.05s)
+    pipeline_fault_test.go:149: flush = {Status:ok ID: Channels:[{Channel:gone Status:dead Error:channel gone is not configured ProviderID: Scheduled:false attempts:1 config:false buried:true}] Next:<nil>}, <nil>; want the entry queued with a reason naming the config
+--- FAIL: TestDeadlineBoundsTheCall (0.31s)
+    pipeline_test.go:179: Notify took 303.83625ms; want within 300ms of a 200ms deadline
+--- FAIL: TestAnEntryForAChannelNotBuiltStaysQueued (0.05s)
+    unbuilt_test.go:65: queue = [{Key:M001.b IncidentKey: Data:[123 34 109 101 115 115 97 103 101 34 58 123 34 105 100 34 58 34 77 48 48 49 34 44 34 108 101 118 101 108 34 58 34 112 97 103 101 34 44 34 116 105 116 108 101 34 58 34 116 34 44 34 97 115 107 34 58 34 34 44 34 98 111 100 121 34 58 34 34 44 34 108 105 110 107 34 58 34 34 44 34 112 114 111 106 101 99 116 34 58 34 34 44 34 97 103 101 110 116 34 58 34 34 44 34 100 101 100 117 112 95 107 101 121 34 58 34 34 44 34 97 99 116 105 111 110 115 34 58 110 117 108 108 44 34 99 114 101 97 116 101 100 34 58 34 50 48 50 54 45 49 48 45 51 48 84 49 50 58 48 48 58 48 48 90 34 44 34 114 101 115 111 108 118 101 100 34 58 102 97 108 115 101 125 44 34 103 101 110 101 114 97 116 105 111 110 34 58 48 44 34 101 110 113 117 101 117 101 100 34 58 34 50 48 50 54 45 49 48 45 51 48 84 49 50 58 48 48 58 48 48 90 34 44 34 105 110 115 116 97 110 99 101 34 58 34 98 34 44 34 105 110 116 101 114 114 117 112 116 105 111 110 34 58 34 97 99 116 105 118 101 34 125] Attempts:1 NextAttempt:2026-10-30 12:02:00 +0000 UTC DeliverAt:0001-01-01 00:00:00 +0000 UTC Reason:}], <nil>; want one entry on attempt 1 with the reason kept
+--- FAIL: TestAnEntryForAChannelNotInTheConfigInForceStaysQueued (0.05s)
+    unbuilt_test.go:72: result [{Channel:b Status:dead Error:channel b is not configured ProviderID: Scheduled:false attempts:2 config:false buried:true}]; want one queued entry whose reason contains "not configured"
+--- FAIL: TestAnEntryIsNeverSentToAChannelOfAnotherType (0.05s)
+    unbuilt_test.go:83: result [{Channel:b Status:sent Error: ProviderID: Scheduled:false attempts:2 config:false buried:false}]; want one queued entry whose reason contains "other"
+--- FAIL: TestAQueuedEntryRecordsItsChannelTypeAndConfigPath (0.07s)
+    unbuilt_test.go:106: next.do = "yo-human flush", want "yo-human flush --config '/work/my dir/proj.yaml'"
+    unbuilt_test.go:111: queued payload = {"message":{"id":"X1","level":"page","title":"t","ask":"","body":"","link":"","project":"","agent":"","dedup_key":"","actions":null,"created":"2026-10-30T12:00:00Z","resolved":false},"generation":0,"enqueued":"2026-10-30T12:00:00Z","instance":"b","interruption":"active"} ({ }); want the channel type and config path recorded
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	20.584s
+--- FAIL: TestParkKeepsAttemptsAndRecordsWhy (0.08s)
+    queue_test.go:301: parked = {Key:A.x IncidentKey:inc Data:[123 34 116 105 116 108 101 34 58 34 116 34 125] Attempts:2 NextAttempt:2026-10-26 12:01:00 +0000 UTC DeliverAt:2026-10-26 12:00:00 +0000 UTC Reason:}; want 2 attempts and the reason
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	5.399s
+--- FAIL: TestClipCapsUserTextAtSixtyFourRunes (0.00s)
+    problem_test.go:69: Clip of 65 runes = "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé", want "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé... (65 characters)"
+    problem_test.go:72: Clip left control characters in "a\nb\x1b[2J"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/problem	0.739s
+FAIL
+# exit code: 1

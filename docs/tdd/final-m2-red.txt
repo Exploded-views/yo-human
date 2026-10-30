@@ -1,0 +1,22 @@
+$ go test -count=1 ./internal/core -run AnExpiredGenerationsCancelRunsAfter|AnExpiredGenerationsRefusedCancel
+--- FAIL: TestAnExpiredGenerationsCancelRunsAfterTheNewPage (0.37s)
+    expired_cancel_test.go:43: Notify = "queued", the scheduled send on n could not be cancelled: context deadline exceeded; want delivered: the page goes out before the old generation's cancel
+    expired_cancel_test.go:46: queue [ cancel]; want the cut-short cancel kept for a retry
+--- FAIL: TestAnExpiredGenerationsRefusedCancelDoesNotFailADeliveredPage (0.11s)
+    expired_cancel_test.go:57: Notify = "delivered", the scheduled send on n could not be cancelled: provider refused; want delivered with no error
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.491s
+FAIL
+[exit 1]
+
+# cli, against the 3440c80 code: core returns the warnings, the cli does not print them
+$ go test -count=1 ./internal/cli -run AReplacedSendThatCannot
+--- FAIL: TestAReplacedSendThatCannotBeCancelledIsAWarning (0.12s)
+    cancelwarn_test.go:53: stderr = "", want it to contain "warning: a scheduled send on phone could not be cancelled yet"
+--- FAIL: TestAReplacedSendThatCannotBeCancelledIsAWarningInJSON (0.13s)
+    cancelwarn_test.go:67: warnings []; want the cancel
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.266s
+FAIL
+[exit 1]
+

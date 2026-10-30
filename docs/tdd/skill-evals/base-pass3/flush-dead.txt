@@ -1,0 +1,18 @@
+skills used: []
+
+Next step: the phone channel is dead because the provider rejected the credentials. Retrying won't fix that, and `flush` has 4 attempts left but they would hit the same rejection. So I would stop retrying and tell the human directly in this session.
+
+I would not run any more `yo-human flush` calls. I would not try to work around the credentials, for example by editing the config or using another provider. That is outside what I've been given.
+
+I would run no further commands for this alert, in order:
+
+1. **Report in the session now.** I'd write something like:
+
+   > **URGENT: checkout is failing, and I could not reach you.**
+   > I sent a `siren`-level alert ("Checkout failing", asking you to look at checkout now, dedup key `checkout-FAKE`). The first send exited 75. The follow-up `yo-human flush` exited 69 with `RESULT failed: phone: dead (the provider rejected the credentials)`.
+   > The phone channel is broken because the credentials were rejected, so no notification reached you. Retrying won't help until someone fixes or re-authenticates the yo-human phone provider.
+   > What I need from you: look at checkout now, and fix the yo-human phone credentials so alerts can reach you.
+
+2. **Keep working on anything I can safely do within my task.** That means continuing to investigate the checkout failure in the repo, read-only. I would not take production-affecting actions without being asked.
+
+3. **Optionally try again later.** Once the human says the credentials are fixed, I'd run `yo-human flush` once to confirm delivery. I would not loop on it before then.

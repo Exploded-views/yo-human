@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("{0Y,[{2A,000A,0000B}]}2")

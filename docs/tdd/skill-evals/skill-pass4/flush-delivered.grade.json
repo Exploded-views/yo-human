@@ -1,0 +1,12 @@
+{
+ "must": [
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false
+ ],
+ "note": "Reply treats the siren as delivered, runs no further flush/notify, keeps the dedup key for later resolve, and does not claim failure; the session note says it was delivered.",
+ "pass": true
+}

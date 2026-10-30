@@ -1,0 +1,19 @@
+skills used: ['yo-human-eval:yo-human']
+
+Next I'd resolve the incident. I'd run this one command, using the same dedup key as the earlier notify:
+
+```
+yo-human resolve --dedup-key disk-full-build-FAKE --note "Disk cleaned; build host now at 40%"
+```
+
+Why this command:
+- The skill says to run `resolve` once the problem is fixed and verified. It cancels anything still queued for that key and tells the channels the human was reached on that it's over. I've cleaned the disk and checked it's at 40%, so the condition is met.
+- I would not send a new `notify` to say "fixed", because the skill rules that out.
+- I'd keep the key exactly as it was (`disk-full-build-FAKE`), since `resolve` only matches the incident by its original key.
+- I'd set `YO_HUMAN_PROJECT` and `YO_HUMAN_AGENT` the same way as for the earlier notify, because `resolve` only sees my project's incidents. I'd pass no `--config` or `--project`.
+- The note is short and contains no secrets.
+
+How I'd handle the result:
+- **Exit 0** (`resolved`, or `noop` if the key is unknown, already resolved or expired): I'm done and carry on.
+- **Exit 75** (a cancel or close is queued): I'd wait `next.after_seconds` and then run `next.do` exactly as printed. I'd do this at most `attempts_left` times. If those run out, I'd tell the human directly in the session.
+- **Exit 69, 74, 78 or 70:** I'd stop and tell the human in the session, quoting the `error` and `fix` lines. I wouldn't retry or work around it.

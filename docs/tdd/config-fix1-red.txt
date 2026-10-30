@@ -1,0 +1,68 @@
+$ go test -race -count=1 ./internal/problem ./internal/secrets ./internal/config 2>&1
+--- FAIL: TestShellQuote (0.00s)
+    quote_test.go:28: ShellQuote("") = "", want "''"
+    quote_test.go:28: ShellQuote("a b") = "a b", want "'a b'"
+    quote_test.go:28: ShellQuote("x;touch PWNED") = "x;touch PWNED", want "'x;touch PWNED'"
+    quote_test.go:28: ShellQuote("$(id)") = "$(id)", want "'$(id)'"
+    quote_test.go:28: ShellQuote("it's") = "it's", want "'it'\\''s'"
+    quote_test.go:28: ShellQuote("a\nb") = "a\nb", want "$'a\\x0ab'"
+    quote_test.go:31: ShellQuote("a\nb") = "a\nb" holds a raw control character
+    quote_test.go:28: ShellQuote("esc\x1b[31m") = "esc\x1b[31m", want "$'esc\\x1b[31m'"
+    quote_test.go:31: ShellQuote("esc\x1b[31m") = "esc\x1b[31m" holds a raw control character
+    quote_test.go:28: ShellQuote("q'\n") = "q'\n", want "$'q\\'\\x0a'"
+    quote_test.go:31: ShellQuote("q'\n") = "q'\n" holds a raw control character
+    quote_test.go:28: ShellQuote("back\\slash\x01") = "back\\slash\x01", want "$'back\\\\slash\\x01'"
+    quote_test.go:28: ShellQuote("café x") = "café x", want "'café x'"
+    quote_test.go:28: ShellQuote("rlo\u202e") = "rlo\u202e", want "$'rlo\\xe2\\x80\\xae'"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/problem	0.013s
+--- FAIL: TestSecretsValidName (0.00s)
+    secrets_test.go:196: ValidName("TOKEN-FAKE-VALUE") = true, want false
+    secrets_test.go:196: ValidName("") = true, want false
+    secrets_test.go:196: ValidName("-a") = true, want false
+    secrets_test.go:196: ValidName("a.b") = true, want false
+    secrets_test.go:196: ValidName("<hex>") = true, want false
+--- FAIL: TestSecretsSymlinkRefused (0.00s)
+    secrets_test.go:211: error = <nil>, want a *problem.Problem
+--- FAIL: TestSecretsFixQuotesHostilePaths (0.00s)
+    secrets_test.go:252: problem text holds a raw control character: the secrets directory $TMPDIR/TestSecretsFixQuotesHostilePaths375852388/001/x;touch PWNED $(id) 'q'
+        fix: forged[31m is mode 755; secrets must not be readable by others
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.475s
+--- FAIL: TestUnreadableProjectFileIsANoticeNotFatal (0.00s)
+    robust_test.go:41: Load: cannot read the config file /private$TMPDIR/TestUnreadableProjectFileIsANoticeNotFatal803933799/001/.yo-human.yaml, want the unreadable project file ignored
+--- FAIL: TestOversizeFiles (0.01s)
+    robust_test.go:57: notices = [{Text:ignoring the project config /private$TMPDIR/TestOversizeFiles3890318985/001/.yo-human.yaml: it is not trusted, or has changed since it was; read it, then run `yo-human config trust /private$TMPDIR/TestOversizeFiles3890318985/001/.yo-human.yaml`}], want one containing "larger than 1 MiB"
+--- FAIL: TestTrustKeyIsTheSymlinkResolvedPath (0.00s)
+    robust_test.go:72: Load: <nil>, notices [{ignoring the project config /private$TMPDIR/TestTrustKeyIsTheSymlinkResolvedPath3465883320/001/link/.yo-human.yaml: it is not trusted, or has changed since it was; read it, then run `yo-human config trust /private$TMPDIR/TestTrustKeyIsTheSymlinkResolvedPath3465883320/001/link/.yo-human.yaml`}]; want the canonical path trusted through a symlinked cwd
+--- FAIL: TestHostilePathsAreQuoted (0.00s)
+    robust_test.go:93: notice holds a raw control character: "ignoring the project config /private$TMPDIR/TestHostilePathsAreQuoted1720616531/001/x;touch PWNED $(id) 'q'\nfix: forged\x1b[31m/.yo-human.yaml: it is not trusted, or has changed since it was; read it, then run `yo-human config trust /private$TMPDIR/TestHostilePathsAreQuoted1720616531/001/x;touch PWNED $(id) 'q'\nfix: forged\x1b[31m/.yo-human.yaml`"
+    robust_test.go:95: notice "ignoring the project config /private$TMPDIR/TestHostilePathsAreQuoted1720616531/001/x;touch PWNED $(id) 'q'\nfix: forged\x1b[31m/.yo-human.yaml: it is not trusted, or has changed since it was; read it, then run `yo-human config trust /private$TMPDIR/TestHostilePathsAreQuoted1720616531/001/x;touch PWNED $(id) 'q'\nfix: forged\x1b[31m/.yo-human.yaml`" holds the path unquoted
+    robust_test.go:101: problem text holds a raw control character: /private$TMPDIR/TestHostilePathsAreQuoted1720616531/001/x;touch PWNED $(id) 'q'
+        fix: forged[31m/bad.yaml breaks the config schema: colour: unknown key
+    robust_test.go:109: missing-file problem holds a raw control character: cannot read the config file /private$TMPDIR/TestHostilePathsAreQuoted1720616531/001/x;touch PWNED $(id) 'q'
+        fix: forged[31m/gone
+        .yaml
+--- FAIL: TestDurationsMustBePositive (0.00s)
+    robust_test.go:116: error = <nil>, want a *problem.Problem
+--- FAIL: TestNamesAreRestricted (0.01s)
+    robust_test.go:134: channel name "Bad_Name" accepted
+    robust_test.go:138: level name "Bad_Name" accepted
+    robust_test.go:134: channel name "-lead" accepted
+    robust_test.go:138: level name "-lead" accepted
+    robust_test.go:134: channel name "has space" accepted
+    robust_test.go:138: level name "has space" accepted
+    robust_test.go:134: channel name "<hex>" accepted
+    robust_test.go:138: level name "<hex>" accepted
+    robust_test.go:134: channel name "a.b" accepted
+    robust_test.go:138: level name "a.b" accepted
+--- FAIL: TestReferenceNamesAreValidated (0.00s)
+    robust_test.go:148: error = <nil>, want a *problem.Problem
+--- FAIL: TestLoadRunsCheck (0.00s)
+    robust_test.go:163: error = <nil>, want a *problem.Problem
+--- FAIL: TestNoticesSurviveAnError (0.00s)
+    robust_test.go:184: notices = [], want one containing "yo-human config trust"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.117s
+FAIL
+exit=1

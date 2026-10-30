@@ -28,6 +28,28 @@ In scope:
   token with write access or a secret, or to change what a pinned action or
   tool runs.
 
+## The boundary between agents and the human
+
+yo-human is driven by agents in many harnesses (Claude Code, Codex, opencode and others) and by the
+human's own scripts. The line is the same everywhere:
+
+- **Agents may run** `notify`, `resolve`, `status` and `flush` (and the read-only `levels`, and
+  `page` where a host's old paging script was replaced). These act only on the project named by
+  `YO_HUMAN_PROJECT`, which the harness sets.
+- **Only the human changes credentials and config:** `config trust`, `config init --config <path>`
+  and `secret set`.
+- **The harness's own permission rules are the primary control.** Allow the agent commands and deny
+  the human ones, as [docs/setup/README.md](docs/setup/README.md#agent-harness-setup) shows.
+  yo-human takes flags only after the command, so a prefix rule matches every form of a command;
+  an absolute-path or wrapped invocation needs its own deny entry where rules match by prefix.
+- **The terminal confirmation is defence in depth.** `config trust`, `config init --config` and
+  `secret set` ask for a typed `yes` on the controlling terminal (`/dev/tty`). That holds only when
+  the harness gives the agent no terminal. A harness that runs commands in a pseudo-terminal the
+  agent can type into (an interactive exec mode) lets the agent answer the prompt itself, so there
+  the deny rules are the only control.
+- `YO_HUMAN_NONINTERACTIVE=1` skips the prompt for the human's own provisioning scripts and is
+  audited in `log.jsonl`. It must never be set in an agent's environment.
+
 ## Supported versions
 
 Pre-release: only the latest commit on `main` is supported.

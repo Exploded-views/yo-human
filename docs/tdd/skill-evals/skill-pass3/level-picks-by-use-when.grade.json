@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "The command uses --level siren with a non-empty --ask and a --title, and avoids invalid levels and murmur/nudge.",
+ "pass": true
+}
