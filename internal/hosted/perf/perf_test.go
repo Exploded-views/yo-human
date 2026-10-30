@@ -137,3 +137,11 @@ func TestSeededWarmsUpBeforeReturning(t *testing.T) {
 		t.Errorf("first Post of the warm-up draft = %s, want %s: seeded must make the one-off post itself", res.Outcome, bus.OutcomeUnchanged)
 	}
 }
+
+func TestSeededReportsAWarmUpFailure(t *testing.T) {
+	b, closeDB, err := seededWarm(filepath.Join(t.TempDir(), "data"), 5, perfDraft("warm-up", ""))
+	if err == nil {
+		closeDB()
+		t.Fatalf("seededWarm with an invalid warm-up draft succeeded (bus %v), want its error", b)
+	}
+}
