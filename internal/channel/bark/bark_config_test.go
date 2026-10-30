@@ -15,7 +15,7 @@ func TestTypeDeclaration(t *testing.T) {
 	if ty.Name != "bark" || ty.New == nil || len(ty.SettingsSchema) == 0 {
 		t.Fatalf("type = %+v", ty)
 	}
-	if got := strings.Join(ty.SecretFields, ","); got != "device_key" {
+	if got := strings.Join(ty.SecretFields, ","); got != "device_key,username,password" {
 		t.Errorf("SecretFields = %q", got)
 	}
 	checkCaps(t, ty.Capabilities)
