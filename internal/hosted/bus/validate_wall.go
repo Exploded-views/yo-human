@@ -61,7 +61,24 @@ func CheckWalledDraft(d Draft) error {
 	if strings.HasPrefix(d.Ref, "pr:") && d.Action != ActionMerge {
 		return wallInvalid("ref", "a PR id, pr:<n>, only on a merge approval")
 	}
+	if e := checkWalledPins(d); e != nil {
+		return e
+	}
 	return checkNoFlags(d)
+}
+
+// checkWalledPins: a walled item carries pinned_commit and pinned_tree only on the actions that use
+// them, a merge and a release (lead ruling, 2026-10-30). A free-form 40-hex string is a channel.
+func checkWalledPins(d Draft) error {
+	if d.Action == ActionMerge || d.Action == ActionRelease {
+		return nil
+	}
+	for _, f := range []struct{ field, v string }{{"pinned_commit", d.PinnedCommit}, {"pinned_tree", d.PinnedTree}} {
+		if f.v != "" {
+			return wallInvalid(f.field, "empty: a walled item pins a commit or tree only on a merge or release approval")
+		}
+	}
+	return nil
 }
 
 // checkNoFlags: a walled item carries no risk flags, in either direction.
