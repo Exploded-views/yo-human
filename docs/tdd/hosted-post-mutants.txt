@@ -1185,3 +1185,72 @@ suite exit=1
 8 mutants, 0 survivors
 
 round 5 total: 8 mutants, 0 survivors (items 1, 2 and 3; item 4 is a comment). Full runs skipped per ev-113.
+
+
+######## round 6 mutants, 2026-10-30T00:58:16Z, on the GREEN implementation (head b6f51e5); each applied by script (string swap), vetted, run, reverted
+baseline: exit=0
+
+## item 2: the NUL check removed
+internal/repolint/binaries.go: 'bytes.IndexByte(head, 0) >= 0 || isExecutable(head)' -> 'isExecutable(head)'
+vet exit=0
+--- FAIL: TestBinaryFilesFindsExecutablesAndNULs
+suite exit=1
+
+## item 2: the testdata exemption widened to the whole tree
+internal/repolint/binaries.go: 'strings.HasPrefix(p, "testdata/") || strings.Contains(p, "/testdata/")' -> 'strings.Contains(p, "testdata")'
+vet exit=0
+--- FAIL: TestBinaryFilesFindsExecutablesAndNULs
+suite exit=1
+
+## item 2: the executable-header check removed
+internal/repolint/binaries.go: '|| isExecutable(head)' -> ''
+vet exit=0
+--- FAIL: TestBinaryFilesFindsExecutablesAndNULs
+suite exit=1
+
+## item 2: the PE check removed
+internal/repolint/binaries.go: 'if len(head) >= 0x40 && bytes.HasPrefix(head, []byte("MZ")) {' -> 'if false && len(head) >= 0x40 && bytes.HasPrefix(head, []byte("MZ")) {'
+vet exit=0
+suite exit=0
+SURVIVED
+
+## item 2: the sniff window widened past 8000
+internal/repolint/binaries.go: 'const sniffLen = 8000' -> 'const sniffLen = 9000'
+vet exit=0
+--- FAIL: TestBinaryFilesFindsExecutablesAndNULs
+suite exit=1
+
+## item 4: the pin check removed
+internal/hosted/bus/validate_wall.go: 'if e := checkWalledPins(d); e != nil {' -> 'if e := checkWalledPins(d); false && e != nil {'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyOnMergeAndRelease
+suite exit=1
+
+## item 4: the pin check applied to unwalled items
+internal/hosted/bus/post.go: 'if e := checkRepoOwner(d.Repo); e != nil {' -> 'if e := checkWalledPins(d); e != nil {\n\t\treturn e\n\t}\n\tif e := checkRepoOwner(d.Repo); e != nil {'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyOnMergeAndRelease
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+## item 4: pins allowed on every action
+internal/hosted/bus/validate_wall.go: 'if d.Action == ActionMerge || d.Action == ActionRelease {' -> 'if true {'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyOnMergeAndRelease
+suite exit=1
+
+## item 4: pins allowed on deploy
+internal/hosted/bus/validate_wall.go: 'if d.Action == ActionMerge || d.Action == ActionRelease {' -> 'if d.Action == ActionMerge || d.Action == ActionRelease || d.Action == ActionDeploy {'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyOnMergeAndRelease
+suite exit=1
+
+## item 4: pinned_tree not checked
+internal/hosted/bus/validate_wall.go: '{"pinned_commit", d.PinnedCommit}, {"pinned_tree", d.PinnedTree}' -> '{"pinned_commit", d.PinnedCommit}'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyOnMergeAndRelease
+suite exit=1
+
+10 mutants, 1 survivors
+
+round 6 total: 10 mutants, 1 survivor: "the PE check removed". It was equivalent: a PE header always contains the NUL bytes of its PE signature, so the NUL check finds every PE file and the separate PE branch was dead code. The branch is deleted (commit after this record); the other 9 mutants are killed. Full runs skipped per ev-113.

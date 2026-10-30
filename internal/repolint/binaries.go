@@ -2,7 +2,6 @@ package repolint
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"io"
 	"os"
@@ -13,8 +12,8 @@ import (
 const sniffLen = 8000
 
 // executableMagics are the leading bytes of the executables a build leaves behind: Mach-O (32 and
-// 64 bit, both byte orders), a universal Mach-O (also the Java class magic), and ELF. A PE file is
-// recognised separately, by its MZ header pointing at a PE signature.
+// 64 bit, both byte orders), a universal Mach-O (also the Java class magic), and ELF. A PE file
+// needs no entry here: its header holds the NUL bytes of the PE signature, which the NUL check finds.
 var executableMagics = [][]byte{
 	{0xfe, 0xed, 0xfa, 0xce}, {0xfe, 0xed, 0xfa, 0xcf}, {0xce, 0xfa, 0xed, 0xfe}, {0xcf, 0xfa, 0xed, 0xfe},
 	{0xca, 0xfe, 0xba, 0xbe}, []byte("\x7fELF"),
@@ -60,10 +59,6 @@ func isExecutable(head []byte) bool {
 		if bytes.HasPrefix(head, m) {
 			return true
 		}
-	}
-	if len(head) >= 0x40 && bytes.HasPrefix(head, []byte("MZ")) {
-		off := int(binary.LittleEndian.Uint32(head[0x3c:]))
-		return off+4 <= len(head) && bytes.Equal(head[off:off+4], []byte("PE\x00\x00"))
 	}
 	return false
 }

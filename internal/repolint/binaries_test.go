@@ -45,13 +45,10 @@ func TestBinaryFilesFindsExecutablesAndNULs(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Errorf("BinaryFiles = %v, %v; want %v", got, err, want)
 	}
-	// Not binary: empty, a short MZ, an MZ whose offset leads nowhere.
+	// Not binary: empty, a short MZ.
 	plant(t, root, "empty.txt", "")
 	plant(t, root, "shortmz.txt", "MZ")
-	badpe := fakePE()
-	binary.LittleEndian.PutUint32(badpe[0x3c:], 0x7fffffff)
-	plant(t, root, "badpe.dat", strings.ReplaceAll(string(badpe), "\x00", "z"))
-	if got, err := BinaryFiles(root, []string{"empty.txt", "shortmz.txt", "badpe.dat"}); err != nil || len(got) != 0 {
+	if got, err := BinaryFiles(root, []string{"empty.txt", "shortmz.txt"}); err != nil || len(got) != 0 {
 		t.Errorf("not-binary files: %v, %v", got, err)
 	}
 	// A directory cannot be read as a file.
