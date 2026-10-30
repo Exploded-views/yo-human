@@ -30,6 +30,13 @@ func cmdInit(e *env, args []string) int {
 	if len(args) > 0 {
 		return e.fail(usageErr("config init"))
 	}
+	// The log path is encoded first: a state path YAML cannot hold must fail before the human is
+	// asked to approve a write and before any directory is created.
+	logPath, err := yamlQuoted(filepath.Join(stateDir(), "messages.log"))
+	if err != nil {
+		return e.fail(problem.Storef("the state directory %q cannot be written into the starter config", "a state directory whose path is valid UTF-8",
+			"set XDG_STATE_HOME to a directory with a plain name", stateDir()))
+	}
 	p := e.paths()
 	path := p.Explicit
 	if path == "" {
@@ -39,11 +46,6 @@ func cmdInit(e *env, args []string) int {
 		}
 	} else if err := initExplicit(path); err != nil {
 		return e.fail(err)
-	}
-	logPath, err := yamlQuoted(filepath.Join(stateDir(), "messages.log"))
-	if err != nil {
-		return e.fail(problem.Storef("the state directory %q cannot be written into the starter config", "a state directory whose path is valid UTF-8",
-			"set XDG_STATE_HOME to a directory with a plain name", stateDir()))
 	}
 	err = core.CreateFile(path, []byte(fmt.Sprintf(starterConfig, logPath)))
 	if errors.Is(err, fs.ErrExist) {

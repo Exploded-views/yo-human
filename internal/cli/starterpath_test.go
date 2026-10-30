@@ -44,7 +44,31 @@ func TestConfigInitRefusesAStatePathYAMLCannotEncode(t *testing.T) {
 	s := newSandbox(t)
 	t.Setenv("XDG_STATE_HOME", filepath.Join(s.home, "st\xff"))
 	r := s.do("", "config", "init")
-	expect(t, r.code != ExitOK && r.out == "", "init exited %d with out=%q err=%q; want a failure and no stdout", r.code, r.out, r.err)
+	r.fails(t, "unencodable state path", ExitStore, "cannot be written into the starter config")
 	_, err := os.Stat(s.userConfig())
 	expect(t, os.IsNotExist(err), "a config file was written: stat err = %v", err)
+}
+
+// config init checks the starter log path before it asks the human or creates anything: an
+// unencodable state path on the default path creates no user config directory.
+func TestConfigInitCreatesNoDirectoryForAnUnencodableStatePath(t *testing.T) {
+	s := newSandbox(t)
+	t.Setenv("XDG_STATE_HOME", filepath.Join(s.home, "st\xff"))
+	r := s.do("", "config", "init")
+	expect(t, r.code != ExitOK, "init exited %d; want a failure", r.code)
+	_, err := os.Stat(s.configDir())
+	expect(t, os.IsNotExist(err), "the user config directory was created: stat err = %v", err)
+}
+
+// On a --config path the human is never asked to approve a write that cannot happen.
+func TestConfigInitNeverAsksToWriteAnUnencodableStatePath(t *testing.T) {
+	s := newSandbox(t)
+	t.Setenv("XDG_STATE_HOME", filepath.Join(s.home, "st\xff"))
+	shown := s.tty("yes\n")
+	target := filepath.Join(s.home, "mine.yaml")
+	r := s.do("", "config", "init", "--config", target)
+	expect(t, r.code != ExitOK, "init exited %d; want a failure", r.code)
+	expect(t, shown.Len() == 0, "the human was asked: %q", shown.String())
+	_, err := os.Stat(target)
+	expect(t, os.IsNotExist(err), "the config was written: stat err = %v", err)
 }
