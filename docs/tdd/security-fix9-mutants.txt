@@ -1,0 +1,37 @@
+KILLED  a live pid is never overridden
+  internal/store/recover.go: 'if pidAlive(pid) && (maxAge <= 0 || now.Sub(fi.ModTime()) <= maxAge) {' -> 'if pidAlive(pid) {'
+  --- FAIL: TestRecoverRequeuesAnInflightEntryOlderThanMaxAgeWhateverItsPid (0.02s)
+      recover_test.go:167: Recover = 0, <nil>, want 1 (only the entry older than maxAge)
+  [go test -count=1 ./internal/store exit 1]
+
+KILLED  a live pid is always overridden
+  internal/store/recover.go: 'if pidAlive(pid) && (maxAge <= 0 || now.Sub(fi.ModTime()) <= maxAge) {' -> 'if pidAlive(pid) && maxAge <= 0 {'
+  --- FAIL: TestRecoverRequeuesAnInflightEntryOlderThanMaxAgeWhateverItsPid (0.05s)
+      recover_test.go:167: Recover = 2, <nil>, want 1 (only the entry older than maxAge)
+  [go test -count=1 ./internal/store exit 1]
+
+KILLED  maxAge 0 overrides every live pid
+  internal/store/recover.go: 'if pidAlive(pid) && (maxAge <= 0 || now.Sub(fi.ModTime()) <= maxAge) {' -> 'if pidAlive(pid) && now.Sub(fi.ModTime()) <= maxAge {'
+  --- FAIL: TestRecoverSkipsLiveOwner (0.03s)
+      recover_test.go:49: Recover = 1, <nil>, want 0
+  [go test -count=1 ./internal/store exit 1]
+
+KILLED  core passes no maxAge
+  internal/core/pipeline.go: 'max(10*p.d.Config.Deadline, 10*time.Minute))' -> '0)'
+  --- FAIL: TestACallRequeuesAnEntryInFlightTooLongForAnyCall (0.04s)
+      recover_age_test.go:51: deadline 1s, in flight 11m0s: requeued = false, want true
+      recover_age_test.go:51: deadline 2m0s, in flight 21m0s: requeued = false, want true
+  [go test -count=1 ./internal/core -run 'TooLong|Recover' exit 1]
+
+KILLED  core's maxAge ignores the deadline
+  internal/core/pipeline.go: 'max(10*p.d.Config.Deadline, 10*time.Minute))' -> '10*time.Minute)'
+  --- FAIL: TestACallRequeuesAnEntryInFlightTooLongForAnyCall (0.12s)
+      recover_age_test.go:51: deadline 2m0s, in flight 15m0s: requeued = true, want false
+  [go test -count=1 ./internal/core -run 'TooLong|Recover' exit 1]
+
+KILLED  core's maxAge has no floor
+  internal/core/pipeline.go: 'max(10*p.d.Config.Deadline, 10*time.Minute))' -> '10*p.d.Config.Deadline)'
+  --- FAIL: TestACallRequeuesAnEntryInFlightTooLongForAnyCall (0.13s)
+      recover_age_test.go:51: deadline 1s, in flight 9m0s: requeued = true, want false
+  [go test -count=1 ./internal/core -run 'TooLong|Recover' exit 1]
+

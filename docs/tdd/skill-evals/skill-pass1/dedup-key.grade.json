@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "Reply uses stable key `disk-full-build-host`, passes --ask, and says later passes never use a new key (reuses the same key); level `nudge` is valid.",
+ "pass": true
+}

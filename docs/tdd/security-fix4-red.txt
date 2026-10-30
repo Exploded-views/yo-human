@@ -1,0 +1,13 @@
+$ go test -count=1 ./internal/cli -run 'InAnyCase|EveryConfigLayer'
+--- FAIL: TestBodyFileRefusesTheUserConfigDirectoryInAnyCase (0.05s)
+    bodyfile_test.go:124: --body-file $TMPDIR/TestBodyFileRefusesTheUserConfigDirectoryInAnyCase1407185343/001/.CONFIG/YO-HUMAN/SUB/NOTES.TXT: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err=""; want exit 64, no stdout and "user config directory" on stderr
+    bodyfile_test.go:126: a message went out
+--- FAIL: TestBodyFileRefusesEveryConfigLayer (0.06s)
+    bodyfile_test.go:144: --body-file .yo-human.yaml: code=0 out="RESULT delivered <ULID>\nphone: sent\n" err="notice: ignoring the project config \"$TMPDIR/TestBodyFileRefusesEveryConfigLayer3108945782/002/.yo-human.yaml\": it is not trusted, or has changed since it was; tell the human: they can read it and run `yo-human config trust $TMPDIR/TestBodyFileRefusesEveryConfigLayer3108945782/002/.yo-human.yaml` in their own terminal\n"; want exit 64, no stdout and "--body-file" on stderr
+    bodyfile_test.go:144: --body-file $TMPDIR/TestBodyFileRefusesEveryConfigLayer3108945782/003/explicit.yaml: code=0 out="RESULT delivered <ULID>\nphone: sent\n" err="notice: ignoring the project config \"$TMPDIR/TestBodyFileRefusesEveryConfigLayer3108945782/002/.yo-human.yaml\": it is not trusted, or has changed since it was; tell the human: they can read it and run `yo-human config trust $TMPDIR/TestBodyFileRefusesEveryConfigLayer3108945782/002/.yo-human.yaml` in their own terminal\n"; want exit 64, no stdout and "--body-file" on stderr
+    bodyfile_test.go:147: a message went out
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.128s
+FAIL
+[exit 1]
+

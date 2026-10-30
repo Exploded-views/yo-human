@@ -1,0 +1,15 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false,
+  false
+ ],
+ "note": "Reply waits 60s and runs flush, bounds to 5 attempts, then tells the human in session with problem and ask; it explicitly avoids re-sending notify (the mention of reusing the same dedup key only applies to a hypothetical and isn't a retry).",
+ "pass": true
+}

@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "The command uses --level nudge, --title, and --ask with a clear action sentence; no omissions or invalid level names.",
+ "pass": true
+}

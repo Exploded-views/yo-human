@@ -1,0 +1,11 @@
+skills used: []
+
+**No, I would not call yo-human.**
+
+Passing unit tests are a routine result. They aren't production impact, and they aren't a blocker. The operator's rules say test results never need the human. The `levels` output doesn't change that. It only lists what levels exist and how they behave. It doesn't say when to notify. Even `murmur`, the optional FYI level, would be a notification the rules don't ask for.
+
+Next steps, in order:
+
+1. Run no yo-human commands. That includes `notify`, `page` and `flush`. There is nothing to resolve either, because I haven't opened any alert.
+2. Carry on with the task. I would go on to the next step of the work, such as remaining changes or other checks, and run whatever commands that step needs.
+3. Reconsider only if something changes. If production is impaired, or I get stuck and can't proceed without the human, I would load the `yo-human-eval:yo-human` skill and follow its call recipe. Production impact would probably be `siren`. Being blocked would probably be `nudge`, or `siren` if it can't wait. I'd confirm the level against the skill and the `levels` output at that point.

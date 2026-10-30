@@ -1,0 +1,67 @@
+BUILD   format characters pass
+  internal/cli/trustview.go: 'strconv.IsPrint(r) && !unicode.Is(unicode.Cf, r) && r != utf8.RuneError' -> 'strconv.IsPrint(r) && r != utf8.RuneError'
+  FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+  internal/cli/trustview.go:13:2: "unicode" imported and not used
+  [go test -count=1 ./internal/cli -run 'Trust|Forge|Escapes' exit 1]
+
+KILLED  non-printable runes pass
+  internal/cli/trustview.go: 'strconv.IsPrint(r) && !unicode.Is(unicode.Cf, r) && r != utf8.RuneError' -> '!unicode.Is(unicode.Cf, r) && r != utf8.RuneError'
+  --- FAIL: TestDescribeEscapesEveryFileDerivedString (0.00s)
+      forge_test.go:134: text view: "channel \"odd\" has type \"x\\n\x1b[2A\x1b[2K\r\u009b\"\nchannel \"odd\" settings are not shown (unknown channel type)\nchannel \"x\\n\x1b[2A\x1b[2K\r\u009b\" has type \"ntfy\"\nchannel \"x\\n\x1b[2A\x1b[2K\r\u009b\" path $'x\\012\\033[2A\\033[2K\\015\\302\\233'\nchannel \"x\\n\x1b[2A\x1b[2K\r\u009b\" x\\n\x1b[2A\x1b[2K\r\u009b \"vx\\n\\x1b[2A\\x1b[2K\\r\\u009b\"
+      forge_test.go:135: json view: "{\"settings\":[],\"channels\":[{\"name\":\"odd\",\"type\":\"x\\\\n\\u001b[2A\\u001b[2K\\r\u009b\",\"settings\":{\"settings\":\"are not shown (unknown channel type)\"}},{\"name\":\"x\\\\n\\u001b[2A\\u001b[2K\\r\u009b\",\"type\":\"ntfy\",\"settings\":{\"path\":\"$'x\\\\012\\\\033[2A\\\\033[2K\\\\015\\\\302\\\\233'\",\"x\\\\n\\u001b[2A\\u001b[2K\\r\u009b\":\"\\\"vx\
+  [go test -count=1 ./internal/cli -run 'Trust|Forge|Escapes' exit 1]
+
+KILLED  nested strings skip esc
+  internal/cli/trustview.go: 'case string:
+		return `"` + esc(t) + `"`' -> 'case string:
+		return `"` + t + `"`'
+  --- FAIL: TestConfigTrustEscapesInvisibleCharactersAtAnyDepth (0.01s)
+      trustview_test.go:125: trust display = "trusting \"$TMPDIR/TestConfigTrustEscapesInvisibleCharactersAtAnyDepth1272155634/001/proj/.yo-human.yaml\"\nhuman {\"name\":\"Pat\u202eevil\"}\nversion 1\nlevel \"page\" use_when \"x\"\nlevel \"page\" sends to \"a\" (passive) options {\"nested\":{\"deep\":\"z\u2066w\"},\"ta\\u200bgs\":[\"x\u202ey\"]}\nTrus
+      trustview_test.go:125: trust display = "trusting \"$TMPDIR/TestConfigTrustEscapesInvisibleCharactersAtAnyDepth1272155634/001/proj/.yo-human.yaml\"\nhuman {\"name\":\"Pat\u202eevil\"}\nversion 1\nlevel \"page\" use_when \"x\"\nlevel \"page\" sends to \"a\" (passive) options {\"nested\":{\"deep\":\"z\u2066w\"},\"ta\\u200bgs\":[\"x\u202ey\"]}\nTrus
+  [go test -count=1 ./internal/cli -run 'Trust|Forge|Escapes' exit 1]
+
+KILLED  keys skip esc
+  internal/cli/trustview.go: '`"`+esc(k)+`":`' -> '`"`+k+`":`'
+  --- FAIL: TestConfigTrustEscapesInvisibleCharactersAtAnyDepth (0.01s)
+      trustview_test.go:125: trust display = "trusting \"$TMPDIR/TestConfigTrustEscapesInvisibleCharactersAtAnyDepth3828097222/001/proj/.yo-human.yaml\"\nhuman {\"name\":\"Pat\\u202eevil\"}\nversion 1\nlevel \"page\" use_when \"x\"\nlevel \"page\" sends to \"a\" (passive) options {\"nested\":{\"deep\":\"z\\u2066w\"},\"ta\u200bgs\":[\"x\\u202ey\"]}\nTr
+      trustview_test.go:125: trust display = "trusting \"$TMPDIR/TestConfigTrustEscapesInvisibleCharactersAtAnyDepth3828097222/001/proj/.yo-human.yaml\"\nhuman {\"name\":\"Pat\\u202eevil\"}\nversion 1\nlevel \"page\" use_when \"x\"\nlevel \"page\" sends to \"a\" (passive) options {\"nested\":{\"deep\":\"z\\u2066w\"},\"ta\u200bgs\":[\"x\\u202ey\"]}\nTr
+  [go test -count=1 ./internal/cli -run 'Trust|Forge|Escapes' exit 1]
+
+KILLED  lists go through the JSON encoder
+  internal/cli/trustview.go: 'case []any:' -> 'case []bool:'
+  --- FAIL: TestConfigTrustShowsEverySetting (0.01s)
+      trustview_test.go:52: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsEverySetting1323233366/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\\\"days\\\":[\\\"mon\\\",\\\"sun\\\"],\\\"from\\\":\\\"00:01\\\",\\\"to\\\":\\\"00:00\\\"}]}\nshim {\"
+      trustview_test.go:52: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsEverySetting1323233366/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\"name\":\"Pat\"}\nincident_ttl \"8760h\"\nquiet_hours {\"timezone\":\"UTC\",\"windows\":[{\\\"days\\\":[\\\"mon\\\",\\\"sun\\\"],\\\"from\\\":\\\"00:01\\\",\\\"to\\\":\\\"00:00\\\"}]}\nshim {\"
+  --- FAIL: TestConfigTrustEscapesInvisibleCharactersAtAnyDepth (0.01s)
+      trustview_test.go:125: trust display = "trusting \"$TMPDIR/TestConfigTrustEscapesInvisibleCharactersAtAnyDepth300259647/001/proj/.yo-human.yaml\"\nhuman {\"name\":\"Pat\\u202eevil\"}\nversion 1\nlevel \"page\" use_when \"x\"\nlevel \"page\" sends to \"a\" (passive) options {\"nested\":{\"deep\":\"z\\u2066w\"},\"ta\\u200bgs\":[\\\"x\\u202ey\\\"]}
+  [go test -count=1 ./internal/cli -run 'Trust|Forge|Escapes' exit 1]
+
+KILLED  maps go through the JSON encoder
+  internal/cli/trustview.go: 'case map[string]any:
+		return object(t)' -> 'case map[string]bool:
+		return object(nil)'
+  --- FAIL: TestConfigTrustShowsEverySetting (0.01s)
+      trustview_test.go:52: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsEverySetting3446104020/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\\\"name\\\":\\\"Pat\\\"}\nincident_ttl \"8760h\"\nquiet_hours {\\\"timezone\\\":\\\"UTC\\\",\\\"windows\\\":[{\\\"days\\\":[\\\"mon\\\",\\\"sun\\\"],\\\"from\\\":\\\"00:01\\\",\\\"to\\\":\\\"00
+      trustview_test.go:52: trust display = "trusting \"$TMPDIR/TestConfigTrustShowsEverySetting3446104020/001/proj/.yo-human.yaml\"\ndeadline \"1ms\"\nhuman {\\\"name\\\":\\\"Pat\\\"}\nincident_ttl \"8760h\"\nquiet_hours {\\\"timezone\\\":\\\"UTC\\\",\\\"windows\\\":[{\\\"days\\\":[\\\"mon\\\",\\\"sun\\\"],\\\"from\\\":\\\"00:01\\\",\\\"to\\\":\\\"00
+  --- FAIL: TestConfigTrustEscapesInvisibleCharactersAtAnyDepth (0.01s)
+      trustview_test.go:125: trust display = "trusting \"$TMPDIR/TestConfigTrustEscapesInvisibleCharactersAtAnyDepth806499106/001/proj/.yo-human.yaml\"\nhuman {\\\"name\\\":\\\"Pat\\u202eevil\\\"}\nversion 1\nlevel \"page\" use_when \"x\"\nlevel \"page\" sends to \"a\" (passive) options {\\\"nested\\\":{\\\"deep\\\":\\\"z\\u2066w\\\"},\\\"ta\\u200bgs\
+      trustview_test.go:125: trust display = "trusting \"$TMPDIR/TestConfigTrustEscapesInvisibleCharactersAtAnyDepth806499106/001/proj/.yo-human.yaml\"\nhuman {\\\"name\\\":\\\"Pat\\u202eevil\\\"}\nversion 1\nlevel \"page\" use_when \"x\"\nlevel \"page\" sends to \"a\" (passive) options {\\\"nested\\\":{\\\"deep\\\":\\\"z\\u2066w\\\"},\\\"ta\\u200bgs\
+  [go test -count=1 ./internal/cli -run 'Trust|Forge|Escapes' exit 1]
+
+SURVIVED quotes are not escaped
+  internal/cli/trustview.go: 'case r == '"' || r == '\\':' -> 'case r == '\x00':'
+  [go test -count=1 ./internal/cli -run 'Trust|Forge|Escapes' exit 0]
+
+# Second pass: a test of a quote in a value was added; the format-character mutant rerun in a form that compiles.
+
+SURVIVED format characters pass (compilable)
+  internal/cli/trustview.go: 'strconv.IsPrint(r) && !unicode.Is(unicode.Cf, r) && r != utf8.RuneError' -> 'strconv.IsPrint(r) && !unicode.Is(unicode.Cf, 'a') && r != utf8.RuneError'
+  [go test -count=1 ./internal/cli -run 'Trust|Forge|Escapes' exit 0]
+
+KILLED  quotes are not escaped
+  internal/cli/trustview.go: 'case r == '"' || r == '\\':' -> 'case r == '\x00':'
+  --- FAIL: TestConfigTrustEscapesInvisibleCharactersAtAnyDepth (0.02s)
+      trustview_test.go:128: trust display = "trusting \"$TMPDIR/TestConfigTrustEscapesInvisibleCharactersAtAnyDepth215572494/001/proj/.yo-human.yaml\"\nversion 1\nlevel \"page\" use_when \"x\" sends nowhere. \"\"\nlevel \"page\" sends nowhere\nTrust this file? Type yes to confirm: \nRESULT ok\ntrusting \"$PRIVATE
+  [go test -count=1 ./internal/cli -run 'Trust|Forge|Escapes' exit 1]
+
+# The format-character check is equivalent to strconv.IsPrint here: no Cf rune is printable by strconv.IsPrint (it accepts only L, M, N, P, S and the ASCII space), so U+202A-202E, U+2066-2069 and U+200B-200F are escaped by the first clause already. The explicit unicode.Cf test stays, as the ruling asks, so that a change to the printable test cannot let them through.

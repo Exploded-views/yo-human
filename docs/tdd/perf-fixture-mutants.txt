@@ -1,0 +1,64 @@
+# what this is: tools/perf/main.go mutated one change at a time (Setup/Env/$DIR handling); each run has a 300s timeout
+# test command: go test -count=1 ./tools/perf/ (timeout 300s per run)
+## baseline
+ok  	github.com/Exploded-views/yo-human/tools/perf	0.212s
+exit=0
+
+## setup never run
+# in tools/perf/main.go: 'if s.Setup != nil {' => 'if s.Setup == nil {'
+--- FAIL: TestNonZeroExitOfScenarioIsError (0.00s)
+panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked]
+panic({0x105261e20?, 0x1052a1390?})
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/runtime/panic.go:859 +0x120
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.011s
+FAIL
+exit=1 (killed)
+
+## env not applied
+# in tools/perf/main.go: '\t\tcmd.Env = env\n' => '\t\tcmd.Env = nil\n'
+--- FAIL: TestSetupRunsOnceIntoATempDirTheTimedCommandSees (0.01s)
+--- FAIL: TestEnvAppliesOnTopOfTheParentEnvironment (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.187s
+FAIL
+exit=1 (killed)
+
+## DIR not replaced
+# in tools/perf/main.go: 'strings.ReplaceAll(e, "$DIR", dir)' => 'e'
+FAIL	github.com/Exploded-views/yo-human/tools/perf [build failed]
+FAIL
+exit=1 (killed)
+
+## parent env dropped
+# in tools/perf/main.go: 'env := os.Environ()' => 'var env []string'
+--- FAIL: TestEnvAppliesOnTopOfTheParentEnvironment (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.206s
+FAIL
+exit=1 (killed)
+
+## temp dir kept
+# in tools/perf/main.go: 'defer func() { _ = os.RemoveAll(dir) }()' => '_ = 0'
+--- FAIL: TestSetupRunsOnceIntoATempDirTheTimedCommandSees (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.211s
+FAIL
+exit=1 (killed)
+
+## setup error swallowed
+# in tools/perf/main.go: 'return nil, fmt.Errorf("setup: %w", err)' => 'return nil, nil'
+--- FAIL: TestSetupFailureIsAnErrorNamingTheScenario (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.218s
+FAIL
+exit=1 (killed)
+
+## setup run in every timed run
+# in tools/perf/main.go: '\tfor range n {\n' => '\tfor range n {\n\t\tif s.Setup != nil {\n\t\t\t_ = s.Setup(dir)\n\t\t}\n'
+--- FAIL: TestSetupRunsOnceIntoATempDirTheTimedCommandSees (0.03s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.209s
+FAIL
+exit=1 (killed)
+
+# survivors: none

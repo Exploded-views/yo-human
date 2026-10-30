@@ -1,0 +1,17 @@
+# what this is: task 10 fix round 1, project log paths: OriginLayer exists but is never set, and the old file-name containment check is still in place (RED)
+# command: go test -count=1 -timeout 60s ./internal/config
+--- FAIL: TestProjectLayerMayNotSetALogPath (0.00s)
+    containment_test.go:59: /etc/yo-human.log: problem channels.journal.path in "/private$TMPDIR/TestProjectLayerMayNotSetALogPath1053361966/001/.yo-human.yaml" puts the log outside the project directory; want one naming channels.journal with the user-config fix
+    containment_test.go:59: ../out.log: problem channels.journal.path in "/private$TMPDIR/TestProjectLayerMayNotSetALogPath1053361966/001/.yo-human.yaml" puts the log outside the project directory; want one naming channels.journal with the user-config fix
+    containment_test.go:59: ~/.zshrc: problem channels.journal.path in "/private$TMPDIR/TestProjectLayerMayNotSetALogPath1053361966/001/.yo-human.yaml" puts the log outside the project directory; want one naming channels.journal with the user-config fix
+    containment_test.go:59: error = <nil>, want a *problem.Problem
+--- FAIL: TestProjectLayerIsRecognisedWhateverTheFileIsCalled (0.00s)
+    containment_test.go:73: error = <nil>, want a *problem.Problem
+--- FAIL: TestNonProjectLayersMayDefineLogChannels (0.00s)
+    containment_test.go:105: explicit file named like a project file: channels.journal.path in "/private$TMPDIR/TestNonProjectLayersMayDefineLogChannels3220945797/001/.yo-human.yaml" puts the log outside the project directory
+--- FAIL: TestOriginLayerRecordsTheKindOfEachLayer (0.00s)
+    containment_test.go:118: OriginLayer = map[], want channels.repo from the project and deadline from the explicit file
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.063s
+FAIL
+# exit code: 1

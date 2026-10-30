@@ -1,0 +1,47 @@
+$ go test ./internal/channel/ntfy/
+--- FAIL: TestTypeDeclaration (0.00s)
+    ntfy_config_test.go:14: type = {Name:ntfy Capabilities:{Interruptions:map[] Markdown:false Link:false MaxActions:0 Subtitle:false NativeDedup:false Resolve:false Schedule:false ReachesHuman:false MaxTitle:0 MaxBody:0} SecretFields:[] SettingsSchema:[] New:0x1050b62e0}
+--- FAIL: TestNewValidatesSettings (0.00s)
+    ntfy_config_test.go:51: no server: err=<nil> kind=0
+    ntfy_config_test.go:51: http server: err=<nil> kind=0
+    ntfy_config_test.go:51: no host: err=<nil> kind=0
+    ntfy_config_test.go:51: userinfo: err=<nil> kind=0
+    ntfy_config_test.go:51: no topic: err=<nil> kind=0
+    ntfy_config_test.go:51: bad topic: err=<nil> kind=0
+    ntfy_config_test.go:51: bad token: err=<nil> kind=0
+--- FAIL: TestValidateOptions (0.00s)
+    ntfy_config_test.go:77: Validate(map[tags:a]) = <nil>
+    ntfy_config_test.go:77: Validate(map[tags:[1]]) = <nil>
+    ntfy_config_test.go:77: Validate(map[markdown:yes]) = <nil>
+    ntfy_config_test.go:77: Validate(map[sound:x]) = <nil>
+--- FAIL: TestResolveUnsupported (0.00s)
+    ntfy_config_test.go:86: Resolve = stub
+--- FAIL: TestErrorKinds (0.00s)
+    ntfy_errors_test.go:34: send 302: err=stub kind=0, want 1
+    ntfy_errors_test.go:38: cancel 302: err=stub kind=0, want 1
+    ntfy_errors_test.go:34: send 403: err=stub kind=0, want 1
+    ntfy_errors_test.go:38: cancel 403: err=stub kind=0, want 1
+    ntfy_errors_test.go:34: send 413: err=stub kind=0, want 1
+    ntfy_errors_test.go:38: cancel 413: err=stub kind=0, want 1
+    ntfy_errors_test.go:34: send 400: err=stub kind=0, want 1
+    ntfy_errors_test.go:38: cancel 400: err=stub kind=0, want 1
+    ntfy_errors_test.go:34: send 401: err=stub kind=0, want 1
+    ntfy_errors_test.go:38: cancel 401: err=stub kind=0, want 1
+--- FAIL: TestSendJSONShape (0.00s)
+    ntfy_test.go:94: stub
+--- FAIL: TestPriorityMapping (0.00s)
+    ntfy_test.go:126: stub
+--- FAIL: TestCriticalIsRejectedPermanently (0.00s)
+    ntfy_test.go:138: err = stub, want permanent
+--- FAIL: TestOptionalFieldsOmitted (0.00s)
+    ntfy_test.go:149: stub
+--- FAIL: TestScheduledSendHasDelayAndCancelDeletes (0.00s)
+    ntfy_test.go:168: stub
+--- FAIL: TestBearerTokenOnlyWhenSet (0.00s)
+    ntfy_test.go:191: stub
+--- FAIL: TestBodyTruncatedWithMarker (0.00s)
+    ntfy_test.go:216: stub
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.017s
+FAIL
+exit=1

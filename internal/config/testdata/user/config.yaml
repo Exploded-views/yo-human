@@ -1,0 +1,18 @@
+version: 1
+deadline: 3s
+human: { name: Pat }
+channels:
+  phone:
+    type: pager
+    token: { secret: user-token }
+  journal:
+    type: logonly
+levels:
+  - name: low
+    use_when: from the user file
+    send:
+      - { channel: phone, interruption: passive }
+  - name: high
+    use_when: from the user file
+    send:
+      - { channel: phone, interruption: critical }

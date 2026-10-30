@@ -13,11 +13,15 @@ type Budget struct {
 	P95Ms int `json:"p95_ms"`
 }
 
-// Budgets is perf-budgets.json (crewkit's schema).
+// Budgets is perf-budgets.json (crewkit's schema), plus the binary's size.
 type Budgets struct {
 	Runs       int               `json:"runs"`
 	CIHeadroom float64           `json:"ci_headroom"`
 	Budgets    map[string]Budget `json:"budgets"`
+
+	// BinaryBytes is the most the built binary may weigh. Zero means no budget, which only a base
+	// file from before the budget has. CI headroom does not apply: the size does not vary by load.
+	BinaryBytes int64 `json:"binary_bytes"`
 }
 
 // Violation is one failed check, printed as "scenario: message".
@@ -40,6 +44,9 @@ func ReadBudgets(path string) (Budgets, error) {
 	}
 	if b.Runs < 1 || b.CIHeadroom < 1 {
 		return b, fmt.Errorf("%s: need runs >= 1 and ci_headroom >= 1.0", path)
+	}
+	if b.BinaryBytes < 0 {
+		return b, fmt.Errorf("%s: binary_bytes must be >= 0", path)
 	}
 	for _, name := range sortedKeys(b.Budgets) {
 		if b.Budgets[name].P95Ms <= 0 {
@@ -98,7 +105,7 @@ func sortedKeys[V any](m map[string]V) []string {
 	return keys
 }
 
-// CheckBase fails when cur loosens base: a raised budget or ci_headroom, fewer
+// CheckBase fails when cur loosens base: a raised budget, binary_bytes or ci_headroom, fewer
 // runs, or a removed budget. Tightening and new scenarios pass.
 func CheckBase(cur, base Budgets) []Violation {
 	var vs []Violation
@@ -118,5 +125,30 @@ func CheckBase(cur, base Budgets) []Violation {
 	if cur.Runs < base.Runs {
 		vs = append(vs, Violation{"runs", fmt.Sprintf("lowered %d → %d", base.Runs, cur.Runs)})
 	}
-	return vs
+	return append(vs, checkBinaryBase(cur, base)...)
+}
+
+// CheckSize compares the size of the binary at path with max bytes, and returns the size.
+func CheckSize(path string, max int64) ([]Violation, int64, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, 0, err
+	}
+	if fi.Size() > max {
+		return []Violation{{"binary", fmt.Sprintf("%d bytes > budget %d bytes", fi.Size(), max)}}, fi.Size(), nil
+	}
+	return nil, fi.Size(), nil
+}
+
+// checkBinaryBase fails a size budget the base had that cur raised or removed.
+func checkBinaryBase(cur, base Budgets) []Violation {
+	switch {
+	case base.BinaryBytes == 0:
+		return nil
+	case cur.BinaryBytes == 0:
+		return []Violation{{"binary_bytes", "budget removed"}}
+	case cur.BinaryBytes > base.BinaryBytes:
+		return []Violation{{"binary_bytes", fmt.Sprintf("budget raised %d → %d bytes", base.BinaryBytes, cur.BinaryBytes)}}
+	}
+	return nil
 }

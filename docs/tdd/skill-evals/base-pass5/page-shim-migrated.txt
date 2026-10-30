@@ -1,0 +1,21 @@
+skills used: []
+
+I'd use the runbook's `page.sh` wrapper and not call `yo-human` directly. The shim block in the config already maps `page.sh`'s modes to levels, so I don't need `yo-human levels --json` first. CI being broken while production is fine is a low-urgency page, so I'd use `--low`.
+
+**1. Page the human (CI broken, production healthy):**
+
+```
+/opt/bin/page.sh --low "CI broken on main; production unaffected" "CI on main is failing. Production is healthy and nothing is user-facing. Needs a fix, but not urgently." ci-main-FAKE
+```
+
+The script runs `exec yo-human page "$@"`, so the shim turns `--low` into the right level. The dedup key `ci-main-FAKE` is the last argument, so repeat pages for the same incident collapse into one.
+
+**2. After CI is fixed, resolve it:**
+
+```
+/opt/bin/page.sh --low --resolve ci-main-FAKE
+```
+
+I'd keep `--low` on the resolve, matching the original page, so it goes through the same shim mapping. That should clear the alert with that key.
+
+If the first command fails with an unknown-mode or level error, I'd stop and run `yo-human levels --json` to check what the config defines. I wouldn't guess at levels or call `yo-human page` directly.

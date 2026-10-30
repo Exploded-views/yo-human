@@ -1,0 +1,24 @@
+skills used: ['yo-human-eval:yo-human']
+
+**After exit 78 (missing secret `pd-critical`)**
+
+I stop. I run no further commands.
+
+- I don't retry `notify`, and I don't switch to another level such as `nudge` or `murmur` to get around it. Retrying can't help, because the paging channel has no routing key.
+- I don't run the `fix:` line. It would pull a credential from 1Password and write it into the store, and only the human can do that. I also don't edit the config or the secrets.
+- I don't use another tool to reach them, such as a different notifier, email or a webhook.
+
+I tell the human in my session reply or handoff, plainly, that they have not been paged:
+
+- **What I tried:** `yo-human notify --level siren --title "Checkout failing" --ask "Look at checkout now"`.
+- **The ask:** checkout is failing and needs a look now.
+- **The error, quoted:**
+  - `error: secret "pd-critical", used by channels.pager.routing_key, is not set`
+  - `fix: op read "op://<vault>/<item>/<field>" | yo-human secret set pd-critical`
+- **What they need to do:** run that fix with their real vault, item and field, then tell me. Only then can the siren go out.
+
+Once they've set the secret, I'd re-run the same notify. I'd add a stable `--dedup-key` such as `checkout-failing`. When checkout is fixed and verified, I'd run `yo-human resolve --dedup-key checkout-failing`.
+
+**If the exit code had been 74 (store I/O failure)**
+
+The response is the same: stop, and tell the human in my session. I wouldn't retry, change levels, or try to repair the store. I'd report what I tried, the ask ("Look at checkout now", with checkout failing), and the exact stderr text. I'd say clearly that the siren was not delivered. The only difference is that there is no secret `fix:` to quote. If stderr gave a `fix:` line, I'd pass it along for the human to act on.

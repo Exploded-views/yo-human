@@ -1,0 +1,139 @@
+# what this is: task 10 fix round 3 mutants: the split key/value control rule, mixed-key mappings, use_when in the trust view, oneLine's format and separator characters; each run has a 300s timeout
+# test command: go test -count=1 -timeout 120s ./internal/cli/ (timeout 300s per run)
+## baseline
+ok  	github.com/Exploded-views/yo-human/internal/cli	0.314s
+exit=0
+
+## newline refused in values
+# in internal/cli/trustcmd.go: "unicode.IsControl(r) && r != '\\n' && r != '\\t'" => "unicode.IsControl(r) && r != '\\t'"
+--- FAIL: TestConfigTrustAllowsNewlinesAndTabsInValues (0.00s)
+--- FAIL: TestHoldsControl (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.278s
+FAIL
+exit=1 (killed)
+
+## tab refused in values
+# in internal/cli/trustcmd.go: "unicode.IsControl(r) && r != '\\n' && r != '\\t'" => "unicode.IsControl(r) && r != '\\n'"
+--- FAIL: TestConfigTrustAllowsNewlinesAndTabsInValues (0.02s)
+--- FAIL: TestHoldsControl (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.287s
+FAIL
+exit=1 (killed)
+
+## CR allowed in values
+# in internal/cli/trustcmd.go: "unicode.IsControl(r) && r != '\\n' && r != '\\t'" => "unicode.IsControl(r) && r != '\\n' && r != '\\t' && r != '\\r'"
+--- FAIL: TestHoldsControl (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.288s
+FAIL
+exit=1 (killed)
+
+## ESC allowed in values
+# in internal/cli/trustcmd.go: "unicode.IsControl(r) && r != '\\n' && r != '\\t'" => "unicode.IsControl(r) && r != '\\n' && r != '\\t' && r != 0x1b"
+--- FAIL: TestHoldsControl (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.294s
+FAIL
+exit=1 (killed)
+
+## keys may hold a newline
+# in internal/cli/trustcmd.go: 'strings.ContainsFunc(s, unicode.IsControl) {\n\t\t\treturn true' => "strings.ContainsFunc(s, func(r rune) bool { return unicode.IsControl(r) && r != '\\n' }) {\n\t\t\treturn true"
+--- FAIL: TestConfigTrustRefusesControlCharacters (0.01s)
+--- FAIL: TestHoldsControl (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.301s
+FAIL
+exit=1 (killed)
+
+## keys not scanned
+# in internal/cli/trustcmd.go: '\tfor _, k := range keys {' => '\tfor _, k := range keys[:0] {'
+--- FAIL: TestConfigTrustRefusesControlCharacters (0.04s)
+--- FAIL: TestConfigTrustScansMappingsWithMixedKeyTypes (0.01s)
+--- FAIL: TestHoldsControl (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.336s
+FAIL
+exit=1 (killed)
+
+## map[any]any not descended
+# in internal/cli/trustcmd.go: '\tcase map[any]any:\n' => '\tcase map[int]any:\n'
+--- FAIL: TestConfigTrustScansMappingsWithMixedKeyTypes (0.01s)
+--- FAIL: TestHoldsControl (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.311s
+FAIL
+exit=1 (killed)
+
+## lists not descended
+# in internal/cli/trustcmd.go: '\tcase []any:\n\t\tvals = t' => '\tcase []int:\n\t\tvals = nil'
+--- FAIL: TestConfigTrustRefusesControlCharacters (0.02s)
+--- FAIL: TestHoldsControl (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.302s
+FAIL
+exit=1 (killed)
+
+## use_when not in the view
+# in internal/cli/trustcmd.go: '\t\tlv.UseWhen = esc(useWhen)' => '\t\t_ = useWhen'
+--- FAIL: TestConfigTrustAllowsNewlinesAndTabsInValues (0.03s)
+--- FAIL: TestDescribeEscapesEveryFileDerivedString (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.276s
+FAIL
+exit=1 (killed)
+
+## use_when not escaped
+# in internal/cli/trustcmd.go: '\t\tlv.UseWhen = esc(useWhen)' => '\t\tlv.UseWhen = useWhen'
+--- FAIL: TestConfigTrustAllowsNewlinesAndTabsInValues (0.03s)
+--- FAIL: TestDescribeEscapesEveryFileDerivedString (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.276s
+FAIL
+exit=1 (killed)
+
+## use_when line dropped from text
+# in internal/cli/trustcmd.go: '\t\tif l.UseWhen != "" {' => '\t\tif false {'
+--- FAIL: TestConfigTrustAllowsNewlinesAndTabsInValues (0.03s)
+--- FAIL: TestDescribeEscapesEveryFileDerivedString (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.286s
+FAIL
+exit=1 (killed)
+
+## Cf not neutralised
+# in internal/cli/output.go: '|| unicode.Is(unicode.Cf, r)' => '|| false'
+--- FAIL: TestOneLineNeutralisesFormatAndSeparatorCharacters (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.291s
+FAIL
+exit=1 (killed)
+
+## U+2028 not neutralised
+# in internal/cli/output.go: "|| r == '\\u2028'" => '|| false'
+--- FAIL: TestOneLineNeutralisesFormatAndSeparatorCharacters (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.294s
+FAIL
+exit=1 (killed)
+
+## U+2029 not neutralised
+# in internal/cli/output.go: "|| r == '\\u2029'" => '|| false'
+--- FAIL: TestOneLineNeutralisesFormatAndSeparatorCharacters (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.300s
+FAIL
+exit=1 (killed)
+
+## C0/C1 not neutralised
+# in internal/cli/output.go: 'unicode.IsControl(r) ||' => 'false ||'
+--- FAIL: TestOneLineNeutralisesFormatAndSeparatorCharacters (0.00s)
+--- FAIL: TestEveryTextLineHasNoControlBytes (0.00s)
+--- FAIL: TestWriteResultText (0.00s)
+--- FAIL: TestWriteProblemKeepsThreeLines (0.00s)
+--- FAIL: TestWriteWarningsAndNotices (0.00s)
+FAIL
+exit=1 (killed)
+
+# survivors: none

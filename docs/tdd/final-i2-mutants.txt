@@ -1,0 +1,97 @@
+KILLED  the level's channels must all build again
+  internal/cli/notify.go: 'chans, failed, err := e.channelsFor(cfg, st, nil, sortedNames(used))' -> 'chans, failed, err := e.channelsFor(cfg, st, sortedNames(used), nil)'
+  --- FAIL: TestALevelSendsThroughEveryChannelThatBuilds (0.07s)
+      besteffort_test.go:28: page: {code:78 out: err:error: secret "pd-critical", used by channels.pager.routing_key, is not set
+      besteffort_test.go:29: stdout = "", want it to contain "phone: sent"
+      besteffort_test.go:29: stdout = "", want it to contain "pager: skipped"
+      besteffort_test.go:31: phone sent 0, pager 0; want the phone paged
+  --- FAIL: TestALevelWithNoChannelThatBuildsFails (0.06s)
+      besteffort_test.go:44: object {Status: Channels:[] Errors:[]}; want failed, the pager skipped and its problem
+  --- FAIL: TestALevelWithAQueuedChannelAndOneThatCannotBuildSaysToRetry (0.06s)
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  an unbuilt channel is queued (parked) again
+  internal/core/repeat.go: 'if _, ok := p.d.Channels[s.Instance]; ok {' -> 'if true {'
+  --- FAIL: TestAPlannedChannelThatIsNotBuiltIsSkipped (0.04s)
+      unbuilt_test.go:175: Notify = {Status:partial ID:Z060 Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}} {Channel:b Status:queued Error:channel b was not built by this co
+  --- FAIL: TestALevelSendsThroughEveryChannelThatBuilds (0.13s)
+      besteffort_test.go:28: page: {code:0 out:RESULT partial <ULID>
+      besteffort_test.go:29: stdout = "RESULT partial <ULID>\nphone: sent\npager: queued (channel pager was not built by this command; the entry stays queued)\n", want it to contain "pager: skipped"
+      besteffort_test.go:32: queued 1; a skipped channel is not queued
+  --- FAIL: TestALevelWithNoChannelThatBuildsFails (0.08s)
+      besteffort_test.go:43: night --json: {code:0 out:{"version":1,"status":"held","id":"<ULID>","channels":[{"channel":"pager","status":"held"}],"warnings":[{"what":"secret \"pd-critical\", used by channels.pager.routing_key, is not set","valid":"a name listed by `yo-human secret list`","fix":"tell 
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  a skipped channel counts as on its way
+  internal/core/pipeline.go: 'if r.unbuilt {\n\t\t\tcounted[i].Status = ChannelDead\n\t\t}' -> ''
+  --- FAIL: TestAPlannedChannelThatIsNotBuiltIsSkipped (0.03s)
+      unbuilt_test.go:183: none built: {Status:queued ID:Z061 Channels:[{Channel:a Status:skipped Error:not sent: the channel could not be built for this call ProviderID: Scheduled:false attempts:0 config:false buried:false parked:false unbuilt:true level: retryAt:{wall:0 ext:0 loc:<nil>}} {Channel:b 
+  --- FAIL: TestALevelWithNoChannelThatBuildsFails (0.09s)
+      besteffort_test.go:43: night --json: {code:75 out:{"version":1,"status":"queued","id":"<ULID>","channels":[{"channel":"pager","status":"skipped","error":"not sent: the channel could not be built for this call"}],"next":{"do":"yo-human flush","after_seconds":60,"attempts_left":5,"then":"tell the 
+      besteffort_test.go:44: object {Status: Channels:[] Errors:[]}; want failed, the pager skipped and its problem
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  skipped channels not reported
+  internal/core/pipeline.go: 'for _, name := range adm.skipped {' -> 'for _, name := range adm.skipped[:0] {'
+  --- FAIL: TestAPlannedChannelThatIsNotBuiltIsSkipped (0.02s)
+      unbuilt_test.go:175: Notify = {Status:delivered ID:Z060 Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> Warnings:[]}, <nil>; want a sent, b skipped, partia
+  --- FAIL: TestALevelSendsThroughEveryChannelThatBuilds (0.10s)
+      besteffort_test.go:28: page: {code:0 out:RESULT delivered <ULID>
+      besteffort_test.go:29: stdout = "RESULT delivered <ULID>\nphone: sent\n", want it to contain "pager: skipped"
+  --- FAIL: TestALevelWithNoChannelThatBuildsFails (0.06s)
+      besteffort_test.go:43: night --json: {code:69 out:{"version":1,"status":"failed","id":"<ULID>","channels":[],"warnings":[{"what":"secret \"pd-critical\", used by channels.pager.routing_key, is not set","valid":"a name listed by `yo-human secret list`","fix":"tell the human to run, in their own t
+      besteffort_test.go:44: object {Status: Channels:[] Errors:[]}; want failed, the pager skipped and its problem
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  an all-skipped call is suppressed
+  internal/core/pipeline.go: 'if len(adm.plan)+len(adm.skipped) == 0 {' -> 'if len(adm.plan) == 0 {'
+  --- FAIL: TestExpiredGenerationsChannelGoneIsReported (0.11s)
+      landing_test.go:288: a held send on a channel no longer configured went unreported
+  --- FAIL: TestAPlannedChannelThatIsNotBuiltIsSkipped (0.02s)
+      unbuilt_test.go:183: none built: {Status:suppressed ID:Z061 Channels:[] Next:<nil> Warnings:[]}, <nil>; want failed, no next
+  --- FAIL: TestALevelWithNoChannelThatBuildsFails (0.07s)
+      besteffort_test.go:43: night --json: {code:0 out:{"version":1,"status":"suppressed","id":"<ULID>","channels":[],"warnings":[{"what":"secret \"pd-critical\", used by channels.pager.routing_key, is not set","valid":"a name listed by `yo-human secret list`","fix":"tell the human to run, in their ow
+      besteffort_test.go:44: object {Status: Channels:[] Errors:[]}; want failed, the pager skipped and its problem
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  a level failure is always a warning
+  internal/cli/notify.go: 'if skipped[name] && res.Status != core.StatusQueued {' -> 'if false {'
+  --- FAIL: TestALevelSendsThroughEveryChannelThatBuilds (0.08s)
+      besteffort_test.go:28: page: {code:0 out:RESULT partial <ULID>
+  --- FAIL: TestALevelWithNoChannelThatBuildsFails (0.07s)
+      besteffort_test.go:43: night --json: {code:69 out:{"version":1,"status":"failed","id":"<ULID>","channels":[{"channel":"pager","status":"skipped","error":"not sent: the channel could not be built for this call"}],"warnings":[{"what":"secret \"pd-critical\", used by channels.pager.routing_key, is 
+      besteffort_test.go:44: object {Status: Channels:[] Errors:[]}; want failed, the pager skipped and its problem
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  a level failure is always an error
+  internal/cli/notify.go: 'if skipped[name] && res.Status != core.StatusQueued {' -> 'if true {'
+  --- FAIL: TestALevelWithAQueuedChannelAndOneThatCannotBuildSaysToRetry (0.10s)
+      besteffort_test.go:55: page: {code:78 out:RESULT queued <ULID>
+      besteffort_test.go:56: stderr = "error: secret \"pd-critical\", used by channels.pager.routing_key, is not set\nvalid: a name listed by `yo-human secret list`\nfix: tell the human to run, in their own terminal: op read \"op://<vault>/<item>/<field>\" | yo-human secret set pd-critical\n", want it
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+KILLED  queued does not defer to the next step
+  internal/cli/notify.go: 'if skipped[name] && res.Status != core.StatusQueued {' -> 'if skipped[name] {'
+  --- FAIL: TestALevelWithAQueuedChannelAndOneThatCannotBuildSaysToRetry (0.15s)
+      besteffort_test.go:55: page: {code:78 out:RESULT queued <ULID>
+      besteffort_test.go:56: stderr = "error: secret \"pd-critical\", used by channels.pager.routing_key, is not set\nvalid: a name listed by `yo-human secret list`\nfix: tell the human to run, in their own terminal: op read \"op://<vault>/<item>/<field>\" | yo-human secret set pd-critical\n", want it
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+SURVIVED  backlog failures treated as the level's
+  internal/cli/notify.go: 'if used[name] {' -> 'if true {'
+  [go test -count=1 ./internal/core ./internal/cli exit 0]
+
+KILLED  the level's failures treated as backlog
+  internal/cli/notify.go: 'if used[name] {' -> 'if false {'
+  --- FAIL: TestALevelSendsThroughEveryChannelThatBuilds (0.08s)
+      besteffort_test.go:28: page: {code:0 out:RESULT partial <ULID>
+  --- FAIL: TestALevelWithNoChannelThatBuildsFails (0.06s)
+      besteffort_test.go:43: night --json: {code:69 out:{"version":1,"status":"failed","id":"<ULID>","channels":[{"channel":"pager","status":"skipped","error":"not sent: the channel could not be built for this call"}],"warnings":[{"what":"secret \"pd-critical\", used by channels.pager.routing_key, is 
+      besteffort_test.go:44: object {Status: Channels:[] Errors:[]}; want failed, the pager skipped and its problem
+  [go test -count=1 ./internal/core ./internal/cli exit 1]
+
+EQUIVALENT  backlog failures treated as the level's
+  Both end as warnings (one printed before the result, one after it), so the split by `used` was
+  dropped: every build failure goes through skippedProblems, which makes a failure an error only for
+  a channel the result skipped.
+

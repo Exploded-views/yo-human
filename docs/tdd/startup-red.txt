@@ -1,0 +1,65 @@
+M1 startup pass, the agreement RED, against 5b48250 with internal/config/schemanode.go declared as a stub (compileNode compiles nothing, nodeViolations finds nothing): the hand-written validator must give the reference (jsonschema v6, now test-only) answer, violation for violation, on the crafted docs, on every config fixture in the repository (testdata files and every Go string literal holding a config key) and on the fuzz seeds. Raw output, cut to the first 8 lines and the last 4, with the count of disagreements per test.
+
+$ go test ./internal/config -run 'Agrees'
+--- FAIL: TestValidatorAgreesWithJSONSchemaOnCraftedDocs (0.01s)
+    agreement_test.go:206: channel bark, crafted doc 1 "version: 1": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [] (err <nil>)
+    agreement_test.go:206: channel log, crafted doc 1 "version: 1": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [] (err <nil>)
+    agreement_test.go:206: channel ntfy, crafted doc 1 "version: 1": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [] (err <nil>)
+    agreement_test.go:206: channel pagerduty, crafted doc 1 "version: 1": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [] (err <nil>)
+    agreement_test.go:206: channel bark, crafted doc 2 "version: 2": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [] (err <nil>)
+    agreement_test.go:206: channel log, crafted doc 2 "version: 2": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [] (err <nil>)
+    agreement_test.go:206: channel ntfy, crafted doc 2 "version: 2": reference [(top level): fails "required" version: unknown key] (err <nil>); validator [] (err <nil>)
+[...]
+        agreement_test.go:308: config, "{version: 1, channels: {a: {type: log, path: /tmp/a.log}}, levels: [{name: note, use_when: always, send: [{channel: a, interruption: passive}]}]}": reference [channel: unknown key interruption: unknown key] (err <nil>); validator [] (err <nil>)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.089s
+FAIL
+[exit 1]
+
+disagreements:
+  OnCraftedDocs: 1099
+  OnEveryFixture: 2591
+  FuzzValidatorAgreesWithJSONSchema: 1099
+
+=== the jsonschema dependency gate, against 8b62880 with scripts/nodeps.sh as a stub that exits 0: a listing that holds jsonschema passes, as do a failing go list, an empty listing and a failing grep; the real config tests, which do import the library, pass too. Raw output with the exit code.
+
+$ sh scripts/nodeps_test.sh
+ok   a clean listing
+FAIL a forbidden package: exit 0, want 1
+FAIL go list fails: exit 0, want 2
+FAIL an empty listing proves nothing: exit 0, want 2
+FAIL grep fails: exit 0, want 2
+FAIL no pattern: exit 0, want 64
+ok   the binary has no jsonschema
+FAIL the config tests do import jsonschema: exit 0, want 1
+nodeps_test: 6 case(s) failed
+[exit 1]
+
+=== the gate against a tree where the dependency is back: a throwaway clone at 5b48250 (before the hand-written validator), with this commit's scripts/nodeps.sh copied in
+$ scripts/nodeps.sh jsonschema -deps ./cmd/yo-human
+nodeps: go list -deps ./cmd/yo-human holds packages matching jsonschema:
+  github.com/santhosh-tekuri/jsonschema/v6/kind
+  github.com/santhosh-tekuri/jsonschema/v6
+[exit 1]
+
+=== the binary-size budget and its ratchet, against 4fb0633 with Budgets.BinaryBytes and the --binary flag in place but CheckSize a stub, CheckBase and ReadBudgets unchanged, and no binary_bytes in perf-budgets.json: raising or removing the size budget over the base passes, a negative one is read, run does not check the size, and the repository has no budget. Raw output with the exit code.
+
+$ go test ./tools/perf -run 'Binary|Size'
+--- FAIL: TestCheckBaseRejectsARaisedOrRemovedBinaryBudget (0.00s)
+    size_test.go:29: raised a lot: got [], want exactly [binary_bytes: budget raised 1000 → 9000000 bytes]
+    size_test.go:29: removed: got [], want exactly [binary_bytes: budget removed]
+    size_test.go:29: raised by a byte: got [], want exactly [binary_bytes: budget raised 1000 → 1001 bytes]
+--- FAIL: TestReadBudgetsRejectsANegativeBinaryBudget (0.00s)
+    size_test.go:51: err <nil>, want an error naming binary_bytes
+--- FAIL: TestRunChecksTheBinarySizeWithoutHeadroom (0.01s)
+    size_test.go:80: at the budget: exit 0, stdout "ok: p95 2.7ms, budget 5000ms (ci=true)\n"; want 0 with the size printed
+    size_test.go:83: a byte over, CI on: exit 0, stdout "ok: p95 2.4ms, budget 5000ms (ci=true)\n"; want 1 naming the size (no headroom)
+    size_test.go:86: no binary: exit 0, stderr ""; want 2 naming the path
+--- FAIL: TestRunBaseRejectsARaisedBinaryBudget (0.01s)
+    size_test.go:94: raised over the base: exit 0, stdout "ok: p95 3.5ms, budget 5000ms (ci=true)\n"; want 1 naming the raise
+--- FAIL: TestTheRepositoryBudgetsHoldABinaryBudget (0.00s)
+    size_test.go:105: perf-budgets.json: binary_bytes 0, err <nil>; want a budget
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	0.029s
+FAIL
+[exit 1]

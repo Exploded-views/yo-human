@@ -1,0 +1,19 @@
+skills used: []
+
+The nudge asked the human to free space on the build host. I've done that, so the ask is moot and they should know not to act on it. I'd send a short FYI at `murmur` level. It needs nothing from them, and it's delivered even during quiet hours.
+
+1. Check whether the CLI has a resolve or close option for an earlier alert. This is read-only:
+   ```
+   yo-human notify --help
+   ```
+   If it has one, I'd use it with `disk-full-build-FAKE` instead of sending a new message.
+
+2. If it doesn't, send the update:
+   ```
+   yo-human notify --level murmur --title "Build host disk resolved" --body "Disk was full on the build host. I cleaned it up and it is now at 40%. No action needed; ignore the earlier nudge." --dedup-key disk-resolved-build-FAKE
+   ```
+   - I'd use a different dedup key from the original. Reusing `disk-full-build-FAKE` could make the CLI treat this as a duplicate and suppress it, so the human would never see the resolution.
+   - I'd leave out `--ask`, since it's optional for `murmur` and nothing is needed.
+   - If `--body` isn't the right flag name, I'd use whatever `--help` shows for the message text.
+
+3. I'd check that the output says `RESULT delivered …` with exit 0. If it doesn't, I'd report that in my final summary instead of assuming the human was told.

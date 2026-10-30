@@ -1,0 +1,42 @@
+=== yo-human#59 follow-up g (nit 3): repolint.GoreleaserTargets as a stub returning nil. RED at 7fc5249
+$ go test ./internal/repolint/ -run Goreleaser -count=1
+--- FAIL: TestGoreleaserTargetsFixtures (0.00s)
+    goreleaser_test.go:32: extraos:
+         got []
+        want ["builds[0] builds windows/amd64, which is not in RELEASE_TARGETS" "builds[0] builds windows/arm64, which is not in RELEASE_TARGETS"]
+    goreleaser_test.go:32: missingarch:
+         got []
+        want ["builds[0] does not build darwin/arm64, which RELEASE_TARGETS lists" "builds[0] does not build linux/arm64, which RELEASE_TARGETS lists"]
+    goreleaser_test.go:32: targetextra:
+         got []
+        want ["builds[0] does not build windows/amd64, which RELEASE_TARGETS lists"]
+    goreleaser_test.go:32: noenv:
+         got []
+        want ["builds[0] env must set CGO_ENABLED=0 and nothing else for CGO_ENABLED (has none)"]
+    goreleaser_test.go:32: goflags:
+         got []
+        want ["builds[0] env sets GOFLAGS=-tags=e2e; the release builds with no GOFLAGS"]
+    goreleaser_test.go:32: ignore:
+         got []
+        want ["builds[0] has an ignore list; RELEASE_TARGETS must be goos x goarch exactly"]
+    goreleaser_test.go:32: twobuilds:
+         got []
+        want ["builds[1] builds linux/riscv64, which is not in RELEASE_TARGETS" "builds[1] does not build darwin/amd64, which RELEASE_TARGETS lists" "builds[1] does not build darwin/arm64, which RELEASE_TARGETS lists" "builds[1] does not build linux/amd64, which RELEASE_TARGETS lists" "builds[1] does not build linux/arm64, which RELEASE_TARGETS lists"]
+    goreleaser_test.go:32: cgoon:
+         got []
+        want ["builds[0] env must set CGO_ENABLED=0 and nothing else for CGO_ENABLED (has CGO_ENABLED=1)"]
+    goreleaser_test.go:32: tagsflag:
+         got []
+        want ["builds[0] flags hold -tags=e2e; the release builds with no tags"]
+    goreleaser_test.go:32: tagskey:
+         got []
+        want ["builds[0] sets tags; the release builds with no tags"]
+    goreleaser_test.go:32: nobuilds:
+         got []
+        want [".goreleaser.yaml has no builds"]
+--- FAIL: TestGoreleaserTargetsFailsOnWhatItCannotRead (0.00s)
+    goreleaser_test.go:39: a directory with neither file passed; want an error
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.007s
+FAIL
+exit=1

@@ -1,0 +1,19 @@
+# M1 task 7 fix round 1 mutation checks (go test -count=1 -timeout 60s on ntfy and config per mutant, each restored).
+# First pass: two did not count: "action scheme unchecked" failed to build (unused variable; rewritten), and "host not required" survived (test gained an https:///nohost URL).
+# Final pass (raw):
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.123s
+ok  	github.com/Exploded-views/yo-human/internal/config	0.056s
+ exit= 0
+KILLED link scheme unchecked ['TestOnlyHTTPLinksReachThePhone']
+KILLED action scheme unchecked ['TestOnlyHTTPLinksReachThePhone']
+KILLED any scheme accepted ['TestOnlyHTTPLinksReachThePhone']
+KILLED host not required ['TestOnlyHTTPLinksReachThePhone']
+KILLED 3 day limit dropped ['TestDeliveryMoreThanThreeDaysOutIsPermanent']
+KILLED 3 day limit off (96h) ['TestDeliveryMoreThanThreeDaysOutIsPermanent']
+KILLED link error quotes the url ['TestOnlyHTTPLinksReachThePhone']
+KILLED topic schema optional ['TestNtfySchemaAcceptsSecretReferences']
+KILLED token schema rejected ['TestNtfySchemaAcceptsSecretReferences']
+=== go test -race -count=20
+ok  	github.com/Exploded-views/yo-human/internal/channel/ntfy	6.077s
+exit=0

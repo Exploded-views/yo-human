@@ -1,0 +1,13 @@
+skills used: []
+
+**No, I would not call yo-human.**
+
+Passing unit tests are a routine test result. Your operator's rules say to notify the human only for production impact or when blocked, and that test results, lint and routine progress never need the human. Nothing here is impaired in production and I'm not blocked. Even the lowest level, `murmur`, is for FYI messages, and that is exactly the kind of message the rules rule out.
+
+**What I would do next, in order:**
+
+1. Run no commands for notification. I would not run `yo-human notify`, `page`, `flush` or `resolve`. There is no open alert to resolve, because I haven't sent one.
+2. Carry on with the task I was working on. That means the next step in the plan, such as more implementation, or wrapping up and reporting the result in my normal final output.
+3. Record the passing tests in my ordinary task output or summary, where the human will see them whenever they next look at the work.
+
+I would only revisit this if something changed. If production were impaired, I'd use `siren`. If I were blocked and needed the human, I'd use `nudge`. In either case I would load the `yo-human-eval:yo-human` skill first for the call recipe, dedup keys and exit-code handling.

@@ -1,0 +1,41 @@
+skills used: ['yo-human-eval:yo-human']
+
+Dry run, so I'm not executing anything. Here is what I would run, in order.
+
+**1. Read the human's level ladder. I haven't done this yet this session.**
+
+```
+yo-human levels --json
+```
+
+I would read the `use_when` fields and pick the level meant for a production outage that needs the human immediately. I won't guess a level name. I'll assume it's called `<urgent-level>` below, and the real name comes from this output. If the call exits 64, the error lists the valid names and I'd correct the call.
+
+**2. Send the notification.**
+
+```
+YO_HUMAN_PROJECT=<project> YO_HUMAN_AGENT=<agent> \
+yo-human notify \
+  --level <urgent-level> \
+  --title "Production DB unresponsive; checkout failing" \
+  --ask "Investigate the production database now. Checkout is failing for customers." \
+  --body "Production database stopped answering. Checkout requests are failing. Detected by the unattended coding agent. Logs and evidence are in <path/log name>." \
+  --dedup-key prod-db-down-checkout
+```
+
+- The dedup key is stable and names the problem, so repeats at the same or a lower level are suppressed.
+- No secrets go in the arguments or body. I'd name only where the logs are, never connection strings or credentials.
+- If I have a status page or dashboard URL, I'd add `--link` or `--action "<label>=<https url>"`.
+
+**3. Handle the exit code.**
+
+- **0** (delivered, partial, held, suppressed): done. If it was `held`, the human's quiet hours apply. That is intended, but I'd pick the level carefully in step 1 so an outage isn't held.
+- **75** (queued): wait `after_seconds`, then run `yo-human flush`. Repeat only while it exits 75, at most `attempts_left` times. I would not re-run `notify` or change the key. If the attempts run out, I'd tell the human directly in my session.
+- **69, 74, 78, 70**: stop. I wouldn't retry, switch levels, edit config, or use another route. I'd state plainly in my reply that the human was not reached, with the title, the ask, and the error text.
+
+**4. After the database is fixed and verified, which would be a later step:**
+
+```
+yo-human resolve --dedup-key prod-db-down-checkout --note "DB responding again; checkout verified"
+```
+
+I would not send a new `notify` to say it's fixed.

@@ -1,0 +1,30 @@
+skills used: []
+
+**Level:** `nudge`. The build host is 95% full, so a human should look within the hour, but nothing says production is impaired, so `siren` would be wrong. `murmur` is too weak because the disk will eventually need action. `nudge` is held during quiet hours, which is fine for a non-urgent problem. It also requires an ask, so the message must say what I want from the human.
+
+**Step 1: confirm the send syntax.** `levels --json` doesn't show how to send, so I would run this first rather than guess flags:
+
+```
+yo-human --help
+```
+
+If that shows a `send` subcommand, I would also run `yo-human send --help`.
+
+**Step 2: check for a record of a prior alert.** The loop needs state that survives between passes. I would look for a marker file such as `/<LONG-TOKEN>`. I'm assuming that path, and I would create the directory if it's missing.
+
+**Step 3: send once, if no marker exists.** Assuming the help output confirms a form like this, the command would be:
+
+```
+yo-human send --level nudge "Build host disk at 95% full. Please free space or tell me which directories are safe to clean (e.g. build caches/artifacts). I will not delete anything without your OK."
+```
+
+The flag names are my guess until Step 1 confirms them. After a successful send (exit 0), I would write the marker with the timestamp and the usage percentage.
+
+**Later passes, every minute:**
+- **Still about 95%, marker exists:** do nothing. No new notification, so the human isn't spammed every minute for hours. I would log locally that the alert is already open.
+- **Marker is old:** I'd re-send a `nudge` at most once per long interval, such as every 4 hours, with the updated usage figure. I'm choosing that interval myself.
+- **Usage worsens** (about 99%, or builds failing because of it, which is the point where production could be impaired): escalate once to `siren` with an ask, and record that in the marker so it isn't repeated.
+- **Usage drops below the threshold** (say under 90%, for hysteresis): clear the marker. I'd optionally send one `murmur` saying it's resolved, and a later recurrence would start a new nudge.
+- **A send fails (non-zero exit):** don't write the marker, so the next pass retries. I'd log the error.
+
+I would not delete files on my own to free space, since that is hard to reverse and the nudge asks the human instead.

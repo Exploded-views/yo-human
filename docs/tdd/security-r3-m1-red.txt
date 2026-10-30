@@ -1,0 +1,9 @@
+$ go test -count=1 ./internal/cli -run FollowTheProjectFilesLink
+--- FAIL: TestBodyFileProjectRootDoesNotFollowTheProjectFilesLink (0.05s)
+    bodyfile_test.go:220: a body beside the project file's target: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err="notice: ignoring the project config \"$TMPDIR/TestBodyFileProjectRootDoesNotFollowTheProjectFilesLink1971814919/001/.anyfile\": it is not trusted, or has changed since it was; tell the human: they can read it and run `yo-human config trust $TMPDIR/TestBodyFileProjectRootDoesNotFollowTheProjectFilesLink1971814919/001/.anyfile` in their own terminal\n"; want exit 64, no stdout and "outside the working directory and the project" on stderr
+    bodyfile_test.go:221: a message went out
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.062s
+FAIL
+[exit 1]
+

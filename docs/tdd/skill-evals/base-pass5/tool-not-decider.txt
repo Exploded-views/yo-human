@@ -1,0 +1,13 @@
+skills used: []
+
+No, I would not call yo-human.
+
+**Why:** The operator's rule limits notifications to two cases: production impact or being blocked. Passing unit tests are neither. The rule also says test results never need the human. Nothing is broken and I'm not stuck. The `murmur` level is optional and meant for FYI messages, but the operator has asked for silence on routine results, so I won't use it for this either.
+
+**What I would do next, in order:**
+1. Run no yo-human commands. I wouldn't call `yo-human levels --json` again or send any notification.
+2. Carry on with the task I was working on. If the tests passing was the last step, I'd finish by writing a brief completion summary in my normal output, which doesn't go through yo-human.
+
+I'd only call yo-human later if one of these happened:
+- **I'm blocked** and can't continue without the human. That would be a `nudge`, or a `siren` if it truly can't wait.
+- **Production is impaired.** That would be a `siren`.

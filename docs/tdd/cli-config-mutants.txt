@@ -1,0 +1,456 @@
+# what this is: internal/cli mutated one change at a time (exit mapping, problem rendering, registry, lazy build, config init/check/trust, secret set/list, levels); each run has a 300s timeout
+# test command: go test -count=1 ./internal/cli/ (timeout 300s per run)
+## baseline
+ok  	github.com/Exploded-views/yo-human/internal/cli	0.180s
+exit=0
+
+## exitFor(queued) returns 0
+# in internal/cli/exit.go: '\tcase core.StatusQueued:\n\t\treturn ExitQueued' => '\tcase core.StatusQueued:\n\t\treturn ExitOK'
+--- FAIL: TestExitCodeTable (0.00s)
+--- FAIL: TestFinishPrintsTheResultThenTheProblemsAndExitsWithTheProblem (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.174s
+FAIL
+exit=1 (killed)
+
+## exitFor(failed) returns 0
+# in internal/cli/exit.go: '\tcase core.StatusFailed:\n\t\treturn ExitFailed' => '\tcase core.StatusFailed:\n\t\treturn ExitOK'
+--- FAIL: TestExitCodeTable (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.174s
+FAIL
+exit=1 (killed)
+
+## exitFor unknown status exits 0
+# in internal/cli/exit.go: '\treturn ExitInternal\n}\n\n// exitForProblem' => '\treturn ExitOK\n}\n\n// exitForProblem'
+--- FAIL: TestExitCodeTable (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.176s
+FAIL
+exit=1 (killed)
+
+## store problem exits 78
+# in internal/cli/exit.go: '\tcase problem.Store:\n\t\treturn ExitStore' => '\tcase problem.Store:\n\t\treturn ExitConfig'
+--- FAIL: TestConfigInitStoreFailures (0.00s)
+--- FAIL: TestExitCodeTable (0.00s)
+--- FAIL: TestFinishPrintsTheResultThenTheProblemsAndExitsWithTheProblem (0.00s)
+--- FAIL: TestConfigTrustStoreFailures (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.179s
+exit=1 (killed)
+
+## config problem exits 64
+# in internal/cli/exit.go: '\tcase problem.Config:\n\t\treturn ExitConfig' => '\tcase problem.Config:\n\t\treturn ExitUsage'
+--- FAIL: TestConfigCheckAppliesEachChannelsOwnValidation (0.00s)
+--- FAIL: TestConfigCheckWithoutAConfigExits78 (0.00s)
+--- FAIL: TestConfigCheckStructureErrorsExit78 (0.00s)
+--- FAIL: TestConfigCheckLooseSecretsFileExits78 (0.00s)
+--- FAIL: TestExitCodeTable (0.00s)
+--- FAIL: TestLevelsWithoutAConfigExits78 (0.00s)
+exit=1 (killed)
+
+## unavailable problem exits 70
+# in internal/cli/exit.go: '\tcase problem.Unavailable:\n\t\treturn ExitFailed' => '\tcase problem.Unavailable:\n\t\treturn ExitInternal'
+--- FAIL: TestExitCodeTable (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.178s
+FAIL
+exit=1 (killed)
+
+## unknown problem kind exits 0
+# in internal/cli/exit.go: '\tcase problem.Unavailable:\n\t\treturn ExitFailed\n\t}\n\treturn ExitInternal' => '\tcase problem.Unavailable:\n\t\treturn ExitFailed\n\t}\n\treturn ExitOK'
+--- FAIL: TestExitCodeTable (0.00s)
+--- FAIL: TestWriteProblemsTreatsAPlainErrorAsInternal (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.171s
+FAIL
+exit=1 (killed)
+
+## exit code from the last problem
+# in internal/cli/output.go: '\treturn exitForProblem(ps[0])\n}\n\n// flatten' => '\treturn exitForProblem(ps[len(ps)-1])\n}\n\n// flatten'
+--- FAIL: TestWriteProblemsRendersEveryProblemInAJoin (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.172s
+FAIL
+exit=1 (killed)
+
+## json exit code from the last problem
+# in internal/cli/output.go: '\t\treturn exitForProblem(ps[0])\n\t}\n\tfor' => '\t\treturn exitForProblem(ps[len(ps)-1])\n\t}\n\tfor'
+--- FAIL: TestWriteProblemsRendersEveryProblemInAJoin (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.161s
+FAIL
+exit=1 (killed)
+
+## only the first problem of a join
+# in internal/cli/output.go: '\t\t\tout = append(out, flatten(e)...)' => '\t\t\tout = append(out, flatten(e)...)\n\t\t\tbreak'
+--- FAIL: TestWriteProblemsRendersEveryProblemInAJoin (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.160s
+FAIL
+exit=1 (killed)
+
+## plain error exits as a problem kind 0
+# in internal/cli/output.go: 'problem.Internalf("unexpected error: %s"' => 'problem.Usagef("unexpected error: %s"'
+--- FAIL: TestWriteProblemsTreatsAPlainErrorAsInternal (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.164s
+FAIL
+exit=1 (killed)
+
+## newlines kept in the what line
+# in internal/cli/output.go: 'oneLine(p.What), oneLine(p.Valid), oneLine(p.Fix))\n\t}\n\treturn exitForProblem(ps[0])' => 'p.What, p.Valid, p.Fix)\n\t}\n\treturn exitForProblem(ps[0])'
+--- FAIL: TestWriteProblemKeepsThreeLines (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.161s
+FAIL
+exit=1 (killed)
+
+## json version dropped
+# in internal/cli/output.go: '}{jsonVersion, r})' => '}{0, r})'
+--- FAIL: TestWriteResultJSON (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.161s
+FAIL
+exit=1 (killed)
+
+## errors list missing in json
+# in internal/cli/output.go: '\t\t\tobj["errors"] = all\n' => '\t\t\t_ = all\n'
+--- FAIL: TestWriteProblemsRendersEveryProblemInAJoin (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.163s
+FAIL
+exit=1 (killed)
+
+## result id dropped from the RESULT line
+# in internal/cli/output.go: '\t\thead += " " + r.ID' => '\t\thead += ""'
+--- FAIL: TestWriteResultText (0.00s)
+--- FAIL: TestFinishPrintsTheResultThenTheProblemsAndExitsWithTheProblem (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.162s
+FAIL
+exit=1 (killed)
+
+## channel error dropped
+# in internal/cli/output.go: '\t\t\tline += " (" + oneLine(c.Error) + ")"' => '\t\t\tline += ""'
+--- FAIL: TestWriteResultText (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.160s
+FAIL
+exit=1 (killed)
+
+## warning prefix doubled
+# in internal/cli/output.go: 'strings.TrimPrefix(p.What, "warning: ")' => 'p.What'
+--- FAIL: TestWriteWarningsAndNotices (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.171s
+FAIL
+exit=1 (killed)
+
+## finish drops the problem's code
+# in internal/cli/cli.go: '\tif err != nil {\n\t\treturn e.fail(err)\n\t}\n\treturn exitFor(*r)' => '\tif err != nil {\n\t\te.fail(err)\n\t}\n\treturn exitFor(*r)'
+--- FAIL: TestFinishPrintsTheResultThenTheProblemsAndExitsWithTheProblem (0.00s)
+panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked]
+panic({0x1014adbe8?, 0x101544210?})
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/runtime/panic.go:859 +0x120
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.086s
+FAIL
+exit=1 (killed)
+
+## finish does not print the result
+# in internal/cli/cli.go: '\tif r != nil {\n\t\twriteResult(e.stdout, *r, e.asJSON)\n\t}' => '\tif r != nil {\n\t}'
+--- FAIL: TestFinishPrintsTheResultThenTheProblemsAndExitsWithTheProblem (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.160s
+FAIL
+exit=1 (killed)
+
+## --json ignored
+# in internal/cli/cli.go: '\t\t\te.asJSON = true' => '\t\t\te.asJSON = false'
+--- FAIL: TestErrorFormatJSON (0.00s)
+--- FAIL: TestGlobalFlagsComeFromAnywhere (0.00s)
+--- FAIL: TestConfigCheckReportsOrigins (0.00s)
+--- FAIL: TestConfigSchemaPrintsTheEmbeddedSchema (0.00s)
+--- FAIL: TestLevelsJSON (0.00s)
+--- FAIL: TestSecretListShowsNamesAndSizes (0.02s)
+exit=1 (killed)
+
+## --config=file ignored
+# in internal/cli/cli.go: '\t\t\te.configFile = strings.TrimPrefix(a, "--config=")' => '\t\t\te.configFile = ""'
+--- FAIL: TestGlobalFlagsComeFromAnywhere (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.161s
+FAIL
+exit=1 (killed)
+
+## subcommand word echoed
+# in internal/cli/cli.go: '"run `yo-human "+group+" <subcommand>`", group))' => '"run `yo-human "+group+" <subcommand>`", group+" "+args[0]))'
+--- FAIL: TestSubcommandsNeedAKnownName (0.00s)
+panic: runtime error: index out of range [0] with length 0 [recovered, repanicked]
+panic({0x104cbf320?, 0x3ff889af5350?})
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/runtime/panic.go:859 +0x120
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.021s
+FAIL
+exit=1 (killed)
+
+## registry without bark
+# in internal/cli/wire.go: '\t\tbark.NewType(version.Version),\n' => ''
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL
+exit=1 (killed)
+
+## registry without pagerduty
+# in internal/cli/wire.go: '\t\tpagerduty.NewType(version.Version),\n' => ''
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL
+exit=1 (killed)
+
+## registry without log
+# in internal/cli/wire.go: '\t\tlogch.Type,\n' => ''
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL
+exit=1 (killed)
+
+## buildChannels builds every channel
+# in internal/cli/wire.go: '\t\tsub.Channels[n] = ci\n' => '\t\tsub.Channels = cfg.Channels\n'
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL
+exit=1 (killed)
+
+## buildChannels unknown name ignored
+# in internal/cli/wire.go: '\t\tif !ok {\n\t\t\treturn nil, problem.Configf("there is no channel' => '\t\tif !ok && false {\n\t\t\treturn nil, problem.Configf("there is no channel'
+--- FAIL: TestBuildChannelsRejectsAnUnknownName (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.162s
+FAIL
+exit=1 (killed)
+
+## buildChannels drops a constructor error
+# in internal/cli/wire.go: '\t\tif err != nil {\n\t\t\trefused = append(' => '\t\tif err != nil && n == "" {\n\t\t\trefused = append('
+--- FAIL: TestConfigCheckAppliesEachChannelsOwnValidation (0.00s)
+panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked]
+panic({0x102b09be8?, 0x102ba0210?})
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/runtime/panic.go:859 +0x120
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.071s
+FAIL
+exit=1 (killed)
+
+## --config ignored
+# in internal/cli/wire.go: '\tif e.configFile != "" {' => '\tif false {'
+--- FAIL: TestGlobalFlagsComeFromAnywhere (0.00s)
+--- FAIL: TestConfigInitHonoursConfigFlag (0.01s)
+--- FAIL: TestConfigInitStoreFailures (0.01s)
+--- FAIL: TestConfigCheckReportsOrigins (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.186s
+exit=1 (killed)
+
+## XDG_STATE_HOME ignored
+# in internal/cli/wire.go: 'if v := os.Getenv("XDG_STATE_HOME"); v != "" {' => 'if v := os.Getenv("XDG_STATE_HOME"); v != "" && false {'
+--- FAIL: TestConfigTrustStoreFailures (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.164s
+FAIL
+exit=1 (killed)
+
+## init overwrites
+# in internal/cli/configcmd.go: 'if _, err := os.Lstat(path); err == nil {' => 'if _, err := os.Lstat(path); err == nil && false {'
+--- FAIL: TestConfigInitWritesStarterAndRefusesOverwrite (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.180s
+FAIL
+exit=1 (killed)
+
+## init writes world-readable
+# in internal/cli/configcmd.go: '[]byte(fmt.Sprintf(starterConfig, logPath)), 0o600)' => '[]byte(fmt.Sprintf(starterConfig, logPath)), 0o644)'
+--- FAIL: TestConfigInitWritesStarterAndRefusesOverwrite (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.172s
+FAIL
+exit=1 (killed)
+
+## init ignores --config
+# in internal/cli/configcmd.go: '\tpath := p.Explicit\n\tif path == "" {' => '\tpath := ""\n\tif path == "" {'
+--- FAIL: TestConfigInitHonoursConfigFlag (0.01s)
+--- FAIL: TestConfigInitStoreFailures (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.175s
+FAIL
+exit=1 (killed)
+
+## a missing secret is not warned
+# in internal/cli/configcmd.go: '\t\t\tif !have[secret] {' => '\t\t\tif have[secret] && false {'
+--- FAIL: TestStarterPassesCheckAndHoldsNoSecretValues (0.01s)
+--- FAIL: TestConfigCheckMissingSecretsAreWarningsNotErrors (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.165s
+FAIL
+exit=1 (killed)
+
+## check passes no placeholders
+# in internal/cli/configcmd.go: '\t\t\tvalues[secret] = placeholder\n' => '\t\t\tvalues[secret] = ""\n'
+--- FAIL: TestStarterPassesCheckAndHoldsNoSecretValues (0.01s)
+--- FAIL: TestConfigCheckReportsOrigins (0.00s)
+--- FAIL: TestConfigCheckMissingSecretsAreWarningsNotErrors (0.00s)
+--- FAIL: TestConfigCheckAppliesEachChannelsOwnValidation (0.00s)
+--- FAIL: TestConfigCheckPrintsCapabilityWarningsAsWarnings (0.00s)
+--- FAIL: TestConfigTrustThenChange (0.01s)
+exit=1 (killed)
+
+## check skips the channel validation
+# in internal/cli/configcmd.go: '\tif err := checkChannels(cfg, values); err != nil {' => '\tif err := checkChannels(cfg, values); err != nil && false {'
+--- FAIL: TestConfigCheckAppliesEachChannelsOwnValidation (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.169s
+FAIL
+exit=1 (killed)
+
+## check skips per-send options
+# in internal/cli/configcmd.go: 'ch.Validate(s.Options); verr != nil' => 'ch.Validate(nil); verr != nil'
+--- FAIL: TestConfigCheckAppliesEachChannelsOwnValidation (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.171s
+FAIL
+exit=1 (killed)
+
+## check drops the origins
+# in internal/cli/configcmd.go: '\t\torigins = append(origins, k+" <- "+oneLine(cfg.Origin[k]))' => '\t\t_ = k'
+--- FAIL: TestConfigCheckReportsOrigins (0.00s)
+--- FAIL: TestConfigTrustThenChange (0.01s)
+--- FAIL: TestConfigTrustThroughASymlinkedCwd (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.169s
+FAIL
+exit=1 (killed)
+
+## trust key not symlink-resolved
+# in internal/cli/trustcmd.go: 'path, err := filepath.EvalSymlinks(abs)' => 'path, err := abs, error(nil)'
+--- FAIL: TestConfigTrustThenChange (0.01s)
+--- FAIL: TestConfigTrustThroughASymlinkedCwd (0.02s)
+--- FAIL: TestConfigTrustRefusals (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.164s
+FAIL
+exit=1 (killed)
+
+## trust hashes other bytes
+# in internal/cli/trustcmd.go: 'sum := sha256.Sum256(data)' => 'sum := sha256.Sum256(data[1:])'
+--- FAIL: TestConfigTrustThenChange (0.01s)
+--- FAIL: TestConfigTrustThroughASymlinkedCwd (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.168s
+FAIL
+exit=1 (killed)
+
+## trust prints a pasted secret name
+# in internal/cli/trustcmd.go: 'ok && secrets.ValidName(s)' => 'ok'
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL
+exit=1 (killed)
+
+## trust prints the whole URL
+# in internal/cli/trustcmd.go: 'shown := strconv.Quote(u.Scheme + "://" + u.Host + u.EscapedPath())' => 'shown := strconv.Quote(s)'
+--- FAIL: TestConfigTrustShowsEndpointsAndSecretNamesNotValues (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.158s
+FAIL
+exit=1 (killed)
+
+## trust has no size limit
+# in internal/cli/trustcmd.go: 'err != nil || len(data) > maxTrustBytes' => 'err != nil'
+--- FAIL: TestConfigTrustRefusals (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.172s
+FAIL
+exit=1 (killed)
+
+## trust accepts a directory
+# in internal/cli/trustcmd.go: 'err != nil || !fi.Mode().IsRegular()' => 'err != nil'
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL
+exit=1 (killed)
+
+## trust takes any count of files
+# in internal/cli/trustcmd.go: '\tif len(args) != 1 {' => '\tif len(args) < 1 {'
+--- FAIL: TestConfigTrustRefusals (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.159s
+FAIL
+exit=1 (killed)
+
+## trust prints no secret references
+# in internal/cli/trustcmd.go: 'ok && len(ref) == 1' => 'ok && len(ref) == 99'
+--- FAIL: TestConfigTrustShowsEndpointsAndSecretNamesNotValues (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.161s
+FAIL
+exit=1 (killed)
+
+## secret set accepts extra arguments
+# in internal/cli/secretcmd.go: '\tif len(args) != 1 {' => '\tif len(args) < 1 {'
+--- FAIL: TestSecretSetReadsStdinOnly (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.169s
+FAIL
+exit=1 (killed)
+
+## secret set reads stdin before the name check
+# in internal/cli/secretcmd.go: '\tif !secrets.ValidName(name) {' => '\tif false {'
+--- FAIL: TestSecretSetRefusesBadNamesWithoutEchoingThem (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.160s
+FAIL
+exit=1 (killed)
+
+## secret set has no size limit
+# in internal/cli/secretcmd.go: 'err != nil || len(value) > maxSecretBytes' => 'err != nil'
+--- FAIL: TestSecretSetStdinProblems (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.171s
+FAIL
+exit=1 (killed)
+
+## secret set echoes a bad name
+# in internal/cli/secretcmd.go: '"that is not a valid secret name (it is not echoed: a pasted value must never be printed)",\n\t\t\t"lower-case' => '"that is not a valid secret name "+name,\n\t\t\t"lower-case'
+--- FAIL: TestSecretSetRefusesBadNamesWithoutEchoingThem (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.164s
+FAIL
+exit=1 (killed)
+
+## secret list shows values
+# in internal/cli/secretcmd.go: 'lines[i] = fmt.Sprintf("%s %d bytes", s.Name, s.Bytes)' => 'lines[i] = fmt.Sprintf("%s %d bytes", s.Name, s.Bytes+1)'
+--- FAIL: TestSecretListShowsNamesAndSizes (0.02s)
+--- FAIL: TestSecretListShowsInvalidStoredNamesAsPlaceholders (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.159s
+FAIL
+exit=1 (killed)
+
+## levels ask inverted
+# in internal/cli/levelscmd.go: '\t\tif l.AskRequired {' => '\t\tif !l.AskRequired {'
+--- FAIL: TestLevelsJSON (0.00s)
+--- FAIL: TestLevelsText (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.160s
+FAIL
+exit=1 (killed)
+
+## levels quiet hours inverted
+# in internal/cli/levelscmd.go: '\t\tif l.HoldInQuietHours {' => '\t\tif !l.HoldInQuietHours {'
+--- FAIL: TestLevelsJSON (0.00s)
+--- FAIL: TestLevelsText (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.161s
+FAIL
+exit=1 (killed)
+
+## levels takes arguments
+# in internal/cli/levelscmd.go: '\tif len(args) > 0 {' => '\tif len(args) > 9 {'
+--- FAIL: TestSubcommandsNeedAKnownName (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	0.168s
+FAIL
+exit=1 (killed)
+
+# survivors: none

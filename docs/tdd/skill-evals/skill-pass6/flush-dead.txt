@@ -1,0 +1,13 @@
+skills used: ['yo-human-eval:yo-human']
+
+I would stop and run no more yo-human commands. `flush` exited 69 with `RESULT failed`, which means every channel rejected the message for good. Retrying can't help. Switching levels or re-running `notify` won't help either, because the phone channel's credentials are rejected, and only the human can fix that. I also wouldn't touch the config or secrets, run `config trust` or `secret set`, or use another tool to reach them.
+
+Next I'd tell the human in my session, in my reply or handoff:
+
+> **I could not reach you. The siren for "Checkout failing" was not delivered.**
+> - **What I sent:** `yo-human notify --level siren --title "Checkout failing" --ask "Look at checkout now" --dedup-key checkout-FAKE`
+> - **Ask:** Look at checkout now. Checkout is failing, so treat it as urgent.
+> - **What happened:** `notify` exited 75 (queued). After 60 seconds, `yo-human flush` exited 69 with `RESULT failed` and `phone: dead (the provider rejected the credentials)`.
+> - **What you need to do:** Fix the phone channel's provider credentials. I can't do that. After that, tell me and I'll send the page again.
+
+After that I'd carry on with the work I can do myself, such as investigating the checkout failure. If I fix and verify it, I'd run `yo-human resolve --dedup-key checkout-FAKE` to close the incident.

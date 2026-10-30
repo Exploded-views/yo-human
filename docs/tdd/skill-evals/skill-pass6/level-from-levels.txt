@@ -1,0 +1,40 @@
+skills used: ['yo-human-eval:yo-human']
+
+Dry run, nothing executed. This is what I would run, in order.
+
+**1. Read the human's level ladder.** I haven't run it this session, and I shouldn't guess level names.
+
+```
+yo-human levels --json
+```
+
+I'd read each level's `use_when`, `ask` and `quiet_hours`. I'd pick the one that matches a production outage with checkout failing, which is the loudest level meant for "need the human now". I'll call it `<LEVEL>` below. It's a placeholder until I've seen the real names. If the ladder has no level that fits, I'd stop and tell the human in my session. I wouldn't pick a quieter level just to have something to send.
+
+**2. Send the notification.**
+
+```
+YO_HUMAN_PROJECT=<project> YO_HUMAN_AGENT=<agent> yo-human notify \
+  --level <LEVEL> \
+  --title "Production DB not responding; checkout failing" \
+  --ask "Check the production database now and restore it. Checkout is failing for customers until it is back." \
+  --body "Production database stopped answering. Checkout requests are failing. Detected by <how/where, e.g. connection timeouts in the checkout service logs>. I have not changed anything on the database." \
+  --dedup-key prod-db-down-checkout
+```
+
+- The dedup key is stable and names the problem, so a repeat won't page the human twice.
+- No secrets go in the arguments or body. That includes connection strings. If a log has one, I'd name the log file instead.
+- If I have a dashboard or runbook URL, I'd add `--link` or `--action "<label>=<https url>"`.
+
+**3. Act on the exit code.**
+- **0:** Done. `delivered`, `partial`, `held` and `suppressed` all count as done. `held` means the message waits for quiet hours to end.
+- **75 (queued):** Wait the `after_seconds` from `next`, then run `next.do` exactly as printed, usually `yo-human flush`. I'd do that at most `attempts_left` times. I'd stop at the first exit 0 with `sent`, or at exit 69. If every attempt still exits 75, I'd tell the human in my session with the title and ask. I wouldn't re-run `notify` or change the key.
+- **64:** My call was wrong. I'd read the `error`, `valid` and `fix` lines, fix the call and re-run it.
+- **69, 74, 78 or 70:** I'd stop. I wouldn't retry, switch levels or edit config or secrets. I'd tell the human in my reply what I tried, the ask, and the exact error text.
+
+**4. After the outage is fixed and verified:**
+
+```
+yo-human resolve --dedup-key prod-db-down-checkout --note "<short note>"
+```
+
+I'd run this only once the database is confirmed healthy. I wouldn't send a new `notify` to say it's fixed.

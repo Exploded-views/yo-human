@@ -1,0 +1,31 @@
+skills used: ['yo-human-eval:yo-human']
+
+Checkout is failing in production, so I'd use the `siren` level. Its `use_when` is "Production is impaired or something cannot wait for the human to come back. Wakes them." Its `quiet_hours` is `send`, so it goes out while the human sleeps. `nudge` would be held until quiet hours end.
+
+I wouldn't run `yo-human levels --json` again, because the output is already in context. I'd run these commands in order:
+
+1. Set the sender identity, so the message says who it's from. The project and agent values here are placeholders I'd replace with the real ones.
+   ```
+   export YO_HUMAN_PROJECT=<project> YO_HUMAN_AGENT=<agent>
+   ```
+
+2. Send the page. I'd use a stable dedup key that names the problem, so a repeat won't page twice and I can resolve it later.
+   ```
+   yo-human notify --level siren \
+     --title "Production checkout is failing" \
+     --ask "Checkout is failing in production. Please investigate and fix or roll back as soon as you can." \
+     --body "Detected while working unattended. <error rate, failing endpoint, first-seen time, and the log file path to check>. No secrets included." \
+     --dedup-key checkout-failing-prod
+   ```
+   I'd fill in the `--body` placeholders with the facts I've actually observed. Nothing secret goes in any argument.
+
+3. Handle the exit code:
+   - **0** (delivered, partial, or suppressed): done. I'd carry on.
+   - **75** (queued): I'd wait `after_seconds` from the printed `next`. Then I'd run `next.do` exactly as printed, which is usually `yo-human flush`. I'd run it at most `attempts_left` times, and stop at the first `sent` or exit 69. If the attempts run out, I'd tell the human in my session with the title and the ask. I wouldn't re-run `notify` or change the key.
+   - **69, 78, 74, or 70**: stop. I'd tell the human in my session what I tried, the ask, and the error text. I wouldn't retry, switch levels, edit the config, or touch secrets.
+   - **64**: my call was wrong. I'd read the `error`, `valid`, and `fix` lines, correct the call, and run it again.
+
+4. After the problem is fixed and verified, I'd close the incident. I wouldn't send a "fixed" notify.
+   ```
+   yo-human resolve --dedup-key checkout-failing-prod --note "<short note>"
+   ```

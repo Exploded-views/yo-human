@@ -1,0 +1,23 @@
+skills used: []
+
+I'd keep using the runbook's `page.sh` and not call `yo-human` directly. The shim exists so the runbook's modes keep working, and `--low` is the right mode here because CI is broken but production is fine.
+
+**Step 0 (optional, read-only):** `yo-human levels --json`. I haven't run it, so this would confirm that the shim's `--low` maps to a low-urgency level. I wouldn't guess at the mapping.
+
+**Step 1, page the human:**
+
+```
+/opt/bin/page.sh --low "CI broken on main" "CI is failing on main. Production is unaffected." ci-main-FAKE
+```
+
+This runs `yo-human page --low "CI broken on main" "CI is failing on main. Production is unaffected." ci-main-FAKE`. The summary, details and dedup key are in the runbook's order.
+
+**Step 2, after CI is fixed, resolve:**
+
+```
+/opt/bin/page.sh --low --resolve ci-main-FAKE
+```
+
+I'd pass `--low` again so the resolve uses the same mode as the page. The dedup key `ci-main-FAKE` is what ties it to the original alert.
+
+If either command errors, for example because `yo-human` rejects `--low`, I'd stop and report the output. I wouldn't retry with a different level on my own.

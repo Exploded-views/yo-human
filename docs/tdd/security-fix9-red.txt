@@ -1,0 +1,17 @@
+$ go test -count=1 ./internal/store -run MaxAge
+--- FAIL: TestRecoverRequeuesAnInflightEntryOlderThanMaxAgeWhateverItsPid (0.02s)
+    recover_test.go:167: Recover = 0, <nil>, want 1 (only the entry older than maxAge)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	0.031s
+FAIL
+[exit 1]
+
+$ go test -count=1 ./internal/core -run TooLong
+--- FAIL: TestACallRequeuesAnEntryInFlightTooLongForAnyCall (0.04s)
+    recover_age_test.go:51: deadline 1s, in flight 11m0s: requeued = false, want true
+    recover_age_test.go:51: deadline 2m0s, in flight 21m0s: requeued = false, want true
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.055s
+FAIL
+[exit 1]
+

@@ -1,0 +1,37 @@
+$ go test ./internal/channel/ntfy/ ./internal/config/ -run "Ntfy|OnlyHTTP|ThreeDays|NewValidates|TypeDecl"
+--- FAIL: TestOnlyHTTPLinksReachThePhone (0.02s)
+    ntfy_test.go:288: #0 action=false: err=<nil>
+    ntfy_test.go:291: #0: a request was made
+    ntfy_test.go:288: #0 action=true: err=<nil>
+    ntfy_test.go:291: #0: a request was made
+    ntfy_test.go:288: #1 action=false: err=<nil>
+    ntfy_test.go:291: #1: a request was made
+    ntfy_test.go:288: #1 action=true: err=<nil>
+    ntfy_test.go:291: #1: a request was made
+    ntfy_test.go:288: #2 action=false: err=<nil>
+    ntfy_test.go:291: #2: a request was made
+    ntfy_test.go:288: #2 action=true: err=<nil>
+    ntfy_test.go:291: #2: a request was made
+    ntfy_test.go:288: #3 action=false: err=<nil>
+    ntfy_test.go:291: #3: a request was made
+    ntfy_test.go:288: #3 action=true: err=<nil>
+    ntfy_test.go:291: #3: a request was made
+    ntfy_test.go:288: #4 action=false: err=<nil>
+    ntfy_test.go:291: #4: a request was made
+    ntfy_test.go:288: #4 action=true: err=<nil>
+    ntfy_test.go:291: #4: a request was made
+    ntfy_test.go:288: #5 action=true: err=<nil>
+    ntfy_test.go:291: #5: a request was made
+--- FAIL: TestDeliveryMoreThanThreeDaysOutIsPermanent (0.00s)
+    ntfy_test.go:302: err = <nil>
+    ntfy_test.go:305: a request was made
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/ntfy	0.035s
+--- FAIL: TestNtfySchemaAcceptsSecretReferences (0.00s)
+    ntfy_schema_test.go:22: topic only: [channels.phone.topic: unknown key]
+    ntfy_schema_test.go:22: topic and token: [channels.phone.token: unknown key channels.phone.topic: unknown key]
+    ntfy_schema_test.go:34: no topic: accepted
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.013s
+FAIL
+exit=1

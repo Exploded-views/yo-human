@@ -1,0 +1,46 @@
+# what this is: task 14 fix round 1 RED: the new lint fixtures (tilde evasions, op:// pipe checks, reassignment forms, Inputs bullets) against the first CheckSetupPage
+# command: go test -count=1 ./internal/repolint (home path redacted)
+--- FAIL: TestSetupPageTildeEvasions (0.00s)
+    --- FAIL: TestSetupPageTildeEvasions/text_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/fish_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/ksh_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/shell-session_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/upper-case_SH_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/info_string_with_attributes (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/four-backtick_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/tilde_fence (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/indented_block (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/cd_to_home (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+    --- FAIL: TestSetupPageTildeEvasions/cd_to_home_then_more (0.00s)
+        setupdocs_evasion_test.go:33: rules = "", want tilde-home
+--- FAIL: TestSetupPageOpPipeEvasions (0.00s)
+    setupdocs_evasion_test.go:59: "X=$(op read \"op://v/i/f\"); echo hi | yo-human secret set x": rules = "", want op-unpiped
+    setupdocs_evasion_test.go:59: "op read \"op://v/i/f\" > out; echo hi | yo-human secret set x": rules = "", want op-unpiped
+    setupdocs_evasion_test.go:59: "echo \"op://v/i/f\" | yo-human secret set x": rules = "", want op-unpiped
+    setupdocs_evasion_test.go:59: "op read \"op://v/i/f\" | tee out | yo-human secret set x": rules = "", want op-unpiped
+    setupdocs_evasion_test.go:59: "op read \"op://v/i/f\" && echo | yo-human secret set x": rules = "", want op-unpiped
+    setupdocs_evasion_test.go:59: "S=`op read \"op://v/i/f\"` | yo-human secret set x": rules = "", want op-unpiped
+    setupdocs_evasion_test.go:69: "op read \"op://v/i/f\" |\n  yo-human secret set x": [{Path:p.md Lines:0 Line:22 Rule:op-unpiped Msg:an op:// line must pipe into `yo-human secret set <name>`: a secret never reaches a variable or a screen}]; want none
+--- FAIL: TestSetupPageReassignmentForms (0.00s)
+    setupdocs_evasion_test.go:77: "TOPIC_NAME+=x": rules = "", want input-reassigned
+    setupdocs_evasion_test.go:77: "read TOPIC_NAME": rules = "", want input-reassigned
+    setupdocs_evasion_test.go:77: "read -r TOPIC_NAME": rules = "", want input-reassigned
+    setupdocs_evasion_test.go:77: "set TOPIC_NAME x": rules = "", want input-reassigned
+--- FAIL: TestSetupPageInputsBullets (0.00s)
+    setupdocs_evasion_test.go:94: no bullets: rules = "", want input-format
+    setupdocs_evasion_test.go:98: star bullet: rules = "", want input-format
+    setupdocs_evasion_test.go:102: indented bullet: rules = "", want input-format
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.017s
+FAIL
+exit=1

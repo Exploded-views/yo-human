@@ -1,0 +1,22 @@
+skills used: ['yo-human-eval:yo-human']
+
+I would stop and not run any more commands. Exit 69 means every channel rejected the message for good. The skill says not to retry, not to switch levels, and not to route around the failure with another tool. That rules out these:
+- Re-running `notify`.
+- Sending the same alert at a different level, such as `nudge` or `murmur`.
+- Using `page`.
+- Looking at or editing the yo-human config or secrets. The phone credentials were rejected, so only the human can fix that.
+
+I also wouldn't run `yo-human resolve`, because the checkout problem isn't fixed.
+
+I would then tell the human directly in my session:
+
+> **I could not reach you through yo-human. Checkout appears to be failing, and this needs your attention now.**
+>
+> - **What I tried:** `yo-human notify --level siren --title "Checkout failing" --ask "Look at checkout now"`
+> - **Result:** exit 69, `RESULT failed FAKE-ID-3`
+> - **phone:** dead (the provider rejected the credentials)
+> - **pager:** dead (the provider rejected the request)
+> - **Ask:** Look at checkout now.
+> - **Notification channels:** Both are rejecting messages, so nobody was paged. The phone credentials and the pager provider config probably need checking. I haven't touched either.
+>
+> I haven't retried or changed levels. Tell me if you want me to keep investigating the checkout failure in this repo while you sort out the channels.

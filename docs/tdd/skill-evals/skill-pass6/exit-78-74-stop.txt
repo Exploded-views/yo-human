@@ -1,0 +1,19 @@
+skills used: ['yo-human-eval:yo-human']
+
+**Exit 78 (what happened):** the config is bad. The `pd-critical` secret isn't set. Only the human can fix that, so I stop.
+
+What I would do, in order:
+
+1. **Run no more commands.** I would not run `yo-human secret set pd-critical`, even though the `fix:` line spells it out. That command belongs to the human, in their own terminal. I would not pipe `op read` into it either, and I would not edit the config. I would not retry `notify`, and I would not drop to `nudge` or `murmur` to get around it. The siren is the level that matches "checkout failing". Switching levels to dodge the error would quietly downgrade the alert, and the error is about a missing secret, not the level.
+2. **Tell the human in my session.** The notify didn't reach them. I'd write something like:
+
+   > I could not page you. `yo-human notify --level siren --title "Checkout failing" --ask "Look at checkout now"` exited 78:
+   > `error: secret "pd-critical", used by channels.pager.routing_key, is not set`
+   > `fix: op read "op://<vault>/<item>/<field>" | yo-human secret set pd-critical`
+   >
+   > Please run that fix in your own terminal, filling in the vault, item and field. The ask is: **look at checkout now. Checkout is failing.** Tell me once the secret is set and I'll send the siren again.
+   
+   If the config's other siren channels went out, the output would have shown them. A channel that was skipped for a missing secret stays unreached and isn't retried. I'd say that too, and I'd send again only after the human has fixed it.
+3. **Carry on with any safe work** that doesn't depend on the page. If I fix checkout, I'd verify it myself. I would run `yo-human resolve` only if the incident was actually created, and I'd use the same dedup key. I passed none in this call, so I'd add a stable key, for example `--dedup-key checkout-failing`, when I re-send after the human fixes the secret.
+
+**If it had been exit 74 (store I/O failure):** the response is the same shape. I stop, and I don't retry, change levels or work around it with another tool. I tell the human in my session. The message would say that I tried to send a siren titled "Checkout failing" with the ask "Look at checkout now". It would say it failed with exit 74, quote the error text, and say the human has not been reached, so they should look at checkout now. The difference is that no secret or config fix applies. The problem is the local store, and I wouldn't touch it.

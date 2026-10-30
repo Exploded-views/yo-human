@@ -3,6 +3,7 @@ package main
 
 import (
 	"os"
+	_ "time/tzdata" // the static binary may run where there is no zoneinfo; quiet_hours.timezone must still load
 
 	"github.com/Exploded-views/yo-human/internal/cli"
 )

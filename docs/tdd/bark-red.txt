@@ -1,0 +1,87 @@
+$ go test -count=1 ./internal/channel/bark/ ./internal/config/ -run 'Bark|TypeDeclaration|DefaultServer|NewValidatesSettings|ValidateOptions|ResolveAndCancel|SendJSON|Interruption|Optional|Volume|Truncated|OnlyHTTP|ErrorKinds|ApplicationError|Redirect|Dial|NoSecret|Context|Promptly|Transport'
+--- FAIL: TestTypeDeclaration (0.00s)
+    bark_config_test.go:16: type = {Name:bark Capabilities:{Interruptions:map[] Markdown:false Link:false MaxActions:0 Subtitle:false NativeDedup:false Resolve:false Schedule:false ReachesHuman:false MaxTitle:0 MaxBody:0} SecretFields:[] SettingsSchema:[] New:0x104932fc0}
+--- FAIL: TestDefaultServer (0.00s)
+    bark_config_test.go:39: default = "", stub
+    bark_config_test.go:42: trailing slash kept: ""
+--- FAIL: TestNewValidatesSettings (0.00s)
+    bark_config_test.go:69: http server: err=<nil> kind=0
+    bark_config_test.go:69: empty server: err=<nil> kind=0
+    bark_config_test.go:69: non-string server: err=<nil> kind=0
+    bark_config_test.go:69: no host: err=<nil> kind=0
+    bark_config_test.go:69: userinfo: err=<nil> kind=0
+    bark_config_test.go:69: query: err=<nil> kind=0
+    bark_config_test.go:69: fragment: err=<nil> kind=0
+    bark_config_test.go:69: no key: err=<nil> kind=0
+    bark_config_test.go:69: key with space: err=<nil> kind=0
+    bark_config_test.go:69: key with newline: err=<nil> kind=0
+    bark_config_test.go:69: key with slash: err=<nil> kind=0
+--- FAIL: TestValidateOptions (0.00s)
+    bark_config_test.go:94: Validate(map[volume:-1]) = <nil>
+    bark_config_test.go:94: Validate(map[volume:11]) = <nil>
+    bark_config_test.go:94: Validate(map[volume:5.5]) = <nil>
+    bark_config_test.go:94: Validate(map[volume:5]) = <nil>
+    bark_config_test.go:94: Validate(map[volume:true]) = <nil>
+    bark_config_test.go:94: Validate(map[call:1]) = <nil>
+    bark_config_test.go:94: Validate(map[call:1]) = <nil>
+    bark_config_test.go:94: Validate(map[sound:3]) = <nil>
+    bark_config_test.go:94: Validate(map[sound:true]) = <nil>
+    bark_config_test.go:94: Validate(map[tags:[a]]) = <nil>
+    bark_config_test.go:99: Send with a bad option = stub
+--- FAIL: TestResolveAndCancelUnsupported (0.00s)
+    bark_config_test.go:106: Resolve = stub
+    bark_config_test.go:109: Cancel = stub
+--- FAIL: TestErrorKinds (0.00s)
+    bark_errors_test.go:40: send 401: err=stub kind=0, want 1
+    bark_errors_test.go:40: send 413: err=stub kind=0, want 1
+    bark_errors_test.go:40: send 302: err=stub kind=0, want 1
+    bark_errors_test.go:40: send 400: err=stub kind=0, want 1
+    bark_errors_test.go:40: send 404: err=stub kind=0, want 1
+--- FAIL: TestApplicationErrorIn200 (0.00s)
+    bark_errors_test.go:59: "{\"code\":400,\"message\":\"device key DEVICEKEY-FAKE-1 not found\"}": err=stub kind=0, want 1
+    bark_errors_test.go:59: "{\"code\":404,\"message\":\"x\"}": err=stub kind=0, want 1
+    bark_errors_test.go:67: code 200: stub
+--- FAIL: TestContextCancellationIsTransient (0.00s)
+    bark_errors_test.go:134: cancelled send: err=stub kind=0
+    bark_errors_test.go:141: deadline send: err=stub kind=0
+--- FAIL: TestSendJSONShape (0.00s)
+    bark_test.go:96: stub
+--- FAIL: TestInterruptionLevels (0.00s)
+    bark_test.go:125: stub
+--- FAIL: TestUnknownInterruptionIsPermanent (0.00s)
+    bark_test.go:135: err=stub requests=0
+--- FAIL: TestOptionalFieldsOmitted (0.00s)
+    bark_test.go:141: stub
+--- FAIL: TestVolumeForms (0.00s)
+    bark_test.go:154: stub
+--- FAIL: TestBodyTruncatedWithMarker (0.00s)
+    bark_test.go:164: stub
+--- FAIL: TestOnlyHTTPLinksReachThePhone (0.00s)
+    bark_test.go:189: #0: err=stub requests=0
+    bark_test.go:189: #0: err=stub requests=0
+    bark_test.go:189: #1: err=stub requests=0
+    bark_test.go:189: #1: err=stub requests=0
+    bark_test.go:189: #2: err=stub requests=0
+    bark_test.go:189: #2: err=stub requests=0
+    bark_test.go:189: #3: err=stub requests=0
+    bark_test.go:189: #3: err=stub requests=0
+    bark_test.go:189: #4: err=stub requests=0
+    bark_test.go:189: #4: err=stub requests=0
+    bark_test.go:189: #5: err=stub requests=0
+    bark_test.go:189: #5: err=stub requests=0
+    bark_test.go:189: #6: err=stub requests=0
+    bark_test.go:189: #6: err=stub requests=0
+    bark_test.go:189: #7: err=stub requests=0
+    bark_test.go:189: #7: err=stub requests=0
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/bark	0.022s
+--- FAIL: TestBarkSchemaAcceptsSecretReferences (0.00s)
+    bark_schema_test.go:35: no key: accepted
+    bark_schema_test.go:35: http server: accepted
+    bark_schema_test.go:35: stray key: accepted
+    bark_schema_test.go:35: literal: accepted
+    bark_schema_test.go:35: extra field: accepted
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.014s
+FAIL
+exit=1

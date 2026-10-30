@@ -1,0 +1,17 @@
+skills used: []
+
+I'd pick the **nudge** level. The human should look within the hour, but production isn't impaired, so siren would be wrong. Murmur doesn't fit either, because something is needed from them. Nudge requires an ask, so the message has to say what I need from them. Quiet hours hold nudges, so it may wait until they're over. That's acceptable for a backup failure that isn't an emergency.
+
+The `levels` output doesn't show the send syntax, so I won't guess the exact flags. I'd run these in order:
+
+1. `yo-human --help`. This shows the send subcommand and its flags.
+2. `yo-human <send-subcommand> --help`, using whatever subcommand step 1 shows. This shows how to pass the level, message and ask.
+3. The send command itself, using the syntax from steps 1 and 2. Assuming the flags are `--level` and `--ask`, it would look like this:
+
+   `yo-human send --level nudge --message "Nightly backup job failed twice (2026-10-26). I can't fix it from here." --ask "Please check the backup job logs and credentials/storage, then tell me whether to retry or leave it."`
+
+   Treat those flag names as unverified until step 2 confirms them.
+
+4. I'd check that the exit code is 0 and that the output reports `status: ok`. If it fails, I'd report the error and not escalate to siren on my own.
+
+I wouldn't run any other commands, and I wouldn't retry the backup in a way that changes state unless it's clearly safe.

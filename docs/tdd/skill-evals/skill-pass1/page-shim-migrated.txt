@@ -1,0 +1,27 @@
+skills used: ['yo-human-eval:yo-human']
+
+Dry run, so I'm not executing anything. CI is broken while production is up, which is the `--low` case. The shim's level mapping handles the rest, so I don't need `yo-human levels --json` for this. I'd go through the runbook script, which now just execs `yo-human page`, and not call `yo-human notify` directly.
+
+**1. Page the human about the broken CI:**
+
+```
+/opt/bin/page.sh --low "CI broken on main; production is unaffected" "CI is failing on main. Production is healthy, so this is not urgent but needs a look." ci-main-FAKE
+```
+
+- `--low` comes before the summary.
+- The arguments after it are the summary, the details, and the dedup key `ci-main-FAKE`.
+- The details contain no secrets.
+
+I'd check the exit code:
+- **0:** done. This includes suppressed or held, which are intended.
+- **64:** my call was wrong. I'd read the `error`, `valid` and `fix` lines, correct the call, and re-run it.
+- **75:** no channel was reachable. I'd wait `after_seconds`, run `yo-human flush`, and repeat up to `attempts_left` times. I wouldn't re-run the page or change the key. If the attempts run out, I'd tell the human directly in the session.
+- **69, 74, 78 or 70:** I'd stop, not retry, and tell the human in the session with the title, the ask, and the error text.
+
+**2. After CI is fixed and I've verified it** (a green run on main), resolve with the same key:
+
+```
+/opt/bin/page.sh --low --resolve ci-main-FAKE
+```
+
+I wouldn't send a new page saying "fixed". Resolving cancels anything still queued for that key and tells the channels the human was reached on that it's over. If the key is unknown or already resolved, it exits 0 with `RESULT noop`. If resolve exits 69, a scheduled page couldn't be cancelled, so I'd tell the human they may still get paged for something that's fixed.

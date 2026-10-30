@@ -1,0 +1,27 @@
+skills used: ['yo-human-eval:yo-human']
+
+**Next step (exit 75, status queued)**
+
+The siren was journaled, but the phone push didn't go out because the ntfy server couldn't be reached. I would not re-run `notify`, because that would create a duplicate. I would also keep the dedup key `checkout-FAKE` and the level `siren` as they are.
+
+1. Wait 60 seconds (`next.after_seconds`). I'd use `sleep 60`.
+2. Run the printed next step exactly as given, without retyping or changing it:
+   `yo-human flush --config '/home/user/project/.yo-human.yaml'`
+3. Read the exit code and the channel lines, and act on them:
+   - **Exit 0 with a `sent` channel line:** it was delivered, so I stop. If there are no channel lines, nothing was due yet, so I don't count that as delivery.
+   - **Exit 75 (`RESULT queued`):** it is still queued. I wait for the new `next.after_seconds` and run the same flush command again. I follow the printed `attempts_left`, which starts at 5 and counts down.
+   - **Exit 69 (`RESULT failed`):** every channel rejected it for good. I stop and don't retry or switch levels. I tell the human in my session.
+   - **Exit 78, 74 or 70:** I stop and tell the human in my session. For 78 I quote the `error` and `fix` lines and don't edit the config or secrets myself.
+
+**If it keeps failing**
+
+If the flush attempts run out while it is still queued (5 attempts, all exit 75), I stop retrying. Nothing has reached the human's phone, so I tell them directly in my session, in my reply or handoff. The message would say:
+
+- **Title:** Checkout failing
+- **Ask:** Look at checkout now
+- **Status:** The siren was journaled, but the phone push was never delivered because the ntfy server was unreachable. All 5 flush attempts were exhausted.
+- **Error text:** the last `ntfy server could not be reached` output.
+
+I wouldn't try another tool or channel to route around the failure.
+
+Once checkout is fixed and I've verified it, I'd run `yo-human resolve --dedup-key checkout-FAKE --note "<short note>"`. That cancels anything still queued, so the human isn't paged for something already fixed. I'd do that instead of sending a new "fixed" notify.

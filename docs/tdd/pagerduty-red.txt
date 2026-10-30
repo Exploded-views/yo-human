@@ -1,0 +1,105 @@
+$ go test -count=1 -timeout 120s ./internal/channel/pagerduty/ ./internal/config/ -run 'PagerDuty|TypeDeclaration|DefaultEventsURL|NewValidatesSettings|ValidateOptions|CancelUnsupported|TriggerShape|Severities|DefaultsAnd|Summary|BodyTruncated|ResolveShape|ResolveNeeds|OnlySafe|UnknownInterruption|ErrorKinds|Redirect|NoSecret|Context|Promptly'
+--- FAIL: TestTypeDeclaration (0.00s)
+    pagerduty_config_test.go:19: SecretFields = ""
+    pagerduty_config_test.go:21: Interruptions = map[]
+    pagerduty_config_test.go:21: capabilities = {Interruptions:map[] Markdown:false Link:false MaxActions:0 Subtitle:false NativeDedup:false Resolve:false Schedule:false ReachesHuman:false MaxTitle:0 MaxBody:0}
+--- FAIL: TestDefaultEventsURL (0.00s)
+    pagerduty_config_test.go:43: default = "stub", <nil>
+--- FAIL: TestNewValidatesSettings (0.00s)
+    pagerduty_config_test.go:72: http url: err=<nil> kind=0
+    pagerduty_config_test.go:72: empty url: err=<nil> kind=0
+    pagerduty_config_test.go:72: non-string url: err=<nil> kind=0
+    pagerduty_config_test.go:72: no host: err=<nil> kind=0
+    pagerduty_config_test.go:72: empty hostname: err=<nil> kind=0
+    pagerduty_config_test.go:72: userinfo: err=<nil> kind=0
+    pagerduty_config_test.go:72: query: err=<nil> kind=0
+    pagerduty_config_test.go:72: empty query: err=<nil> kind=0
+    pagerduty_config_test.go:72: fragment: err=<nil> kind=0
+    pagerduty_config_test.go:72: no key: err=<nil> kind=0
+    pagerduty_config_test.go:72: empty key: err=<nil> kind=0
+    pagerduty_config_test.go:72: key with space: err=<nil> kind=0
+    pagerduty_config_test.go:72: key with newline: err=<nil> kind=0
+--- FAIL: TestValidateOptions (0.00s)
+    pagerduty_config_test.go:93: Validate with an option = <nil>
+    pagerduty_config_test.go:97: Send with an option = <nil>
+--- FAIL: TestCancelUnsupported (0.00s)
+    pagerduty_config_test.go:104: Cancel = <nil>
+--- FAIL: TestErrorKinds (0.00s)
+    pagerduty_errors_test.go:35: send 429: err=<nil> kind=0, want 0
+    pagerduty_errors_test.go:39: resolve 429: err=<nil> kind=0, want 0
+    pagerduty_errors_test.go:35: send 500: err=<nil> kind=0, want 0
+    pagerduty_errors_test.go:39: resolve 500: err=<nil> kind=0, want 0
+    pagerduty_errors_test.go:35: send 400: err=<nil> kind=0, want 1
+    pagerduty_errors_test.go:39: resolve 400: err=<nil> kind=0, want 1
+    pagerduty_errors_test.go:35: send 403: err=<nil> kind=0, want 1
+    pagerduty_errors_test.go:39: resolve 403: err=<nil> kind=0, want 1
+    pagerduty_errors_test.go:35: send 503: err=<nil> kind=0, want 0
+    pagerduty_errors_test.go:39: resolve 503: err=<nil> kind=0, want 0
+    pagerduty_errors_test.go:35: send 408: err=<nil> kind=0, want 0
+    pagerduty_errors_test.go:39: resolve 408: err=<nil> kind=0, want 0
+    pagerduty_errors_test.go:35: send 302: err=<nil> kind=0, want 1
+    pagerduty_errors_test.go:39: resolve 302: err=<nil> kind=0, want 1
+    pagerduty_errors_test.go:35: send 200: err=<nil> kind=0, want 0
+    pagerduty_errors_test.go:39: resolve 200: err=<nil> kind=0, want 0
+    pagerduty_errors_test.go:35: send 401: err=<nil> kind=0, want 1
+    pagerduty_errors_test.go:39: resolve 401: err=<nil> kind=0, want 1
+    pagerduty_errors_test.go:35: send 404: err=<nil> kind=0, want 1
+    pagerduty_errors_test.go:39: resolve 404: err=<nil> kind=0, want 1
+--- FAIL: TestRedirectIsNotFollowed (0.00s)
+    pagerduty_errors_test.go:54: err=<nil> kind=0, want permanent
+--- FAIL: TestNoSecretInErrors (0.00s)
+    pagerduty_errors_test.go:78: dial: no error
+    pagerduty_errors_test.go:79: dial resolve: no error
+    pagerduty_errors_test.go:82: status: no error
+    pagerduty_errors_test.go:83: resolve status: no error
+    pagerduty_errors_test.go:82: status: no error
+    pagerduty_errors_test.go:83: resolve status: no error
+    pagerduty_errors_test.go:82: status: no error
+    pagerduty_errors_test.go:83: resolve status: no error
+    pagerduty_errors_test.go:82: status: no error
+    pagerduty_errors_test.go:83: resolve status: no error
+    pagerduty_errors_test.go:82: status: no error
+    pagerduty_errors_test.go:83: resolve status: no error
+    pagerduty_errors_test.go:88: cancelled: no error
+    pagerduty_errors_test.go:92: bad link: no error
+    pagerduty_errors_test.go:96: bad action: no error
+    pagerduty_errors_test.go:98: bad interruption: no error
+--- FAIL: TestContextCancellationIsTransient (0.00s)
+    pagerduty_errors_test.go:107: cancelled send: err=<nil> kind=0
+    pagerduty_errors_test.go:111: cancelled resolve: err=<nil> kind=0
+    pagerduty_errors_test.go:118: deadline send: err=<nil> kind=0
+--- FAIL: TestReturnsPromptlyWhenServerHangs (0.00s)
+    pagerduty_errors_test.go:142: send: err=<nil> kind=0
+    pagerduty_errors_test.go:142: resolve: err=<nil> kind=0
+--- FAIL: TestTriggerShape (0.00s)
+    pagerduty_test.go:98: receipt = {Instance: ProviderID: Scheduled:false}
+    pagerduty_test.go:102: 0 requests, want 1
+--- FAIL: TestSeverities (0.00s)
+panic: runtime error: index out of range [0] with length 0 [recovered, repanicked]
+
+goroutine 83 [running]:
+testing.tRunner.func1.2({0x105379c88, 0x130c1c26c00})
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2125 +0x1a0
+testing.tRunner.func1()
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2128 +0x2c8
+panic({0x105379c88?, 0x130c1c26c00?})
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/runtime/panic.go:859 +0x120
+github.com/Exploded-views/yo-human/internal/channel/pagerduty.send(0x130c1c5f688, {{0x104fd4bbb, 0x8}, {0x104fd3d59, 0x4}, {0x104fd74ae, 0xe}, {0x104fd9bdb, 0x13}, {0x104fd6606, ...}, ...}, ...)
+	<worktree>/internal/channel/pagerduty/pagerduty_test.go:88 +0x134
+github.com/Exploded-views/yo-human/internal/channel/pagerduty.TestSeverities(0x130c1c5f688)
+	<worktree>/internal/channel/pagerduty/pagerduty_test.go:131 +0x2b4
+testing.tRunner(0x130c1c5f688, 0x105396f70)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2195 +0xc4
+created by testing.(*T).Run in goroutine 1
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2260 +0x3b8
+FAIL	github.com/Exploded-views/yo-human/internal/channel/pagerduty	0.022s
+--- FAIL: TestPagerDutySchemaAcceptsSecretReferences (0.00s)
+    pagerduty_schema_test.go:35: literal: accepted
+    pagerduty_schema_test.go:35: extra field: accepted
+    pagerduty_schema_test.go:35: no key: accepted
+    pagerduty_schema_test.go:35: http url: accepted
+    pagerduty_schema_test.go:35: stray key: accepted
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.013s
+FAIL
+exit=1

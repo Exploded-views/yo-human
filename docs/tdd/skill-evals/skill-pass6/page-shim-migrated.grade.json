@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "Reply uses `--low` with summary and key ci-main-FAKE for the trigger, resolves with `--low --resolve ci-main-FAKE`, and avoids --level/--title/--ask, guessed level names, and notify.",
+ "pass": true
+}

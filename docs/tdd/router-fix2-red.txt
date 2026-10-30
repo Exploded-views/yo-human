@@ -1,0 +1,19 @@
+$ go test -race ./internal/core 2>&1
+--- FAIL: TestQuietGapEndIsTheTransition (0.00s)
+    quiet_dst_test.go:51: Europe/Berlin: end = 2026-10-25 01:00:00 +0000 UTC, inside = true; want inside until 2026-03-29 01:00:00 +0000 UTC
+    quiet_dst_test.go:54: Europe/Berlin: the transition instant is inside a window ending in the gap
+    quiet_dst_test.go:51: Australia/Sydney: end = 2027-04-03 16:00:00 +0000 UTC, inside = true; want inside until 2026-10-03 16:00:00 +0000 UTC
+    quiet_dst_test.go:54: Australia/Sydney: the transition instant is inside a window ending in the gap
+    quiet_dst_test.go:51: Australia/Lord_Howe: end = 2027-04-03 15:00:00 +0000 UTC, inside = true; want inside until 2026-10-03 15:30:00 +0000 UTC
+    quiet_dst_test.go:54: Australia/Lord_Howe: the transition instant is inside a window ending in the gap
+--- FAIL: TestQuietGapStartIsTheTransition (0.00s)
+    quiet_dst_test.go:70: Europe/Berlin: end = 0001-01-01 00:00:00 +0000 UTC, inside = false; want inside until 2026-03-29 05:00:00 +0200 CEST
+    quiet_dst_test.go:70: Australia/Sydney: end = 0001-01-01 00:00:00 +0000 UTC, inside = false; want inside until 2026-10-04 05:00:00 +1100 AEDT
+    quiet_dst_test.go:70: Australia/Lord_Howe: end = 0001-01-01 00:00:00 +0000 UTC, inside = false; want inside until 2026-10-04 05:00:00 +1100 +11
+--- FAIL: TestQuietFallBackEdgeIsFirstOccurrence (0.00s)
+    quiet_dst_test.go:101: Europe/Berlin: end = 2026-10-25 01:30:00 +0000 UTC, inside = true; want the first occurrence 2026-10-25 00:30:00 +0000 UTC
+    quiet_dst_test.go:101: Australia/Lord_Howe: end = 2027-04-03 15:15:00 +0000 UTC, inside = true; want the first occurrence 2027-04-03 14:45:00 +0000 UTC
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.032s
+FAIL
+exit=1

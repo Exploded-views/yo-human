@@ -1,0 +1,32 @@
+skills used: ['yo-human-eval:yo-human']
+
+I'd use the `siren` level. Production checkout is failing, which is "production is impaired". The human is asleep, and siren is the only level whose `quiet_hours` is `send`. `nudge` would be held until quiet hours end.
+
+The commands, in order:
+
+1. **Set the sender identity.** The project value is a placeholder, since I don't know the real one.
+   ```
+   export YO_HUMAN_PROJECT="<this repo name>" YO_HUMAN_AGENT="claude-code"
+   ```
+
+2. **Send the page.** I'd put the dedup key on the problem, so a repeat from me doesn't page twice. I'd leave out secrets and keep the detail short.
+   ```
+   yo-human notify --level siren \
+     --title "Production checkout is failing" \
+     --ask "Checkout is failing in production. Please look at it now and decide whether to roll back or fix forward." \
+     --body "Detected while working unattended. Include the error rate and the first failing log lines here, with no secrets." \
+     --dedup-key checkout-failing-prod
+   ```
+
+3. **Handle the exit code.**
+   - **Exit 0** (delivered, partial, or suppressed): carry on.
+   - **Exit 75** (queued): wait `after_seconds`, then run `yo-human flush`. I'd repeat only while it exits 75, up to `attempts_left` times. I would not re-run `notify`. If the attempts run out, I'd tell the human in my session with the title and ask.
+   - **Exit 64:** my call was wrong. I'd read the `error`, `valid` and `fix` lines, fix the call, and run it again.
+   - **Exit 69, 74, 78 or 70:** I'd stop, not retry, and not switch levels or tools. I'd report in my session what I tried to send, the ask, and the error text.
+
+4. **After the fix is made and verified**, close the page. I would not send a new notify to say it's fixed.
+   ```
+   yo-human resolve --dedup-key checkout-failing-prod --note "Checkout fixed and verified"
+   ```
+
+I wouldn't run any of these now, since this is a dry run.

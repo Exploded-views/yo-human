@@ -1,0 +1,692 @@
+M1 layering pass, mutation checks (raw failing output, each reverted after). The fresh-map test as first written (delete from one map, then call New again) let the shared-map mutant live, since the next call put ntfy back; it now holds two maps from two calls and deletes from one.
+
+=== registry: bark left out
+-	"github.com/Exploded-views/yo-human/internal/channel/bark"
+-		bark.NewType(version),
+$ go test ./internal/channel/registry/
+--- FAIL: TestNewHoldsTheFourTypes (0.00s)
+    registry_test.go:22: registry = [log ntfy pagerduty], want bark log ntfy pagerduty
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/registry	0.009s
+FAIL
+[exit 1]
+
+=== registry: one shared map for every call
+-	reg := make(channel.Registry, len(types))
++	reg := shared
++var shared = channel.Registry{}
+$ go test ./internal/channel/registry/
+--- FAIL: TestNewBuildsAFreshMapEachCall (0.00s)
+    registry_test.go:30: deleting from one registry changed another
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/registry	0.009s
+FAIL
+[exit 1]
+
+
+=== core state API and the cli moved onto it. Each mutant applied to the code at the commit after af61aea, its command run, and reverted. The lock-bound test runs Reached in a goroutine with a 5s watchdog, so the dropped-bound mutant fails on an assertion instead of hanging to the 10m test timeout (as it did on the first run). On the first run the dead-letter scope mutant survived (no test, before this pass or after, looked at another project's dead letter); TestStatusOfAnotherProjectShowsNoneOfIt was added, and this run kills all 29.
+
+=== Reached: the TTL boundary itself counts as expired
+--- internal/core/state.go
+- expired := at.Sub(inc.LastSent) > cfg.IncidentTTL
++ expired := at.Sub(inc.LastSent) >= cfg.IncidentTTL
+$ go test ./internal/core -run 'TestStateReached$'
+--- FAIL: TestStateReached (0.02s)
+    state_read_test.go:52: Reached(open, 1h0m0s) = [{c false}], <nil>; want [{a true} {b false} {c false}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.027s
+FAIL
+[exit 1] KILLED
+
+=== Reached: an expired incident lists every instance, not only those with a scheduled send
+--- internal/core/state.go
+- case len(r.Scheduled) > 0:
++ case true:
+$ go test ./internal/core -run 'TestStateReached$'
+--- FAIL: TestStateReached (0.01s)
+    state_read_test.go:52: Reached(open, 1h0m0.000000001s) = [{a false} {b false} {c false}], <nil>; want [{c false}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.025s
+FAIL
+[exit 1] KILLED
+
+=== Reached: delivered is never reported
+--- internal/core/state.go
+- Delivered: len(r.Delivered) > 0
++ Delivered: false
+$ go test ./internal/core -run 'TestStateReached$'
+--- FAIL: TestStateReached (0.02s)
+    state_read_test.go:52: Reached(open, 1h0m0s) = [{a false} {b false} {c false}], <nil>; want [{a true} {b false} {c false}]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.029s
+FAIL
+[exit 1] KILLED
+
+=== Reached: a closed incident counts
+--- internal/core/state.go
+- if !ok || !inc.Open {
++ if !ok {
+$ go test ./internal/core -run 'TestStateReached$'
+--- FAIL: TestStateReached (0.01s)
+    state_read_test.go:52: Reached(closed, 0s) = [{a true}], <nil>; want []
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.025s
+FAIL
+[exit 1] KILLED
+
+=== Within: the bound is dropped
+--- internal/core/state.go
+- return &State{st: s.st.Within(ctx)}
++ return &State{st: s.st}
+$ go test ./internal/core -run 'TestStateWithin'
+--- FAIL: TestStateWithinGivesUpOnAHeldLock (5.01s)
+    state_test.go:88: Reached behind a held lock waited past its bound
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	5.026s
+FAIL
+[exit 1] KILLED
+
+=== IsBusy: always false
+--- internal/core/state.go
+- func IsBusy(err error) bool { return store.IsBusy(err) }
++ func IsBusy(err error) bool { return false }
+$ go test ./internal/core -run 'TestStateWithin'
+--- FAIL: TestStateWithinGivesUpOnAHeldLock (0.06s)
+    state_test.go:91: Reached behind a held lock = another yo-human process held the incident lock past this call's deadline; want a busy lock
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.075s
+FAIL
+[exit 1] KILLED
+
+=== Trust: records nothing
+--- internal/core/state.go
+- func (s *State) Trust(path, sha string) error { return s.st.Trust(path, sha) }
++ func (s *State) Trust(path, sha string) error { return nil }
+$ go test ./internal/core -run 'TestStateTrust'
+--- FAIL: TestStateTrustRecordsAPathAndHash (0.00s)
+    state_test.go:54: Trusted(/p/.yo-human.yaml, aa) = false, <nil>; want true
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.013s
+FAIL
+[exit 1] KILLED
+
+=== Audit: writes nothing
+--- internal/core/state.go
+- func (s *State) Audit(entry map[string]any) error { return s.st.AppendLog(entry) }
++ func (s *State) Audit(entry map[string]any) error { return nil }
+$ go test ./internal/core -run 'TestStateAudit'
+--- FAIL: TestStateAuditAppendsALogLine (0.00s)
+    state_test.go:69: open $TMPDIR/TestStateAuditAppendsALogLine229793912/001/state/log.jsonl: no such file or directory
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.013s
+FAIL
+[exit 1] KILLED
+
+=== Pipeline: the state's store is not set
+--- internal/core/state.go
+- d.Store = s.st
++ 
+$ go test ./internal/core -run 'TestStatePipeline'
+--- FAIL: TestStatePipelineWorksOnTheState (0.00s)
+panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked]
+[signal SIGSEGV: segmentation violation code=0x2 addr=0x0 pc=0x10468ce90]
+goroutine 6 [running]:
+testing.tRunner.func1.2({0x104a795b8, 0x104b0eca0})
+	$GOROOT/src/testing/testing.go:2125 +0x1a0
+testing.tRunner.func1()
+	$GOROOT/src/testing/testing.go:2128 +0x2c8
+panic({0x104a795b8?, 0x104b0eca0?})
+	$GOROOT/src/runtime/panic.go:859 +0x120
+github.com/Exploded-views/yo-human/internal/store.(*Store).Within(...)
+	internal/store/store.go:26
+github.com/Exploded-views/yo-human/internal/core.(*Pipeline).within(...)
+	internal/core/pipeline.go:119
+github.com/Exploded-views/yo-human/internal/core.(*Pipeline).Notify(0xb0219c18bd0, {0x104ab80d8?, 0x104b48ce0?}, {{0x0, 0x0}, {0x1047298c2, 0x4}, {0x1047ba788, 0x1}, {0x0, ...}, ...})
+	internal/core/pipeline.go:77 +0x100
+github.com/Exploded-views/yo-human/internal/core_test.TestStatePipelineWorksOnTheState(0xb0219bf3b08)
+	internal/core/state_test.go:103 +0x4ec
+testing.tRunner(0xb0219bf3b08, 0x104ab93f0)
+	$GOROOT/src/testing/testing.go:2195 +0xc4
+created by testing.(*T).Run in goroutine 1
+	$GOROOT/src/testing/testing.go:2260 +0x3b8
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.016s
+FAIL
+[exit 1] KILLED
+
+=== Recover: does nothing
+--- internal/core/state.go
+- func (s *State) Recover(cfg *config.Config) error { return RecoverStale(cfg, s.st) }
++ func (s *State) Recover(cfg *config.Config) error { return nil }
+$ go test ./internal/core -run 'TestStateRecover'
+--- FAIL: TestStateRecoverRequeuesAStrandedSend (0.03s)
+    state_test.go:146: queued 0, inflight 1 after Recover; want the stranded send queued again
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.044s
+FAIL
+[exit 1] KILLED
+
+=== DueInstances: an instance once per entry
+--- internal/core/state.go
+- set := map[string]bool{}
+	for _, p := range due {
+		for _, inst := range EntryInstances(p) {
+			set[inst] = true
+		}
+	}
+	out := make([]string, 0, len(set))
+	for inst := range set {
+		out = append(out, inst)
+	}
++ var out []string
+	for _, p := range due {
+		out = append(out, EntryInstances(p)...)
+	}
+$ go test ./internal/core -run 'TestStateDueInstances'
+--- FAIL: TestStateDueInstancesNamesEachInstanceOnceSorted (0.04s)
+    state_test.go:125: DueInstances = [a b b], <nil>; want a b (c is not due)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.052s
+FAIL
+[exit 1] KILLED
+
+=== DueInstances: unsorted
+--- internal/core/state.go
+- sort.Strings(out)
+	return out, nil
++ sort.Sort(sort.Reverse(sort.StringSlice(out)))
+	return out, nil
+$ go test ./internal/core -run 'TestStateDueInstances'
+--- FAIL: TestStateDueInstancesNamesEachInstanceOnceSorted (0.05s)
+    state_test.go:125: DueInstances = [b a], <nil>; want a b (c is not due)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.059s
+FAIL
+[exit 1] KILLED
+
+=== DueInstances: a listing failure is ignored
+--- internal/core/state.go
+- due, err := s.st.Due(at)
+	if err != nil {
+		return nil, err
+	}
++ due, _ := s.st.Due(at)
+$ go test ./internal/core -run 'TestStateDueInstances'
+--- FAIL: TestStateDueInstancesNamesEachInstanceOnceSorted (0.04s)
+    state_test.go:135: DueInstances over an unreadable queue = []; want the error
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.053s
+FAIL
+[exit 1] KILLED
+
+=== CreateFile: mode 0644
+--- internal/core/state.go
+- store.WriteFileExclusive(path, data, 0o600)
++ store.WriteFileExclusive(path, data, 0o644)
+$ go test ./internal/core -run 'TestStateCreateFile'
+--- FAIL: TestStateCreateFileNeverReplaces (0.03s)
+    state_test.go:163: file = "one", mode -rw-r--r--; want "one", 0600
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.037s
+FAIL
+[exit 1] KILLED
+
+=== incidents: a read failure is dropped
+--- internal/core/state.go
+- if errors.Is(err, errReadOnly) {
+		err = nil
+	}
++ err = nil
+$ go test ./internal/core -run 'TestStateWithin'
+--- FAIL: TestStateWithinGivesUpOnAHeldLock (0.07s)
+    state_test.go:91: Reached behind a held lock = <nil>; want a busy lock
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.082s
+FAIL
+[exit 1] KILLED
+
+=== Snapshot: the TTL boundary itself is closed
+--- internal/core/snapshot.go
+- i.Open && at.Sub(i.LastSent) <= ttl
++ i.Open && at.Sub(i.LastSent) < ttl
+$ go test ./internal/core -run 'TestStateSnapshot$'
+--- FAIL: TestStateSnapshot (0.09s)
+    state_read_test.go:102: incidents = []; want only {Key:live Project:p1 Level:page Generation:2 Opened:2026-10-30 11:00:00 +0000 UTC LastSent:2026-10-30 11:00:00 +0000 UTC Latest:disk} (one at the TTL is open, one past it or closed is not)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.098s
+FAIL
+[exit 1] KILLED
+
+=== Snapshot: a closed incident is listed
+--- internal/core/snapshot.go
+- i.Open && at.Sub(i.LastSent) <= ttl
++ at.Sub(i.LastSent) <= ttl
+$ go test ./internal/core -run 'TestStateSnapshot$'
+--- FAIL: TestStateSnapshot (0.08s)
+    state_read_test.go:102: incidents = [{Key:live Project:p1 Level:page Generation:2 Opened:2026-10-30 11:00:00 +0000 UTC LastSent:2026-10-30 11:00:00 +0000 UTC Latest:disk} {Key:shut Project: Level: Generation:0 Opened:0001-01-01 00:00:00 +0000 UTC LastSent:2026-10-30 12:00:00 +0000 UTC Latest:}]; want only {Key:live Project:p1 Level:page Generation:2 Opened:2026-10-30 11:00:00 +0000 UTC LastSent:2026-10-30 11:00:00 +0000 UTC Latest:disk} (one at the TTL is open, one past it or closed is not)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.095s
+FAIL
+[exit 1] KILLED
+
+=== Snapshot: a failure does not stop it
+--- internal/core/snapshot.go
+- if err := step(); err != nil {
+			return snap, err
+		}
++ _ = step()
+$ go test ./internal/core -run 'TestStateSnapshot'
+--- FAIL: TestStateSnapshotStopsAtTheFirstFailure (0.01s)
+    state_read_test.go:137: snapshot over an unreadable dead letter = {Queue:[{ID:M1 Instance:a Kind:send Project: Attempts:0 NextAttempt:0001-01-01 00:00:00 +0000 UTC DeliverAt:0001-01-01 00:00:00 +0000 UTC Reason:}] Dead:[] Inflight:0 Incidents:[]}, <nil>; want the queue and the error
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.107s
+FAIL
+[exit 1] KILLED
+
+=== Snapshot: the inflight count is not read
+--- internal/core/snapshot.go
+- _, snap.Inflight, _, err = s.st.Counts()
++ _, _, _, err = s.st.Counts()
+$ go test ./internal/core -run 'TestStateSnapshot$'
+--- FAIL: TestStateSnapshot (0.09s)
+    state_read_test.go:98: inflight = 0; want 1
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.100s
+FAIL
+[exit 1] KILLED
+
+=== entryOf: a resolve note is called a send
+--- internal/core/snapshot.go
+- return "note", p.Message.Project
++ return "send", p.Message.Project
+$ go test ./internal/core -run 'TestStateSnapshot$'
+--- FAIL: TestStateSnapshot (0.09s)
+    state_read_test.go:91: queue =
+        [{M1 a send p1 2 2026-10-30 11:59:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC not built} {M2 b send p2 0 0001-01-01 00:00:00 +0000 UTC 2026-10-30 13:00:00 +0000 UTC } {M3 c cancel  0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC } {M4 _admit admit p1 0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC }]
+        want
+        [{M1 a send p1 2 2026-10-30 11:59:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC not built} {M2 b note p2 0 0001-01-01 00:00:00 +0000 UTC 2026-10-30 13:00:00 +0000 UTC } {M3 c cancel  0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC } {M4 _admit admit p1 0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC }]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.106s
+FAIL
+[exit 1] KILLED
+
+=== entryOf: a cancel loses its kind
+--- internal/core/snapshot.go
+- p.Kind == kindCancel || p.Kind == kindAdmit
++ p.Kind == kindAdmit
+$ go test ./internal/core -run 'TestStateSnapshot$'
+--- FAIL: TestStateSnapshot (0.08s)
+    state_read_test.go:91: queue =
+        [{M1 a send p1 2 2026-10-30 11:59:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC not built} {M2 b note p2 0 0001-01-01 00:00:00 +0000 UTC 2026-10-30 13:00:00 +0000 UTC } {M3 c send  0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC } {M4 _admit admit p1 0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC }]
+        want
+        [{M1 a send p1 2 2026-10-30 11:59:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC not built} {M2 b note p2 0 0001-01-01 00:00:00 +0000 UTC 2026-10-30 13:00:00 +0000 UTC } {M3 c cancel  0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC } {M4 _admit admit p1 0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC }]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.095s
+FAIL
+[exit 1] KILLED
+
+=== entryOf: an unreadable entry is called a send
+--- internal/core/snapshot.go
+- return "unreadable", ""
++ return "send", ""
+$ go test ./internal/core -run 'TestStateSnapshot$'
+--- FAIL: TestStateSnapshot (0.09s)
+    state_read_test.go:95: dead = [{ID:M6 Instance:e Kind:send Project: Reason:gone At:2026-10-27 03:35:27.694677 +0000 UTC}]; want M6 on e, unreadable, with its reason and time
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.101s
+FAIL
+[exit 1] KILLED
+
+=== addQueue: the parked reason is dropped
+--- internal/core/snapshot.go
+- DeliverAt: p.DeliverAt, Reason: p.Reason})
++ DeliverAt: p.DeliverAt})
+$ go test ./internal/core -run 'TestStateSnapshot$'
+--- FAIL: TestStateSnapshot (0.08s)
+    state_read_test.go:91: queue =
+        [{M1 a send p1 2 2026-10-30 11:59:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC } {M2 b note p2 0 0001-01-01 00:00:00 +0000 UTC 2026-10-30 13:00:00 +0000 UTC } {M3 c cancel  0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC } {M4 _admit admit p1 0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC }]
+        want
+        [{M1 a send p1 2 2026-10-30 11:59:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC not built} {M2 b note p2 0 0001-01-01 00:00:00 +0000 UTC 2026-10-30 13:00:00 +0000 UTC } {M3 c cancel  0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC } {M4 _admit admit p1 0 0001-01-01 00:00:00 +0000 UTC 0001-01-01 00:00:00 +0000 UTC }]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.095s
+FAIL
+[exit 1] KILLED
+
+=== cli status: the queue is not scoped to the project
+--- internal/cli/status.go
+- case !sc.shows(q.Project):
++ 
+$ go test ./internal/cli -run Status
+--- FAIL: TestStatusHidesAnotherProjectsEntries (0.03s)
+    securityedge_test.go:59: status as alpha = "RESULT ok\nqueued: 0\nheld: 1\ndead: 0\ninflight: 0\nincidents: 0\nheld 01M5XPTT1KE6XG8VS785Y5THB7 pager until=2026-10-31T00:00:00Z kind=send\n", want it to contain "held: 0"
+--- FAIL: TestStatusOfAnotherProjectShowsNoneOfIt (0.16s)
+    status_test.go:76: stdout = "RESULT ok\nqueued: 1\nheld: 1\ndead: 0\ninflight: 0\nincidents: 0\nqueued 01M5XPTT8654MDW9YXB36FFFX2 pager attempts=1 next=2026-10-30T12:01:00Z kind=send\nheld 01M5XPTTAXJZACAWGVF3E90M2Y pager until=2026-10-31T00:00:00Z kind=send\n", want it to contain "queued: 0"
+    status_test.go:76: stdout = "RESULT ok\nqueued: 1\nheld: 1\ndead: 0\ninflight: 0\nincidents: 0\nqueued 01M5XPTT8654MDW9YXB36FFFX2 pager attempts=1 next=2026-10-30T12:01:00Z kind=send\nheld 01M5XPTTAXJZACAWGVF3E90M2Y pager until=2026-10-31T00:00:00Z kind=send\n", want it to contain "held: 0"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	2.402s
+FAIL
+[exit 1] KILLED
+
+=== cli status: the dead letter is not scoped to the project
+--- internal/cli/status.go
+- if sc.shows(d.Project) {
+			snap.Dead
++ if true {
+			snap.Dead
+$ go test ./internal/cli -run Status
+--- FAIL: TestStatusOfAnotherProjectShowsNoneOfIt (0.17s)
+    status_test.go:76: stdout = "RESULT ok\nqueued: 0\nheld: 0\ndead: 1\ninflight: 0\nincidents: 0\ndead 01M5XPTX2JY32N469VCQJH7Z1Z phone kind=send: provider said no\n", want it to contain "dead: 0"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	2.536s
+FAIL
+[exit 1] KILLED
+
+=== cli status: the incidents are not scoped to the project
+--- internal/cli/status.go
+- if sc.shows(i.Project) {
+			snap.Incidents
++ if true {
+			snap.Incidents
+$ go test ./internal/cli -run Status
+--- FAIL: TestStatusShowsTheCallersProjectUnlessAll (0.21s)
+    namespace_test.go:77: status --project beta = [alpha/alpha-key beta/beta-key]
+    namespace_test.go:82: status as alpha = [alpha/alpha-key beta/beta-key]
+--- FAIL: TestStatusOfAnotherProjectShowsNoneOfIt (0.15s)
+    status_test.go:76: stdout = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 1\nincident db-down project=unknown level=page generation=1 last_sent=2026-10-30T12:00:00Z latest: db is down\n", want it to contain "incidents: 0"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	2.454s
+FAIL
+[exit 1] KILLED
+
+=== cli status: a held entry is listed as queued
+--- internal/cli/status.go
+- case q.DeliverAt.After(at):
++ case false:
+$ go test ./internal/cli -run Status
+--- FAIL: TestStatusHidesAnotherProjectsEntries (0.03s)
+    securityedge_test.go:62: status --all = "RESULT ok\nqueued: 1\nheld: 0\ndead: 0\ninflight: 0\nincidents: 0\nqueued 01M5XPV27CVQFME685340SSQZG pager attempts=0 next=0001-01-01T00:00:00Z kind=send\n", want it to contain "held: 1"
+--- FAIL: TestStatusShowsQueuedHeldDeadIncidents (0.16s)
+    status_test.go:61: stdout = "RESULT ok\nqueued: 2\nheld: 0\ndead: 1\ninflight: 0\nincidents: 1\nqueued 01M5XPV2B8TTEPYCS6C6DS3ZRB pager attempts=0 next=0001-01-01T00:00:00Z kind=send\nqueued 01M5XPV28E34HYSGGDKK8JQBRM pager attempts=1 next=2026-10-30T12:01:00Z kind=send\ndead 01M5XPV2BKVRCZYX5ANF0GV7TR phone kind=send: provider said no\nincident db-down project=unknown level=page generation=1 last_sent=2026-10-30T12:00:00Z latest: db is down\n", want it to contain "queued: 1"
+    status_test.go:61: stdout = "RESULT ok\nqueued: 2\nheld: 0\ndead: 1\ninflight: 0\nincidents: 1\nqueued 01M5XPV2B8TTEPYCS6C6DS3ZRB pager attempts=0 next=0001-01-01T00:00:00Z kind=send\nqueued 01M5XPV28E34HYSGGDKK8JQBRM pager attempts=1 next=2026-10-30T12:01:00Z kind=send\ndead 01M5XPV2BKVRCZYX5ANF0GV7TR phone kind=send: provider said no\nincident db-down project=unknown level=page generation=1 last_sent=2026-10-30T12:00:00Z latest: db is down\n", want it to contain "held: 1"
+    status_test.go:61: stdout = "RESULT ok\nqueued: 2\nheld: 0\ndead: 1\ninflight: 0\nincidents: 1\nqueued 01M5XPV2B8TTEPYCS6C6DS3ZRB pager attempts=0 next=0001-01-01T00:00:00Z kind=send\nqueued 01M5XPV28E34HYSGGDKK8JQBRM pager attempts=1 next=2026-10-30T12:01:00Z kind=send\ndead 01M5XPV2BKVRCZYX5ANF0GV7TR phone kind=send: provider said no\nincident db-down project=unknown level=page generation=1 last_sent=2026-10-30T12:00:00Z latest: db is down\n", want it to contain "held 01M5XPV2B8TTEPYCS6C6DS3ZRB pager until="
+    status_test.go:67: object = {Version:1 Status:ok Inflight:0 Queued:[{ID:01M5XPV2B8TTEPYCS6C6DS3ZRB Channel:pager Attempts:0 NextAttempt:0001-01-01T00:00:00Z} {ID:01M5XPV28E34HYSGGDKK8JQBRM Channel:pager Attempts:1 NextAttempt:2026-10-30T12:01:00Z}] Held:[] Dead:[{ID:01M5XPV2BKVRCZYX5ANF0GV7TR Channel:phone Reason:provider said no At:2026-10-27T03:35:38.630435Z}] Incidents:[{Key:db-down Level:page Latest:db is down Generation:1 LastSent:2026-10-30T12:00:00Z}]}; want one of each
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	2.486s
+FAIL
+[exit 1] KILLED
+
+=== cli resolve: a busy lock is not turned into run-it-again
+--- internal/cli/resolve.go
+- if res.Status == "" && core.IsBusy(err) {
++ if false {
+$ go test ./internal/cli -run HeldLock
+--- FAIL: TestAResolveBehindAHeldLockSaysToRunItAgain (0.32s)
+    lockwait_test.go:44: resolve: {code:75 out: err:error: another yo-human process held the incident lock past this call's deadline
+        valid: an incident lock that comes free within the deadline
+        fix: run the next step; if this keeps happening, tell the human: a yo-human process may be stopped or hung
+        }; want exit 75 and RESULT queued
+    lockwait_test.go:45: stdout = "", want it to contain "next: yo-human resolve --dedup-key 'disk 7' in "
+--- FAIL: TestAPageResolveBehindAHeldLockSaysToRunItAgain (0.23s)
+    lockwait_test.go:58: page --resolve: {code:75 out:{"version":1,"error":{"what":"another yo-human process held the incident lock past this call's deadline","valid":"an incident lock that comes free within the deadline","fix":"run the next step; if this keeps happening, tell the human: a yo-human process may be stopped or hung"}}
+         err:}; want exit 75 and the same resolve as the next step
+--- FAIL: TestAResolveBehindAHeldLockKeepsItsConfig (0.23s)
+    lockwait_test.go:79: stdout = "", want it to contain "next: yo-human resolve --dedup-key k --project p --note 'fixed it' --config $TMPDIR/TestAResolveBehindAHeldLockKeepsItsConfig113589986/001/.config/yo-human/003/c.yaml in "
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	1.035s
+FAIL
+[exit 1] KILLED
+
+=== cli resolve: a delivered channel has no note waiting
+--- internal/cli/resolve.go
+- delivered[r.Instance] = r.Delivered
++ delivered[r.Instance] = false
+$ go test ./internal/cli
+--- FAIL: TestResolveStillCancelsWhenAReachedChannelCannotBeBuilt (0.23s)
+    channelchanges_test.go:23: stderr = "error: secret \"ntfy-topic\", used by channels.phone.topic, is not set\nvalid: a name listed by `yo-human secret list`\nfix: tell the human to run, in their own terminal: op read \"op://<vault>/<item>/<field>\" | yo-human secret set ntfy-topic\n", want it to contain "resolve note"
+--- FAIL: TestARemovedChannelsResolveNoteIsSentOnlyWhenRestoredIdentically (0.21s)
+    scheduledcancel_test.go:112: stderr = "error: channel phone is no longer configured; its queued sends were cancelled, and no resolve note is queued for it\nvalid: a channel named under channels: in the config in force\nfix: restore it in the config only if you want it back; a scheduled send it holds is queued for cancellation until then\n", want it to contain "resolve note for it waits in the queue"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	13.598s
+FAIL
+[exit 1] KILLED
+
+=== the e2e repolint check and the ruled depguard delta. The first mutant is the one the orchestrator asked for: with the check dropped, the probe (an untagged x_e2e.go importing net/http) passes when it must fail. The depguard mutants run golangci-lint on the real tree: a mutant is killed when lint reports an issue.
+
+=== repolint: the e2e check dropped (E2EOnly finds nothing)
+--- internal/repolint/e2etag.go
+- found := append(e2eNames(files), e2eImports(files, module)...)
++ var found []Finding
+	_, _ = e2eNames, e2eImports
+$ go test ./internal/repolint -run 'TestE2EOnlyProbe'
+FAIL	github.com/Exploded-views/yo-human/internal/repolint [build failed]
+FAIL
+# github.com/Exploded-views/yo-human/internal/repolint [github.com/Exploded-views/yo-human/internal/repolint.test]
+internal/repolint/e2etag.go:42:2: declared and not used: module
+internal/repolint/e2etag.go:46:2: declared and not used: files
+[exit 1] SURVIVED or did not build
+
+=== repolint: an untagged *_e2e.go passes
+--- internal/repolint/e2etag.go
+- strings.HasSuffix(f.path, "_e2e.go") && f.constraint != e2eConstraint:
++ strings.HasSuffix(f.path, "_e2e.go") && f.constraint != e2eConstraint && f.constraint != "":
+$ go test ./internal/repolint -run 'TestE2EOnlyProbe'
+--- FAIL: TestE2EOnlyProbe (0.00s)
+    e2etag_test.go:74: untagged x_e2e.go: [], <nil>; want one e2e-constraint finding
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.008s
+FAIL
+[exit 1] KILLED
+
+=== repolint: any constraint naming e2e passes
+--- internal/repolint/e2etag.go
+- strings.HasSuffix(f.path, "_e2e.go") && f.constraint != e2eConstraint:
++ strings.HasSuffix(f.path, "_e2e.go") && !strings.Contains(f.constraint, "e2e"):
+$ go test ./internal/repolint
+--- FAIL: TestE2EOnlyFindsEachBreak (0.01s)
+    e2etag_test.go:55: E2EOnly =
+        [linuxe2e/hook.go e2e-name named/hook.go e2e-name untagged/x_e2e.go e2e-constraint user/user.go e2e-import]
+        want
+        [linuxe2e/hook.go e2e-name named/hook.go e2e-name untagged/x_e2e.go e2e-constraint user/user.go e2e-import wrongtag/x_e2e.go e2e-constraint]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.040s
+FAIL
+[exit 1] KILLED
+
+=== repolint: an e2e-only file needs no _e2e name
+--- internal/repolint/e2etag.go
+- case f.e2eOnly && !strings.HasSuffix(f.path, "_test.go") && !strings.HasSuffix(f.path, "_e2e.go"):
++ case false:
+$ go test ./internal/repolint
+--- FAIL: TestE2EOnlyFindsEachBreak (0.01s)
+    e2etag_test.go:55: E2EOnly =
+        [untagged/x_e2e.go e2e-constraint user/user.go e2e-import wrongtag/x_e2e.go e2e-constraint]
+        want
+        [linuxe2e/hook.go e2e-name named/hook.go e2e-name untagged/x_e2e.go e2e-constraint user/user.go e2e-import wrongtag/x_e2e.go e2e-constraint]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.039s
+FAIL
+[exit 1] KILLED
+
+=== repolint: imports of e2e-only packages not checked
+--- internal/repolint/e2etag.go
+- if ok && only[dir] {
++ if ok && only[dir] && false {
+$ go test ./internal/repolint
+--- FAIL: TestE2EOnlyFindsEachBreak (0.00s)
+    e2etag_test.go:55: E2EOnly =
+        [linuxe2e/hook.go e2e-name named/hook.go e2e-name untagged/x_e2e.go e2e-constraint wrongtag/x_e2e.go e2e-constraint]
+        want
+        [linuxe2e/hook.go e2e-name named/hook.go e2e-name untagged/x_e2e.go e2e-constraint user/user.go e2e-import wrongtag/x_e2e.go e2e-constraint]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.038s
+FAIL
+[exit 1] KILLED
+
+=== repolint: a test file importing an e2e-only package flagged
+--- internal/repolint/e2etag.go
+- if f.e2eOnly || strings.HasSuffix(f.path, "_test.go") {
+			continue
+		}
+		for _, imp
++ if f.e2eOnly {
+			continue
+		}
+		for _, imp
+$ go test ./internal/repolint
+--- FAIL: TestE2EOnlyFindsEachBreak (0.00s)
+    e2etag_test.go:55: E2EOnly =
+        [linuxe2e/hook.go e2e-name named/hook.go e2e-name testuser/x_test.go e2e-import untagged/x_e2e.go e2e-constraint user/user.go e2e-import wrongtag/x_e2e.go e2e-constraint]
+        want
+        [linuxe2e/hook.go e2e-name named/hook.go e2e-name untagged/x_e2e.go e2e-constraint user/user.go e2e-import wrongtag/x_e2e.go e2e-constraint]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.040s
+FAIL
+[exit 1] KILLED
+
+=== repolint: e2e-only judged with the other tags all on (!unix counts)
+--- internal/repolint/e2etag.go
+- if expr.Eval(setting(others, set, false)) {
+			return false
+		}
++ if set == 0 && expr.Eval(setting(others, 1<<len(others)-1, false)) {
+			return false
+		}
+$ go test ./internal/repolint
+ok  	github.com/Exploded-views/yo-human/internal/repolint	0.039s
+[exit 0] SURVIVED or did not build
+
+=== repolint: a package is e2e-only if any file is
+--- internal/repolint/e2etag.go
+- if seen, ok := only[f.dir]; !ok || seen {
+			only[f.dir] = f.e2eOnly
+		}
++ only[f.dir] = only[f.dir] || f.e2eOnly
+$ go test ./internal/repolint
+--- FAIL: TestE2EOnlyFindsEachBreak (0.00s)
+    e2etag_test.go:55: E2EOnly =
+        [linuxe2e/hook.go e2e-name named/hook.go e2e-name untagged/x_e2e.go e2e-constraint user/user.go e2e-import user/user.go e2e-import wrongtag/x_e2e.go e2e-constraint]
+        want
+        [linuxe2e/hook.go e2e-name named/hook.go e2e-name untagged/x_e2e.go e2e-constraint user/user.go e2e-import wrongtag/x_e2e.go e2e-constraint]
+--- FAIL: TestRepoE2EFilesAreTestOnly (0.01s)
+    e2etag_test.go:107: cmd/yo-human/main.go: e2e-import: imports github.com/Exploded-views/yo-human/internal/cli, which builds only under e2e
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.039s
+FAIL
+[exit 1] KILLED
+
+=== depguard: the *_e2e.go exclusion dropped (the e2e hook is flagged)
+--- .golangci.yml
+- - "!**/*_e2e.go"
++ 
+$ golangci-lint run --build-tags=e2e ./internal/cli/
+internal/cli/testhooks_e2e.go:6:2: import 'crypto/tls' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+	"crypto/tls"
+	^
+internal/cli/testhooks_e2e.go:8:2: import 'net/http' is not allowed from list 'internal-no-network': only a channel implementation makes network calls (depguard)
+	"net/http"
+	^
+2 issues:
+* depguard: 2
+[exit 1] KILLED
+
+=== depguard: implementations back to original mode (transport denied)
+--- .golangci.yml
+- list-mode: strict
++ 
+$ golangci-lint run ./internal/channel/ntfy/
+internal/channel/ntfy/client.go:16:2: import 'github.com/Exploded-views/yo-human/internal/channel/transport' is not allowed from list 'channel-implementations': a channel must not import another channel (depguard)
+	"github.com/Exploded-views/yo-human/internal/channel/transport"
+	^
+internal/channel/ntfy/ntfy.go:20:2: import 'github.com/Exploded-views/yo-human/internal/channel/transport' is not allowed from list 'channel-implementations': a channel must not import another channel (depguard)
+	"github.com/Exploded-views/yo-human/internal/channel/transport"
+	^
+2 issues:
+* depguard: 2
+[exit 1] KILLED
+
+=== depguard: no transport allow for implementations
+--- .golangci.yml
+- - github.com/Exploded-views/yo-human/internal/channel
+            - github.com/Exploded-views/yo-human/internal/channel/transport$
+          deny:
++ - github.com/Exploded-views/yo-human/internal/channel
+          deny:
+$ golangci-lint run ./internal/channel/ntfy/
+internal/channel/ntfy/client.go:16:2: import 'github.com/Exploded-views/yo-human/internal/channel/transport' is not allowed from list 'channel-implementations': a channel must not import another channel (depguard)
+	"github.com/Exploded-views/yo-human/internal/channel/transport"
+	^
+internal/channel/ntfy/ntfy.go:20:2: import 'github.com/Exploded-views/yo-human/internal/channel/transport' is not allowed from list 'channel-implementations': a channel must not import another channel (depguard)
+	"github.com/Exploded-views/yo-human/internal/channel/transport"
+	^
+2 issues:
+* depguard: 2
+[exit 1] KILLED
+
+=== rerun of the mutant that survived above, after testdata/e2e/either/x.go (//go:build e2e || !linux, which builds without e2e when linux is off) was added
+
+=== repolint: e2e-only judged with the other tags all on (!unix counts)
+--- internal/repolint/e2etag.go
+- if expr.Eval(setting(others, set, false)) {
+			return false
+		}
++ if set == 0 && expr.Eval(setting(others, 1<<len(others)-1, false)) {
+			return false
+		}
+$ go test ./internal/repolint
+--- FAIL: TestE2EOnlyFindsEachBreak (0.01s)
+    e2etag_test.go:55: E2EOnly =
+        [either/x.go e2e-name linuxe2e/hook.go e2e-name named/hook.go e2e-name untagged/x_e2e.go e2e-constraint user/user.go e2e-import wrongtag/x_e2e.go e2e-constraint]
+        want
+        [linuxe2e/hook.go e2e-name named/hook.go e2e-name untagged/x_e2e.go e2e-constraint user/user.go e2e-import wrongtag/x_e2e.go e2e-constraint]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.041s
+FAIL
+[exit 1] KILLED
+
+
+=== the registry's exported API (#64 review). Each mutant adds type Client = http.Client to ntfy, then re-exports it from the registry one way; reverted after.
+
+=== the alias re-exported
++ registry.go: type Client = ntfy.Client
+$ go test ./internal/channel/registry/ -run ExposesOnly
+--- FAIL: TestRegistryExposesOnlyChannelTypes (1.82s)
+    api_test.go:32: registry exports the type Client; it may export only functions and values of internal/channel types
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/registry	1.835s
+FAIL
+[exit 1]
+
+=== a value of the alias exported
++ registry.go: var HTTP = &ntfy.Client{}
+$ go test ./internal/channel/registry/ -run ExposesOnly
+--- FAIL: TestRegistryExposesOnlyChannelTypes (1.75s)
+    api_test.go:36: registry.HTTP exposes github.com/Exploded-views/yo-human/internal/channel/ntfy.Client, which is not an internal/channel type
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/registry	1.759s
+FAIL
+[exit 1]
+
+=== a function returning the alias
++ registry.go: func HTTP() *ntfy.Client { return nil }
+$ go test ./internal/channel/registry/ -run ExposesOnly
+--- FAIL: TestRegistryExposesOnlyChannelTypes (1.76s)
+    api_test.go:36: registry.HTTP exposes github.com/Exploded-views/yo-human/internal/channel/ntfy.Client, which is not an internal/channel type
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/registry	1.770s
+FAIL
+[exit 1]
+
+=== a function taking the alias
++ registry.go: func Use(c *ntfy.Client) {}
+$ go test ./internal/channel/registry/ -run ExposesOnly
+--- FAIL: TestRegistryExposesOnlyChannelTypes (1.72s)
+    api_test.go:36: registry.Use exposes github.com/Exploded-views/yo-human/internal/channel/ntfy.Client, which is not an internal/channel type
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/registry	1.729s
+FAIL
+[exit 1]
+
+=== L3: foreignTypes mutants, each against go test ./internal/channel/registry/
+mutant: builtin types pass (old named: Pkg nil returns nil):     api_test.go:144: Kinds: flagged false, want true;    api_test.go:144: Param: flagged false, want true;    api_test.go:144: Result: flagged false, want true;FAIL;FAIL github.com/Exploded-views/yo-human/internal/channel/registry 4.329s;FAIL;
+mutant: an inline interface passes:     api_test.go:144: Empty: flagged false, want true;    api_test.go:144: Field: flagged false, want true;    api_test.go:144: Slice: flagged false, want true;FAIL;FAIL github.com/Exploded-views/yo-human/internal/channel/registry 4.189s;FAIL;
+mutant: an alias is not checked:     api_test.go:142: Kinds: flagged false, want true;    api_test.go:142: Param: flagged false, want true;FAIL;FAIL github.com/Exploded-views/yo-human/internal/channel/registry 3.248s;FAIL;
+mutant: every named type passes:     api_test.go:144: Kinds: flagged false, want true;    api_test.go:144: Param: flagged false, want true;    api_test.go:144: Result: flagged false, want true;FAIL;FAIL github.com/Exploded-views/yo-human/internal/channel/registry 3.926s;FAIL;

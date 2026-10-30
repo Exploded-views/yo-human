@@ -1,0 +1,16 @@
+$ bash evals/leakcheck_test.sh
+ok   ulid
+ok   timestamp
+ok   session-uuid
+ok   key
+ok   long-token
+ok   users-path
+ok   home-path
+FAIL macos-temp (exit 0)
+FAIL macos-private-temp (exit 0)
+ok   ipv4
+ok   email
+ok   hostname
+ok   clean
+[exit 1]
+

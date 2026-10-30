@@ -1,0 +1,21 @@
+KILLED  the root follows the project file's link
+  internal/cli/bodyfile.go: 'if root := config.ProjectRoot(p.Cwd); root != "" {' -> 'if root := filepath.Dir(config.ProjectFile(p.Cwd)); root != "." {'
+  --- FAIL: TestBodyFileProjectRootDoesNotFollowTheProjectFilesLink (0.06s)
+      bodyfile_test.go:220: a body beside the project file's target: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err="notice: ignoring the project config \"$TMPDIR/TestBodyFileProjectRootDoesNotFollowTheProjectFilesLink466264766/001/.anyfile\": it is not trusted, or has changed since it was; tell the human: the
+      bodyfile_test.go:221: a message went out
+  [go test -count=1 ./internal/cli -run 'BodyFile' -timeout 120s exit 1]
+
+KILLED  the search returns no found directory
+  internal/config/paths.go: 'return p, dir' -> 'return p, ""'
+  --- FAIL: TestBodyFileStaysInsideTheProject (0.05s)
+      bodyfile_test.go:207: a file in the project root, from a subdirectory: {code:64 out: err:error: --body-file $TMPDIR/TestBodyFileSta... (115 characters) is outside the working directory and the project
+          valid: a file inside the working directory or the project (the directory holding .yo-human.yaml)
+  [go test -count=1 ./internal/cli -run 'BodyFile' -timeout 120s exit 1]
+
+KILLED  the found directory is the file's
+  internal/config/paths.go: 'return p, dir' -> 'return p, filepath.Dir(p)'
+  --- FAIL: TestBodyFileProjectRootDoesNotFollowTheProjectFilesLink (0.05s)
+      bodyfile_test.go:220: a body beside the project file's target: code=0 out="RESULT delivered <ULID>\nphone: sent\npager: sent\n" err="notice: ignoring the project config \"$TMPDIR/TestBodyFileProjectRootDoesNotFollowTheProjectFilesLink1998958604/001/.anyfile\": it is not trusted, or has changed since it was; tell the human: th
+      bodyfile_test.go:221: a message went out
+  [go test -count=1 ./internal/cli -run 'BodyFile' -timeout 120s exit 1]
+

@@ -1,0 +1,23 @@
+skills used: ['yo-human-eval:yo-human']
+
+I would run no more commands. Exit 69 with `RESULT failed` means every channel rejected the message for good, and the skill says to stop in that case.
+
+**What I would not do:**
+- Retry the `notify`.
+- Switch to a different level, such as `nudge` or `murmur`.
+- Run `flush`. Nothing is queued, and retrying can't fix rejected credentials.
+- Run `yo-human config trust` or `yo-human secret set`, or edit the config or secrets. Those belong to the human.
+- Try another tool to get around the failure.
+
+**What I would do:** tell the human directly in my session reply or handoff. The message would say plainly that they have not been reached:
+
+> **I could not reach you through yo-human.** I sent a `siren`-level notification, and both channels rejected it for good (exit 69, `RESULT failed FAKE-ID-3`):
+> - phone: dead (the provider rejected the credentials)
+> - pager: dead (the provider rejected the request)
+>
+> **Title:** Checkout failing
+> **Ask:** Look at checkout now.
+>
+> Production checkout is failing and nothing has paged you. The phone credentials look invalid, so please check them and the pager configuration. Only you can fix those. I have not retried or changed the level.
+
+After that I would carry on with whatever I can do safely in the repo. I would not run `yo-human resolve`, because nothing has been fixed and no incident was delivered.

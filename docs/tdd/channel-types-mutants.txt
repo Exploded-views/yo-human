@@ -1,0 +1,62 @@
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/problem	0.017s
+ok  	github.com/Exploded-views/yo-human/internal/channel	0.013s
+ok  	github.com/Exploded-views/yo-human/internal/channel/channeltest	0.010s
+ok  	github.com/Exploded-views/yo-human/internal/channel/logch	0.021s
+exit=0
+=== mutant: KindOf defaults to permanent (internal/channel/errors.go: return TransientError
+} -> return PermanentError
+})
+ok  	github.com/Exploded-views/yo-human/internal/problem	0.025s
+--- FAIL: TestKindOf (0.00s)
+    channel_test.go:28: plain counts as transient: KindOf = 1, want 0
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel	0.009s
+ok  	github.com/Exploded-views/yo-human/internal/channel/channeltest	0.009s
+ok  	github.com/Exploded-views/yo-human/internal/channel/logch	0.015s
+FAIL
+exit=1
+=== mutant: log channel claims to reach a human (internal/channel/logch/logch.go: ReachesHuman: false -> ReachesHuman: true)
+ok  	github.com/Exploded-views/yo-human/internal/problem	0.011s
+ok  	github.com/Exploded-views/yo-human/internal/channel	0.012s
+ok  	github.com/Exploded-views/yo-human/internal/channel/channeltest	0.015s
+--- FAIL: TestLogCapabilities (0.00s)
+    logch_test.go:102: the log channel must never count as reaching a human
+--- FAIL: TestLogTypeRegistration (0.00s)
+    logch_test.go:119: registry capabilities disagree with the channel's
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/logch	0.014s
+FAIL
+exit=1
+=== mutant: ParseInterruption accepts anything (internal/channel/message.go: switch i := Interruption(s); i {
+	case Passive, Active, TimeSensitive, Critical: -> switch i := Interruption(s); i {
+	default:)
+ok  	github.com/Exploded-views/yo-human/internal/problem	0.015s
+--- FAIL: TestParseInterruption (0.00s)
+    channel_test.go:58: ParseInterruption(loud) did not fail
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel	0.011s
+ok  	github.com/Exploded-views/yo-human/internal/channel/channeltest	0.011s
+ok  	github.com/Exploded-views/yo-human/internal/channel/logch	0.012s
+FAIL
+exit=1
+=== mutant: log truncates instead of appending (internal/channel/logch/logch.go: os.O_APPEND| -> os.O_TRUNC|)
+ok  	github.com/Exploded-views/yo-human/internal/problem	0.012s
+ok  	github.com/Exploded-views/yo-human/internal/channel	0.008s
+ok  	github.com/Exploded-views/yo-human/internal/channel/channeltest	0.009s
+--- FAIL: TestLogAppendsOneLinePerSend (0.00s)
+    logch_test.go:74: got 1 lines, want 2
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/logch	0.011s
+FAIL
+exit=1
+=== mutant: log file mode 0644 (internal/channel/logch/logch.go: 0o600 -> 0o644)
+ok  	github.com/Exploded-views/yo-human/internal/problem	0.018s
+ok  	github.com/Exploded-views/yo-human/internal/channel	0.026s
+ok  	github.com/Exploded-views/yo-human/internal/channel/channeltest	0.020s
+--- FAIL: TestLogAppendsOneLinePerSend (0.00s)
+    logch_test.go:77: mode = -rw-r--r--, want 0600
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/logch	0.011s
+FAIL
+exit=1

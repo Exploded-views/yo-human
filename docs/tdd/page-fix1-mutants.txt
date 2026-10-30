@@ -1,0 +1,198 @@
+# what this is: task 12 fix round 1 mutants: page names its own arguments in usage errors, a missing shim ask is a config problem naming shim.default.ask or shim.low.ask, an empty key argument is the default key; each run is bounded by a 300s timeout
+# note: message ids (ULIDs) and the time part of default dedup keys in the failing output were replaced by <ulid> and <time> so the file holds no gitleaks generic-api-key match; nothing else is edited
+# runs 1-16 are the first pass; three survived (the long-summary fix text, the unknown-flag fix text, the ask problem fix naming its path) and got tests (a 201-character summary in TestPageUsage and the fix text checks in TestPageNamesItsOwnArgumentsInUsageErrors and the ask test); their re-runs follow.
+# test command: go test -count=1 -timeout 150s ./internal/cli (timeout 300s per run); the failing lines of each run are kept as printed
+
+## summary label reverts
+# in internal/cli/page.go: 'titleAs("the summary (first argument)"' => 'titleAs("--title"'
+--- FAIL: TestPageUsage (0.02s)
+    page_test.go:110: blank summary stderr = "error: --title is missing or blank\nvalid: a one-line title of 1 to 200 characters\nfix: pass the summary as the first argument\n", must not contain "--title"
+    page_test.go:110: invalid utf-8 summary stderr = "error: --title is not valid UTF-8 text\nvalid: UTF-8 text\nfix: re-encode the value as UTF-8\n", must not contain "--title"
+--- FAIL: TestPageNamesItsOwnArgumentsInUsageErrors (0.02s)
+    page_test.go:165: stderr = "error: --title is missing or blank\nvalid: a one-line title of 1 to 200 characters\nfix: pass the summary as the first argument\n", want it to contain "the summary (first argument)"
+    page_test.go:165: stderr = "error: --title is 201 characters\nvalid: at most 200 characters\nfix: shorten the summary and put the detail in the details (second argument)\n", want it to contain "the summary (first argument)"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	9.130s
+FAIL
+exit=1
+
+## summary missing fix names --title
+# in internal/cli/page.go: '"pass the summary as the first argument"' => '`add --title "x"`'
+--- FAIL: TestPageUsage (0.02s)
+    page_test.go:110: blank summary stderr = "error: the summary (first argument) is missing or blank\nvalid: a one-line title of 1 to 200 characters\nfix: add --title \"x\"\n", must not contain "--title"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.926s
+FAIL
+exit=1
+
+## summary long fix names --body
+# in internal/cli/page.go: '"shorten the summary and put the detail in the details (second argument)"' => '"put the detail in --body"'
+ok  	github.com/Exploded-views/yo-human/internal/cli	8.707s
+exit=0
+
+## third-argument key label reverts
+# in internal/cli/page.go: 'checkKeyAs("the dedup key (third argument)"' => 'checkKeyAs("--dedup-key"'
+--- FAIL: TestPageUsage (0.02s)
+    page_test.go:110: key of 256 characters stderr = "error: --dedup-key is 256 characters (it is not echoed)\nvalid: at most 255 characters\nfix: use a shorter, stable key, such as a service name and a symptom\n", must not contain "--dedup-key"
+    page_test.go:110: invalid utf-8 key stderr = "error: --dedup-key is not valid UTF-8 text\nvalid: UTF-8 text\nfix: re-encode the value as UTF-8\n", must not contain "--dedup-key"
+    page_test.go:110: control character in key stderr = "error: --dedup-key holds a control character (it is not echoed)\nvalid: printable characters only\nfix: remove the control characters from the key\n", must not contain "--dedup-key"
+--- FAIL: TestPageNamesItsOwnArgumentsInUsageErrors (0.02s)
+    page_test.go:165: stderr = "error: --dedup-key is 256 characters (it is not echoed)\nvalid: at most 255 characters\nfix: use a shorter, stable key, such as a service name and a symptom\n", want it to contain "the dedup key (third argument)"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.495s
+FAIL
+exit=1
+
+## resolve key label reverts
+# in internal/cli/page.go: 'checkKeyAs("the dedup key after --resolve"' => 'checkKeyAs("--dedup-key"'
+--- FAIL: TestPageUsage (0.02s)
+    page_test.go:110: resolve key of 256 characters stderr = "error: --dedup-key is 256 characters (it is not echoed)\nvalid: at most 255 characters\nfix: use a shorter, stable key, such as a service name and a symptom\n", must not contain "--dedup-key"
+--- FAIL: TestPageNamesItsOwnArgumentsInUsageErrors (0.02s)
+    page_test.go:165: stderr = "error: --dedup-key is 256 characters (it is not echoed)\nvalid: at most 255 characters\nfix: use a shorter, stable key, such as a service name and a symptom\n", want it to contain "the dedup key after --resolve"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.990s
+FAIL
+exit=1
+
+## details label reverts
+# in internal/cli/page.go: '"the details (second argument)")' => '"--body")'
+--- FAIL: TestPageUsage (0.02s)
+    page_test.go:110: body over 16 KB stderr = "error: --body is too long: 16385 bytes > 16384\nvalid: at most 16384 bytes\nfix: shorten it, or leave the detail out and link to it\n", must not contain "--body"
+--- FAIL: TestPageNamesItsOwnArgumentsInUsageErrors (0.02s)
+    page_test.go:165: stderr = "error: --body is too long: 16385 bytes > 16384\nvalid: at most 16384 bytes\nfix: shorten it, or leave the detail out and link to it\n", want it to contain "the details (second argument)"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.850s
+FAIL
+exit=1
+
+## empty key argument is used
+# in internal/cli/page.go: 'len(pos) > 2 && pos[2] != ""' => 'len(pos) > 2'
+--- FAIL: TestPageEmptyKeyArgumentIsTheDefaultKey (0.05s)
+    page_test.go:190: sends = [{ID:<ulid> Level:page Title:x Ask:look now Body:d Link: Project:unknown Agent:orchestrator DedupKey: Actions:[] Created:2026-10-30 12:00:00 +0000 UTC Resolved:false}]; want the default key for an empty third argument
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.880s
+FAIL
+exit=1
+
+## ask path dropped (usage problem again)
+# in internal/cli/page.go: 'askPath: askPath}' => 'askPath: ""}'
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL
+exit=1
+
+## low ask path is the default one
+# in internal/cli/page.go: 'mode, path = shim.Low, "shim.low"' => 'mode, path = shim.Low, "shim.default"'
+--- FAIL: TestPageHalfConfiguredShim (0.03s)
+    page_test.go:123: stderr = "error: shim.default.level is not set\nvalid: a level name from the config\nfix: set shim.default.level to one of the names under levels\n", want it to contain "shim.low.level"
+--- FAIL: TestPageWithoutAnAskOnALevelThatNeedsOneIsAConfigProblem (0.04s)
+    page_test.go:180: stderr = "error: level \"page\" needs an ask, and shim.default.ask is empty\nvalid: a sentence saying what the human must do\nfix: set shim.default.ask in the shim: block of the config\n", want it to contain "shim.low.ask"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	9.200s
+FAIL
+exit=1
+
+## unknown-flag fix loses --
+# in internal/cli/page.go: '; use -- before a summary that starts with "-"`, "page")' => '`, "page")'
+ok  	github.com/Exploded-views/yo-human/internal/cli	8.858s
+exit=0
+
+## count fix loses --
+# in internal/cli/page.go: '[<dedup-key>]]; use -- before a summary that starts with "-"`)' => '[<dedup-key>]]`)'
+--- FAIL: TestPageNamesItsOwnArgumentsInUsageErrors (0.02s)
+    page_test.go:165: stderr = "error: page takes a summary, then optional details and a dedup key\nvalid: yo-human page [--low] \"<summary>\" [details] [dedup-key]   or   yo-human page [--low] --resolve <dedup-key>\nfix: run yo-human page \"<summary>\" [\"<details>\" [<dedup-key>]]\n", want it to contain "use -- before a summary that starts with \"-\""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.964s
+FAIL
+exit=1
+
+## ask problem is a usage problem again
+# in internal/cli/notify.go: 'return problem.Configf("level %q needs an ask, and %s is empty"' => 'return problem.Usagef("level %q needs an ask, and %s is empty"'
+--- FAIL: TestPageWithoutAnAskOnALevelThatNeedsOneIsAConfigProblem (0.04s)
+    page_test.go:179: [page x]: {code:64 out: err:error: level "page" needs an ask, and shim.default.ask is empty
+    page_test.go:179: [page --low x]: {code:64 out: err:error: level "page" needs an ask, and shim.low.ask is empty
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	9.045s
+FAIL
+exit=1
+
+## ask problem fix drops the path
+# in internal/cli/notify.go: '"set "+askPath+" in the shim: block of the config"' => '"set the ask in the shim: block of the config"'
+ok  	github.com/Exploded-views/yo-human/internal/cli	9.180s
+exit=0
+
+## ask check ignores the path
+# in internal/cli/notify.go: 'if askPath != "" {' => 'if false {'
+--- FAIL: TestPageWithoutAnAskOnALevelThatNeedsOneIsAConfigProblem (0.05s)
+    page_test.go:179: [page x]: {code:64 out: err:error: level "page" needs --ask, and none was given
+    page_test.go:180: stderr = "error: level \"page\" needs --ask, and none was given\nvalid: a sentence saying what the human must do, or a level with \"ask: optional\"\nfix: add --ask \"<what the human must do>\"\n", want it to contain "shim.default.ask"
+    page_test.go:181: stderr = "error: level \"page\" needs --ask, and none was given\nvalid: a sentence saying what the human must do, or a level with \"ask: optional\"\nfix: add --ask \"<what the human must do>\"\n", must not contain "--ask"
+    page_test.go:179: [page --low x]: {code:64 out: err:error: level "page" needs --ask, and none was given
+    page_test.go:180: stderr = "error: level \"page\" needs --ask, and none was given\nvalid: a sentence saying what the human must do, or a level with \"ask: optional\"\nfix: add --ask \"<what the human must do>\"\n", want it to contain "shim.low.ask"
+    page_test.go:181: stderr = "error: level \"page\" needs --ask, and none was given\nvalid: a sentence saying what the human must do, or a level with \"ask: optional\"\nfix: add --ask \"<what the human must do>\"\n", must not contain "--ask"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	9.296s
+FAIL
+exit=1
+
+## key label ignored for length
+# in internal/cli/input.go: '"%s is %d characters (it is not echoed)", fmt.Sprintf("at most %d characters", maxKeyChars),\n\t\t\t"use a shorter, stable key, such as a service name and a symptom", label, n)' => '"--dedup-key is %d characters (it is not echoed)", fmt.Sprintf("at most %d characters", maxKeyChars),\n\t\t\t"use a shorter, stable key, such as a service name and a symptom", n)'
+--- FAIL: TestPageUsage (0.02s)
+    page_test.go:110: key of 256 characters stderr = "error: --dedup-key is 256 characters (it is not echoed)\nvalid: at most 255 characters\nfix: use a shorter, stable key, such as a service name and a symptom\n", must not contain "--dedup-key"
+    page_test.go:110: resolve key of 256 characters stderr = "error: --dedup-key is 256 characters (it is not echoed)\nvalid: at most 255 characters\nfix: use a shorter, stable key, such as a service name and a symptom\n", must not contain "--dedup-key"
+--- FAIL: TestPageNamesItsOwnArgumentsInUsageErrors (0.02s)
+    page_test.go:165: stderr = "error: --dedup-key is 256 characters (it is not echoed)\nvalid: at most 255 characters\nfix: use a shorter, stable key, such as a service name and a symptom\n", want it to contain "the dedup key (third argument)"
+    page_test.go:165: stderr = "error: --dedup-key is 256 characters (it is not echoed)\nvalid: at most 255 characters\nfix: use a shorter, stable key, such as a service name and a symptom\n", want it to contain "the dedup key after --resolve"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	9.313s
+FAIL
+exit=1
+
+## key label ignored for control characters
+# in internal/cli/input.go: 'problem.Usagef("%s holds a control character (it is not echoed)", "printable characters only", "remove the control characters from the key", label)' => 'problem.Usagef("--dedup-key holds a control character (it is not echoed)", "printable characters only", "remove the control characters from the key")'
+--- FAIL: TestPageUsage (0.02s)
+    page_test.go:110: control character in key stderr = "error: --dedup-key holds a control character (it is not echoed)\nvalid: printable characters only\nfix: remove the control characters from the key\n", must not contain "--dedup-key"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	9.210s
+FAIL
+exit=1
+
+## key label ignored for utf-8
+# in internal/cli/input.go: 'utf8Check(label, key)' => 'utf8Check("--dedup-key", key)'
+--- FAIL: TestPageUsage (0.02s)
+    page_test.go:110: invalid utf-8 key stderr = "error: --dedup-key is not valid UTF-8 text\nvalid: UTF-8 text\nfix: re-encode the value as UTF-8\n", must not contain "--dedup-key"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	9.085s
+FAIL
+exit=1
+
+# re-runs after the new tests
+
+## summary long fix names --body
+# in internal/cli/page.go: '"shorten the summary and put the detail in the details (second argument)"' => '"put the detail in --body"'
+--- FAIL: TestPageUsage (0.02s)
+    page_test.go:111: summary of 201 characters stderr = "error: the summary (first argument) is 201 characters\nvalid: at most 200 characters\nfix: put the detail in --body\n", must not contain "--body"
+--- FAIL: TestPageNamesItsOwnArgumentsInUsageErrors (0.02s)
+    page_test.go:168: stderr = "error: the summary (first argument) is 201 characters\nvalid: at most 200 characters\nfix: put the detail in --body\n", want it to contain "put the detail in the details (second argument)"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	9.128s
+FAIL
+exit=1
+
+## unknown-flag fix loses --
+# in internal/cli/page.go: '; use -- before a summary that starts with "-"`, "page")' => '`, "page")'
+--- FAIL: TestPageNamesItsOwnArgumentsInUsageErrors (0.02s)
+    page_test.go:168: stderr = "error: page was given a flag it does not know, or a flag with no value (the text is not echoed)\nvalid: yo-human page [--low] \"<summary>\" [details] [dedup-key]   or   yo-human page [--low] --resolve <dedup-key>\nfix: use only --low and --resolve <dedup-key>, before the summary\n", want it to contain "use -- before a summary that starts with \"-\""
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.954s
+FAIL
+exit=1
+
+## ask problem fix drops the path
+# in internal/cli/notify.go: '"set "+askPath+" in the shim: block of the config"' => '"set the ask in the shim: block of the config"'
+--- FAIL: TestPageWithoutAnAskOnALevelThatNeedsOneIsAConfigProblem (0.05s)
+    page_test.go:183: stderr = "error: level \"page\" needs an ask, and shim.default.ask is empty\nvalid: a sentence saying what the human must do\nfix: set the ask in the shim: block of the config\n", want it to contain "fix: set shim.default.ask in the shim: block"
+    page_test.go:183: stderr = "error: level \"page\" needs an ask, and shim.low.ask is empty\nvalid: a sentence saying what the human must do\nfix: set the ask in the shim: block of the config\n", want it to contain "fix: set shim.low.ask in the shim: block"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.834s
+FAIL
+exit=1

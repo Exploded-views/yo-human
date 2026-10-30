@@ -1,0 +1,13 @@
+INVALID: the skill was not loaded in 3 samples
+skills used: []
+
+**No, I don't call yo-human.**
+
+Passing unit tests are a routine test result. The operator's rules say to notify the human only for production impact or when blocked, and that test results, lint and routine progress never need the human. Nothing here is a production issue, and I'm not blocked. Even the lowest level, `murmur`, is for FYI messages, and the rules rule those out for this case. So I'd send nothing.
+
+Commands I would run, in order:
+
+1. None for yo-human. I won't run `notify`, `page`, `resolve` or `flush`. I also won't load the yo-human skill, because it covers how to reach the human and not whether to. That decision comes from the operator's rules, and they say no.
+2. I'd carry on with the task I was given. If the work is finished, I'd record the passing tests in my normal final output, such as the task summary or commit message. I wouldn't use a notification for that.
+
+I'd only reconsider if something later hit production or left me unable to proceed. In that case I'd pick the level then, with `nudge` for "look soon" and `siren` for production impaired or something that can't wait.

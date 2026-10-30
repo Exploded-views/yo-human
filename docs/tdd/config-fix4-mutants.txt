@@ -1,0 +1,96 @@
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.230s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.267s
+exit=0
+=== mutant: config: non-regular path opened before the check (pre-open stat ignored) (internal/config/open.go)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.228s
+--- FAIL: TestNonRegularConfigFilesAreNeverOpened (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.158s
+FAIL
+exit=1
+=== mutant: config: O_NOCTTY dropped from the open (internal/config/open.go)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.233s
+--- FAIL: TestConfigOpenFlagsAndDescriptorRecheck (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.154s
+FAIL
+exit=1
+=== mutant: config: open descriptor not re-checked (internal/config/open.go)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.226s
+--- FAIL: TestConfigOpenFlagsAndDescriptorRecheck (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.163s
+FAIL
+exit=1
+=== mutant: config: fstat failure reported as not a regular file (internal/config/open.go)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.223s
+--- FAIL: TestConfigDescriptorStatFailureIsReported (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.161s
+FAIL
+exit=1
+=== mutant: config: project search skips directories and dangling symlinks (round-3 Stat) (internal/config/paths.go)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.222s
+--- FAIL: TestNonRegularConfigFilesAreNeverOpened (0.01s)
+--- FAIL: TestProjectSearchStopsAtNearestCandidate (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.159s
+FAIL
+exit=1
+=== mutant: config: explicit layer gets the user/system fix (internal/config/load.go)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.232s
+--- FAIL: TestNonRegularFixSuitsTheLayer (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.161s
+FAIL
+exit=1
+=== mutant: config: user and system layers get the --config fix (internal/config/load.go)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.221s
+--- FAIL: TestNonRegularFixSuitsTheLayer (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.163s
+FAIL
+exit=1
+=== mutant: config: dangling project symlink gets the generic read notice (internal/config/load.go)
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.222s
+--- FAIL: TestProjectSearchStopsAtNearestCandidate (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.155s
+FAIL
+exit=1
+=== mutant: secrets: non-regular path opened before the check (internal/secrets/secrets.go)
+--- FAIL: TestSecretsNonRegularNeverOpened (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.229s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.165s
+FAIL
+exit=1
+=== mutant: secrets: symlink opened before the check (internal/secrets/secrets.go)
+--- FAIL: TestSecretsSymlinkRefused (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.246s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.289s
+FAIL
+exit=1
+=== mutant: secrets: O_NOCTTY dropped from the open (internal/secrets/secrets_unix.go)
+--- FAIL: TestSecretsOpenFlagsAndDescriptorRecheck (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.231s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.269s
+FAIL
+exit=1
+=== mutant: secrets: open descriptor not re-checked (internal/secrets/secrets.go)
+--- FAIL: TestSecretsOpenFlagsAndDescriptorRecheck (0.02s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.227s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.166s
+FAIL
+exit=1
+=== mutant: secrets: fstat failure reported as not a regular file (internal/secrets/secrets.go)
+--- FAIL: TestSecretsDescriptorStatFailureIsReported (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.238s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.274s
+FAIL
+exit=1

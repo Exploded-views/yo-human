@@ -1,0 +1,44 @@
+$ go test -count=1 ./internal/core -run LouderRepeatInQuietHours|ReminderReplaces|RaisesFailedCancel
+--- FAIL: TestALouderRepeatInQuietHoursPagesOnce (0.16s)
+    raise_held_test.go:68: cancelled map[]; the scheduled quieter copy must be cancelled when the louder one goes out
+    raise_held_test.go:71: queue 1/0/0; the held quieter copy must leave the queue
+    raise_held_test.go:75: reached {Instance:sched Delivered:[<hex>] Scheduled:[{ID:SCHED-FAKE-1 Fingerprint:<hex>}]}; a cancelled scheduled send is no longer held
+    raise_held_test.go:80: local got 2 sends; want only the louder page, nothing more after the window
+--- FAIL: TestAReminderReplacesTheHeldCopy (0.17s)
+    raise_held_test.go:99: cancelled map[]; want the first scheduled copy cancelled and the reminder kept
+    raise_held_test.go:102: queued 2; want only the reminder's held send for local
+    raise_held_test.go:106: local got 2 sends after the window; want one
+--- FAIL: TestARaisesFailedCancelIsAWarningAndIsQueued (0.15s)
+    raise_held_test.go:121: warnings []; want the failed cancel as one warning
+    raise_held_test.go:124: queue []; want only the cancel, kept for a retry
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	0.505s
+FAIL
+[exit 1]
+
+$ go test -tags e2e -count=1 ./test/e2e -run LouderRepeatInQuietHours
+--- FAIL: TestALouderRepeatInQuietHoursPagesOnce (0.30s)
+    quiet_test.go:91: yo-human notify --level page --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT held <ULID>
+        phone: held
+        bell: held
+        pager: held
+    quiet_test.go:92: yo-human notify --level urgent --title Disk is full on build-7 --ask Free some space --project proj --agent tester --dedup-key disk-7 -> exit 0
+        RESULT delivered <ULID>
+        phone: sent
+        bell: sent
+        pager: sent
+    quiet_test.go:94: ntfy got [POST / POST /]; want the scheduled page, the urgent one, then the scheduled page deleted
+    quiet_test.go:96: yo-human status --json -> exit 0
+        {"dead":[],"held":[{"id":"<ULID>","channel":"bell","deliver_at":"2026-10-27T00:00:00Z","kind":"send"},{"id":"<ULID>","channel":"pager","deliver_at":"2026-10-27T00:00:00Z","kind":"send"}],"incidents":[{"key":"disk-7","project":"proj","level":"urgent","generation":1,"opened":"2026-10-26T21:25:27Z","last_sent":"2026-10-26T21:25:27Z","latest":"Disk is full on build-7"}],"inflight":0,"queued":[],"status":"ok","version":1}
+    quiet_test.go:97: queue after the louder repeat: {Status:ok Queued:[] Held:[{ID:<ULID> Channel:bell Kind:send DeliverAt:2026-10-27 00:00:00 +0000 UTC} {ID:<ULID> Channel:pager Kind:send DeliverAt:2026-10-27 00:00:00 +0000 UTC}] Dead:[] Incidents:[{Key:disk-7 Level:urgent Generation:1}]}; want the held copies gone
+    quiet_test.go:100: yo-human flush -> exit 0
+        RESULT ok
+        bell: sent
+        pager: sent
+    quiet_test.go:101: bark fake received 2 requests, want 1: [POST /push POST /push]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/test/e2e	0.651s
+FAIL
+[exit 1]
+

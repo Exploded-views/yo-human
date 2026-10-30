@@ -1,0 +1,14 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false,
+  false
+ ],
+ "note": "The reply reruns notify with --level siren and the original title and ask, and does not give up, blame yo-human, or keep 'urgent'.",
+ "pass": true
+}

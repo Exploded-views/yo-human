@@ -1,0 +1,60 @@
+$ go test -race -count=1 -timeout 60s ./internal/secrets ./internal/config 2>&1
+--- FAIL: TestSecretsNonRegularNeverOpened (0.00s)
+    --- FAIL: TestSecretsNonRegularNeverOpened/directory (0.00s)
+        secrets_nonregular_test.go:53: the secrets path was opened 1 times, want never
+    --- FAIL: TestSecretsNonRegularNeverOpened/symlink_to_a_device (0.00s)
+        secrets_nonregular_test.go:53: the secrets path was opened 1 times, want never
+    --- FAIL: TestSecretsNonRegularNeverOpened/FIFO (0.00s)
+        secrets_nonregular_test.go:53: the secrets path was opened 1 times, want never
+--- FAIL: TestSecretsOpenFlagsAndDescriptorRecheck (0.02s)
+    secrets_nonregular_test.go:76: open flags = [0x104], want one read-only open with O_NONBLOCK|O_NOCTTY|O_NOFOLLOW
+--- FAIL: TestSecretsDescriptorStatFailureIsReported (0.01s)
+    secrets_nonregular_test.go:90: What = "the secrets file \"$TMPDIR/TestSecretsDescriptorStatFailureIsReported2839380571/001/yo-human/secrets.yaml\" is not a regular file", want the real error
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.203s
+--- FAIL: TestNonRegularConfigFilesAreNeverOpened (0.02s)
+    --- FAIL: TestNonRegularConfigFilesAreNeverOpened/project_FIFO (0.00s)
+        nonregular_test.go:93: /private$TMPDIR/TestNonRegularConfigFilesAreNeverOpenedproject_FIFO3150877647/001/.yo-human.yaml was opened 1 times, want never
+    --- FAIL: TestNonRegularConfigFilesAreNeverOpened/project_directory (0.01s)
+        nonregular_test.go:99: notices = [], want one containing "not a regular file"
+    --- FAIL: TestNonRegularConfigFilesAreNeverOpened/user_FIFO (0.00s)
+        nonregular_test.go:93: /private$TMPDIR/TestNonRegularConfigFilesAreNeverOpeneduser_FIFO2741653441/001/u/config.yaml was opened 1 times, want never
+    --- FAIL: TestNonRegularConfigFilesAreNeverOpened/system_FIFO (0.00s)
+        nonregular_test.go:93: /private$TMPDIR/TestNonRegularConfigFilesAreNeverOpenedsystem_FIFO2959075713/001/system.yaml was opened 1 times, want never
+    --- FAIL: TestNonRegularConfigFilesAreNeverOpened/system_device (0.00s)
+        nonregular_test.go:93: /dev/null was opened 1 times, want never
+    --- FAIL: TestNonRegularConfigFilesAreNeverOpened/explicit_FIFO (0.00s)
+        nonregular_test.go:93: /private$TMPDIR/TestNonRegularConfigFilesAreNeverOpenedexplicit_FIFO2902543265/001/c.yaml was opened 1 times, want never
+    --- FAIL: TestNonRegularConfigFilesAreNeverOpened/explicit_device (0.00s)
+        nonregular_test.go:93: /dev/null was opened 1 times, want never
+--- FAIL: TestNonRegularFixSuitsTheLayer (0.02s)
+    --- FAIL: TestNonRegularFixSuitsTheLayer/user_FIFO (0.00s)
+        nonregular_test.go:122: Fix = "point --config or YO_HUMAN_CONFIG at a regular file, or remove /private$TMPDIR/TestNonRegularFixSuitsTheLayeruser_FIFO2624287124/001/u/config.yaml", want no removal suggested
+        nonregular_test.go:128: Fix = "point --config or YO_HUMAN_CONFIG at a regular file, or remove /private$TMPDIR/TestNonRegularFixSuitsTheLayeruser_FIFO2624287124/001/u/config.yaml", want no --config for the user FIFO
+        nonregular_test.go:131: Fix = "point --config or YO_HUMAN_CONFIG at a regular file, or remove /private$TMPDIR/TestNonRegularFixSuitsTheLayeruser_FIFO2624287124/001/u/config.yaml", want it to contain "replace /private$TMPDIR/TestNonRegularFixSuitsTheLayeruser_FIFO2624287124/001/u/config.yaml with a regular file"
+    --- FAIL: TestNonRegularFixSuitsTheLayer/system_FIFO (0.01s)
+        nonregular_test.go:122: Fix = "point --config or YO_HUMAN_CONFIG at a regular file, or remove /private$TMPDIR/TestNonRegularFixSuitsTheLayersystem_FIFO1500632238/001/system.yaml", want no removal suggested
+        nonregular_test.go:128: Fix = "point --config or YO_HUMAN_CONFIG at a regular file, or remove /private$TMPDIR/TestNonRegularFixSuitsTheLayersystem_FIFO1500632238/001/system.yaml", want no --config for the system FIFO
+        nonregular_test.go:131: Fix = "point --config or YO_HUMAN_CONFIG at a regular file, or remove /private$TMPDIR/TestNonRegularFixSuitsTheLayersystem_FIFO1500632238/001/system.yaml", want it to contain "replace /private$TMPDIR/TestNonRegularFixSuitsTheLayersystem_FIFO1500632238/001/system.yaml with a regular file"
+    --- FAIL: TestNonRegularFixSuitsTheLayer/system_device (0.00s)
+        nonregular_test.go:122: Fix = "point --config or YO_HUMAN_CONFIG at a regular file, or remove /dev/null", want no removal suggested
+        nonregular_test.go:128: Fix = "point --config or YO_HUMAN_CONFIG at a regular file, or remove /dev/null", want no --config for the system device
+        nonregular_test.go:131: Fix = "point --config or YO_HUMAN_CONFIG at a regular file, or remove /dev/null", want it to contain "replace /dev/null with a regular file"
+    --- FAIL: TestNonRegularFixSuitsTheLayer/explicit_FIFO (0.00s)
+        nonregular_test.go:122: Fix = "point --config or YO_HUMAN_CONFIG at a regular file, or remove /private$TMPDIR/TestNonRegularFixSuitsTheLayerexplicit_FIFO3469864398/001/c.yaml", want no removal suggested
+    --- FAIL: TestNonRegularFixSuitsTheLayer/explicit_device (0.00s)
+        nonregular_test.go:122: Fix = "point --config or YO_HUMAN_CONFIG at a regular file, or remove /dev/null", want no removal suggested
+--- FAIL: TestProjectSearchStopsAtNearestCandidate (0.01s)
+    --- FAIL: TestProjectSearchStopsAtNearestCandidate/dangling_symlink (0.00s)
+        nonregular_test.go:171: notices = [], want one containing "does not exist"
+    --- FAIL: TestProjectSearchStopsAtNearestCandidate/directory (0.00s)
+        nonregular_test.go:171: notices = [], want one containing "not a regular file"
+--- FAIL: TestConfigOpenFlagsAndDescriptorRecheck (0.00s)
+    nonregular_test.go:198: open flags = 0x4, want O_RDONLY|O_NONBLOCK|O_NOCTTY
+--- FAIL: TestConfigDescriptorStatFailureIsReported (0.00s)
+    nonregular_test.go:215: What = "the config file \"/private$TMPDIR/TestConfigDescriptorStatFailureIsReported577963953/001/c.yaml\" is not a regular file", want the real error
+    nonregular_test.go:219: notices = [{Text:ignoring the project config "/private$TMPDIR/TestConfigDescriptorStatFailureIsReported577963953/001/.yo-human.yaml": it is not a regular file}], want one containing "input/output error"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.250s
+FAIL
+exit=1

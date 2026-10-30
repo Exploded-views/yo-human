@@ -1,0 +1,83 @@
+KILLED  the listing rule is ignored
+  internal/core/repeat.go: 'case slices.Contains(inc.Withdrawn, entryKey):' -> 'case false:'
+  --- FAIL: TestAWaitingMessageIsDroppedByAResolveWhateverTheClock (0.59s)
+          clockfree_test.go:27: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 1; want the waiting message d
+          clockfree_test.go:30: incident &{Key:k Project: Generation:1 Previous:resolved Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex>
+          clockfree_test.go:27: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 1; want the waiting message d
+          clockfree_test.go:30: incident &{Key:k Project: Generation:1 Previous:resolved Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex>
+  --- FAIL: TestAWithdrawnMessageIsDroppedAfterTheKeyReopens (0.37s)
+      clockfree_test.go:81: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 2; want only the reopening messag
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  the time rule is ignored
+  internal/core/repeat.go: 'return !inc.Open && inc.Updated.After(queuedAt)' -> 'return false'
+  --- FAIL: TestAWaitingMessageTheResolveCouldNotListIsDroppedByTime (0.28s)
+      clockfree_test.go:65: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 1; want the waiting message dropp
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  the time rule drops a tie
+  internal/core/repeat.go: 'return !inc.Open && inc.Updated.After(queuedAt)' -> 'return !inc.Open && !inc.Updated.Before(queuedAt)'
+  --- FAIL: TestAMessageWaitingAfterAResolveIsSent (0.25s)
+      clockfree_test.go:45: flush = {Status:ok ID: Channels:[{Channel:_admit Status:cancelled Error:dropped: incident k was resolved after this message was queued ProviderID: Scheduled:false attempts:0 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] N
+      clockfree_test.go:48: incident &{Key:k Project: Generation:0 Previous: Level: Rank:0 Open:false Reached:[] ContentHash: Latest: Opened:0001-01-01 00:00:00 +0000 UTC LastSent:0001-01-01 00:00:00 +0000 UTC Updated:2026-10-30 12:00:00 +0000 UTC Withdrawn:[]}; want it open
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  a message sent as it is written is checked against the list
+  internal/core/repeat.go: 'case queuedAt.IsZero() || inc == nil:' -> 'case inc == nil:'
+  --- FAIL: TestAWithdrawnMessageIsDroppedAfterTheKeyReopens (0.28s)
+      clockfree_test.go:81: flush = {Status:ok ID: Channels:[{Channel:_admit Status:cancelled Error:dropped: incident k was resolved after this message was queued ProviderID: Scheduled:false attempts:0 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] N
+  --- FAIL: TestGenerationBumpsOnEveryOpen (0.32s)
+      generation_test.go:80: reopened after a resolve = 1, want 2
+      generation_test.go:85: reopened after expiry = 2, want 3
+  --- FAIL: TestReopenDuringResolveKeepsTheNewMessage (0.22s)
+      generation_test.go:130: incident open=false gen=1, notify "suppressed" []; want the reopened incident paged
+      generation_test.go:137: sent [t Resolved: t]; the new message must go out, once, last
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  the resolve lists nothing
+  internal/core/resolve.go: 'b.withdraw(cur, key)' -> ''
+  --- FAIL: TestAWaitingMessageIsDroppedByAResolveWhateverTheClock (0.58s)
+          clockfree_test.go:27: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 1; want the waiting message d
+          clockfree_test.go:30: incident &{Key:k Project: Generation:1 Previous:resolved Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex>
+          clockfree_test.go:27: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 1; want the waiting message d
+          clockfree_test.go:30: incident &{Key:k Project: Generation:1 Previous:resolved Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex>
+  --- FAIL: TestAWithdrawnMessageIsDroppedAfterTheKeyReopens (0.33s)
+      clockfree_test.go:81: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 2; want only the reopening messag
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  the list is lost on a reopen
+  internal/core/repeat.go: 'withdrawn = old.Withdrawn // a message the resolve withdrew may still be waiting' -> '_ = old'
+  --- FAIL: TestAWithdrawnMessageIsDroppedAfterTheKeyReopens (0.40s)
+      clockfree_test.go:81: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 2; want only the reopening messag
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  WaitingOf lists only queued messages
+  internal/store/queue.go: 'for _, sub := range []string{"inflight", "queue", "inflight"} {\n\t\tws, err := s.listWires(sub)\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t\tfor _, w := range ws {\n\t\t\tif w.IncidentKey == incidentKey && isAdmit(w.Key) {' -> 'for _, sub := range []string{"queue"} {\n\t\tws, err := s.listWires(sub)\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t\tfor _, w := range ws {\n\t\t\tif w.IncidentKey == incidentKey && isAdmit(w.Key) {'
+  --- FAIL: TestAWaitingMessageIsDroppedByAResolveWhateverTheClock (0.75s)
+          clockfree_test.go:27: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 1; want the waiting message d
+          clockfree_test.go:30: incident &{Key:k Project: Generation:1 Previous:resolved Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex>
+          clockfree_test.go:27: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 1; want the waiting message d
+          clockfree_test.go:30: incident &{Key:k Project: Generation:1 Previous:resolved Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex>
+  --- FAIL: TestAWithdrawnMessageIsDroppedAfterTheKeyReopens (0.40s)
+      clockfree_test.go:81: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 2; want only the reopening messag
+  --- FAIL: TestWaitingOfListsTheWaitingMessagesOfTheIncident (0.07s)
+  [go test -count=1 -timeout 300s ./internal/core ./internal/store exit 1]
+
+KILLED  WaitingOf keeps the owner's pid
+  internal/store/queue.go: 'seen[w.Key[:strings.Index(w.Key, admitSuffix)+len(admitSuffix)]] = true' -> 'seen[w.Key] = true'
+  --- FAIL: TestAWaitingMessageIsDroppedByAResolveWhateverTheClock (0.66s)
+          clockfree_test.go:27: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 1; want the waiting message d
+          clockfree_test.go:30: incident &{Key:k Project: Generation:1 Previous:resolved Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex>
+          clockfree_test.go:27: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 1; want the waiting message d
+          clockfree_test.go:30: incident &{Key:k Project: Generation:1 Previous:resolved Level:page Rank:1 Open:true Reached:[{Instance:a Delivered:[<hex>] Scheduled:[]}] ContentHash:<hex>
+  --- FAIL: TestAWithdrawnMessageIsDroppedAfterTheKeyReopens (0.39s)
+      clockfree_test.go:81: flush = {Status:ok ID: Channels:[{Channel:a Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}}] Next:<nil> DedupKey: Warnings:[]}, sent 2; want only the reopening messag
+  --- FAIL: TestWaitingOfListsTheWaitingMessagesOfTheIncident (0.09s)
+  [go test -count=1 -timeout 300s ./internal/core ./internal/store exit 1]
+
+KILLED  WaitingOf lists other incidents
+  internal/store/queue.go: 'if w.IncidentKey == incidentKey && isAdmit(w.Key) {\n\t\t\t\tseen' -> 'if isAdmit(w.Key) {\n\t\t\t\tseen'
+  --- FAIL: TestWaitingOfListsTheWaitingMessagesOfTheIncident (0.07s)
+      followup_test.go:82: WaitingOf = [01A._admit 01B._admit 01C._admit], <nil>; want 01A._admit and 01B._admit
+  [go test -count=1 -timeout 300s ./internal/core ./internal/store exit 1]
+

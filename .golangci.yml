@@ -39,9 +39,9 @@ linters:
       rules:
         # Constitution IV (v1.0.1): core, store, config, secrets, problem and cli import only
         # the standard library, this module's internal/ packages and the third-party modules
-        # reviewed and named in their own rule. main imports none yet; M1 adds its reviewed
-        # modules by name. Everything else is denied (an unreviewed module could open a
-        # connection of its own). The deny rules below still apply on top. Test files are free.
+        # reviewed and named in their own rule: gopkg.in/yaml.v3 in config, secrets and cli, and
+        # github.com/oklog/ulid/v2 in cli.
+        # Everything else is denied (an unreviewed module could open a connection of its own). The deny rules below still apply on top. Test files are free.
         core-imports:
           files:
             - "**/internal/core/**"
@@ -63,6 +63,7 @@ linters:
           allow:
             - $gostd
             - github.com/Exploded-views/yo-human/internal/
+            - gopkg.in/yaml.v3$ # reviewed for M1: config files, the secrets file, trust display
         secrets-imports:
           files:
             - "**/internal/secrets/**"
@@ -70,6 +71,7 @@ linters:
           allow:
             - $gostd
             - github.com/Exploded-views/yo-human/internal/
+            - gopkg.in/yaml.v3$ # reviewed for M1: config files, the secrets file, trust display
         problem-imports:
           files:
             - "**/internal/problem/**"
@@ -84,6 +86,8 @@ linters:
           allow:
             - $gostd
             - github.com/Exploded-views/yo-human/internal/
+            - gopkg.in/yaml.v3$ # reviewed for M1: config files, the secrets file, trust display
+            - github.com/oklog/ulid/v2$ # reviewed for M1: message and incident ids
         # Constitution IV: only cmd and internal/cli may import internal/cli.
         cli-is-the-top:
           files:
@@ -361,7 +365,7 @@ linters:
         # internal/channel. The allow list rejects everything else (config, secrets, core, store,
         # problem, third-party); the deny entry rejects every internal/channel/<name>, which the
         # parent's prefix would otherwise allow. Provider SDKs are added here by name when adopted.
-        # internal/channel/transport (the network helpers; arrives with M1) is allowed by its
+        # internal/channel/transport (the network helpers) is allowed by its
         # exact entry; strict mode lets that longer allow entry beat the internal/channel/ deny.
         channel-implementations:
           list-mode: strict
@@ -386,7 +390,6 @@ linters:
           allow:
             - $gostd
             - github.com/Exploded-views/yo-human/internal/channel
-            # internal/channel/transport arrives with M1.
             - github.com/Exploded-views/yo-human/internal/channel/transport$
         # Constitution IV: core never reaches a channel implementation directly (only the
         # internal/channel interface). Its network ban is internal-no-network.
@@ -425,6 +428,16 @@ linters:
         linters: [gosec]
       - path: ^tools/
         linters: [gosec]
+      # The e2e harness opens a pseudo-terminal with an ioctl through syscall.Syscall. That is
+      # not a socket; only these two files, and only for that call, are excused.
+      - path: ^test/e2e/pty_(darwin|linux)_test\.go$
+        linters: [forbidigo]
+        text: syscall\.Syscall
+      # The e2e hook swaps the root CAs on http.DefaultTransport so the real binary can talk to
+      # TLS fakes. It never builds or calls a client; only this file is excused.
+      - path: ^internal/cli/testhooks_e2e\.go$
+        linters: [forbidigo]
+        text: only internal/hosted/egress makes outbound HTTP calls
       # Channel implementations may open sockets; registry may not. golangci-lint refuses
       # path and path-except in one rule and RE2 has no lookahead, so the pattern spells out
       # "any internal/channel/<dir>/ whose name is not exactly registry".

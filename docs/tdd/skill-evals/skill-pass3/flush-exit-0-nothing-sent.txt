@@ -1,0 +1,21 @@
+skills used: ['yo-human-eval:yo-human']
+
+**Was the human reached? Unconfirmed.** The flush exited 0 but printed only `RESULT ok`, with no channel lines. The skill says never to take a flush exit 0 as delivery without reading its channel lines. A line like `sent` would mean delivered. No lines means nothing was due yet, so the siren may still be queued. I can't tell from this output that anyone was paged.
+
+**What I'd do next, in order:**
+
+1. **Re-run the flush once, exactly as printed.** The earlier `next` line gave no `--config`, so I'd run `yo-human flush`. This is a dry run, so I'm not running it now. I'd run it with `--json` to read the per-channel result unambiguously, and I'd wait the 60s `after_seconds` first if the output asks for it.
+   - **Channel line `sent` and exit 0:** the siren is delivered. I stop there.
+   - **Exit 75 (`RESULT queued`):** it's still queued. I follow the new `next`, wait, and flush again, within the remaining attempts (5 at most).
+   - **Exit 69 (`RESULT failed`):** it failed for good. I stop and don't retry.
+   - **Exit 0 with no channel lines again:** I treat it as unconfirmed delivery and count it against the bounded retries.
+
+2. **Don't re-run `notify`, and don't change the key or level.** Either would create a duplicate or route around the problem. The dedup key stays `checkout-FAKE`.
+
+3. **If attempts run out, or the result is 69, 74, 78 or 70, tell the human directly in this session.** I'd say plainly that they were not confirmed reached. The message would include:
+   - the title: "Checkout failing"
+   - the ask: "Look at checkout now"
+   - the level (siren) and the key (`checkout-FAKE`)
+   - the exact error or output text
+
+4. **If delivery is confirmed and checkout is later fixed and verified,** I'd run `yo-human resolve --dedup-key checkout-FAKE --note "<short note>"`. I would not send a new notify to say it's fixed.

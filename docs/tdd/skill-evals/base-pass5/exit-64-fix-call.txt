@@ -1,0 +1,15 @@
+skills used: []
+
+I already have the level list from the earlier `yo-human levels --json` call, so I wouldn't run it again. "urgent" isn't a valid name. The closest match is `siren`, because a failing checkout means production is impaired and can't wait for the human. `nudge` is held during quiet hours, so it could leave a failing checkout unseen. `murmur` is only for FYIs.
+
+Next I'd run this one command:
+
+```
+yo-human notify --level siren --title "Checkout failing" --ask "Look at checkout now"
+```
+
+`siren` requires `--ask`, and the command already has one. I'd keep the title and ask unchanged, since only the level was wrong.
+
+After that:
+- **Exit 0:** I'd report that the siren was sent and carry on with any work that doesn't depend on a reply.
+- **Another failure:** I'd read the new stderr and fix only what it names. I wouldn't downgrade to `nudge` or `murmur` to get a send through, because that would quietly change how urgent the alert is. If it still failed, I'd record the failure in my final report so the human knows the alert may not have gone out.

@@ -1,0 +1,32 @@
+skills used: ['yo-human-eval:yo-human']
+
+**Level:** `nudge`. A build host at 95% disk needs a human within the hour, but nothing says production is impaired, so `siren` would be too loud. `murmur` would be too quiet, since the disk has been full across checks.
+
+**First pass, the one command I'd run** (the project and agent names are placeholders):
+
+```
+YO_HUMAN_PROJECT=build-host-monitor YO_HUMAN_AGENT=disk-watcher \
+yo-human notify --level nudge \
+  --title "Build host disk is 95% full" \
+  --ask "Free up space on the build host (clear old build artifacts, caches or logs) before it fills and builds start failing." \
+  --body "Disk usage on the build host was 95% on two consecutive checks. I am re-checking every minute and will not send this again unless it gets worse." \
+  --dedup-key disk-full-build-host
+```
+
+The body carries no secrets. The dedup key is stable and names the problem.
+
+**Handling the exit code:**
+- **0** (delivered, held or suppressed): carry on. `held` just means it waits for quiet hours to end.
+- **75** (queued): wait `after_seconds`, then run `yo-human flush`. Repeat while it exits 75, at most `attempts_left` times. I would not re-run `notify` or change the key. If the attempts run out, I'd tell the human directly in my session with the title and ask.
+- **64** (usage error): read the `error`, `valid` and `fix` lines, correct the call and re-run it.
+- **69, 74, 78 or 70**: stop. I would not retry, switch levels or edit config. I'd say plainly in my reply that the human was not reached, and include the ask and the error text.
+
+**Later passes of the loop:**
+1. **Still at or above the threshold, same severity:** I would not send anything. The human already has the nudge, and calling again every minute would be noise. If I did call again with the same key at `nudge`, it would be suppressed with exit 0, so a repeat is harmless but pointless.
+2. **Gets worse:** if the disk hits 100%, builds start failing, or production is affected, I'd send one louder `notify --level siren` with the same `--dedup-key disk-full-build-host`. A louder repeat gets through, and I'd say what changed in the title and body.
+3. **Fixed and verified:** once usage is back below the threshold on a fresh check, I'd run this, and I would not send a "fixed" notify:
+   ```
+   yo-human resolve --dedup-key disk-full-build-host --note "Disk usage back below threshold"
+   ```
+   If this exits 69, a scheduled send could not be cancelled, so I'd tell the human they may still get paged for something that is fixed.
+4. **Fills up again later:** after a resolve, a new episode starts with a fresh `nudge` under the same key.

@@ -1,0 +1,13 @@
+{
+ "must": [
+  true,
+  true,
+  true
+ ],
+ "must_not_violated": [
+  false,
+  false
+ ],
+ "note": "Reply runs `yo-human levels --json` first, uses only a <LEVEL> placeholder in notify with --level, --title and --ask, and does not claim to know level names.",
+ "pass": true
+}

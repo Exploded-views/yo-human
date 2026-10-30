@@ -10,10 +10,14 @@ import (
 	"strings"
 )
 
-// Finding is a Go file that exceeds the line limit.
+// Finding is one problem a check found. Oversized fills Path and Lines (a Go file over the line
+// limit); CheckSetupPage fills Path (the page name), Line, Rule and Msg.
 type Finding struct {
 	Path  string
 	Lines int
+	Line  int
+	Rule  string
+	Msg   string
 }
 
 var generatedHeader = regexp.MustCompile(`^// Code generated .* DO NOT EDIT\.$`)

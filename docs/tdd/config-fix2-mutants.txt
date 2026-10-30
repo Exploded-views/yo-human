@@ -1,0 +1,77 @@
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/problem	1.186s
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.174s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.162s
+exit=0
+=== mutant: quote inside $'...' left raw instead of \x27 (internal/problem/problem.go)
+--- FAIL: TestShellQuote (0.00s)
+--- FAIL: TestShellQuoteExecutesNothing (0.07s)
+--- FAIL: TestShellQuoteBashRoundTrips (0.12s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/problem	0.200s
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.187s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.135s
+FAIL
+exit=1
+=== mutant: invalid UTF-8 bytes not escaped (internal/problem/problem.go)
+--- FAIL: TestShellQuote (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/problem	0.178s
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.178s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.147s
+FAIL
+exit=1
+=== mutant: backslash not escaped (internal/problem/problem.go)
+--- FAIL: TestShellQuote (0.00s)
+--- FAIL: TestShellQuoteBashRoundTrips (0.11s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/problem	0.180s
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.178s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.137s
+FAIL
+exit=1
+=== mutant: C1 controls pass through (internal/problem/problem.go)
+--- FAIL: TestShellQuote (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/problem	0.186s
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.187s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.136s
+FAIL
+exit=1
+=== mutant: leading - or = not forced into quotes (internal/problem/problem.go)
+--- FAIL: TestShellQuote (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/problem	0.184s
+ok  	github.com/Exploded-views/yo-human/internal/secrets	1.186s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.139s
+FAIL
+exit=1
+=== mutant: FIFO open can block (internal/secrets/secrets_unix.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	1.189s
+--- FAIL: TestSecretsFIFORefusedWithoutHanging (3.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	3.183s
+ok  	github.com/Exploded-views/yo-human/internal/config	1.147s
+FAIL
+exit=1
+=== mutant: hex-token names accepted (internal/secrets/secrets.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+--- FAIL: TestSecretsValidNameRefusesLikelyTokens (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.174s
+--- FAIL: TestReferenceThatLooksLikeAHexTokenIsRefused (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.133s
+FAIL
+exit=1
+=== mutant: other-owner and other checks intact: ValidName ignores the pattern (internal/secrets/secrets.go)
+ok  	github.com/Exploded-views/yo-human/internal/problem	(cached)
+--- FAIL: TestSecretsSetRefusesBadNames (0.11s)
+--- FAIL: TestSecretsValidName (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/secrets	0.240s
+--- FAIL: TestReferenceNamesAreValidated (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/config	0.133s
+FAIL
+exit=1

@@ -1,0 +1,17 @@
+skills used: ['yo-human-eval:yo-human']
+
+**Was the human reached? Not confirmed.** The `flush` exit 0 printed only `RESULT ok`, with no channel lines. The skill says exit 0 with no channel lines means nothing was due yet, not delivery. A `sent` line is the only proof of delivery, and I didn't get one. So I can't say the siren reached them.
+
+**What I'd do next:**
+
+1. **Don't re-run `notify`.** That would duplicate the page. I also wouldn't change the dedup key or the level.
+
+2. **Run `yo-human status --json`, which is read-only.** This checks whether the `checkout-FAKE` incident shows as delivered, pending or failed. It's the only way to settle the ambiguity. It also needs `YO_HUMAN_PROJECT` to be set so it sees my project's incidents.
+   - **If it shows delivered**, I stop and carry on.
+   - **If it shows still queued**, I keep flushing within the budget. The first `next` allowed 5 attempts and I've used 1, so at most 4 remain. Each time I'd wait the `after_seconds` it prints, then run `yo-human flush`. I'd stop at the first `sent` line or at exit 69.
+   - **If it's unclear or still not delivered**, I treat the human as not reached.
+
+3. **If the attempts run out without a `sent` line, I tell the human in my session.** I wouldn't run `flush` again after that. The message would say:
+   > I could not confirm delivery of a siren page. **Title:** Checkout failing. **Ask:** Look at checkout now. Flush returned `RESULT ok` with no `sent` channel line, so the page may not have reached you.
+
+4. **When checkout is fixed and verified, I'd run `yo-human resolve --dedup-key checkout-FAKE --note "<short note>"`.** I wouldn't send a new notify to say it's fixed.

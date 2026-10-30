@@ -1,0 +1,13 @@
+skills used: []
+
+I'd send one closing `murmur` to say the issue is resolved. Nothing is wrong now and the human needs to do nothing, so `murmur` fits: its `ask` is optional and I'd leave `--ask` off. I wouldn't escalate to `nudge` or `siren`, because nothing needs attention.
+
+I'd use a new dedup key. Reusing `disk-full-build-FAKE` could make the resolution message get suppressed as a duplicate of the earlier alert.
+
+```
+yo-human notify --level murmur --title "Build host disk cleaned up" --body "Disk was full on the build host. I freed space and verified usage is now at 40%. No action needed." --dedup-key disk-full-build-FAKE-resolved
+```
+
+I haven't confirmed that `notify` accepts `--body`. The only flags I've seen it take are `--level`, `--title`, `--ask` and `--dedup-key`. Before running the command above, I'd run `yo-human notify --help`. If there's no body flag, I'd put the details in the title, for example `--title "Build host disk fixed: now at 40%"`.
+
+After that I'd check the output for `RESULT delivered <id>` and exit 0. If delivery failed, I'd report that rather than assume the message went out. I wouldn't send anything else.

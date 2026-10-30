@@ -1,0 +1,249 @@
+# what this is: task 12 mutants for the page shim; each run is bounded by a 300s timeout
+# note: message ids (ULIDs) and the time part of default dedup keys in the failing output were replaced by <ulid> and <time> so the file holds no gitleaks generic-api-key match; nothing else is edited
+# runs 1-21 are the first pass; two survived (the shim ask kept on one line, and a resolve that carries no note of its own) and got tests (TestPageAskIsOneLine, and a resolve-note check in TestPageResolve); their re-runs follow.
+# test command: go test -count=1 -timeout 150s ./internal/cli (timeout 300s per run); the failing lines of each run are kept as printed
+
+## default key uses local time
+# in internal/cli/page.go: 'now().UTC().Format(' => 'now().Format('
+--- FAIL: TestPageDefaultDedupKey (0.16s)
+    page_test.go:58: keys = [{ID:<ulid> Level:page Title:db down Ask:look now Body: Link: Project:unknown Agent:orchestrator DedupKey:orch-<time> Actions:[] Created:2026-10-30 12:34:56 -0500 -0500 Resolved:false} {ID:<ulid> Level:page Title:db down 2 Ask:look now Body:details Link: Project:unknown Agent:orchestrator DedupKey:orch-<time> Actions:[] Created:2026-10-30 12:34:56 -0500 -0500 Resolved:false}]; want orch-<time> (UTC, from the clock), empty body when none given
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	9.427s
+FAIL
+exit=1
+
+## default key format drops the Z
+# in internal/cli/page.go: '"orch-20060102T150405Z"' => '"orch-20060102T150405"'
+--- FAIL: TestPageDefaultDedupKey (0.15s)
+    page_test.go:58: keys = [{ID:<ulid> Level:page Title:db down Ask:look now Body: Link: Project:unknown Agent:orchestrator DedupKey:orch-<time> Actions:[] Created:2026-10-30 12:34:56 -0500 -0500 Resolved:false} {ID:<ulid> Level:page Title:db down 2 Ask:look now Body:details Link: Project:unknown Agent:orchestrator DedupKey:orch-<time> Actions:[] Created:2026-10-30 12:34:56 -0500 -0500 Resolved:false}]; want orch-<time> (UTC, from the clock), empty body when none given
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.662s
+FAIL
+exit=1
+
+## default key layout wrong prefix
+# in internal/cli/page.go: '"orch-20060102T150405Z"' => '"page-20060102T150405Z"'
+--- FAIL: TestPageDefaultDedupKey (0.15s)
+    page_test.go:58: keys = [{ID:<ulid> Level:page Title:db down Ask:look now Body: Link: Project:unknown Agent:orchestrator DedupKey:page-<time> Actions:[] Created:2026-10-30 12:34:56 -0500 -0500 Resolved:false} {ID:<ulid> Level:page Title:db down 2 Ask:look now Body:details Link: Project:unknown Agent:orchestrator DedupKey:page-<time> Actions:[] Created:2026-10-30 12:34:56 -0500 -0500 Resolved:false}]; want orch-<time> (UTC, from the clock), empty body when none given
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.746s
+FAIL
+exit=1
+
+## low ignored
+# in internal/cli/page.go: 'if low {\n\t\tmode, path = shim.Low' => 'if false {\n\t\tmode, path = shim.Low'
+--- FAIL: TestPageLow (0.10s)
+    page_test.go:47: phone got [{ID:<ulid> Level:page Title:ci broken Ask:look now Body:log Link: Project:unknown Agent:orchestrator DedupKey:ci-key Actions:[] Created:2026-10-30 12:00:00 +0000 UTC Resolved:false}], pager 1; want one note-level send
+--- FAIL: TestPageHalfConfiguredShim (0.09s)
+    page_test.go:119: low with no shim.low: {code:0 out:RESULT delivered <ulid>
+    page_test.go:120: stderr = "", want it to contain "shim.low.level"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.469s
+FAIL
+exit=1
+
+## env agent ignored
+# in internal/cli/page.go: 'if v := flatLine(os.Getenv("YO_HUMAN_AGENT")); v != ""' => 'if v := ""; v != ""'
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL
+exit=1
+
+## shim agent ignored
+# in internal/cli/page.go: 'if v := flatLine(cfg.Shim.Agent); v != ""' => 'if v := ""; v != ""'
+--- FAIL: TestPageTrigger (0.17s)
+    page_test.go:33: message = {ID:<ulid> Level:page Title:db down Ask:look now Body:details Link: Project:unknown Agent:unknown DedupKey:key1 Actions:[] Created:2026-10-30 12:00:00 +0000 UTC Resolved:false}; want level page, ask, title, body, key and agent from the shim
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.434s
+FAIL
+exit=1
+
+## missing shim not checked
+# in internal/cli/page.go: 'if cfg.Shim == nil {\n\t\treturn e.fail(noShim())' => 'if false {\n\t\treturn e.fail(noShim())'
+--- FAIL: TestPageWithoutShimBlock (0.02s)
+panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked]
+panic({0x1050a0418?, 0x105151420?})
+FAIL	github.com/Exploded-views/yo-human/internal/cli	4.319s
+FAIL
+exit=1
+
+## resolve with extra args allowed
+# in internal/cli/page.go: 'if len(pos) > 0 {\n\t\t\treturn call, problem.Usagef("page --resolve' => 'if false {\n\t\t\treturn call, problem.Usagef("page --resolve'
+--- FAIL: TestPageUsage (0.04s)
+    page_test.go:106: resolve with a summary: {code:0 out:RESULT noop <ulid>
+    page_test.go:107: resolve with a summary stderr = "", want it to contain "error:"
+    page_test.go:107: resolve with a summary stderr = "", want it to contain "valid:"
+    page_test.go:107: resolve with a summary stderr = "", want it to contain "fix:"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.509s
+FAIL
+exit=1
+
+## resolve key not checked
+# in internal/cli/page.go: 'return call, checkKey(call.key)' => 'return call, nil'
+--- FAIL: TestPageUsage (0.03s)
+    page_test.go:106: resolve key of 256 characters: {code:0 out:RESULT noop <ulid>
+    page_test.go:107: resolve key of 256 characters stderr = "", want it to contain "error:"
+    page_test.go:107: resolve key of 256 characters stderr = "", want it to contain "valid:"
+    page_test.go:107: resolve key of 256 characters stderr = "", want it to contain "fix:"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.404s
+FAIL
+exit=1
+
+## empty resolve key allowed
+# in internal/cli/page.go: 'if call.key == "" {' => 'if false {'
+--- FAIL: TestPageUsage (0.03s)
+    page_test.go:106: resolve with an empty key: {code:0 out:RESULT noop <ulid>
+    page_test.go:107: resolve with an empty key stderr = "", want it to contain "error:"
+    page_test.go:107: resolve with an empty key stderr = "", want it to contain "valid:"
+    page_test.go:107: resolve with an empty key stderr = "", want it to contain "fix:"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.255s
+FAIL
+exit=1
+
+## too many positionals allowed
+# in internal/cli/page.go: 'len(pos) < 1 || len(pos) > 3' => 'len(pos) < 1'
+--- FAIL: TestPageUsage (0.09s)
+    page_test.go:106: too many arguments: {code:0 out:RESULT delivered <ulid>
+    page_test.go:107: too many arguments stderr = "", want it to contain "error:"
+    page_test.go:107: too many arguments stderr = "", want it to contain "valid:"
+    page_test.go:107: too many arguments stderr = "", want it to contain "fix:"
+    page_test.go:112: a rejected page was sent
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.417s
+FAIL
+exit=1
+
+## no positionals allowed
+# in internal/cli/page.go: 'len(pos) < 1 || len(pos) > 3' => 'len(pos) > 3'
+--- FAIL: TestPageUsage (0.02s)
+panic: runtime error: index out of range [0] with length 0 [recovered, repanicked]
+panic({0x10119ca30?, 0x1efa4cc27908?})
+FAIL	github.com/Exploded-views/yo-human/internal/cli	4.358s
+FAIL
+exit=1
+
+## title not validated
+# in internal/cli/page.go: 'if m.Title, err = titleOf(pos[0]); err != nil {' => 'if m.Title, err = flatLine(pos[0]), error(nil); err != nil {'
+--- FAIL: TestPageUsage (0.13s)
+    page_test.go:106: blank summary: {code:0 out:RESULT delivered <ulid>
+    page_test.go:107: blank summary stderr = "", want it to contain "error:"
+    page_test.go:107: blank summary stderr = "", want it to contain "valid:"
+    page_test.go:107: blank summary stderr = "", want it to contain "fix:"
+    page_test.go:106: invalid utf-8 summary: {code:0 out:RESULT delivered <ulid>
+    page_test.go:107: invalid utf-8 summary stderr = "", want it to contain "error:"
+    page_test.go:107: invalid utf-8 summary stderr = "", want it to contain "valid:"
+    page_test.go:107: invalid utf-8 summary stderr = "", want it to contain "fix:"
+    page_test.go:112: a rejected page was sent
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.582s
+exit=1
+
+## details not validated
+# in internal/cli/page.go: 'm.Body, err = readText(strings.NewReader(pos[1]), "the details"); err != nil' => 'm.Body, err = pos[1], error(nil); err != nil'
+FAIL	github.com/Exploded-views/yo-human/internal/cli [build failed]
+FAIL
+exit=1
+
+## given key not used
+# in internal/cli/page.go: 'm.DedupKey = pos[2]' => 'm.DedupKey = m.DedupKey'
+--- FAIL: TestPageTrigger (0.14s)
+    page_test.go:33: message = {ID:<ulid> Level:page Title:db down Ask:look now Body:details Link: Project:unknown Agent:orchestrator DedupKey:orch-<time> Actions:[] Created:2026-10-30 12:00:00 +0000 UTC Resolved:false}; want level page, ask, title, body, key and agent from the shim
+--- FAIL: TestPageResolve (0.13s)
+    page_test.go:65: page --resolve: {code:0 out:RESULT noop <ulid>
+    page_test.go:66: pager resolved []; want key1
+    page_test.go:69: page --low --resolve: {code:0 out:RESULT noop <ulid>
+    page_test.go:70: status = "RESULT ok\nqueued: 0\nheld: 0\ndead: 0\ninflight: 0\nincidents: 1\nincident orch-20261030T120000Z level=page generation=1 last_sent=2026-10-30T12:00:00Z latest: ci\n", want it to contain "incidents: 0"
+--- FAIL: TestPageUsage (0.12s)
+    page_test.go:106: key of 256 characters: {code:0 out:RESULT delivered <ulid>
+    page_test.go:107: key of 256 characters stderr = "", want it to contain "error:"
+    page_test.go:107: key of 256 characters stderr = "", want it to contain "valid:"
+    page_test.go:107: key of 256 characters stderr = "", want it to contain "fix:"
+exit=1
+
+## default key not checked / given key unchecked
+# in internal/cli/page.go: 'return checkKey(m.DedupKey)' => 'return nil'
+--- FAIL: TestPageUsage (0.24s)
+    page_test.go:106: key of 256 characters: {code:0 out:RESULT delivered <ulid>
+    page_test.go:107: key of 256 characters stderr = "", want it to contain "error:"
+    page_test.go:107: key of 256 characters stderr = "", want it to contain "valid:"
+    page_test.go:107: key of 256 characters stderr = "", want it to contain "fix:"
+    page_test.go:106: invalid utf-8 key: {code:0 out:RESULT delivered <ulid>
+    page_test.go:107: invalid utf-8 key stderr = "", want it to contain "error:"
+    page_test.go:107: invalid utf-8 key stderr = "", want it to contain "valid:"
+    page_test.go:107: invalid utf-8 key stderr = "", want it to contain "fix:"
+    page_test.go:106: control character in key: {code:0 out:RESULT delivered <ulid>
+    page_test.go:107: control character in key stderr = "", want it to contain "error:"
+    page_test.go:107: control character in key stderr = "", want it to contain "valid:"
+exit=1
+
+## details dropped
+# in internal/cli/page.go: 'if len(pos) > 1 {' => 'if len(pos) > 5 {'
+--- FAIL: TestPageTrigger (0.17s)
+    page_test.go:33: message = {ID:<ulid> Level:page Title:db down Ask:look now Body: Link: Project:unknown Agent:orchestrator DedupKey:key1 Actions:[] Created:2026-10-30 12:00:00 +0000 UTC Resolved:false}; want level page, ask, title, body, key and agent from the shim
+--- FAIL: TestPageUsage (0.08s)
+    page_test.go:106: body over 16 KB: {code:0 out:RESULT delivered <ulid>
+    page_test.go:107: body over 16 KB stderr = "", want it to contain "error:"
+    page_test.go:107: body over 16 KB stderr = "", want it to contain "valid:"
+    page_test.go:107: body over 16 KB stderr = "", want it to contain "fix:"
+    page_test.go:112: a rejected page was sent
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.616s
+FAIL
+exit=1
+
+## ask not flattened
+# in internal/cli/page.go: 'flatLine(mode.Ask)' => 'mode.Ask'
+ok  	github.com/Exploded-views/yo-human/internal/cli	8.543s
+exit=0
+
+## resolve sends a note
+# in internal/cli/page.go: 'e.closeIncident(cfg, st, call.key, "")' => 'e.closeIncident(cfg, st, call.key, "x")'
+ok  	github.com/Exploded-views/yo-human/internal/cli	8.590s
+exit=0
+
+## empty mode level allowed
+# in internal/cli/page.go: 'if mode.Level == "" {' => 'if false {'
+--- FAIL: TestPageHalfConfiguredShim (0.03s)
+    page_test.go:119: low with no shim.low: {code:64 out: err:error: unknown level ""
+    page_test.go:120: stderr = "error: unknown level \"\"\nvalid: levels, quietest first: note (use when FYI only), night (use when can wait until morning), page (use when production is down)\nfix: retry with --level <name>; run \"yo-human levels --json\" to read them\n", want it to contain "shim.low.level"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.634s
+FAIL
+exit=1
+
+## flag error echoes nothing -> low flag unregistered
+# in internal/cli/page.go: 'low := fs.Bool("low", false, "")' => 'low := new(bool)'
+--- FAIL: TestPageLow (0.02s)
+    page_test.go:45: page --low: {code:64 out: err:error: page was given a flag it does not know, or a flag with no value (the text is not echoed)
+    page_test.go:47: phone got [], pager 0; want one note-level send
+--- FAIL: TestPageResolve (0.16s)
+    page_test.go:69: page --low --resolve: {code:64 out: err:error: page was given a flag it does not know, or a flag with no value (the text is not echoed)
+--- FAIL: TestPageHalfConfiguredShim (0.02s)
+    page_test.go:119: low with no shim.low: {code:64 out: err:error: page was given a flag it does not know, or a flag with no value (the text is not echoed)
+    page_test.go:120: stderr = "error: page was given a flag it does not know, or a flag with no value (the text is not echoed)\nvalid: yo-human page [--low] \"<summary>\" [details] [dedup-key]   or   yo-human page [--low] --resolve <dedup-key>\nfix: use only --low and --resolve <dedup-key>, before the summary\n", want it to contain "shim.low.level"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.989s
+FAIL
+exit=1
+
+# re-runs after the new tests
+
+## ask not flattened
+# in internal/cli/page.go: 'flatLine(mode.Ask)' => 'mode.Ask'
+--- FAIL: TestPageAskIsOneLine (0.11s)
+    page_test.go:153: sends = [{ID:<ulid> Level:page Title:x Ask:look
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	9.162s
+FAIL
+exit=1
+
+## resolve sends a note
+# in internal/cli/page.go: 'e.closeIncident(cfg, st, call.key, "")' => 'e.closeIncident(cfg, st, call.key, "x")'
+--- FAIL: TestPageResolve (0.27s)
+    page_test.go:68: phone got [{ID:<ulid> Level:page Title:db down Ask:look now Body:d Link: Project:unknown Agent:orchestrator DedupKey:key1 Actions:[] Created:2026-10-30 12:00:00 +0000 UTC Resolved:false} {ID:<ulid> Level:page Title:Resolved: db down Ask: Body:x Link: Project: Agent: DedupKey:key1 Actions:[] Created:2026-10-30 12:00:00 +0000 UTC Resolved:true}]; want a resolve note with no text of its own
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	8.897s
+FAIL
+exit=1

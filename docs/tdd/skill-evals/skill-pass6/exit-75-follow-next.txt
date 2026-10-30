@@ -1,0 +1,29 @@
+skills used: ['yo-human-eval:yo-human']
+
+**Next steps (dry run, nothing executed)**
+
+The exit 75 and `RESULT queued FAKE-ID-2` mean no phone channel was reachable yet. The journal channel did get it. The message is not lost, and I will not re-run `notify`. That would duplicate the page and I won't change the dedup key.
+
+1. **Wait 60s.** That is the `after_seconds` from the printed `next`.
+2. **Run the command exactly as printed**, with its `--config` path and without retyping it:
+   `yo-human flush --config '/home/user/project/.yo-human.yaml'`
+3. **Read the result.**
+   - **Exit 0 with a `sent` channel line:** the page is delivered. I stop flushing and carry on. An exit 0 with no channel lines only means nothing was due, so I wouldn't count that as delivery.
+   - **Exit 69 (`RESULT failed`):** every channel rejected it for good. I stop, don't retry or change levels, and tell the human in my session.
+   - **Exit 75 (still queued):** I wait the new `next`'s `after_seconds` and run the `next.do` command again.
+   - **Exit 78, 74 or 70:** I stop and tell the human, quoting the `error` and `fix` lines. I don't touch the config or secrets.
+
+**Bound:** I run `flush` at most 5 times in total, the `attempts_left` from the first `next`. Each new `next` counts down from there.
+
+**If it keeps failing (all 5 flushes still exit 75):**
+- I stop and don't run `flush` again for this message, not later either.
+- I don't re-run `notify`, change the key, or use another tool to get around it.
+- I tell the human directly in my session/handoff:
+  - **What happened:** a siren-level page, "Checkout failing", was sent.
+  - **The ask:** "Look at checkout now."
+  - **Delivery:** it reached the journal, but the phone push stayed queued because the ntfy server could not be reached, and 5 flush attempts failed.
+  - **The error text:** `phone: queued (ntfy server could not be reached)`.
+
+I'd state plainly that the human has not been reached by phone.
+
+If I later fix and verify checkout, I'd run `yo-human resolve --dedup-key checkout-FAKE --note "<short note>"`. I would not send a new notify to say it's fixed.

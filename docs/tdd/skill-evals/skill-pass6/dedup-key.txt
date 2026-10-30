@@ -1,0 +1,34 @@
+skills used: ['yo-human-eval:yo-human']
+
+I would run this once, using the `nudge` level.
+
+**Why nudge:** The disk is 95% full, but nothing says production is impaired. The human should look soon, and that doesn't justify waking them, so not `siren`. It's more than an FYI, so not `murmur`. I already have the levels from `levels --json`, so I won't read them again this session.
+
+**First pass:**
+```
+YO_HUMAN_PROJECT=<this-repo-name> YO_HUMAN_AGENT=<this-agent-name> \
+yo-human notify --level nudge \
+  --title "Build host disk 95% full" \
+  --ask "Free up space on the build host (clear old build artifacts or caches) before it fills and builds start failing." \
+  --body "Disk usage was 95% on two consecutive checks. My loop re-checks every minute." \
+  --dedup-key disk-full-build-host
+```
+The key is stable and names the problem. It has no timestamp or counter, so every pass maps to the same incident. The command includes no secrets.
+
+**Exit codes:**
+- **0 (delivered or held):** Carry on. `held` means the message waits for quiet hours to end, which is intended.
+- **75 (queued):** Wait `next.after_seconds`, then run `next.do` exactly as printed, usually `yo-human flush`. Read the channel lines each time. Stop at the first exit 0 with `sent`, or at exit 69. Run `flush` no more times than the first `attempts_left`. If the attempts run out, tell the human in my session with the title and ask. I would not re-run `notify` or change the key.
+- **69, 74, 78 or 70:** Stop. Tell the human in my session what I tried, the ask, and the error text, quoting the `error` and `fix` lines. I would not retry, switch levels, edit the config, or work around it.
+- **64:** My call is wrong. Read `error`, `valid` and `fix`, correct the call, and run it again.
+
+**Later passes while the disk is still full:**
+- I keep checking disk usage every minute, but I send nothing new. The incident is already open under `disk-full-build-host`, so repeating the same call would only be suppressed.
+- If it gets worse, for example the disk hits 100%, builds or production start failing, or something can't wait, I escalate. I run the same `notify` command with `--level siren`, the same `--dedup-key`, and an updated title and body. A louder repeat goes through. A repeat at the same or a lower level does not.
+- I don't send "still full" messages and I don't use a new key.
+
+**When usage drops and I've verified it** (a fresh check shows it well below the threshold, by my own rules):
+```
+YO_HUMAN_PROJECT=<this-repo-name> YO_HUMAN_AGENT=<this-agent-name> \
+yo-human resolve --dedup-key disk-full-build-host --note "Disk usage back to normal"
+```
+I would not send a new `notify` to say it's fixed. If `resolve` exits 75, I follow its `next` the same bounded way. If it exits 69, I tell the human the page may still fire.

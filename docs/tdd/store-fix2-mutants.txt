@@ -1,0 +1,27 @@
+=== baseline
+ok  	github.com/Exploded-views/yo-human/internal/store	2.387s
+exit=0
+=== mutant: quarantine replaces an existing dead record (internal/store/quarantine.go: err = os.Link(src, filepath.Join(dir, n)) -> err = os.Rename(src, filepath.Join(dir, n)))
+--- FAIL: TestQuarantineNeverOverwritesExistingDeadRecord (0.04s)
+    quarantine_test.go:110: counts = 0 0 1, want 0 0 2
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.477s
+FAIL
+exit=1
+=== mutant: Dead replaces an existing dead record (internal/store/queue.go: ok, err := publishNoClobber(s.path("dead", n), w) -> err := writeWire(s.path("dead", n), w); ok := true)
+--- FAIL: TestDeadTwiceOnSameKeyKeepsBoth (0.05s)
+    quarantine_test.go:127: counts = 0 0 1, want 0 0 2
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.435s
+FAIL
+exit=1
+=== mutant: dead listing keeps the stamp in the key (internal/store/quarantine.go: key = deadKey(key) -> _ = deadKey)
+--- FAIL: TestQuarantineNeverOverwritesExistingDeadRecord (0.03s)
+    quarantine_test.go:111: dead entry key = "K.x.1793005208553424000", want "K.x"
+--- FAIL: TestDeadTwiceOnSameKeyKeepsBoth (0.06s)
+    quarantine_test.go:128: dead entry key = "K.x.1793005208598848000", want "K.x"
+    quarantine_test.go:130: dead entries by reason = map[one:[123 34 110 34 58 48 125] unreadable: file holds key "K.x", its name says "K.x.1793005208598848000":[123 34 110 34 58 49 125]], want both records with their own data
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.223s
+FAIL
+exit=1

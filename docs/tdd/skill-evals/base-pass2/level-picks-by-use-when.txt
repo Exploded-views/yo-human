@@ -1,0 +1,20 @@
+skills used: []
+
+I'd use the `siren` level, but I can't give you the exact command line yet because `levels --json` doesn't show the notify syntax.
+
+**Why siren**
+- Checkout failing in production is "production is impaired", which is the siren definition.
+- `nudge` is wrong because its quiet-hours policy is `hold`. The message would sit until morning, and this can't wait.
+- `murmur` is for FYIs, so it doesn't fit.
+
+**What I'd do, in order**
+1. Run `yo-human --help`, then `yo-human notify --help` (or whatever subcommand the help lists). This is read-only, and it shows the real flag names for level, message, and ask. I'd rather check than guess flags.
+2. Run the notify command once, with these values:
+   - **Level:** `siren`.
+   - **Message:** a short summary, such as "Checkout is failing in production. Started around <time>. Seen in <error or log source>. Not yet fixed."
+   - **Ask:** siren requires one, so it would be a concrete question the human can answer from their phone, such as "Approve rolling back the last deploy, or tell me another action?"
+3. Keep the message free of secrets, tokens, and customer data, since it goes to an external service.
+4. Not send repeats. If the first send succeeds (exit 0, `status: ok`), I'd wait for a reply. I would not re-send or escalate in a loop.
+5. Keep investigating read-only in the meantime (logs, recent changes) and put any findings in a follow-up. I wouldn't roll back or change production without the human's approval, unless you've already given me that authority.
+
+If `--help` shows the syntax is something like `yo-human notify --level siren --ask "..." "message"`, that's the command I'd run. I don't want to present that as the exact form before seeing the help output.

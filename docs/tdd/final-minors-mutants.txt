@@ -1,0 +1,157 @@
+KILLED  m3: help is not a command word
+  internal/cli/cli.go: 'case helpWords[args[0]]:' -> 'case false:'
+  --- FAIL: TestHelpPrintsTheUsageAndExits0 (0.00s)
+      help_test.go:20: [help]: {code:64 out: err:error: unknown command
+      help_test.go:20: [--help]: {code:64 out: err:error: a flag was given before the command
+      help_test.go:20: [-h]: {code:64 out: err:error: a flag was given before the command
+      help_test.go:26: --help --json: {code:64 out:{"version":1,"error":{"what":"a flag was given before the command","valid":"yo-human \u003ccommand\u003e [\u003csubcommand\u003e] [flags]: --json and --config \u003cfile\u003e go after the command","fix":"put the flag after the command, for example `y
+  [go test -count=1 -timeout 300s ./internal/cli exit 1]
+
+KILLED  m3: help after the command ignored
+  internal/cli/cli.go: 'case len(args) > 1 && (args[1] == "--help" || args[1] == "-h"):' -> 'case false:'
+  --- FAIL: TestHelpPrintsTheUsageAndExits0 (0.00s)
+      help_test.go:20: [levels --help]: {code:64 out: err:error: levels takes no arguments
+      help_test.go:20: [flush -h]: {code:64 out: err:error: flush takes no arguments
+      help_test.go:20: [version --help]: {code:0 out:yo-human dev none
+      help_test.go:20: [config --help]: {code:64 out: err:error: a flag was given before the command
+  [go test -count=1 -timeout 300s ./internal/cli exit 1]
+
+KILLED  m3: help after a subcommand ignored
+  internal/cli/cli.go: 'return groups[args[0]] && len(args) > 2 && (args[2] == "--help" || args[2] == "-h")' -> 'return false'
+  --- FAIL: TestHelpPrintsTheUsageAndExits0 (0.00s)
+      help_test.go:20: [config check --help]: {code:64 out: err:error: config check takes no arguments
+      help_test.go:20: [secret set --help]: {code:64 out: err:error: that is not a valid secret name (it is not echoed: a pasted value must never be printed)
+      help_test.go:20: [channel test -h]: {code:78 out: err:error: no config file was found
+  [go test -count=1 -timeout 300s ./internal/cli exit 1]
+
+BUILD-FAILED  m3: a flag set's ErrHelp is a usage error
+  internal/cli/input.go: 'if err := fs.Parse(args); errors.Is(err, flag.ErrHelp) {\n\t\treturn errHelp' -> 'if err := fs.Parse(args); false {\n\t\treturn errHelp'
+  [go test -count=1 -timeout 300s ./internal/cli exit 1]
+
+KILLED  m3: help ignores --json
+  internal/cli/cli.go: 'if e.asJSON {\n\t\twriteOK(e.stdout, true, nil, map[string]any{"usage": usage})' -> 'if false {\n\t\twriteOK(e.stdout, true, nil, map[string]any{"usage": usage})'
+  --- FAIL: TestHelpPrintsTheUsageAndExits0 (0.00s)
+      help_test.go:26: --help --json: {code:0 out:usage: yo-human <command> [flags]   (--json and --config <file> go after the command)
+  [go test -count=1 -timeout 300s ./internal/cli exit 1]
+
+KILLED  m1: levels does not flush first
+  internal/cli/levelscmd.go: 'e.flushFirst(cfg, st)' -> '_ = st'
+  --- FAIL: TestLevelsFlushesFirst (0.07s)
+      levels_test.go:81: levels: {code:0 out:RESULT ok
+  [go test -count=1 -timeout 300s ./internal/cli exit 1]
+
+KILLED  use_when raw in JSON
+  internal/cli/levelscmd.go: 'UseWhen: oneLine(l.UseWhen)' -> 'UseWhen: l.UseWhen'
+  --- FAIL: TestOneLineNeutralisesFormatAndSeparatorCharacters (0.01s)
+      forge_test.go:123: levels output "RESULT ok\nnote (ask optional, quiet hours send): FYI \u202eevil\npage (ask required, quiet hours send): production is down\n" holds a BiDi override
+  --- FAIL: TestEveryTextLineHasNoControlBytes (0.01s)
+      forge_test.go:179: levels output "RESULT ok\nnote (ask optional, quiet hours send): FYI\x1b[2K\rforged\npage (ask required, quiet hours send): production is down\n" holds a control byte
+  --- FAIL: TestLevelsJSONFlattensUseWhen (0.00s)
+      levels_test.go:92: levels --json: [{Name:note UseWhen:FYI‮ only
+  [go test -count=1 -timeout 300s ./internal/cli exit 1]
+
+KILLED  m4: page does not show its key
+  internal/cli/page.go: 'askPath: askPath, showKey: true})' -> 'askPath: askPath})'
+  --- FAIL: TestPagePrintsItsKey (0.21s)
+      page_test.go:210: page: {code:0 out:RESULT delivered <ULID>
+      page_test.go:215: stdout = "{\"version\":1,\"status\":\"delivered\",\"id\":\"<ULID>\",\"channels\":[{\"channel\":\"phone\",\"status\":\"sent\"},{\"channel\":\"pager\",\"status\":\"sent\"}]}\n", want it to contain "\"dedup_key\":\"my-key\""
+  [go test -count=1 -timeout 300s ./internal/cli exit 1]
+
+KILLED  m4: the key line is not printed
+  internal/cli/output.go: '_, _ = fmt.Fprintln(stdout, "key: "+oneLine(r.DedupKey))' -> '_ = r.DedupKey'
+  --- FAIL: TestPagePrintsItsKey (0.22s)
+      page_test.go:210: page: {code:0 out:RESULT delivered <ULID>
+  [go test -count=1 -timeout 300s ./internal/cli exit 1]
+
+KILLED  m5: no recovery before building
+  internal/cli/runtime.go: '_ = core.RecoverStale(cfg, st)' -> '_ = cfg'
+  --- FAIL: TestFlushSendsARecoveredEntryAtOnce (0.11s)
+      flush_test.go:118: flush: {code:0 out:RESULT ok
+  [go test -count=1 -timeout 300s ./internal/cli exit 1]
+
+KILLED  m9: the merged value is not printed
+  internal/cli/configcmd.go: 'out = append(out, k+" <- "+oneLine(cfg.Origin[k])+" = "+oneLine(string(b)))' -> 'out = append(out, k+" <- "+oneLine(cfg.Origin[k])+" = "+oneLine(string(b[:0])))'
+  --- FAIL: TestConfigCheckPrintsTheMergedConfig (0.02s)
+      config_test.go:278: stdout = "RESULT ok\nconfig ok: 3 channels, 2 levels\nchannels.journal <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig3408695337/001/.config/yo-human/config.yaml = \nchannels.pager <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig3408695337/001/.config/yo-human/config.yaml = \n
+      config_test.go:278: stdout = "RESULT ok\nconfig ok: 3 channels, 2 levels\nchannels.journal <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig3408695337/001/.config/yo-human/config.yaml = \nchannels.pager <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig3408695337/001/.config/yo-human/config.yaml = \n
+  [go test -count=1 -timeout 300s ./internal/cli exit 1]
+
+KILLED  m9: a channel's value is not looked up
+  internal/cli/configcmd.go: 'v = chans[name]' -> '_ = chans[name]'
+  --- FAIL: TestConfigCheckPrintsTheMergedConfig (0.01s)
+      config_test.go:278: stdout = "RESULT ok\nconfig ok: 3 channels, 2 levels\nchannels.journal <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig2058711096/001/.config/yo-human/config.yaml = null\nchannels.pager <- $TMPDIR/TestConfigCheckPrintsTheMergedConfig2058711096/001/.config/yo-human/config.yaml 
+  [go test -count=1 -timeout 300s ./internal/cli exit 1]
+
+SURVIVED  m10: the cli builds an expired incident's channels
+  internal/cli/resolve.go: 'if !ok || !inc.Open || now().Sub(inc.LastSent) > cfg.IncidentTTL {' -> 'if !ok || !inc.Open {'
+  [go test -count=1 -timeout 300s ./internal/cli exit 0]
+
+KILLED  trust: no schema check
+  internal/cli/trustcmd.go: 'return doc, config.CheckLayer(path, data)' -> 'return doc, nil'
+  --- FAIL: TestConfigTrustAllowsNewlinesAndTabsInValues (0.04s)
+      forge_test.go:71: newline in interruption: code=0 out="RESULT ok\ntrusting \"$TMPDIR/TestConfigTrustAllowsNewlinesAndTabsInValues1484189056/003/p/.yo-human.yaml\"\nversion 1\nchannel \"office\" has type \"ntfy\"\nchannel \"office\" server <not a valid URL>\nlevel \"page\" use_when \"x\"\nlevel \
+  --- FAIL: TestConfigTrustRefusesAFileThatBreaksTheSchema (0.01s)
+      trust_test.go:247: trust of a file that breaks the schema: code=0 out="RESULT ok\ntrusting \"$TMPDIR/TestConfigTrustRefusesAFileThatBreaksTheSchema3648718652/001/proj/.yo-human.yaml\"\nversion 1\nalso sets (not shown; read the file): colour\ntrusted; a change to the file un-trusts it until you r
+      trust_test.go:248: the prompt was shown: "trusting \"$TMPDIR/TestConfigTrustRefusesAFileThatBreaksTheSchema3648718652/001/proj/.yo-human.yaml\"\nversion 1\nalso sets (not shown; read the file): colour\nTrust this file? Type yes to confirm: "
+      trust_test.go:250: a trust record was written: <nil>
+  [go test -count=1 -timeout 300s ./internal/cli exit 1]
+
+KILLED  m10: an expired incident is closed
+  internal/core/resolve.go: 'if cur != nil && cur.Open && b.now.Sub(cur.LastSent) > b.p.d.Config.IncidentTTL {' -> 'if false {'
+  --- FAIL: TestResolveOfAnExpiredIncidentIsANoop (0.19s)
+      resolve_exit_test.go:169: resolve = {Status:resolved ID:M002 Channels:[{Channel:n Status:sent Error: ProviderID: Scheduled:false attempts:1 config:false buried:false parked:false unbuilt:false level:page retryAt:{wall:0 ext:0 loc:<nil>}} {Channel:pd Status:sent Error: ProviderID: Scheduled:false
+      resolve_exit_test.go:172: the expired incident was changed
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  m10: off by one at the TTL
+  internal/core/resolve.go: 'if cur != nil && cur.Open && b.now.Sub(cur.LastSent) > b.p.d.Config.IncidentTTL {' -> 'if cur != nil && cur.Open && b.now.Sub(cur.LastSent) >= b.p.d.Config.IncidentTTL {'
+  --- FAIL: TestResolveDeadLettersACancelTheProviderRefused (0.06s)
+      cancel_dead_test.go:44: resolve = , <nil>; want resolved, the failed cancel reported as dead
+  --- FAIL: TestResolveRetriesACancelThatFailedForNow (0.05s)
+      cancel_dead_test.go:62: resolve = , <nil>; want the failed cancel reported and queued for a retry
+  --- FAIL: TestAFailedCancelThatCannotBeKeptIsStillReported (0.11s)
+      cancel_dead_test.go:185: queue locked: resolve = , <nil>; want "phone:dead:provider refused" and the human told a page may still fire
+      cancel_dead_test.go:188: queue locked: <nil>; want the store failure reported too
+      cancel_dead_test.go:185: inflight locked: resolve = , <nil>; want "phone:queued:provider refused" and the human told a page may still fire
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+BUILD-FAILED  m13: the pipeline clock times a queued cancel
+  internal/core/cancel.go: 'return b.settle(ctx, sendOutcome{c: c, pl: pl, err: err, took: time.Since(started)})' -> 'return b.settle(ctx, sendOutcome{c: c, pl: pl, err: err, took: b.p.d.Now().Sub(b.p.d.Now())})'
+  [go test -count=1 -timeout 300s ./internal/core exit 1]
+
+KILLED  ServerURL accepts an empty query
+  internal/channel/helpers.go: '|| u.ForceQuery ||' -> '||'
+  --- FAIL: TestServerURL (0.00s)
+      helpers_test.go:158: ServerURL("https://x.example?") = "https://x.example?", true; want ""
+  --- FAIL: TestNewValidatesSettings (0.00s)
+      ntfy_config_test.go:62: an empty query: err=<nil> kind=0
+  --- FAIL: TestNewValidatesSettings (0.00s)
+      bark_config_test.go:74: empty query: err=<nil> kind=0
+  [go test -count=1 ./internal/channel ./internal/channel/ntfy ./internal/channel/bark exit 1]
+
+KILLED  ServerURL takes a port for a host
+  internal/channel/helpers.go: 'u.Hostname() == ""' -> 'u.Host == ""'
+  --- FAIL: TestServerURL (0.00s)
+      helpers_test.go:158: ServerURL("https://:443") = "https://:443", true; want ""
+  --- FAIL: TestNewValidatesSettings (0.00s)
+      ntfy_config_test.go:62: a port and no host: err=<nil> kind=0
+  [go test -count=1 ./internal/channel ./internal/channel/ntfy ./internal/channel/bark exit 1]
+
+KILLED  m10: the cli builds an expired incident's channels (rerun after an added test)
+  internal/cli/resolve.go: 'if !ok || !inc.Open || now().Sub(inc.LastSent) > cfg.IncidentTTL {' -> 'if !ok || !inc.Open {'
+  --- FAIL: TestResolveOfAnExpiredIncidentBuildsNothing (0.16s)
+      resolve_test.go:81: resolve: {code:78 out:RESULT noop <ULID>
+  [go test -count=1 ./internal/cli -run Resolve exit 1]
+
+KILLED  m3: a flag set's ErrHelp is a usage error (rerun compilable)
+  internal/cli/input.go: 'if err := fs.Parse(args); errors.Is(err, flag.ErrHelp) {' -> 'if err := fs.Parse(args); errors.Is(err, flag.ErrHelp) && false {'
+  --- FAIL: TestHelpPrintsTheUsageAndExits0 (0.00s)
+      help_test.go:20: [notify --level page -h]: {code:64 out: err:error: notify was given a flag it does not know, or a flag with no value (the text is not echoed)
+  [go test -count=1 ./internal/cli -run Help exit 1]
+
+KILLED  m13: the pipeline clock times a queued cancel (rerun compilable)
+  internal/core/cancel.go: 'return b.settle(ctx, sendOutcome{c: c, pl: pl, err: err, took: time.Since(started)})' -> 'return b.settle(ctx, sendOutcome{c: c, pl: pl, err: err, took: 0 * time.Since(started)})'
+  --- FAIL: TestAQueuedCancelThatHangsSpendsAnAttempt (0.33s)
+      expired_cancel_test.go:104: 1 queued, attempts [0]; want the cancel back with one attempt spent
+  [go test -count=1 ./internal/core -run QueuedCancel exit 1]
+

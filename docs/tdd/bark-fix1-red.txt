@@ -1,0 +1,54 @@
+$ go test -count=1 ./internal/channel/ ./internal/channel/bark/ -run 'TransportError|Truncate|SafeLink|NoRedirectClient|LongBodyKeeps|OnlyHTTPLinks|RedirectIsNotFollowed|NewValidatesSettings'
+--- FAIL: TestTransportErrorDescribesInFixedWords (0.00s)
+    helpers_test.go:38: unknown: error text "boom SECRET-FAKE-1" leaks the cause or lacks the provider
+    helpers_test.go:38: timeout: error text "i/o timeout SECRET-FAKE-1" leaks the cause or lacks the provider
+    helpers_test.go:38: cert: error text "tls: failed to verify certificate: bad cert SECRET-FAKE-1" leaks the cause or lacks the provider
+    helpers_test.go:38: cert: error text "bad cert SECRET-FAKE-1" leaks the cause or lacks the provider
+    helpers_test.go:38: url: error text "Post https://h.example/SECRET-FAKE-1: connection refused" leaks the cause or lacks the provider
+--- FAIL: TestTransportErrorForContext (0.00s)
+    helpers_test.go:54: cancelled: x SECRET-FAKE-1
+    helpers_test.go:60: deadline: x
+--- FAIL: TestTruncate (0.00s)
+    helpers_test.go:74: ascii: len=101
+    helpers_test.go:78: multibyte: len=401 valid=true
+    helpers_test.go:81: max below the marker: "éééééééééééééééééééééééééééééééééééééééééééééééééé"
+--- FAIL: TestSafeLink (0.00s)
+    helpers_test.go:96: SafeLink("") = true
+    helpers_test.go:96: SafeLink("intent://x#Intent;scheme=evil;end") = true
+    helpers_test.go:96: SafeLink("javascript:alert(1)") = true
+    helpers_test.go:96: SafeLink("tel:+15550100") = true
+    helpers_test.go:96: SafeLink("ftp://x.example/f") = true
+    helpers_test.go:96: SafeLink("//x.example") = true
+    helpers_test.go:96: SafeLink("https:///nohost") = true
+    helpers_test.go:96: SafeLink("https://:8080/") = true
+    helpers_test.go:96: SafeLink("https://<userinfo>@x.example/") = true
+    helpers_test.go:96: SafeLink("https://<userinfo>@x.example/") = true
+    helpers_test.go:96: SafeLink("http://%zz") = true
+--- FAIL: TestNoRedirectClient (0.00s)
+    helpers_test.go:112: client not a copy: same=true timeout=5s origCheck=false
+    helpers_test.go:120: status=200 target hits=1
+panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked]
+[signal SIGSEGV: segmentation violation code=0x2 addr=0x10 pc=0x104c50378]
+
+goroutine 24 [running]:
+testing.tRunner.func1.2({0x104fa3560, 0x10503b710})
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2125 +0x1a0
+testing.tRunner.func1()
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2128 +0x2c8
+panic({0x104fa3560?, 0x10503b710?})
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/runtime/panic.go:859 +0x120
+github.com/Exploded-views/yo-human/internal/channel.TestNoRedirectClient(0x40e3c92d6d88)
+	<worktree>/internal/channel/helpers_test.go:122 +0x298
+testing.tRunner(0x40e3c92d6d88, 0x104fedb98)
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2195 +0xc4
+created by testing.(*T).Run in goroutine 1
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2260 +0x3b8
+FAIL	github.com/Exploded-views/yo-human/internal/channel	0.016s
+--- FAIL: TestNewValidatesSettings (0.00s)
+    bark_config_test.go:74: empty query: err=<nil> kind=0
+--- FAIL: TestLongBodyKeepsEveryAction (0.01s)
+    bark_test.go:206: len=4000 tail="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…[truncated]"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/channel/bark	0.028s
+FAIL
+exit=1

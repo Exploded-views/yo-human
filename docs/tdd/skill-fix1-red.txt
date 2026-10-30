@@ -1,0 +1,51 @@
+$ go test -count=1 ./internal/store
+--- FAIL: TestHasPendingSeesQueuedAndInflightEntriesOfThatIncident (0.02s)
+    pending_test.go:22: queued: want pending for inc only
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/store	2.410s
+FAIL
+[exit 1]
+
+$ go test -count=1 ./internal/core
+--- FAIL: TestFlushThatLeavesASendQueuedIsQueuedWithNext (0.09s)
+    flush_status_test.go:37: flush = {Status:ok ID: Channels:[{Channel:a Status:queued Error:down ProviderID: Scheduled:false attempts:2 config:false buried:false}] Next:<nil>}; want queued with next
+--- FAIL: TestFlushThatBuriesASendFails (0.07s)
+    flush_status_test.go:45: flush = {Status:ok ID: Channels:[{Channel:a Status:dead Error:revoked ProviderID: Scheduled:false attempts:2 config:false buried:true}] Next:<nil>}; want failed and no next
+--- FAIL: TestADeadSendOutweighsAQueuedOne (0.15s)
+    flush_status_test.go:68: flush = {Status:ok ID: Channels:[{Channel:a Status:queued Error:down ProviderID: Scheduled:false attempts:2 config:false buried:false} {Channel:b Status:dead Error:revoked ProviderID: Scheduled:false attempts:2 config:false buried:true}] Next:<nil>}; want failed (dead wins over queued)
+--- FAIL: TestFlushNextUsesTheEntrysLevelRetry (0.09s)
+    flush_status_test.go:80: flush = {Status:ok ID: Channels:[{Channel:a Status:queued Error:down ProviderID: Scheduled:false attempts:2 config:false buried:false}] Next:<nil>}; want next with the page level's 3 attempts
+--- FAIL: TestDeadlineBoundsTheCall (0.31s)
+    pipeline_test.go:179: Notify took 301.601959ms; want within 300ms of a 200ms deadline
+--- FAIL: TestRepeatAfterADeadFirstSendIsSent (0.06s)
+    repeat_stranded_test.go:21: repeat = {Status:suppressed ID:M002 Channels:[] Next:<nil>}, sent 1; want it sent
+--- FAIL: TestAQuieterOrSameLevelRepeatAfterADeadSendIsSentToo (0.06s)
+    repeat_stranded_test.go:37: quieter repeat = "suppressed"; want sent, no human has been reached
+--- FAIL: TestADeliveryToANonHumanChannelDoesNotCount (0.09s)
+    repeat_stranded_test.go:48: repeat = {Status:suppressed ID:M002 Channels:[] Next:<nil>}; the log line reached no human
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/core	18.506s
+FAIL
+[exit 1]
+
+$ go test -count=1 ./internal/cli
+--- FAIL: TestFlushThatLeavesASendQueuedExits75WithNext (0.09s)
+    flush_exit_test.go:28: flush: {code:0 out:RESULT ok
+        pager: queued (provider said no)
+        phone: queued (provider said no)
+         err:}; want RESULT queued, exit 75
+    flush_exit_test.go:29: stdout = "RESULT ok\npager: queued (provider said no)\nphone: queued (provider said no)\n", want it to contain "next: yo-human flush in 60s, 5 attempts left, then tell the human in your session"
+    flush_exit_test.go:40: flush --json: {code:0 out:{"version":1,"status":"ok","id":"","channels":[{"channel":"pager","status":"queued","error":"provider said no"},{"channel":"phone","status":"queued","error":"provider said no"}]}
+         err:}; want exit 75
+    flush_exit_test.go:41: json = {"version":1,"status":"ok","id":"","channels":[{"channel":"pager","status":"queued","error":"provider said no"},{"channel":"phone","status":"queued","error":"provider said no"}]}
+        ; want queued with next
+--- FAIL: TestFlushThatBuriesASendExits69 (0.08s)
+    flush_exit_test.go:48: flush: {code:0 out:RESULT ok
+        pager: dead (provider said no)
+        phone: queued (provider said no)
+         err:}; want RESULT failed, exit 69 (dead wins over the phone's queued send)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/cli	9.300s
+FAIL
+[exit 1]
+
