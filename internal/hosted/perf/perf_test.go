@@ -2,6 +2,7 @@ package perf
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -119,5 +120,20 @@ func TestTimePostsRefusesTheWrongOutcome(t *testing.T) {
 	}
 	if _, err := timePosts(b, 1, same, bus.OutcomeRevised); err == nil {
 		t.Error("an unchanged repost was timed as a revision")
+	}
+}
+
+func TestSeededWarmsUpBeforeReturning(t *testing.T) {
+	b, closeDB, err := seeded(filepath.Join(t.TempDir(), "data"), 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeDB()
+	res, err := b.Post(context.Background(), perfNode, perfDraft("warm-up", "Warm-up"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Outcome != bus.OutcomeUnchanged {
+		t.Errorf("first Post of the warm-up draft = %s, want %s: seeded must make the one-off post itself", res.Outcome, bus.OutcomeUnchanged)
 	}
 }

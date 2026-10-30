@@ -1,0 +1,8 @@
+# what this is: go test ./internal/hosted/perf/ with seeded() returning before any post, so the first timed hosted-post pays the post-seed one-off cost (RED)
+# command: go test ./internal/hosted/perf/ -run TestSeededWarmsUpBeforeReturning -count=1
+--- FAIL: TestSeededWarmsUpBeforeReturning (0.01s)
+    perf_test.go:137: first Post of the warm-up draft = created, want unchanged: seeded must make the one-off post itself
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	0.017s
+FAIL
+# exit code: 1
