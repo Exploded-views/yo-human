@@ -506,7 +506,7 @@ exit=1
 
 # Note, round 6, item 3 (P3-NIT-1): v01.2.3, v1.02.3, v1.2.03, v00.1.1, v12345.1.1, v1.2.3.4 and v1.2 were added to TestWalledRefAndTargetRefusals as ref cases that assert the field the error names (ref). They all passed on arrival, so this is a test-only commit with no RED and no fix: the semver grammar already refused them.
 
-# H1 Task 5 RED, round 6, item 4 (P3-LOW-1, LEAD RULING 2026-10-30: on a walled item pinned_commit and pinned_tree must be empty unless the action is merge or release; any other action with either set is invalid, naming the field; it holds for posts, revisions and Duet's post into the swarm; unwalled swarms are unchanged. The lead adds the matching plan line in #12), 2026-10-29
+# H1 Task 5 RED, round 6, item 4 (P3-LOW-1, lead ruling 2026-10-30: pins only where the action requires them; first built as merge and release only, corrected below in item 4b)
 $ go test -count=1 -timeout 300s ./internal/hosted/bus/
 --- FAIL: TestWalledPinsOnlyOnMergeAndRelease (0.01s)
     --- FAIL: TestWalledPinsOnlyOnMergeAndRelease/none_with_a_pinned_commit (0.00s)
@@ -524,5 +524,20 @@ $ go test -count=1 -timeout 300s ./internal/hosted/bus/
     wall_test.go:405: err = <nil> (<nil>), want a *bus.Error with code invalid
 FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.580s
+FAIL
+exit=1
+
+# H1 Task 5 RED, round 6, item 4b (lead ruling 2026-10-30: pins only where the action requires them. A walled item may carry pinned_commit and pinned_tree exactly where Validate's required map requires them: pinned_commit for merge, release, deploy and public-sync; pinned_tree for public-sync. Derived from that map. none and other: both refused; an action that requires only pinned_commit refuses a pinned_tree; the lead's first brief said merge and release only and missed deploy), 2026-10-29
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem (0.01s)
+    --- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem/merge_with_a_pinned_tree (0.00s)
+        wall_pins_test.go:36: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem/release_with_a_pinned_tree (0.00s)
+        wall_pins_test.go:36: err = <nil> (<nil>), want a *bus.Error with code invalid
+    --- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem/deploy_with_a_pinned_tree (0.00s)
+        wall_pins_test.go:37: What = "pinned_commit", want "pinned_tree"
+    wall_pins_test.go:60: Post: invalid: pinned_commit (valid: empty: a walled item pins a commit or tree only on a merge or release approval)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.654s
 FAIL
 exit=1

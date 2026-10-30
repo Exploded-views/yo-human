@@ -47,6 +47,8 @@ func newEnvWalled(t *testing.T, walled ...string) *env {
 			{Action: "merge", Repo: "o/r", Ref: "main", Mode: policy.Passkey},
 			{Action: "release", Repo: "cn/alpha", Ref: "v*", Mode: policy.Passkey},
 			{Action: "merge", Repo: "cn/alpha", Ref: "main", Mode: policy.Passkey},
+			{Action: "deploy", Repo: "cn/alpha", Env: "prod", Mode: policy.Passkey},
+			{Action: "public-sync", Repo: "cn/alpha", Ref: "main", Mode: policy.Passkey},
 		}},
 		WalledSwarms: walled,
 	}

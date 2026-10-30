@@ -8,10 +8,12 @@ import (
 	"github.com/Exploded-views/yo-human/internal/hosted/bus"
 )
 
-// A walled item carries pinned_commit and pinned_tree only on the actions that use them: a merge
-// and a release (lead ruling, 2026-10-30). Anything else with either field set is invalid, naming
-// the field, on a post, a revision and Duet's post into the swarm. An unwalled swarm is unchanged.
-func TestWalledPinsOnlyOnMergeAndRelease(t *testing.T) {
+// A walled item carries pinned_commit and pinned_tree only where its action requires them, which
+// is what Validate's required map says: pinned_commit for a merge, release, deploy and public-sync,
+// pinned_tree for public-sync (lead ruling 2026-10-30: pins only where the action requires them).
+// Any other pin is invalid, naming the field, on a post, a revision and Duet's post into the swarm.
+// An unwalled swarm is unchanged.
+func TestWalledPinsOnlyWhereTheActionRequiresThem(t *testing.T) {
 	e := newEnvWalled(t, "client")
 	sha := strings.Repeat("0a", 20)
 	for _, c := range []struct {
@@ -22,8 +24,10 @@ func TestWalledPinsOnlyOnMergeAndRelease(t *testing.T) {
 		{"none with a pinned tree", "pinned_tree", func(d *bus.Draft) { d.PinnedTree = sha }},
 		{"none with both", "pinned_commit", func(d *bus.Draft) { d.PinnedCommit, d.PinnedTree = sha, sha }},
 		{"other with a pinned commit", "pinned_commit", func(d *bus.Draft) { d.Action, d.PinnedCommit = bus.ActionOther, sha }},
-		{"deploy with a pinned tree", "pinned_tree", func(d *bus.Draft) { d.Action, d.PinnedTree = bus.ActionDeploy, sha }},
-		{"public-sync with a pinned tree", "pinned_tree", func(d *bus.Draft) { d.Action, d.PinnedTree = bus.ActionPublicSync, sha }},
+		{"other with a pinned tree", "pinned_tree", func(d *bus.Draft) { d.Action, d.PinnedTree = bus.ActionOther, sha }},
+		{"merge with a pinned tree", "pinned_tree", func(d *bus.Draft) { *d = walledMerge(); d.PinnedTree = sha }},
+		{"release with a pinned tree", "pinned_tree", func(d *bus.Draft) { *d = walledRelease(); d.PinnedTree = sha }},
+		{"deploy with a pinned tree", "pinned_tree", func(d *bus.Draft) { *d = walledDeploy(); d.PinnedTree = sha }},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			d := typed("12")
@@ -50,15 +54,28 @@ func TestWalledPinsOnlyOnMergeAndRelease(t *testing.T) {
 	if be := errWithCode(t, err, bus.CodeInvalid); be.What != "pinned_commit" {
 		t.Errorf("Duet into the swarm: What = %q", be.What)
 	}
-	// A merge and a release may carry both.
-	m := walledMerge()
-	m.PinnedTree = sha
-	e.post(t, walledNode, m)
-	r := walledRelease()
-	r.PinnedTree = sha
-	e.post(t, walledNode, r)
+	// Where the action requires them they are accepted.
+	e.post(t, walledNode, walledMerge())      // pinned_commit
+	e.post(t, walledNode, walledRelease())    // pinned_commit
+	e.post(t, walledNode, walledDeploy())     // pinned_commit
+	e.post(t, walledNode, walledPublicSync()) // both
 	// Unwalled: unchanged, an action none item may carry them.
 	u := notice("u-1")
 	u.PinnedCommit, u.PinnedTree = sha, sha
 	e.post(t, node("ci-1", "crew"), u)
+}
+
+func walledDeploy() bus.Draft {
+	return bus.Draft{
+		Kind: bus.KindApproval, Severity: bus.SeverityHigh, To: "human", Handle: "ob-14", Title: "ob-14 deploy-ready",
+		Action: bus.ActionDeploy, Repo: "cn:alpha", Target: "prod", PinnedCommit: strings.Repeat("0a", 20), Urgency: bus.UrgencyPage,
+	}
+}
+
+func walledPublicSync() bus.Draft {
+	return bus.Draft{
+		Kind: bus.KindApproval, Severity: bus.SeverityHigh, To: "human", Handle: "ob-15", Title: "ob-15 deploy-ready",
+		Action: bus.ActionPublicSync, Repo: "cn:alpha", Ref: "main", PinnedCommit: strings.Repeat("0a", 20), PinnedTree: strings.Repeat("0b", 20),
+		Urgency: bus.UrgencyPage,
+	}
 }
