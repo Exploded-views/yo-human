@@ -1128,3 +1128,60 @@ suite exit=1
 
 round 4 total: 20 mutants, 0 survivors after item 1b.
 Note: "the PR id back to [0-9]{1,6}" is the mutant for item 2; "the bound applied to an unwalled handle" is the mutant for item 5 (unwalled unchanged); "the owner check limited to walled nodes" is item 4. Full race, lint and floors runs were withdrawn per ev-113; the PR CI on the exact head is the gate.
+
+
+######## round 5 mutants, 2026-10-30T00:41:03Z, on the GREEN implementation (head e5c7ed7); each applied by script (string swap), vetted, run, reverted
+baseline: exit=0
+
+## item 1: the part cap removed for ref
+internal/hosted/bus/validate_wall.go: '){0,2}|v' -> ')*|v'
+vet exit=0
+--- FAIL: TestWalledReleaseHasAtMostThreeParts
+suite exit=1
+
+## item 1: the part cap removed for base_ref
+internal/hosted/bus/validate_wall.go: '){0,2})$`)' -> ')*)$`)'
+vet exit=0
+--- FAIL: TestWalledReleaseHasAtMostThreeParts
+suite exit=1
+
+## item 1: the part cap raised to 4 (ref)
+internal/hosted/bus/validate_wall.go: '){0,2}|v' -> '){0,3}|v'
+vet exit=0
+--- FAIL: TestWalledReleaseHasAtMostThreeParts
+suite exit=1
+
+## item 2: the host match case-sensitive
+internal/repolint/codenames.go: 'MustCompile(`(?i)[a-z0-9-]+(?:' -> 'MustCompile(`[a-z0-9-]+(?:'
+vet exit=0
+--- FAIL: TestCodenameMapLinesFindsAnyHostAndLocalClonePaths
+suite exit=1
+
+## item 2: the general host rule removed
+internal/repolint/codenames.go: 'if hostRE.MatchString(line) || homeRE' -> 'if false && hostRE.MatchString(line) || homeRE'
+vet exit=0
+--- FAIL: TestCodenameMapLinesFindsAnyHostAndLocalClonePaths
+--- FAIL: TestCodenameMapLinesFindsEveryPasteForm
+suite exit=1
+
+## item 2: the home clone path rule removed
+internal/repolint/codenames.go: '|| homeRE.MatchString(line)' -> '|| false && homeRE.MatchString(line)'
+vet exit=0
+--- FAIL: TestCodenameMapLinesFindsAnyHostAndLocalClonePaths
+suite exit=1
+
+## item 2: the host rule limited to github.com
+internal/repolint/codenames.go: '[a-z0-9-]+(?:\\.[a-z0-9-]+)+[:/]' -> 'github\\.com[:/]'
+vet exit=0
+--- FAIL: TestCodenameMapLinesFindsAnyHostAndLocalClonePaths
+suite exit=1
+
+## item 3: target #N back to [0-9]{1,6}
+internal/hosted/bus/validate_wall.go: '(#` + wallID + `)?)$`' -> '(#[0-9]{1,6})?)$`'
+vet exit=0
+--- FAIL: TestWalledTargetPRNumberHasNoLeadingZero
+suite exit=1
+
+8 mutants, 0 survivors
+
+round 5 total: 8 mutants, 0 survivors (items 1, 2 and 3; item 4 is a comment). Full runs skipped per ev-113.
