@@ -1,0 +1,38 @@
+# what this is: internal/hosted/perf/perf.go seeded()/seededWarm warm-up mutated; go test -count=1 ./internal/hosted/perf/ each time
+## baseline
+ok  	github.com/Exploded-views/yo-human/internal/hosted/perf	1.008s
+exit=0
+
+## warm-up post removed
+# swap: if _, err := b.Post(context.Background(), perfNode, warm); err != nil { => if err := error(nil); err != nil {
+--- FAIL: TestSeededWarmsUpBeforeReturning (0.00s)
+    perf_test.go:137: first Post of the warm-up draft = created, want unchanged: seeded must make the one-off post itself
+--- FAIL: TestSeededReportsAWarmUpFailure (0.00s)
+    perf_test.go:145: seededWarm with an invalid warm-up draft succeeded (bus &{0x524a96b02230 0x104edf980 {[] {0 []} []} map[]}), want its error
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	1.018s
+FAIL
+exit=1
+
+## warm-up error ignored
+# swap: 		closeDB()
+		return nil, nil, err
+	}
+	return b, closeDB, nil => 		return b, closeDB, nil
+	}
+	return b, closeDB, nil
+--- FAIL: TestSeededReportsAWarmUpFailure (0.00s)
+    perf_test.go:145: seededWarm with an invalid warm-up draft succeeded (bus &{0xada5fa02130 0x100da7980 {[] {0 []} []} map[]}), want its error
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	1.041s
+FAIL
+exit=1
+
+## warm-up moved before the seed transaction
+# swap: the bus.New + warm-up Post block after the seed Tx => the same block before the seed Tx (return b, closeDB, nil stays last)
+--- FAIL: TestWarmUpFollowsTheSeed (0.01s)
+    perf_test.go:161: warm-up event seq = 1, want 6: the warm-up must follow all 5 seed events
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	1.089s
+FAIL
+exit=1

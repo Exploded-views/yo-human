@@ -120,6 +120,11 @@ func timePosts(b *bus.Bus, n int, draft func(i int) bus.Draft, want bus.Outcome)
 // seeded opens a database in dir holding items items (each with its posted event) spread over
 // four swarms, and returns a Bus over it with the function that closes the database.
 func seeded(dir string, items int) (*bus.Bus, func(), error) {
+	return seededWarm(dir, items, perfDraft("warm-up", "Warm-up"))
+}
+
+// seededWarm is seeded with the warm-up draft given, so a failing warm-up can be tested.
+func seededWarm(dir string, items int, warm bus.Draft) (*bus.Bus, func(), error) {
 	d, err := db.Open(filepath.Join(dir, "bus.db"))
 	if err != nil {
 		return nil, nil, err
@@ -149,5 +154,12 @@ func seeded(dir string, items int) (*bus.Bus, func(), error) {
 		closeDB()
 		return nil, nil, err
 	}
-	return bus.New(d, time.Now, bus.Limits{}), closeDB, nil
+	b := bus.New(d, time.Now, bus.Limits{})
+	// Measured locally: the first commit after the 10,000-item bulk seed took 8.6-10.3 ms, the
+	// rest 0.16-0.37 ms. The seed creates that one-off, so the scenarios must not time it.
+	if _, err := b.Post(context.Background(), perfNode, warm); err != nil {
+		closeDB()
+		return nil, nil, err
+	}
+	return b, closeDB, nil
 }

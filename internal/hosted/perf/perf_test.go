@@ -2,6 +2,7 @@ package perf
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -119,5 +120,49 @@ func TestTimePostsRefusesTheWrongOutcome(t *testing.T) {
 	}
 	if _, err := timePosts(b, 1, same, bus.OutcomeRevised); err == nil {
 		t.Error("an unchanged repost was timed as a revision")
+	}
+}
+
+// seeded makes the one-off post that follows the bulk seed itself, so the first Post a scenario
+// times is already a steady-state one: the warm-up draft is already there (unchanged).
+func TestSeededWarmsUpBeforeReturning(t *testing.T) {
+	b, closeDB, err := seeded(filepath.Join(t.TempDir(), "data"), 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeDB()
+	res, err := b.Post(context.Background(), perfNode, perfDraft("warm-up", "Warm-up"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Outcome != bus.OutcomeUnchanged {
+		t.Errorf("first Post of the warm-up draft = %s, want %s: seeded must make the one-off post itself", res.Outcome, bus.OutcomeUnchanged)
+	}
+}
+
+// A warm-up that fails is an error from the seed, not a bus that silently skipped it.
+func TestSeededReportsAWarmUpFailure(t *testing.T) {
+	b, closeDB, err := seededWarm(filepath.Join(t.TempDir(), "data"), 5, perfDraft("warm-up", ""))
+	if err == nil {
+		closeDB()
+		t.Fatalf("seededWarm with an invalid warm-up draft succeeded (bus %v), want its error", b)
+	}
+}
+
+// The warm-up has to come after the seed: its event takes the sequence number after all the seed
+// events, since a warm-up before the seed would not absorb the post-seed cost.
+func TestWarmUpFollowsTheSeed(t *testing.T) {
+	const items = 5
+	b, closeDB, err := seeded(filepath.Join(t.TempDir(), "data"), items)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeDB()
+	res, err := b.Post(context.Background(), perfNode, perfDraft("warm-up", "Warm-up"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Item.LastSeq != items+1 {
+		t.Errorf("warm-up event seq = %d, want %d: the warm-up must follow all %d seed events", res.Item.LastSeq, items+1, items)
 	}
 }
