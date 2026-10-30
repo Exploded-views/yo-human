@@ -145,3 +145,19 @@ func TestSeededReportsAWarmUpFailure(t *testing.T) {
 		t.Fatalf("seededWarm with an invalid warm-up draft succeeded (bus %v), want its error", b)
 	}
 }
+
+func TestWarmUpFollowsTheSeed(t *testing.T) {
+	const items = 5
+	b, closeDB, err := seeded(filepath.Join(t.TempDir(), "data"), items)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeDB()
+	res, err := b.Post(context.Background(), perfNode, perfDraft("warm-up", "Warm-up"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Item.LastSeq != items+1 {
+		t.Errorf("warm-up event seq = %d, want %d: the warm-up must follow all %d seed events", res.Item.LastSeq, items+1, items)
+	}
+}
