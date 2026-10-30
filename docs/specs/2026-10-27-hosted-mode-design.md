@@ -1,12 +1,32 @@
 # yo-human hosted mode: the bus between a crew and its human's chief of staff
 
-Status: draft for owner review, 2026-10-27. Extends [2026-10-26-yo-human-design.md](2026-10-26-yo-human-design.md); where the two disagree, this document records the owner's newer decision. Brainstormed with the owner and with Claude in Duet, which wrote its own integration notes for the builders (summarized under "What Duet is and how it behaves").
+Status: draft for owner review, 2026-10-27; amended 2026-10-29 with the crew protocol's lessons (containment, status feed, reader cursors, evidence, nouns). Extends [2026-10-26-yo-human-design.md](2026-10-26-yo-human-design.md); where the two disagree, this document records the owner's newer decision. Brainstormed with the owner and with Claude in Duet, which wrote its own integration notes for the builders (summarized under "What Duet is and how it behaves").
+
+## Words used here
+
+The owner's nouns (2026-10-29), as the crew protocol defines them. The older text said "swarm" and "session"; those now read as below.
+
+| Noun | Meaning |
+| - | - |
+| Fleet | All crews on all hosts, for one owner |
+| Crew | Hands working on one project, led by a crew lead (was "swarm") |
+| Hand | One Claude Code, Codex or opencode session doing work in a crew (was "session" or "agent" where it means a working session) |
+| Crew lead | The hand that leads a crew |
+| Subagent | A short-lived helper inside one hand; never posts to the bus |
+| Mission control | The hand that runs the fleet for the owner |
+| Bridge | The hand that carries messages between hosts |
+| Host | A machine that runs hands; not an authority boundary |
+| Owner | The human the fleet works for |
+
+Wire names in the H1 plan and in shipped code keep their old spelling until a code change renames them: the `swarm` field and `swarm_status`. (A planned walled-crew setting is not shipped and is not named here.) Renaming them is a separate change, so this document uses the names as they ship. "Duet's sessions" are Duet's own and are not hands.
+
+The crew protocol is the owner's private operating protocol; this document states every part of it the bus depends on (the containment tiers and the matching rule's inputs and outputs, the stale flag, the ETA fields), so a reader needs nothing else.
 
 ## Intent
 
-The owner is making Claude Duet his chief of staff: the always-on part of him that knows his day, follows up, and decides when to pull him in. At the desk he keeps working with Claude Code sessions directly, which he likes for focused work. Both front doors sit on the same state.
+The owner is making Claude Duet his chief of staff: the always-on part of him that knows his day, follows up, and decides when to pull him in. At the desk he keeps working with hands directly, which he likes for focused work. Both front doors sit on the same state.
 
-yo-human already exists to let agents reach their human and get an answer back. Hosted mode makes it the shared bus that every agent, every machine and Duet read and write: asks, answers, approvals, back-and-forth threads, and the rules that decide how the human gets reached. It also means the human-facing state no longer lives inside one long-running Claude Code session, so that session (today, "the orchestrator" on the owner's Mac) can end or restart without losing anything.
+yo-human already exists to let agents reach their human and get an answer back. Hosted mode makes it the shared bus that every hand, every machine and Duet read and write: asks, answers, approvals, back-and-forth threads, and the rules that decide how the human gets reached. It also means the human-facing state no longer lives inside one long-running Claude Code session, so that hand (today, mission control on the owner's Mac) can end or restart without losing anything.
 
 ## How this changes the 2026-10-26 design
 
@@ -24,10 +44,10 @@ Everything else in the earlier design stands: one human per install, the agent d
 
 - **Claude in Duet (the chief of staff).** Talks to the human. Reads the inbox, works threads, records his answers and approvals, and can itself reach him through yo-human. Never approves anything on his behalf.
 - **yo-human hosted (the bus).** Holds the inbox, threads, answers and approvals, the human's routing rules and preferences, and the channel configs and keys. Routes each message to the right channel(s). Exposes a remote MCP for Duet and an HTTPS API for agents.
-- **Agents (local and cloud Claude Code sessions).** Connect to the bus as an MCP server, the same way Duet does, with their own token. That works for cloud sessions, which can't run a local CLI against the owner's machines. The yo-human CLI gains a hosted target later, as a second way in.
-- **crewkit's registry.** Owns the crew's state (which sessions exist, what they are doing, what is blocked). It feeds a status summary into the bus so Duet can answer "how is everyone doing". Its own design is a separate document; this one only fixes the feed's shape (see "Crew status feed").
-- **The orchestrator and the crews.** Post to the bus and act on answers. For now Duet's asks route through the orchestrator, which passes them to the right crew; later any crew can pick up its own items from the bus.
-- **Spokes on other machines and accounts.** Post to the bus like any agent, including spokes that run a separate workload (see "Separate workloads on the bus").
+- **Hands (local and cloud Claude Code sessions).** Connect to the bus as an MCP server, the same way Duet does, with their own token. That works for cloud sessions, which can't run a local CLI against the owner's machines. The yo-human CLI gains a hosted target later, as a second way in.
+- **crewkit's registry.** Owns the crew's state (which hands exist, what they are doing, what is blocked). It feeds a status summary into the bus so Duet can answer "how is everyone doing". Its own design is a separate document; this one only fixes the feed's shape (see "Crew status feed").
+- **Mission control and the crew leads.** Post to the bus and act on answers. For now Duet's asks route through mission control, which passes them to the right crew lead; later any crew can pick up its own items from the bus.
+- **Other hosts and accounts.** Their hands post to the bus like any hand, including a crew that runs a separate workload (see "Separate workloads on the bus").
 
 bitc stays local-only. Anything about it reaches Duet as crew status or as an ask.
 
@@ -36,10 +56,10 @@ bitc stays local-only. Anything about it reaches Duet as crew status or as an as
 1. **Hard page.** An agent posts with critical severity. yo-human wakes the human directly on the channels his rules give critical (PagerDuty, Bark critical, ntfy max), and copies the item into the inbox so Duet has the context when he looks. Duet is never the path that wakes him: it draws on the same usage window and could be silent exactly when a page matters.
 2. **Soft page.** An agent posts something that needs the human but can wait. yo-human puts it in the inbox and sends one quiet nudge (Bark, passive or active level, collapsed: "2 items for Claude"; see "Self-hosted channels"). The human opens Duet and says "check the inbox"; Duet reads it live and talks it through.
 3. **Duet reaching the human.** Duet posts like any agent, choosing the severity. Its posts are tagged as from Duet so they never come back into its own inbox.
-4. **Back-and-forth.** Duet asks a crew something ("where is the release?"). That becomes a thread on the bus addressed to a crew. The crew (or the orchestrator) replies into the thread. If the reply is something the human would want, yo-human nudges quietly; Duet reads it next time he is in Duet or on its next poll.
+4. **Back-and-forth.** Duet asks a crew something ("where is the release?"). That becomes a thread on the bus addressed to a crew. The crew (or its crew lead) replies into the thread. If the reply is something the human would want, yo-human nudges quietly; Duet reads it next time he is in Duet or on its next poll.
 5. **Answers and approvals.** The human answers in Duet. Duet records it on the bus with his exact words, the timestamp and the item. The asking agent reads it from the bus. The same holds for an answer given at the desk: whichever is recorded first wins and the later one is rejected, with both sides seeing the item resolved.
 6. **Safety-net poll.** A Duet routine reads the inbox two or three times a day, inside the owner's waking hours, and batches what it finds into one message. A routine that finds nothing posts nothing.
-7. **Real-time hand-off (bonus).** A Claude Code session on the owner's own account can hand Duet a message directly. It is fast and free while quiet, but it only works within one account, so the design never depends on it.
+7. **Real-time hand-off (bonus).** A hand on the owner's own account can hand Duet a message directly. It is fast and free while quiet, but it only works within one account, so the design never depends on it.
 
 ## Approval semantics
 
@@ -57,10 +77,10 @@ From Duet's own rules, adopted for the bus:
 - Everything from Duet's connection is `actor_kind: agent`, like a machine token. Duet may record the owner's quoted words and prepare an approval, but nothing it sends resolves one.
 - An approval resolves only on a fresh passkey assertion the owner makes himself, on the bus's approval page. Duet sends him the link.
   - The page shows the action, the repo, the ref and the pinned commit or tree.
-  - The WebAuthn challenge is bound to a hash of that exact payload, the requesting session included.
+  - The WebAuthn challenge is bound to a hash of that exact payload, the requesting hand included.
   - User verification is required, and any authenticator works: Touch ID or Face ID, iCloud Keychain, 1Password, or a phone over the QR flow on a screen that doesn't hold the key.
   - No session or earlier login counts.
-- The session that acts verifies the assertion itself, against the owner's public keys pinned outside the bus, before it runs anything. A compromised bus can't approve.
+- The hand that acts verifies the assertion itself, against the owner's public keys pinned outside the bus, before it runs anything. A compromised bus can't approve.
 - Each assertion and what ran are kept in a hash-chained, append-only audit whose head is anchored outside Fly.
 - The owner's keys are pinned outside the bus, in a file whose every change is signed by a key already in it, back to a first key he pins by hand.
 - An external gate (a required status check, and credentials held only by a dedicated executor) applies to every `passkey` target, and only to those.
@@ -71,7 +91,7 @@ From Duet's own rules, adopted for the bus:
 
 ## Trust model
 
-- Everything any reader takes from the bus is data, not instruction. The bus returns structured fields (id, kind, severity, from, swarm, title, summary, required action, risk flags, canonical link), not prose that tells the reader what to do.
+- Everything any reader takes from the bus is data, not instruction. The bus returns structured fields (id, kind, severity, from, `swarm`, title, summary, required action, risk flags, canonical link), not prose that tells the reader what to do.
 - Links on the bus are canonical URLs from the source system's API, never constructed from item text.
 - Each writer authenticates as itself (see "Auth"), and every write records who made it. A post claiming to be from Duet or the human is accepted only from Duet's or the human's credential.
 - Text from public sources (issues, PRs, mail) is labelled as untrusted in the item and never becomes an action without the human's word.
@@ -83,11 +103,16 @@ The owner's binding constraint is his shared Claude usage window: Duet's session
 - Duet measured one empty routine run (connect, list tools, one call, nothing to report) at about 124k tokens of context, roughly $0.75 at API list prices. Startup is the cost, so the saving comes from not starting a session, not from a cheaper check inside one.
 - So: push first (quiet nudges that bring the human to Duet; real-time hand-offs where available), and keep polling to two or three runs a day. Use one-off runs at a known time for something in flight instead of a faster schedule.
 - MCP answers stay small: summaries and handles first, detail only on request (`item(id)`).
+- Interrupt lanes (owner, 2026-10-28): every push to the owner carries `urgency`.
+  - `page` goes straight to him (Bark, PagerDuty from H2) and never waits for Duet.
+  - `interrupt-when-good` is queued for Duet, which reads it and decides when to interrupt. The bus never pushes it by itself.
+  - `digest` waits for the digest.
+- The client wall (protocol v1.2 §10): a walled swarm's items, and everything sent into it, carry typed lines only, with no free text in either direction. Its repo slugs are codenames, and the codename map never goes on the bus. Detail stays on the client node.
 - The bus moves no files (owner, 2026-10-28): an item carries text and at most one allow-listed `https` link, a pointer and never a copy. A future file hand-off must meet the plan's four conditions: no reads from protected Mac folders, owner-initiated and named per crew, logged with size and sha256 only, and client files only to that crew's node.
 
 ## What Duet is and how it behaves (from its own notes and the 2026-10-27 spike)
 
-- Duet's sessions are event-driven, not a daemon: they wake when the human writes, a routine fires, a task thread reports, or a Claude Code session on his account hands a message over. Nothing can push into Duet from outside (no webhook a server can call).
+- Duet's sessions are event-driven, not a daemon: they wake when the human writes, a routine fires, a task thread reports, or a hand on his account hands a message over. Nothing can push into Duet from outside (no webhook a server can call).
 - Sessions are recycled and their disk is temporary. Anything Duet must remember lives on the bus or in its own notes.
 - Repeating routines run at most hourly; one-off runs can be set for an exact time. So nothing time-sensitive may depend on a Duet poll (owner, 2026-10-28). The bus pushes: approvals, pages and escalations reach the owner by Bark or PagerDuty. Duet reads the bus only on its routine or when he opens it.
 - Spike result (2026-10-27): Duet's main chat and a scheduled routine both called a custom remote MCP connector we hosted on Fly. Duet treated a test approval item as data and took no action. Each Duet session reconnects and lists tools before calling.
@@ -96,9 +121,9 @@ The owner's binding constraint is his shared Claude usage window: Duet's session
 
 Read, safe from routines:
 
-- `inbox_for_claude(since?)`: items needing the human, grouped by kind (approval, question, blocker, finished, failed), each with id, handle, from, swarm, severity, title, summary, created_at, link.
+- `inbox_for_claude(since?)`: items needing the human, grouped by kind (approval, question, blocker, finished, failed), each with id, handle, from, `swarm`, severity, title, summary, created_at, link.
 - `item(id)`: one item in full, including the detail the human needs to decide and the thread so far.
-- `swarm_status(swarm?)`: the crew status summary from the registry feed.
+- `swarm_status(swarm?)`: the crew status summary from the registry feed (the tool and its argument keep the old name; see "Words used here").
 
 Write, only after the human's message:
 
@@ -111,28 +136,60 @@ Excluded on purpose: merge, deploy, delete, spend, secrets access, and any tool 
 
 ## Agent-facing side
 
-- Hosted mode is an MCP server first. Agents use the same server as Duet with an agent token and a broader tool set: `post` (notify, ask, done, escalate, with severity), `answers(since?)` and `item(id)` to read replies, `reply(thread_id, ...)`, and `status_push` for the registry feed. Answers reach agents by the agent reading the bus; the bus never calls into a machine.
-- A local Claude Code session adds it with `claude mcp add --transport http` and its token; a cloud session gets it as a connector.
-- A central orchestrator, and later each crew's own orchestrator, reads new answers and threads addressed to it and fans them out: over UDS (SendMessage) to Claude sessions on its own host, and through its bridge to another host's bridge for sessions elsewhere. Never a herdr pane prompt between sessions on the same host. SendMessage is the Claude harness's own channel, an instruction for sessions that no yo-human code implements. A non-Claude watcher or daemon wakes only its own host's bridge pane, with `herdr agent prompt` (owner, 2026-10-28: "agent prompts between bridges only (host-to-host) and uds on a host"). The bus itself never wakes a session; sessions read it.
+- Hosted mode is an MCP server first. Hands use the same server as Duet with an agent token and a broader tool set: `post` (notify, ask, done, escalate, with severity), `answers(since?)` and `item(id)` to read replies (see "Reader cursors"), `reply(thread_id, ...)`, and `status_push` for the registry feed. Answers reach agents by the agent reading the bus; the bus never calls into a machine.
+- A local hand adds it with `claude mcp add --transport http` and its token; a cloud hand gets it as a connector. Crew setup pre-allows the bus's own MCP tools in the hand's permissions, so its first post can never wedge the hand on a permission prompt.
+- Mission control, and later each crew lead, reads new answers and threads addressed to it and fans them out: over UDS (SendMessage) to hands on its own host, and through its bridge to another host's bridge for hands elsewhere. Never a herdr pane prompt between hands on the same host. SendMessage is the Claude harness's own channel, an instruction for hands that no yo-human code implements. A non-Claude watcher or daemon wakes only its own host's bridge pane, with `herdr agent prompt` (owner, 2026-10-28: "agent prompts between bridges only (host-to-host) and uds on a host"). The bus itself never wakes a hand; hands read it.
 - The yo-human CLI gets a hosted target after M1, as a second way in for scripts and hooks.
+
+### Reader cursors
+
+- Each reader (Duet, mission control, each crew lead, each hand) has its own cursor, kept on the bus. It is keyed to the reader's identity (the node name, or Duet's OAuth subject and client) plus a reader name the caller supplies, not to the token, since tokens rotate and a node's token is shared by every hand on it. A reader does not have to remember where it stopped.
+- `answers(since?, ack?)` returns every item kind after the cursor: answers, replies, approvals, resolutions, new threads addressed to the reader. Never only the newest few. `since` reads from that position without moving the cursor. `ack` is a position: it first moves the cursor to that position, never backwards, then returns the items after it. When both are given, `ack` applies first, then the read starts at `since`. The node is the unit of trust: any caller holding a node's token may move that node's reader cursors.
+- The cursor moves only on `ack`, never on the read itself. A response lost in transit is returned again. Missed items are impossible by construction; a repeat is harmless because an item keeps its id.
+- `ack(item_id)` stays Duet's per-item "surfaced" mark and is a different thing from the position `ack`.
+- This changes the H1 plan's Task 7: the `Answers` signature, the new position ack, and the `PushStatus` schema (see "Crew status feed").
+- Long-poll on `answers` (H1) wakes on any item past the cursor, whatever its kind.
+
+### Containment
+
+- A crew's containment list is the crew protocol's: it has three tiers (never leaves its node, point to point only, may go on the broadcast). The bus is shared across crews, so every bus post counts as the broadcast tier.
+- The checked write tools are `post`, `reply`, `relay`, `escalate` and the free-text fields of `status_push`. `record_answer` and `record_approval` are not checked against other crews' lists: they carry the owner's own words, are delivered only to the item's own crew (the bus never fans them out), and their text is the owner's quoted reply, to which Duet must not add material of its own. This keeps the goal that no answer is lost while the matching rule is missing.
+- A checked write is accepted only if each crew whose material it could carry has a published list that allows the broadcast tier. The post's own crew always counts. A post from Duet, which reads across crews, counts every other crew as well.
+- The content match is the crew protocol's own rule, the same one its gate uses. This document states only its inputs and outputs: the post's text in; allow, or refuse with a named reason, out. Until the protocol publishes a matching rule, the bus refuses (fail closed). The bus defines no rule of its own.
+- A crew with no published list has its automated posts refused. Duet's posts are automated (its routines run with no person present), so a Duet post is refused if any crew in its set has no list. The only exemption is a credential whose `actor_kind` is `human`. In H1 no such credential exists except the owner's own approval-page or desk actions; every node token and Duet's connection is `agent`.
+- Only the owner publishes or changes a crew's list, through an owner-only admin subcommand (in the style of the H1 plan's other admin subcommands). A crew can never loosen its own list.
+- Every refusal returns a named error code the poster sees. Nothing is dropped silently.
+- The check narrows "Separate workloads on the bus", it does not replace it: the token scope still decides who may read an item.
+
+### Evidence on `finished`
+
+- The `done` verb creates a `finished` item. It carries evidence of one of two kinds: a URL with its HTTP status code, or a merge commit sha. A `done` post with neither is refused with a named error code.
+- The bus checks the shape: a URL whose host is in the bus's own link allow-list (the one the H1 plan already has) and a three-digit status code, or a sha of 40 or 64 hex characters. It does not fetch the URL, since only the channel egress package makes outbound calls. The reader judges whether the evidence is enough; the bus makes it impossible to omit.
 
 ## Auth
 
 - Duet connects as a custom connector with OAuth. Prefer Claude's published client identity (Client ID Metadata Document); fall back to Dynamic Client Registration. The bus serves exactly one human.
-- Agents and machines use per-node tokens, each named for its node, scoped to post and read its own items, revocable one at a time. Each token is scoped to its own swarm (see "Separate workloads on the bus").
+- Agents and machines use per-node tokens, each named for its node, scoped to post and read its own items, revocable one at a time. Each token is scoped to its own crew (see "Separate workloads on the bus").
 - Channel keys (PagerDuty, Bark, ntfy) live only on the bus, as secrets, and no tool returns them.
 
 ## Separate workloads on the bus
 
 Any crew, including one for a separate workload, posts to the bus with its own crew-scoped token.
 
-- Its items carry its own `swarm` and a token scoped to that swarm. Duet can route a swarm to a dedicated channel.
-- Items say what the owner needs to know to decide, the same as any other swarm. The bus's data is private to the owner. The rule against naming third parties applies to this repository, its issues, its logs and its tests.
-- A swarm's token can't read other swarms' items, and other swarms' tokens can't read its items. Only Duet and the owner see across swarms.
+- Its items carry its own `swarm` field (the crew) and a token scoped to that crew. Duet can route a crew to a dedicated channel.
+- Items say what the owner needs to know to decide, the same as any other crew, within the crew's containment list: a post the list forbids is refused (see "Containment"). The bus's data is private to the owner. The rule against naming third parties applies to this repository, its issues, its logs and its tests.
+- A crew's token can't read other crews' items, and other crews' tokens can't read its items. Only Duet and the owner see across crews.
 
 ## Crew status feed (contract with crewkit's registry)
 
-The registry pushes a small status document per swarm: swarm, sessions (name, state: working, blocked, idle, done), what is waiting on the human (item handles), main branch health, spend against cap where relevant, and a timestamp. The bus serves it through `swarm_status`. The registry design decides how the document is produced.
+The registry pushes a small status document per crew: the crew (the `swarm` field), its hands, what is waiting on the owner (item handles), main branch health, spend against cap where relevant, and a timestamp. The bus serves it through `swarm_status`. The registry design decides how the document is produced.
+
+Each hand has its own status entry. The H1 plan's `PushStatus` takes only name and one of four states, so it grows these fields (and the four states become five):
+
+- **`name`, `state`:** working, blocked, idle, done, or `waiting-on-prompt`. The registry takes `waiting-on-prompt` from the host's agent-status source (herdr's agent status), not from what the hand says about itself, since a hand stuck on a permission prompt cannot report it.
+- **`last_checkin`, `stale`:** the time of the hand's last check-in, and a stale flag. The registry sets the stale flag; the bus stores and serves it and has no threshold of its own. (The crew protocol's rule is silence of 60 minutes or more, at the time of writing; for information only.)
+- **`closure`:** present only on stale closure, with the hand's `name` and its `session_id`, so the owner can resume it. The protocol's resume record also keeps host, pane, directory and branch@sha; those are deliberately not stored on the bus.
+- **`eta`:** any ETA shown carries `tasks_left`, `rate` (measured where `basis` is `measured`, projected otherwise) and `basis` (`measured` or `projection`). An ETA without all three is not shown. A tracker pushes it through the same `status_push` call, on the crew's token.
 
 ## Hosting
 
@@ -144,8 +201,8 @@ The registry pushes a small status document per swarm: swarm, sessions (name, st
 - **Reaching the owner:** a self-hosted Bark server (bark-server) on Fly, in the owner's personal organization, as its own app with one always-on machine. The official Bark iOS app points at it. Levels: passive, active, time-sensitive, critical. The bus reaches it through a channel adapter (`notify.Channel`), with Bark as H1's only implementation. H1 sends quiet nudges at the active level by default (passive is configurable). Agents can escalate one of their unanswered items a step at a time, once it has waited a set time (30 minutes by default), to time-sensitive and then critical (owner, 2026-10-27). Critical is used only after a real test on the owner's phone with the silent switch on and a Focus active; H2's routing rules then govern every level.
 - **The Bark server is crew infrastructure, not part of the bus.** crewkit may use it later as a second consumer. Its deploy, like the owner's running bus instance, lives in the owner's private crew-infra repository. This repository keeps the product and a generic example deploy with placeholders only.
 - **Private by default:** basic auth on every push route. Device registration is closed except during a window the owner opens, because bark-server's own auth skips `/register` and an open register can re-point an existing device key. The image is pinned by digest. Nothing is exposed before the owner's go.
-- **No ntfy on Fly.** The homelab ntfy on thehalf keeps carrying homelab notifications as it is today.
-- **Session to session goes through the bus:** spokes and sessions post to it and follow it by long-poll on `answers` (H1); an event stream for non-MCP watchers follows in H2. Moving crew pointers off the homelab ntfy onto the bus comes later, with no rush.
+- **No ntfy on Fly.** The homelab ntfy keeps carrying homelab notifications as it is today.
+- **Hand to hand goes through the bus:** hands post to it and follow it by long-poll on `answers` (H1); an event stream for non-MCP watchers follows in H2. Moving crew pointers off the homelab ntfy onto the bus comes later, with no rush.
 - **PagerDuty** stays the backstop for hard pages.
 - **Size:** two machines in total (the bus and the Bark server), about $4.20 a month; no further machines without the owner's go.
 
@@ -162,7 +219,7 @@ Get an MCP up fast. Hosted mode's first release is the MCP bus with only what Du
 
 - Duet becomes a working front door: the human can see what needs him, answer and approve from his phone, and have those answers reach the agents.
 - No answer is lost: every ask has one id, and its answer reaches the asker whichever surface it came from.
-- The orchestrator's session can restart without losing any pending ask, answer or approval.
+- Mission control's session can restart without losing any pending ask, answer or approval.
 
 ## Non-goals
 
@@ -177,12 +234,12 @@ Get an MCP up fast. Hosted mode's first release is the MCP bus with only what Du
 - Silent loss: an answer recorded but never read by the asker, or an item acknowledged but never shown.
 - Burning the usage window on empty polls.
 - A path from the internet into the owner's machines.
-- Client names or client detail in this repository, its issues, logs or tests; or one swarm reading another swarm's items.
+- Client names or client detail in this repository, its issues, logs or tests; or one crew reading another crew's items.
 
-## Calls made while writing this (the orchestrator's, for the owner to check)
+## Calls made while writing this (the author's, for the owner to check)
 
 1. **Critical pages never depend on the bus.** A machine that may send critical pages keeps the M1 local send pipeline and the keys for its critical channels. A critical page goes out locally first (queued locally under the M1 deadline rules), then a copy is posted to the bus for Duet. The bus dedups on the message's dedup key, so it never re-sends a page a machine already sent. Non-critical messages go to the bus only. This replaces "channel keys live only on the bus" for critical channels.
-2. **The constitution is amended first** to allow hosted mode and to make MCP its primary interface (the owner: "ideally hosted mode is MCP so cloud sessions can use it"). Principle VI's "no MCP path the CLI lacks" is restated for hosted mode as "the MCP server is the contract; the CLI's hosted target follows it".
+2. **The constitution is amended first** to allow hosted mode and to make MCP its primary interface (the owner: "ideally hosted mode is MCP so cloud hands can use it"). Principle VI's "no MCP path the CLI lacks" is restated for hosted mode as "the MCP server is the contract; the CLI's hosted target follows it".
 3. **Desk answers and approvals.** *Superseded on 2026-10-27 by "Human approval by passkey":* everything from Duet's connection, and every node token, is `agent`. Only the owner's own payload-bound passkey assertion resolves an approval; a desk sign-in, if kept, may only answer questions.
 4. **Duet's OAuth sign-in uses GitHub as the identity provider**, restricted to the owner's GitHub account. The bus issues its own tokens after that check. There is no password store on the bus.
 5. **Rules live on the bus in hosted mode.** `yo-human rules pull|push` edits them as YAML, and Duet gets a `propose_rule` tool whose change applies only after the human confirms in words. Local layers still apply to local critical sends (call 1) and to machines not using hosted mode.
@@ -195,10 +252,10 @@ Get an MCP up fast. Hosted mode's first release is the MCP bus with only what Du
 - The HTTP framework and MCP library versions (the spike used the Python SDK; the product is Go, per the earlier design).
 - Exact CLI verbs and flags for the hosted target, within the existing contract style.
 - The nudge's wording and collapse rules.
-- How the orchestrator fans out answers locally until crews read the bus themselves: settled (owner, 2026-10-28). UDS (SendMessage) between Claude sessions on the host, a non-Claude watcher prompting only its own host's bridge pane, and bridge to bridge across hosts.
+- How mission control fans out answers locally until crews read the bus themselves: settled (owner, 2026-10-28). UDS (SendMessage) between hands on the host, a non-Claude watcher prompting only its own host's bridge pane, and bridge to bridge across hosts.
 
 ## Open questions
 
 - Whether Duet's `watch_url` tool can watch a bus endpoint for changes without a model run. Untested; if it is cheap it could make Duet's reads cheaper, but it would never carry anything time-sensitive.
-- Whether a local Claude Code session can load the Claude Code Remote connector for real-time hand-offs (today the orchestrator's session can't see it).
+- Whether a local hand can load the Claude Code Remote connector for real-time hand-offs (today mission control's session can't see it).
 - How the human tells the bus where he is ("heads down", "driving"): through Duet, through any agent, or both. H2's to-do digest (plan, H2 outline) depends on it.
