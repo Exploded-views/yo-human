@@ -1254,3 +1254,47 @@ suite exit=1
 10 mutants, 1 survivors
 
 round 6 total: 10 mutants, 1 survivor: "the PE check removed". It was equivalent: a PE header always contains the NUL bytes of its PE signature, so the NUL check finds every PE file and the separate PE branch was dead code. The branch is deleted (commit after this record); the other 9 mutants are killed. Full runs skipped per ev-113.
+
+
+######## round 6 (item 4b) mutants, 2026-10-30T01:03:05Z, on the GREEN implementation (head a0e4530); each applied by script (string swap), vetted, run, reverted
+baseline: exit=0
+
+## item 4b: the rule copied as a fixed merge/release list (deploy refused)
+internal/hosted/bus/validate_wall.go: '!slices.Contains(required[d.Action], f.field)' -> 'd.Action != ActionMerge && d.Action != ActionRelease'
+vet exit=1
+(mutant does not compile)
+
+## item 4b: pinned_tree allowed wherever pinned_commit is
+internal/hosted/bus/validate_wall.go: '!slices.Contains(required[d.Action], f.field)' -> '!slices.Contains(required[d.Action], "pinned_commit")'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem
+suite exit=1
+
+## item 4b: the pin check removed
+internal/hosted/bus/validate_wall.go: 'if f.v != "" && !slices.Contains(required[d.Action], f.field) {' -> 'if false && f.v != "" && !slices.Contains(required[d.Action], f.field) {'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem
+suite exit=1
+
+## item 4b: the pin check applied to unwalled items
+internal/hosted/bus/post.go: 'if e := checkRepoOwner(d.Repo); e != nil {' -> 'if e := checkWalledPins(d); e != nil {\n\t\treturn e\n\t}\n\tif e := checkRepoOwner(d.Repo); e != nil {'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem
+--- FAIL: TestWalledRefAndTargetRefusals
+suite exit=1
+
+4 mutants, 1 survivors
+
+(the first mutant did not compile; rerun with a compiling form:)
+
+baseline: exit=0
+
+## item 4b: the rule copied as a fixed merge/release list (deploy refused)
+internal/hosted/bus/validate_wall.go: '!slices.Contains(required[d.Action], f.field)' -> '(d.Action != ActionMerge && d.Action != ActionRelease || slices.Contains([]string(nil), f.field))'
+vet exit=0
+--- FAIL: TestWalledPinsOnlyWhereTheActionRequiresThem
+suite exit=1
+
+1 mutants, 0 survivors
+
+item 4b total: 4 mutants, 0 survivors (rule copied as a merge/release list; pinned_tree allowed wherever pinned_commit is; check removed; check applied to unwalled).
