@@ -27,3 +27,12 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	1.041s
 FAIL
 exit=1
+
+## warm-up moved before the seed transaction
+# swap: the bus.New + warm-up Post block after the seed Tx => the same block before the seed Tx (return b, closeDB, nil stays last)
+--- FAIL: TestWarmUpFollowsTheSeed (0.01s)
+    perf_test.go:161: warm-up event seq = 1, want 6: the warm-up must follow all 5 seed events
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	1.089s
+FAIL
+exit=1
