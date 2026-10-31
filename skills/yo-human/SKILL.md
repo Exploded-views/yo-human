@@ -92,6 +92,9 @@ Errors go to stderr as `error:`, `valid:` and `fix:` lines (in `--json`, an `err
 left to retry *in this run*: read the channel lines, where `sent` means delivered and no lines at all
 means nothing was due yet (not delivery). Exit 75 with `RESULT queued` and `next` means a send is still
 queued; 69 with `RESULT failed` means one was dead-lettered.
+A channel line `sent (unconfirmed ...)` (`"unconfirmed": true` in `--json`) is final: the request
+went out and the human may already have it. Never send the message again to make sure; a repeat is
+the duplicate this mark prevents.
 `resolve` exits 75 with `next` when cancelling a scheduled send, or closing the PagerDuty alert,
 failed for now and is queued: follow `next`, since until it runs the human may still be paged for
 something fixed. It exits 69 when one was refused for good: tell the human (the page may still

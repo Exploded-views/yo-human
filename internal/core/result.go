@@ -47,7 +47,7 @@ type ChannelResult struct {
 	Status  string `json:"status"`
 	Error   string `json:"error,omitempty"`
 
-	Unconfirmed bool `json:"unconfirmed,omitempty"` // sent: the request went out but no answer came, and it was not retried
+	Unconfirmed bool `json:"unconfirmed,omitempty"` // sent: the request went out but no complete answer came back, and it was not retried
 
 	ProviderID string `json:"-"` // the provider's id for a send that succeeded
 	Scheduled  bool   `json:"-"` // the provider holds the send for a later delivery
