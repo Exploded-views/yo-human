@@ -288,7 +288,8 @@ func (p *Pipeline) retryFor(level string) config.Retry {
 // retriesUnconfirmed reports whether a send that went out with no answer is tried again: on a
 // channel with provider-side dedup a repeat is harmless, and on a paging level a duplicate beats a
 // missed page. A paging level is one with a critical send on any channel, whatever it is named; a
-// level the config no longer has is taken for one, since a lost send is the worse error.
+// level the config no longer has is taken for one, since a lost send is the worse error. The level is
+// read from the config now, as retryFor reads it, not as it stood when the entry was queued.
 func (p *Pipeline) retriesUnconfirmed(pl payload) bool {
 	if p.d.Caps[pl.Instance].NativeDedup {
 		return true

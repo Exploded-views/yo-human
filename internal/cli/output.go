@@ -52,7 +52,7 @@ func writeResult(stdout io.Writer, r core.Result, asJSON bool) {
 	for _, c := range r.Channels {
 		line := c.Channel + ": " + c.Status
 		if c.Unconfirmed {
-			line += " (unconfirmed: the request went out but no answer came before the deadline)"
+			line += " (unconfirmed: the request went out but no complete answer came back)"
 		}
 		if c.Error != "" {
 			line += " (" + oneLine(c.Error) + ")"

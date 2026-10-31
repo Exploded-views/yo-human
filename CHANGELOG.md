@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   paging level (a level with a critical send), so a push the server already delivered is not
   delivered twice. The channel is reported `sent`, with `unconfirmed` in `--json` and a note in
   the text. Paging levels, PagerDuty, and failures before the request went out retry as before.
+  `log.jsonl` records the mark too.
+
+### Fixed
+
+- Bark: a non-2xx answer whose body breaks off is classified by its status (retried or refused as
+  before), no longer taken for an unconfirmed send.
 
 ## [v0.1.1] - 2026-10-31
 

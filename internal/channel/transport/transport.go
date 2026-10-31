@@ -48,14 +48,19 @@ func TransportError(ctx context.Context, provider string, err error, sent bool) 
 }
 
 // Traced returns req with a trace that records the request was fully written, and a func that
-// reports it.
+// reports it. Written means handed to the connection: a kernel buffer or a proxy in front of the
+// server can hold what the server never saw, a limit the unconfirmed rule accepts. A fresh
+// connection (Go retries a request on one) starts the flag over.
 func Traced(req *http.Request) (*http.Request, func() bool) {
 	var wrote atomic.Bool
-	trace := &httptrace.ClientTrace{WroteRequest: func(i httptrace.WroteRequestInfo) {
-		if i.Err == nil {
-			wrote.Store(true)
-		}
-	}}
+	trace := &httptrace.ClientTrace{
+		GetConn: func(string) { wrote.Store(false) },
+		WroteRequest: func(i httptrace.WroteRequestInfo) {
+			if i.Err == nil {
+				wrote.Store(true)
+			}
+		},
+	}
 	return req.WithContext(httptrace.WithClientTrace(req.Context(), trace)), wrote.Load
 }
 

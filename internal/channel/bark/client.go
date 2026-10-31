@@ -126,11 +126,12 @@ func (c *barkChannel) do(ctx context.Context, req *http.Request) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
-	if err != nil {
-		return transport.TransportError(ctx, "bark", err, true) // the request went out and its answer broke off
-	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		// A complete status line is an answer, whatever the body does after it.
 		return classify("HTTP", resp.StatusCode)
+	}
+	if err != nil {
+		return transport.TransportError(ctx, "bark", err, true) // a 2xx whose body broke off: the push may have gone out
 	}
 	var env struct {
 		Code *int `json:"code"`

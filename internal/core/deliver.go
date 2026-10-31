@@ -21,6 +21,8 @@ type logEntry struct {
 	Error      string `json:"error,omitempty"`
 	Attempts   int    `json:"attempts"`
 	ProviderID string `json:"provider_id,omitempty"`
+	// Unconfirmed marks a send reported sent that went out with no complete answer.
+	Unconfirmed bool `json:"unconfirmed,omitempty"`
 }
 
 // deliver claims one queue entry, sends it and settles it: removed when sent, back in the queue
@@ -248,7 +250,7 @@ func (b *batch) bury(c store.Claimed, pl payload, reason string, config bool) (C
 func (b *batch) finish(c store.Claimed, pl payload, res ChannelResult, storeErr error) (ChannelResult, error) {
 	res.level = pl.Message.Level
 	logErr := b.p.d.Store.AppendLog(logEntry{At: b.now.UTC().Format("2006-01-02T15:04:05Z"), ID: pl.Message.ID,
-		Channel: res.Channel, Status: res.Status, Error: res.Error, Attempts: res.attempts, ProviderID: res.ProviderID})
+		Channel: res.Channel, Status: res.Status, Error: res.Error, Attempts: res.attempts, ProviderID: res.ProviderID, Unconfirmed: res.Unconfirmed})
 	if storeErr != nil {
 		return res, storeErr
 	}
