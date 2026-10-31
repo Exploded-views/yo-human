@@ -133,25 +133,35 @@ type sendOutcome struct {
 func (b *batch) settle(ctx context.Context, o sendOutcome) (ChannelResult, error) {
 	switch {
 	case o.err == nil:
-		status := ChannelSent
-		if o.rcpt.Scheduled {
-			status = ChannelHeld // the provider delivers it later; the queue is done with it
-		}
-		res := ChannelResult{Channel: o.pl.Instance, Status: status, ProviderID: o.rcpt.ProviderID,
-			Scheduled: o.rcpt.Scheduled, attempts: o.c.Attempts + 1}
-		complete := func() error { return b.p.d.Store.Complete(o.c) }
-		err := error(nil)
-		if o.pl.Message.DedupKey != "" && !o.pl.Message.Resolved {
-			err = b.landed(ctx, o.pl, res, complete)
-		} else {
-			err = complete()
-		}
-		return b.finish(o.c, o.pl, res, err)
+		return b.settleSent(ctx, o, false)
+	case channel.IsUnconfirmed(o.err) && !b.p.retriesUnconfirmed(o.pl):
+		// The request went out and the server may have acted on it, and a repeat could be a
+		// duplicate the channel cannot catch, on a message that is not worth one: it counts as sent.
+		return b.settleSent(ctx, o, true)
 	case channel.KindOf(o.err) == channel.TransientError:
 		return b.settleTransient(ctx, o)
 	}
 	// Permanent and config errors are never retried.
 	return b.bury(o.c, o.pl, o.err.Error(), channel.KindOf(o.err) == channel.ConfigError)
+}
+
+// settleSent completes an entry whose send is done: it succeeded, or (unconfirmed) went out with no
+// answer and is not retried.
+func (b *batch) settleSent(ctx context.Context, o sendOutcome, unconfirmed bool) (ChannelResult, error) {
+	status := ChannelSent
+	if o.rcpt.Scheduled {
+		status = ChannelHeld // the provider delivers it later; the queue is done with it
+	}
+	res := ChannelResult{Channel: o.pl.Instance, Status: status, ProviderID: o.rcpt.ProviderID,
+		Scheduled: o.rcpt.Scheduled, Unconfirmed: unconfirmed, attempts: o.c.Attempts + 1}
+	complete := func() error { return b.p.d.Store.Complete(o.c) }
+	err := error(nil)
+	if o.pl.Message.DedupKey != "" && !o.pl.Message.Resolved {
+		err = b.landed(ctx, o.pl, res, complete)
+	} else {
+		err = complete()
+	}
+	return b.finish(o.c, o.pl, res, err)
 }
 
 func (b *batch) settleTransient(ctx context.Context, o sendOutcome) (ChannelResult, error) {

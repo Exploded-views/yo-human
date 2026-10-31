@@ -168,9 +168,10 @@ func (c *ntfyChannel) request(ctx context.Context, method, target string, body i
 
 // do sends req and maps the outcome to a channel error that carries no URL and no response body.
 func (c *ntfyChannel) do(ctx context.Context, req *http.Request) error {
+	req, sent := transport.Traced(req)
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return transport.TransportError(ctx, "ntfy", err, false)
+		return transport.TransportError(ctx, "ntfy", err, sent())
 	}
 	defer func() { _ = resp.Body.Close() }()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))

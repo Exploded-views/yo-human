@@ -16,8 +16,9 @@ const (
 
 // kinded is an error carrying its kind; it unwraps to the cause.
 type kinded struct {
-	kind ErrorKind
-	err  error
+	kind        ErrorKind
+	err         error
+	unconfirmed bool // a transient error whose request went out with no answer read
 }
 
 func (e *kinded) Error() string { return e.err.Error() }
@@ -49,8 +50,18 @@ func KindOf(err error) ErrorKind {
 	return TransientError
 }
 
-// Unconfirmed marks err as transient, and as a send whose request went out with no answer read.
-func Unconfirmed(err error) error { return Transient(err) }
+// Unconfirmed marks err as transient, and as a send whose request was fully written but whose
+// answer never arrived: the provider may have acted on it. Core retries it only where a repeat
+// cannot be a duplicate, or a lost send would be worse than one.
+func Unconfirmed(err error) error {
+	if err == nil {
+		return nil
+	}
+	return &kinded{kind: TransientError, err: err, unconfirmed: true}
+}
 
-// IsUnconfirmed reports whether err is an Unconfirmed error.
-func IsUnconfirmed(err error) bool { return false }
+// IsUnconfirmed reports whether the outermost marked error in err's chain is an Unconfirmed one.
+func IsUnconfirmed(err error) bool {
+	var k *kinded
+	return errors.As(err, &k) && k.unconfirmed
+}

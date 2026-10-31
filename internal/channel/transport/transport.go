@@ -11,13 +11,16 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"strings"
+	"sync/atomic"
 
 	"github.com/Exploded-views/yo-human/internal/channel"
 )
 
-// TransportError describes an HTTP client failure in fixed words, as a Transient error. The
+// TransportError describes an HTTP client failure in fixed words, as a Transient error; sent says
+// the request was fully written (see Traced), which makes it an Unconfirmed one. The
 // *url.Error the client returns embeds the request URL, which can hold a secret, so the raw error
 // is never returned or wrapped; only the context's own error is, so callers can test for it.
 // provider prefixes the text ("ntfy request timed out").
@@ -27,23 +30,33 @@ func TransportError(ctx context.Context, provider string, err error, sent bool) 
 		cert *tls.CertificateVerificationError
 		op   *net.OpError
 	)
+	mark := channel.Transient
+	if sent {
+		mark = channel.Unconfirmed
+	}
 	switch {
 	case ctx.Err() != nil:
-		return channel.Transient(fmt.Errorf("%s request interrupted: %w", provider, ctx.Err()))
+		return mark(fmt.Errorf("%s request interrupted: %w", provider, ctx.Err()))
 	case errors.As(err, &cert):
-		return channel.Transient(fmt.Errorf("%s server certificate could not be verified", provider))
+		return mark(fmt.Errorf("%s server certificate could not be verified", provider))
 	case errors.As(err, &ne) && ne.Timeout():
-		return channel.Transient(fmt.Errorf("%s request timed out", provider))
+		return mark(fmt.Errorf("%s request timed out", provider))
 	case errors.As(err, &op):
-		return channel.Transient(fmt.Errorf("%s server could not be reached", provider))
+		return mark(fmt.Errorf("%s server could not be reached", provider))
 	}
-	return channel.Transient(fmt.Errorf("%s request failed", provider))
+	return mark(fmt.Errorf("%s request failed", provider))
 }
 
 // Traced returns req with a trace that records the request was fully written, and a func that
 // reports it.
 func Traced(req *http.Request) (*http.Request, func() bool) {
-	return req, func() bool { return false }
+	var wrote atomic.Bool
+	trace := &httptrace.ClientTrace{WroteRequest: func(i httptrace.WroteRequestInfo) {
+		if i.Err == nil {
+			wrote.Store(true)
+		}
+	}}
+	return req.WithContext(httptrace.WithClientTrace(req.Context(), trace)), wrote.Load
 }
 
 // NoRedirectClient returns a copy of base (a default client when nil) that never follows a
