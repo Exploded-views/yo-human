@@ -1,5 +1,10 @@
 ## Amendment Log
 
+### v1.2.0 — 2026-10-31
+- **Amended Principle V**: the unconfirmed-send exception (#TBD)
+- **Rationale**: a Bark push that was cut off by the deadline after APNs had it was retried, and the owner got it twice. The owner chose this rule on 2026-10-31 (FU-TIMEOUT option b)
+- **Impact**: core settle, the transport trace, the result and log fields, `README.md`
+
 ### v1.1.0 — 2026-10-27
 - **Amended the preamble and Principles IV, V, VI, VII and VIII**: hosted
   mode is allowed as an optional always-on service, with its own layer chain,
@@ -222,7 +227,13 @@ Every message an agent hands to yo-human MUST be either delivered or visibly
 queued, and MUST reach the human at most once per incident.
 
 - A message is written to the local queue before any send is attempted. It
-  leaves the queue only when a channel confirms delivery
+  leaves the queue only when a channel confirms delivery, with one exception:
+  a send whose request was fully written but whose answer never came
+  (unconfirmed) is not retried on a channel without provider-side dedup
+  unless its level is a paging level (a level with a critical send). It
+  leaves the queue reported `sent`, marked `unconfirmed` in the result and the
+  log. A duplicate page beats a missed one; below paging, a duplicate is the
+  worse error
 - Every `yo-human` call first sends anything still queued, within the same
   deadline (Principle VII); `yo-human flush` does the same on demand or from
   cron
@@ -535,4 +546,4 @@ Changes to principles MUST propagate to:
 
 ---
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-25 | **Last Amended**: 2026-10-27
+**Version**: 1.2.0 | **Ratified**: 2026-10-25 | **Last Amended**: 2026-10-31
