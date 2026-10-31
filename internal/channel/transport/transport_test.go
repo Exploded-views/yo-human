@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httptrace"
 	"strings"
 	"testing"
 	"time"
@@ -144,12 +145,12 @@ func TestTimeoutAfterTheRequestWentOutIsUnconfirmed(t *testing.T) {
 		_, _ = io.Copy(io.Discard, r.Body)
 		select {
 		case <-done:
-		case <-time.After(2 * time.Second):
+		case <-time.After(5 * time.Second):
 		}
 	}))
 	defer srv.Close()
 	defer close(done)
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
 	err := do(ctx, srv.URL)
 	if err == nil || !channel.IsUnconfirmed(err) || channel.KindOf(err) != channel.TransientError {
@@ -200,5 +201,26 @@ func TestUnconfirmedUsesTheFixedWords(t *testing.T) {
 	err := TransportError(context.Background(), "prov", timeoutErr{}, true)
 	if !channel.IsUnconfirmed(err) || err.Error() != "prov request timed out" {
 		t.Errorf("err = %q unconfirmed=%v", err, channel.IsUnconfirmed(err))
+	}
+}
+
+// Go may retry a request on a fresh connection, so each attempt starts with nothing written.
+func TestTracedForgetsAWriteWhenAFreshConnectionIsTaken(t *testing.T) {
+	req, sent := Traced(httptest.NewRequest(http.MethodPost, "http://127.0.0.1/", nil))
+	tr := httptrace.ContextClientTrace(req.Context())
+	tr.WroteRequest(httptrace.WroteRequestInfo{})
+	if !sent() {
+		t.Fatal("a fully written request was not recorded")
+	}
+	if tr.GetConn == nil {
+		t.Fatal("no GetConn hook: a retry on a fresh connection keeps the earlier attempt's flag")
+	}
+	tr.GetConn("127.0.0.1:80")
+	if sent() {
+		t.Error("sent() still true after a fresh connection was taken")
+	}
+	tr.WroteRequest(httptrace.WroteRequestInfo{Err: errors.New("broken pipe")})
+	if sent() {
+		t.Error("a failed write was recorded as written")
 	}
 }

@@ -179,7 +179,7 @@ func TestUnconfirmedSendIsReportedSentWithTheNote(t *testing.T) {
 	s, fk := notifySandbox(t)
 	unconfirmed(fk)
 	r := s.notify("note")
-	mustContain(t, "stdout", r.out, "phone: sent (unconfirmed: the request went out but no answer came before the deadline)")
+	mustContain(t, "stdout", r.out, "phone: sent (unconfirmed: the request went out but no complete answer came back)")
 	expect(t, r.code == ExitOK && s.entries("queue") == 0, "code=%d queued=%d; want exit 0 and nothing queued", r.code, s.entries("queue"))
 	s, fk = notifySandbox(t)
 	unconfirmed(fk)
