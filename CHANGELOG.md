@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [v0.1.0] - Unreleased
+## [v0.1.1] - 2026-10-31
+
+### Added
+
+- Bark: optional `username` and `password` secrets on a bark channel. yo-human sends them as
+  HTTP basic auth on every push, for a self-hosted bark-server that requires it. Set both or
+  neither; one alone is refused with exit 78. A 418 or 401 answer now says the server wants basic
+  auth or rejected it.
+
+### Fixed
+
+- `yo-human config init` checks that the starter log path can be written into the config before
+  it asks the human to approve a `--config` write and before it creates any directory, and it
+  refuses with exit 74.
+
+## [v0.1.0] - 2026-10-30
 
 M1, the first usable release: an agent can reach its human from the command line. This also ships
 the M0 scaffold.
