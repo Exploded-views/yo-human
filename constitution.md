@@ -2,8 +2,8 @@
 
 ### v1.2.0 — 2026-10-31
 - **Amended Principles V and VII**: the unconfirmed-send exception (#TBD)
-- **Rationale**: a Bark push that was cut off by the deadline after APNs had it was retried, and the owner got it twice. The owner chose this rule on 2026-10-31 (FU-TIMEOUT option b)
-- **Impact**: core settle, the transport trace, the result and log fields, `README.md`
+- **Rationale**: a Bark push that was cut off by the deadline after APNs had it was retried, and the owner got it twice. The owner chose this rule on 2026-10-31 and approved this text and version the same day (relayed by the orchestrator)
+- **Impact**: core settle, the transport trace, the result and log fields, `README.md` and the agent skill
 
 ### v1.1.0 — 2026-10-27
 - **Amended the preamble and Principles IV, V, VI, VII and VIII**: hosted
