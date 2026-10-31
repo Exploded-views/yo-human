@@ -125,7 +125,7 @@ func (c *pdChannel) post(ctx context.Context, ev event) error {
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return transport.TransportError(ctx, "pagerduty", err)
+		return transport.TransportError(ctx, "pagerduty", err, false)
 	}
 	defer func() { _ = resp.Body.Close() }()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))

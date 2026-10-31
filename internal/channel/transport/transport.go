@@ -21,7 +21,7 @@ import (
 // *url.Error the client returns embeds the request URL, which can hold a secret, so the raw error
 // is never returned or wrapped; only the context's own error is, so callers can test for it.
 // provider prefixes the text ("ntfy request timed out").
-func TransportError(ctx context.Context, provider string, err error) error {
+func TransportError(ctx context.Context, provider string, err error, sent bool) error {
 	var (
 		ne   net.Error
 		cert *tls.CertificateVerificationError
@@ -38,6 +38,12 @@ func TransportError(ctx context.Context, provider string, err error) error {
 		return channel.Transient(fmt.Errorf("%s server could not be reached", provider))
 	}
 	return channel.Transient(fmt.Errorf("%s request failed", provider))
+}
+
+// Traced returns req with a trace that records the request was fully written, and a func that
+// reports it.
+func Traced(req *http.Request) (*http.Request, func() bool) {
+	return req, func() bool { return false }
 }
 
 // NoRedirectClient returns a copy of base (a default client when nil) that never follows a

@@ -121,12 +121,12 @@ func (c *barkChannel) Send(ctx context.Context, m channel.Message, s channel.Sen
 func (c *barkChannel) do(ctx context.Context, req *http.Request) error {
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return transport.TransportError(ctx, "bark", err)
+		return transport.TransportError(ctx, "bark", err, false)
 	}
 	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
 	if err != nil {
-		return transport.TransportError(ctx, "bark", err)
+		return transport.TransportError(ctx, "bark", err, false)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return classify("HTTP", resp.StatusCode)

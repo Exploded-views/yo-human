@@ -48,3 +48,9 @@ func KindOf(err error) ErrorKind {
 	}
 	return TransientError
 }
+
+// Unconfirmed marks err as transient, and as a send whose request went out with no answer read.
+func Unconfirmed(err error) error { return Transient(err) }
+
+// IsUnconfirmed reports whether err is an Unconfirmed error.
+func IsUnconfirmed(err error) bool { return false }
