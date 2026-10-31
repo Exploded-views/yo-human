@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- A send that times out after its request went out is no longer retried on ntfy or Bark below a
+  paging level (a level with a critical send), so a push the server already delivered is not
+  delivered twice. The channel is reported `sent`, with `unconfirmed` in `--json` and a note in
+  the text. Paging levels, PagerDuty, and failures before the request went out retry as before.
+
 ## [v0.1.1] - 2026-10-31
 
 ### Added
@@ -84,3 +91,7 @@ the M0 scaffold.
 - README rewritten for new readers: why yo-human exists, the planned M1 CLI
   (marked as not shipped), a message-path diagram, build-from-source steps and
   the milestone roadmap. Theme-aware banner in `docs/assets/`.
+
+[Unreleased]: https://github.com/Exploded-views/yo-human/compare/v0.1.1...HEAD
+[v0.1.1]: https://github.com/Exploded-views/yo-human/compare/v0.1.0...v0.1.1
+[v0.1.0]: https://github.com/Exploded-views/yo-human/releases/tag/v0.1.0

@@ -27,6 +27,8 @@ yo-human gives every agent one tool for this. The agent decides whether you are 
 
 The [constitution](constitution.md) binds the design to a few promises. A message is written to a local queue before any send and leaves it only when a channel confirms delivery; sends that run out of retries go to a dead letter that `status` shows. The same dedup key at the same level is recorded, not sent twice. Every call returns within a deadline you set (default 1 s); if no channel answers in time, the message stays queued and the call exits 75. Levels, channels and quiet hours are configuration you own, and the core runs on free services. Config files name secrets but never hold them; values live in one local file at mode 0600 and are piped in on stdin.
 
+A send that times out after its request was fully written has an unknown outcome: the server may have delivered it. PagerDuty updates the alert by key, so it is retried. ntfy and Bark have no such dedup, so there a level with a critical send (a paging level, whatever its name) retries it, because a duplicate page beats a missed one, and every lower level does not: the channel is reported `sent`, marked `unconfirmed`, and leaves the queue. A failure before the request went out (connect, TLS) is always retried.
+
 ## Usage
 
 > [!NOTE]
