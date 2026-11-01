@@ -9,11 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- A send whose request went out but whose answer never came in full (a timeout, or a 2xx reply cut
+- A send whose request went out but whose answer never came (a timeout, or on Bark a 2xx reply cut
   off) is no longer retried on ntfy or Bark below a paging level (a level with a critical send), so
-  a push the server already delivered is not delivered twice. The channel is reported `sent`, with `unconfirmed` in `--json` and a note in
-  the text. Paging levels, PagerDuty, and failures before the request went out retry as before.
-  `log.jsonl` records the mark too.
+  a push the server already delivered is not delivered twice. The channel is reported `sent`, with
+  `unconfirmed` in `--json` and `log.jsonl` and a note in the text. Paging levels, PagerDuty, and
+  failures before the request went out retry as before.
+- Bark: an error answer whose body breaks off is classified by its status, as a whole error answer
+  is. A 5xx, 408 or 429 is still retried; any other 4xx, which was retried before, is now refused.
 
 ## [v0.1.1] - 2026-10-31
 
