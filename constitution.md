@@ -1,5 +1,10 @@
 ## Amendment Log
 
+### v1.2.0 — 2026-10-31
+- **Amended Principles V and VII**: the unconfirmed-send exception (#18)
+- **Rationale**: a Bark push that was cut off by the deadline after APNs had it was retried, and the owner got it twice. The owner chose this rule on 2026-10-31 and approved this text and version the same day (relayed by the orchestrator)
+- **Impact**: core settle, the transport trace, the result and log fields, `README.md` and the agent skill
+
 ### v1.1.0 — 2026-10-27
 - **Amended the preamble and Principles IV, V, VI, VII and VIII**: hosted
   mode is allowed as an optional always-on service, with its own layer chain,
@@ -219,10 +224,17 @@ store at once, so a second write path is how the queue gets corrupted.
 ### V. Delivery Integrity: Never Lost, Never Twice (NON-NEGOTIABLE)
 
 Every message an agent hands to yo-human MUST be either delivered or visibly
-queued, and MUST reach the human at most once per incident.
+queued (or, for the unconfirmed-send exception below, reported `sent` and
+marked `unconfirmed`), and MUST reach the human at most once per incident.
 
 - A message is written to the local queue before any send is attempted. It
-  leaves the queue only when a channel confirms delivery
+  leaves the queue only when a channel confirms delivery, with one exception:
+  a send whose request was fully written but whose answer never came
+  (unconfirmed) is not retried on a channel without provider-side dedup
+  unless its level is a paging level (a level with a critical send). It
+  leaves the queue reported `sent`, marked `unconfirmed` in the result and the
+  log. A duplicate page beats a missed one; below paging, a duplicate is the
+  worse error
 - Every `yo-human` call first sends anything still queued, within the same
   deadline (Principle VII); `yo-human flush` does the same on demand or from
   cron
@@ -232,7 +244,9 @@ queued, and MUST reach the human at most once per incident.
   runs out of retries is kept in a dead-letter view that `status` shows,
   never deleted
 - No silent error swallowing: every error is either handled specifically or
-  returned. A failed send is never reported as delivered
+  returned. A failed send is never reported as delivered; an unconfirmed
+  send (the exception above) is reported `sent` with its mark, never as
+  confirmed
 - Every page states what it needs from the human
 - **Hosted mode**: a write is committed before it is acknowledged. The first
   human answer or approval recorded for an item's revision wins; a later one
@@ -285,7 +299,8 @@ whatever the channels are doing.
 
 - Network sends happen inline under a hard deadline (default 1 s, set by the
   user in config). On timeout or failure the message stays queued (Principle V)
-  and the call exits with the "queued" code. It never waits longer
+  and the call exits with the "queued" code, except an unconfirmed send below
+  a paging level, which Principle V reports `sent`. It never waits longer
 - Commands that do no network work (`status`, enqueue, config validation)
   have p95 budgets in the tens of milliseconds, recorded in the performance
   ratchet file and measured over N runs with a recorded headroom factor
@@ -535,4 +550,4 @@ Changes to principles MUST propagate to:
 
 ---
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-25 | **Last Amended**: 2026-10-27
+**Version**: 1.2.0 | **Ratified**: 2026-10-25 | **Last Amended**: 2026-10-31

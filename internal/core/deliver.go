@@ -21,6 +21,8 @@ type logEntry struct {
 	Error      string `json:"error,omitempty"`
 	Attempts   int    `json:"attempts"`
 	ProviderID string `json:"provider_id,omitempty"`
+	// Unconfirmed marks a send reported sent that went out with no complete answer.
+	Unconfirmed bool `json:"unconfirmed,omitempty"`
 }
 
 // deliver claims one queue entry, sends it and settles it: removed when sent, back in the queue
@@ -133,25 +135,35 @@ type sendOutcome struct {
 func (b *batch) settle(ctx context.Context, o sendOutcome) (ChannelResult, error) {
 	switch {
 	case o.err == nil:
-		status := ChannelSent
-		if o.rcpt.Scheduled {
-			status = ChannelHeld // the provider delivers it later; the queue is done with it
-		}
-		res := ChannelResult{Channel: o.pl.Instance, Status: status, ProviderID: o.rcpt.ProviderID,
-			Scheduled: o.rcpt.Scheduled, attempts: o.c.Attempts + 1}
-		complete := func() error { return b.p.d.Store.Complete(o.c) }
-		err := error(nil)
-		if o.pl.Message.DedupKey != "" && !o.pl.Message.Resolved {
-			err = b.landed(ctx, o.pl, res, complete)
-		} else {
-			err = complete()
-		}
-		return b.finish(o.c, o.pl, res, err)
+		return b.settleSent(ctx, o, false)
+	case channel.IsUnconfirmed(o.err) && !b.p.retriesUnconfirmed(o.pl):
+		// The request went out and the server may have acted on it, and a repeat could be a
+		// duplicate the channel cannot catch, on a message that is not worth one: it counts as sent.
+		return b.settleSent(ctx, o, true)
 	case channel.KindOf(o.err) == channel.TransientError:
 		return b.settleTransient(ctx, o)
 	}
 	// Permanent and config errors are never retried.
 	return b.bury(o.c, o.pl, o.err.Error(), channel.KindOf(o.err) == channel.ConfigError)
+}
+
+// settleSent completes an entry whose send is done: it succeeded, or (unconfirmed) went out with no
+// answer and is not retried.
+func (b *batch) settleSent(ctx context.Context, o sendOutcome, unconfirmed bool) (ChannelResult, error) {
+	status := ChannelSent
+	if o.rcpt.Scheduled {
+		status = ChannelHeld // the provider delivers it later; the queue is done with it
+	}
+	res := ChannelResult{Channel: o.pl.Instance, Status: status, ProviderID: o.rcpt.ProviderID,
+		Scheduled: o.rcpt.Scheduled, Unconfirmed: unconfirmed, attempts: o.c.Attempts + 1}
+	complete := func() error { return b.p.d.Store.Complete(o.c) }
+	err := error(nil)
+	if o.pl.Message.DedupKey != "" && !o.pl.Message.Resolved {
+		err = b.landed(ctx, o.pl, res, complete)
+	} else {
+		err = complete()
+	}
+	return b.finish(o.c, o.pl, res, err)
 }
 
 func (b *batch) settleTransient(ctx context.Context, o sendOutcome) (ChannelResult, error) {
@@ -238,7 +250,7 @@ func (b *batch) bury(c store.Claimed, pl payload, reason string, config bool) (C
 func (b *batch) finish(c store.Claimed, pl payload, res ChannelResult, storeErr error) (ChannelResult, error) {
 	res.level = pl.Message.Level
 	logErr := b.p.d.Store.AppendLog(logEntry{At: b.now.UTC().Format("2006-01-02T15:04:05Z"), ID: pl.Message.ID,
-		Channel: res.Channel, Status: res.Status, Error: res.Error, Attempts: res.attempts, ProviderID: res.ProviderID})
+		Channel: res.Channel, Status: res.Status, Error: res.Error, Attempts: res.attempts, ProviderID: res.ProviderID, Unconfirmed: res.Unconfirmed})
 	if storeErr != nil {
 		return res, storeErr
 	}

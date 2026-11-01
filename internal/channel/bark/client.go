@@ -119,17 +119,19 @@ func (c *barkChannel) Send(ctx context.Context, m channel.Message, s channel.Sen
 
 // do sends req and maps the outcome to a channel error that carries no URL and no response text.
 func (c *barkChannel) do(ctx context.Context, req *http.Request) error {
+	req, sent := transport.Traced(req)
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return transport.TransportError(ctx, "bark", err)
+		return transport.TransportError(ctx, "bark", err, sent())
 	}
 	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
-	if err != nil {
-		return transport.TransportError(ctx, "bark", err)
-	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		// A complete status line is an answer, whatever the body does after it.
 		return classify("HTTP", resp.StatusCode)
+	}
+	if err != nil {
+		return transport.TransportError(ctx, "bark", err, true) // a 2xx whose body broke off: the push may have gone out
 	}
 	var env struct {
 		Code *int `json:"code"`

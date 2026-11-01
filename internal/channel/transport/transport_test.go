@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httptrace"
 	"strings"
 	"testing"
 	"time"
@@ -31,7 +33,7 @@ func TestTransportErrorDescribesInFixedWords(t *testing.T) {
 		"url":     &urlErr{"https://h.example/" + fakeSecret},
 	}
 	for name, cause := range cases {
-		err := TransportError(context.Background(), "prov", cause)
+		err := TransportError(context.Background(), "prov", cause, false)
 		if err == nil || channel.KindOf(err) != channel.TransientError {
 			t.Errorf("%s: err=%v kind=%v", name, err, channel.KindOf(err))
 			continue
@@ -52,14 +54,14 @@ func (e *urlErr) Error() string { return "Post " + e.url + ": connection refused
 func TestTransportErrorForContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	err := TransportError(ctx, "prov", errors.New("x "+fakeSecret))
+	err := TransportError(ctx, "prov", errors.New("x "+fakeSecret), false)
 	if channel.KindOf(err) != channel.TransientError || !errors.Is(err, context.Canceled) || strings.Contains(err.Error(), "FAKE") {
 		t.Errorf("cancelled: %v", err)
 	}
 	dctx, dcancel := context.WithTimeout(context.Background(), time.Nanosecond)
 	defer dcancel()
 	time.Sleep(time.Millisecond)
-	if err := TransportError(dctx, "prov", errors.New("x")); !errors.Is(err, context.DeadlineExceeded) || channel.KindOf(err) != channel.TransientError {
+	if err := TransportError(dctx, "prov", errors.New("x"), false); !errors.Is(err, context.DeadlineExceeded) || channel.KindOf(err) != channel.TransientError {
 		t.Errorf("deadline: %v", err)
 	}
 }
@@ -98,7 +100,7 @@ func TestTransportErrorWording(t *testing.T) {
 		"prov request failed":                           errors.New("x"),
 	}
 	for text, cause := range want {
-		if got := TransportError(context.Background(), "prov", cause).Error(); got != text {
+		if got := TransportError(context.Background(), "prov", cause, false).Error(); got != text {
 			t.Errorf("got %q, want %q", got, text)
 		}
 	}
@@ -116,5 +118,109 @@ func TestServerURL(t *testing.T) {
 		if got != want || ok != (want != "") {
 			t.Errorf("ServerURL(%q) = %q, %v; want %q", in, got, ok, want)
 		}
+	}
+}
+
+// do runs one POST through a Traced request, as a channel does, and returns the mapped error.
+func do(ctx context.Context, url string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader("{}"))
+	if err != nil {
+		return err
+	}
+	req, sent := Traced(req)
+	resp, err := NoRedirectClient(nil).Do(req)
+	if err != nil {
+		return TransportError(ctx, "prov", err, sent())
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if _, err := io.ReadAll(resp.Body); err != nil {
+		return TransportError(ctx, "prov", err, true)
+	}
+	return nil
+}
+
+func TestTimeoutAfterTheRequestWentOutIsUnconfirmed(t *testing.T) {
+	done := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+		}
+	}))
+	defer srv.Close()
+	defer close(done)
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	err := do(ctx, srv.URL)
+	if err == nil || !channel.IsUnconfirmed(err) || channel.KindOf(err) != channel.TransientError {
+		t.Errorf("err = %v, unconfirmed = %v; want a transient, unconfirmed error", err, channel.IsUnconfirmed(err))
+	}
+	if err != nil && strings.Contains(err.Error(), "127.0.0.1") {
+		t.Errorf("error text %q leaks the URL", err)
+	}
+}
+
+func TestFailureBeforeTheRequestWentOutIsNotUnconfirmed(t *testing.T) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	url := "http://" + l.Addr().String()
+	_ = l.Close() // nothing listens: connection refused
+	if err := do(context.Background(), url); err == nil || channel.IsUnconfirmed(err) {
+		t.Errorf("refused: %v unconfirmed=%v; want a plain transient error", err, channel.IsUnconfirmed(err))
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	defer srv.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := do(ctx, srv.URL); err == nil || channel.IsUnconfirmed(err) {
+		t.Errorf("cancelled before Do: %v unconfirmed=%v; want a plain transient error", err, channel.IsUnconfirmed(err))
+	}
+}
+
+func TestBodyAbortedAfterHeadersIsUnconfirmed(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		conn, rw, err := w.(http.Hijacker).Hijack()
+		if err != nil {
+			return
+		}
+		_, _ = rw.WriteString("HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\npartial")
+		_ = rw.Flush()
+		_ = conn.Close()
+	}))
+	defer srv.Close()
+	if err := do(context.Background(), srv.URL); err == nil || !channel.IsUnconfirmed(err) {
+		t.Errorf("err = %v unconfirmed=%v; want an unconfirmed error", err, channel.IsUnconfirmed(err))
+	}
+}
+
+func TestUnconfirmedUsesTheFixedWords(t *testing.T) {
+	err := TransportError(context.Background(), "prov", timeoutErr{}, true)
+	if !channel.IsUnconfirmed(err) || err.Error() != "prov request timed out" {
+		t.Errorf("err = %q unconfirmed=%v", err, channel.IsUnconfirmed(err))
+	}
+}
+
+// Go may retry a request on a fresh connection, so each attempt starts with nothing written.
+func TestTracedForgetsAWriteWhenAFreshConnectionIsTaken(t *testing.T) {
+	req, sent := Traced(httptest.NewRequest(http.MethodPost, "http://127.0.0.1/", nil))
+	tr := httptrace.ContextClientTrace(req.Context())
+	tr.WroteRequest(httptrace.WroteRequestInfo{})
+	if !sent() {
+		t.Fatal("a fully written request was not recorded")
+	}
+	if tr.GetConn == nil {
+		t.Fatal("no GetConn hook: a retry on a fresh connection keeps the earlier attempt's flag")
+	}
+	tr.GetConn("127.0.0.1:80")
+	if sent() {
+		t.Error("sent() still true after a fresh connection was taken")
+	}
+	tr.WroteRequest(httptrace.WroteRequestInfo{Err: errors.New("broken pipe")})
+	if sent() {
+		t.Error("a failed write was recorded as written")
 	}
 }

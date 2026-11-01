@@ -46,6 +46,28 @@ func TestKindedErrorKeepsCause(t *testing.T) {
 	}
 }
 
+func TestUnconfirmed(t *testing.T) {
+	base := errors.New("cut off")
+	err := channel.Unconfirmed(base)
+	if !channel.IsUnconfirmed(err) || channel.KindOf(err) != channel.TransientError {
+		t.Errorf("Unconfirmed: IsUnconfirmed = %v, KindOf = %v; want true, transient", channel.IsUnconfirmed(err), channel.KindOf(err))
+	}
+	if !errors.Is(err, base) || err.Error() != "cut off" {
+		t.Error("the unconfirmed error must keep its cause and its text")
+	}
+	if !channel.IsUnconfirmed(fmt.Errorf("send: %w", err)) {
+		t.Error("IsUnconfirmed must see through %w")
+	}
+	for _, other := range []error{base, channel.Transient(base), channel.Permanent(base), nil} {
+		if channel.IsUnconfirmed(other) {
+			t.Errorf("IsUnconfirmed(%v) = true, want false", other)
+		}
+	}
+	if channel.Unconfirmed(nil) != nil {
+		t.Error("marking nil must stay nil")
+	}
+}
+
 func TestParseInterruption(t *testing.T) {
 	for _, s := range []string{"passive", "active", "time-sensitive", "critical"} {
 		got, err := channel.ParseInterruption(s)

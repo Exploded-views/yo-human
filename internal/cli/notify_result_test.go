@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -165,4 +166,34 @@ func TestNotifyWithAResultAndAStoreProblem(t *testing.T) {
 		Errors []struct{ What string }
 	}
 	expect(t, r.code == ExitStore && r.err == "" && json.Unmarshal([]byte(r.out), &obj) == nil && obj.Status != "" && len(obj.Errors) > 0, "json: %+v object %+v", r, obj)
+}
+
+// A send that went out and got no answer, below a paging level, on a channel without dedup is not
+// retried: it is reported sent, with the note.
+func TestUnconfirmedSendIsReportedSentWithTheNote(t *testing.T) {
+	unconfirmed := func(fk fakeSet) {
+		fk["phone"].SendFunc = func(context.Context, channel.Message, channel.SendSpec) (channel.Receipt, error) {
+			return channel.Receipt{}, channel.Unconfirmed(errors.New("ntfy request timed out"))
+		}
+	}
+	s, fk := notifySandbox(t)
+	unconfirmed(fk)
+	r := s.notify("note")
+	mustContain(t, "stdout", r.out, "phone: sent (unconfirmed: the request went out but no complete answer came back)")
+	expect(t, r.code == ExitOK && s.entries("queue") == 0, "code=%d queued=%d; want exit 0 and nothing queued", r.code, s.entries("queue"))
+	s, fk = notifySandbox(t)
+	unconfirmed(fk)
+	r = s.notify("note", "--json")
+	var obj struct {
+		Channels []struct {
+			Channel, Status string
+			Unconfirmed     bool
+		}
+	}
+	expect(t, json.Unmarshal([]byte(r.out), &obj) == nil, "json: %q", r.out)
+	found := false
+	for _, c := range obj.Channels {
+		found = found || (c.Channel == "phone" && c.Status == "sent" && c.Unconfirmed)
+	}
+	expect(t, found, "channels = %+v; want phone sent with unconfirmed true", obj.Channels)
 }
