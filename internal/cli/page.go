@@ -77,14 +77,40 @@ func resolveKeyOnly(call pageCall, pos []string) error {
 	return checkKeyAs("the dedup key after --resolve", call.key)
 }
 
-// refuseLoneWord refuses a page whose only argument is "version", "help" or "-v" (any case), which
-// is a request for the version or help, not a summary. After --, the word is a summary on purpose.
+// pageFlagWords are page's own flags and the help and version flags, spelled as a caller might type
+// them after the summary. --json and --config are not here: they are global flags, taken anywhere
+// after the command before page sees its arguments.
+var pageFlagWords = map[string]bool{
+	"--low": true, "-low": true, "--check": true, "-check": true, "--resolve": true, "-resolve": true,
+	"--help": true, "-help": true, "-h": true, "--version": true, "-version": true, "-v": true,
+}
+
+// isPageFlagWord reports whether a positional argument is really a flag: Go's flag parsing stops at
+// the first positional, so a flag typed after the summary arrives here as text. Case, surrounding
+// space and an =value do not hide it.
+func isPageFlagWord(a string) bool {
+	w := strings.ToLower(strings.TrimSpace(a))
+	if name, _, ok := strings.Cut(w, "="); ok {
+		w = name
+	}
+	return pageFlagWords[w]
+}
+
+// refuseLoneWord refuses, unless -- came first, a page whose arguments hold a flag (one typed after
+// the summary, which would page with the flag as text: `page "test" --check`, meant as a dry run),
+// or whose only argument is "version" or "help" (any case), a request for information, not a
+// summary. After --, every argument is text on purpose.
 func refuseLoneWord(args, pos []string) error {
-	dashed := len(args) > len(pos) && args[len(args)-len(pos)-1] == "--"
-	if len(pos) != 1 || dashed {
+	if len(args) > len(pos) && args[len(args)-len(pos)-1] == "--" {
 		return nil
 	}
-	if w := strings.ToLower(strings.TrimSpace(pos[0])); w == "version" || w == "help" || w == "-v" {
+	for _, a := range pos {
+		if isPageFlagWord(a) {
+			return problem.Usagef("page was given %q after the summary, where it is not a flag; nothing was sent", pageUsage,
+				"put the flags before the summary (yo-human page --low \"<summary>\"); to send that text on purpose, put -- before the summary", strings.TrimSpace(a))
+		}
+	}
+	if w := strings.ToLower(strings.TrimSpace(pos[0])); len(pos) == 1 && (w == "version" || w == "help") {
 		return problem.Usagef("page was given only %q, which looks like a request for the version or help, not a summary; nothing was sent", pageUsage,
 			"to send that word as the summary on purpose, put -- before it: yo-human page -- <summary>; yo-human help prints the usage", w)
 	}
@@ -211,7 +237,7 @@ func checkModeOf(cfg *config.Config, low bool) (checkMode, error) {
 }
 
 // pageCheck prints what `page` and `page --low` would send, and sends nothing: it opens no channel,
-// flushes nothing and writes nothing, so it is safe to run anywhere.
+// flushes nothing and changes no queue entry or incident, so it is safe to run anywhere.
 func (e *env) pageCheck(cfg *config.Config) int {
 	def, err := checkModeOf(cfg, false)
 	if err != nil {
@@ -230,13 +256,16 @@ func (e *env) pageCheck(cfg *config.Config) int {
 		for i, s := range m.Sends {
 			sends[i] = s.Channel + " " + s.Interruption
 		}
+		if len(sends) == 0 {
+			sends = []string{"none"}
+		}
 		return []string{
 			fmt.Sprintf("%s level %s, ask %q", label, m.Level, m.Ask),
 			"            sends: " + strings.Join(sends, ", "),
 		}
 	}
 	lines := append(line("page:      ", def), line("page --low:", low)...)
-	lines = append(lines, "agent: "+agent)
+	lines = append(lines, "agent: "+agent+" (YO_HUMAN_AGENT wins when it is set)")
 	e.ok(lines, map[string]any{"default": def, "low": low, "agent": agent})
 	return ExitOK
 }

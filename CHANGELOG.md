@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `yo-human page version` and `page help` (any case, with or without `--low`) are usage errors (64)
   and send nothing, as `page --version` and `-v` already were; `page -- version` sends that word as
   the summary on purpose.
+- `yo-human page` refuses a page flag typed after the summary (`page "test" --check`,
+  `page x --low`) with a usage error (64), instead of paging with the flag as the details;
+  `page -- x --check` still sends that text on purpose.
 
 ### Changed
 

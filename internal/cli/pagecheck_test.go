@@ -139,7 +139,7 @@ func TestPageFlagAfterTheSummarySendsNothing(t *testing.T) {
 	for _, args := range [][]string{
 		{"page", "x", "--check"}, {"page", "x", "--low"}, {"page", "x", "-low"}, {"page", "version", "--check"},
 		{"page", "version", "--help"}, {"page", "version", "--version"}, {"page", "x", "details", "--low"},
-		{"page", "x", "--resolve=k"}, {"page", "x", "--json"}, {"page", "x", "-h"}, {"page", " --version"}, {"page", " -h"},
+		{"page", "x", "--resolve=k"}, {"page", "x", "-h"}, {"page", " --version"}, {"page", " -h"},
 		{"page", "x", " --CHECK "},
 	} {
 		r := s.do("", args...)

@@ -137,7 +137,7 @@ yo-human page --check
 ```
 
 Default is the "need the human now" service; `--low` is for "CI/CD broken while production is up".
-Put `--low` before the summary. Exit codes are the same as above. A trigger prints the key it used
+Put `--low` before the summary: a flag after it is refused (64) and nothing is sent. Exit codes are the same as above. A trigger prints the key it used
 on a `key:` line (`dedup_key` in `--json`), so a page sent without a key can still be resolved.
 `page --check` prints which level each mode maps to and what each sends, and sends nothing; run it
 before relying on a migrated host.
