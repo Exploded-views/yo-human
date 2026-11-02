@@ -86,7 +86,8 @@ func noTriggerAfterResolve(t *testing.T, calls []string) {
 
 var temporary = func(error) error { return channel.Transient(errors.New("down")) }
 
-// A trigger waiting for its retry is gone once its incident is resolved.
+// A trigger waiting for its retry is gone once its incident is resolved. The channel never reached
+// the human (its one send failed), so the resolve has nothing to tell it: no resolve or note is due.
 func TestRetryingTriggerIsNotSentAfterResolve(t *testing.T) {
 	e := newEnv(t, incCfg(0, "a"), one)
 	log := recordCalls(e.fakes["a"], func(channel.Message) error { return temporary(nil) }, nil)
@@ -160,10 +161,11 @@ func TestTriggerInFlightElsewhereEndsWithResolve(t *testing.T) {
 	caps := map[string]channel.Capabilities{"a": {ReachesHuman: true, NativeDedup: true, Resolve: true}}
 	e := newEnv(t, incCfg(0, "a"), caps)
 	started, release := make(chan struct{}), make(chan struct{})
+	var startedOnce sync.Once
 	log := &callLog{}
 	e.fakes["a"].SendFunc = func(_ context.Context, m channel.Message, s channel.SendSpec) (channel.Receipt, error) {
 		log.add("send:" + m.DedupKey + ":" + m.Title)
-		close(started)
+		startedOnce.Do(func() { close(started) })
 		<-release
 		return channel.Receipt{Instance: s.Instance}, nil
 	}
@@ -198,7 +200,8 @@ func TestTriggerInFlightElsewhereEndsWithResolve(t *testing.T) {
 
 // One flush over several keys with several workers keeps each key's calls in queue order. The store
 // holds, for one key, a resolve note of the closed generation and a trigger of the next at once:
-// both are due, and the note must not follow the trigger.
+// both are due, and the stale note must not be sent at all: it is dropped when claimed, so each key's
+// calls are the first trigger, the note that failed, the new trigger that failed, and its retry.
 func TestFlushWorkersKeepPerKeyOrder(t *testing.T) {
 	caps := map[string]channel.Capabilities{"a": {ReachesHuman: true, NativeDedup: true, Resolve: true}}
 	e := newEnvW(t, incCfg(0, "a"), caps, 4)
@@ -228,8 +231,9 @@ func TestFlushWorkersKeepPerKeyOrder(t *testing.T) {
 	}
 	for _, k := range keys {
 		calls := log.forKey(k)
-		if n := len(calls); n == 0 || calls[n-1] != "send:"+k+":"+k+" second" {
-			t.Errorf("key %s: calls = %v; the last must be the new trigger", k, calls)
+		want := []string{"send:" + k + ":" + k + " first", "resolve:" + k, "send:" + k + ":" + k + " second", "send:" + k + ":" + k + " second"}
+		if !slices.Equal(calls, want) {
+			t.Errorf("key %s: calls = %v; want %v", k, calls, want)
 		}
 	}
 }
