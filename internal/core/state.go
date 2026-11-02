@@ -104,6 +104,79 @@ func (s *State) Reached(cfg *config.Config, key string, at time.Time) ([]Reach, 
 	return out, nil
 }
 
+// SourceKind says what a shim `page --resolve` has to close: see State.ResolveSource.
+type SourceKind int
+
+// The sources of a shim resolve, in the order ResolveSource looks for them.
+const (
+	SourceOpen     SourceKind = iota // an open incident under the project: resolve it
+	SourceOther                      // none there, one open under exactly one other project: resolve that one
+	SourceSeveral                    // none there, open under two or more other projects: ambiguous
+	SourceRecorded                   // none open, but a record lists where the key was delivered
+	SourceNone                       // never seen, or nothing recorded: resolve everywhere that can
+)
+
+// ResolveSource is what ResolveSource found: the projects to name (SourceOther: the one to close;
+// SourceSeveral: all of them, sorted), or where the record delivered (SourceRecorded).
+type ResolveSource struct {
+	Kind     SourceKind
+	Projects []string
+	Reached  []Reach
+}
+
+// ResolveSource looks up what a shim resolve of key, for project, has to close. An open incident is
+// one not silent for longer than incident_ttl at at. Other projects' incidents are looked for by the
+// bare key: the shim's trigger and resolve may run under different YO_HUMAN_PROJECT values. A
+// record of the project's own that is closed, or expired and still marked open, still lists the
+// destinations that delivered (the incident record keeps them until it is pruned), and those are
+// returned in the order they were recorded.
+func (s *State) ResolveSource(cfg *config.Config, project, key string, at time.Time) (ResolveSource, error) {
+	incs, err := s.incidents()
+	if err != nil {
+		return ResolveSource{}, err
+	}
+	live := func(inc store.Incident) bool { return inc.Open && at.Sub(inc.LastSent) <= cfg.IncidentTTL }
+	own, held := incs[IncidentKey(project, key)]
+	if held && live(own) {
+		return ResolveSource{Kind: SourceOpen}, nil
+	}
+	others := openElsewhere(incs, project, key, live)
+	switch {
+	case len(others) == 1:
+		return ResolveSource{Kind: SourceOther, Projects: others}, nil
+	case len(others) > 1:
+		return ResolveSource{Kind: SourceSeveral, Projects: others}, nil
+	}
+	return recordedSource(own), nil
+}
+
+// openElsewhere lists, sorted, the other projects that hold a live incident for the bare key.
+func openElsewhere(incs map[string]store.Incident, project, key string, live func(store.Incident) bool) []string {
+	var out []string
+	for id, inc := range incs {
+		if inc.Key == key && inc.Project != project && id == IncidentKey(inc.Project, inc.Key) && live(inc) {
+			out = append(out, inc.Project)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// recordedSource is the source for a project's own record that is not open: SourceRecorded when it
+// lists a destination that delivered, otherwise SourceNone.
+func recordedSource(rec store.Incident) ResolveSource {
+	var reached []Reach
+	for _, r := range rec.Reached {
+		if len(r.Delivered) > 0 {
+			reached = append(reached, Reach{Instance: r.Instance, Delivered: true})
+		}
+	}
+	if len(reached) == 0 {
+		return ResolveSource{Kind: SourceNone}
+	}
+	return ResolveSource{Kind: SourceRecorded, Reached: reached}
+}
+
 // CreateFile writes a new file holding data, mode 0600, and fails with an error wrapping
 // fs.ErrExist if anything is already at path. A reader never sees a partial file.
 func CreateFile(path string, data []byte) error { return store.WriteFileExclusive(path, data, 0o600) }

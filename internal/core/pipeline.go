@@ -325,6 +325,8 @@ type batch struct {
 	errs  []error
 	more  []ChannelResult // results of sends admitted from the queue during the batch
 	warns []error         // warnings of those admissions
+
+	prior store.Incident // the record closeIncident found for the key before it closed it; zero when there was none
 }
 
 func (b *batch) fail(err error) {

@@ -131,11 +131,14 @@ func TestPageResolvePassThroughPermanentRefusal(t *testing.T) {
 func TestPageResolveNoResolveCapableInstance(t *testing.T) {
 	s, fk := passThroughSandbox(t)
 	body := strings.Replace(passThroughShim, "default: { level: page,", "default: { level: note,", 1)
+	body = strings.Replace(body, "low:     { level: low-page,", "low:     { level: note,", 1)
 	write(t, s.userConfig(), strings.Replace(notifyConfigBody, "  journal: {", "  pager2: { type: pagerduty, routing_key: { secret: pd-low } }\n  journal: {", 1)+body)
-	r := s.do("", "page", "--resolve", "k")
-	expect(t, r.code == ExitFailed && strings.HasPrefix(r.out, "RESULT failed "), "page --resolve: %+v; want failed, exit 69, never a silent 0", r)
-	mustContain(t, "stderr", r.err, "note", "error:", "valid:", "fix:")
-	expect(t, len(fk["phone"].Sent) == 0 && len(fk["journal"].Sent) == 0 && len(fk["pager"].Resolved) == 0, "something was sent")
+	for _, args := range [][]string{{"page", "--resolve", "k"}, {"page", "--low", "--resolve", "k"}} {
+		r := s.do("", args...)
+		expect(t, r.code == ExitFailed && strings.HasPrefix(r.out, "RESULT failed "), "%v: %+v; want failed, exit 69, never a silent 0", args, r)
+		mustContain(t, "stderr", r.err, "level note", "error:", "valid:", "fix:")
+	}
+	expect(t, len(fk["phone"].Sent) == 0 && len(fk["journal"].Sent) == 0 && len(fk["pager"].Resolved) == 0 && len(fk["pager2"].Resolved) == 0, "something was sent")
 }
 
 func TestResolveCommandUnchangedForUnknownKey(t *testing.T) {

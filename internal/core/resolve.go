@@ -75,6 +75,9 @@ func (b *batch) closeIncident(key string) (inc store.Incident, gone []store.Pend
 	err = b.p.d.Store.WithIncidents(func(incs map[string]*store.Incident) error {
 		b.p.pruneClosed(incs, b.now)
 		cur := incs[key]
+		if cur != nil {
+			b.prior = *cur
+		}
 		switch {
 		case cur == nil:
 			project, bare := splitIncidentKey(key)
