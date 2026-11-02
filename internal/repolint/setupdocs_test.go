@@ -135,6 +135,18 @@ func TestRepoSetupPages(t *testing.T) {
 	}
 }
 
+func TestBarkSetupSuggestsLongerDeadline(t *testing.T) {
+	md, err := os.ReadFile("../../docs/setup/bark.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"deadline: 3s", "cold"} {
+		if !strings.Contains(string(md), want) {
+			t.Errorf("docs/setup/bark.md does not contain %q", want)
+		}
+	}
+}
+
 func contains(l []string, s string) bool {
 	for _, x := range l {
 		if x == s {
