@@ -86,7 +86,7 @@ func openUnder(s *sandbox, t *testing.T, key string, projects ...string) {
 
 // With a project set, --resolve never looks at another project: its incident stays open, and the
 // resolve takes the pass-through path with the key in this project's namespace.
-func TestPageResolveOtherProjectSingleMatch(t *testing.T) {
+func TestPageResolveOtherProjectSingleMatchStaysClosedToAProjectCaller(t *testing.T) {
 	s, fk := passThroughSandbox(t)
 	openUnder(s, t, "shared", "alpha")
 	t.Setenv("YO_HUMAN_PROJECT", "beta")
@@ -182,6 +182,8 @@ func TestPageResolvePassThroughPermanentRefusal(t *testing.T) {
 	r := s.do("", "page", "--resolve", "refused-key")
 	expect(t, r.code == ExitFailed && strings.HasPrefix(r.out, "RESULT failed "), "page --resolve: %+v; want failed, exit 69", r)
 	mustContain(t, "stderr", r.err, "refused-key", "pager")
+	j := s.do("", "page", "--resolve", "refused-key2", "--json")
+	mustNotContain(t, "json", j.out, "\\u0000", "\x00") // the store's internal key never reaches the output
 	expect(t, s.entries("queue") == 0, "queue holds %d entries; a refused close is not retried", s.entries("queue"))
 }
 
@@ -216,4 +218,42 @@ func TestPageResolveShimLevelUnknown(t *testing.T) {
 	write(t, s.userConfig(), strings.Replace(notifyConfigBody, "  journal: {", "  pager2: { type: pagerduty, routing_key: { secret: pd-low } }\n  journal: {", 1)+body)
 	r := s.do("", "page", "--resolve", "k")
 	expect(t, r.code == ExitConfig && !strings.HasPrefix(r.out, "RESULT resolved") && len(fk["pager"].Resolved) == 0, "page --resolve: %+v; want exit 78 and nothing sent", r)
+}
+
+// A closed record that has outlived incident_ttl but was not pruned yet is no record: the key is
+// resolved on the shim level's instances, never a silent 0 that sent nothing.
+func TestPageResolveClosedRecordPastTTLFallsToRule5(t *testing.T) {
+	s, fk := passThroughSandbox(t)
+	s.do("", "page", "db down", "d", "k1")
+	s.do("", "page", "--resolve", "k1")
+	s.advance(25 * time.Hour)
+	r := s.do("", "page", "--resolve", "k1")
+	expect(t, r.code == ExitOK && strings.HasPrefix(r.out, "RESULT resolved "), "page --resolve: %+v; want resolved, exit 0", r)
+	expect(t, sameKeys(fk["pager"].Resolved, "7:unknown/k1", "k1"), "pager resolved %v; want the bare key sent the second time", fk["pager"].Resolved)
+}
+
+// Re-resolving a key already closed re-sends the idempotent PagerDuty resolve, but tells the human
+// nothing more: no passive note to ntfy.
+func TestPageResolveClosedRecordSendsNoPassiveNote(t *testing.T) {
+	s, fk := passThroughSandbox(t)
+	s.do("", "page", "db down", "d", "k2")
+	s.do("", "page", "--resolve", "k2")
+	for i := 0; i < 2; i++ {
+		r := s.do("", "page", "--resolve", "k2")
+		expect(t, r.code == ExitOK && strings.HasPrefix(r.out, "RESULT resolved "), "repeat %d: %+v; want resolved, exit 0", i, r)
+	}
+	expect(t, len(fk["pager"].Resolved) == 3, "pager resolved %v; want the resolve each time", fk["pager"].Resolved)
+	expect(t, len(fk["phone"].Sent) == 2, "phone got %d sends; want the page and one resolve note only", len(fk["phone"].Sent))
+}
+
+// An expired record whose instance has left the config cannot be closed now: the close waits in the
+// queue, and the result says so instead of resolved.
+func TestPageResolveExpiredRecordOfARemovedInstanceIsQueued(t *testing.T) {
+	s, _ := passThroughSandbox(t)
+	s.do("", "page", "--low", "ci", "d", "k3")
+	s.advance(25 * time.Hour)
+	body := strings.Replace(passThroughShim, "{ channel: pager2, interruption: active }", "{ channel: phone, interruption: active }", 1)
+	write(t, s.userConfig(), notifyConfigBody+body)
+	r := s.do("", "page", "--resolve", "k3")
+	expect(t, r.code == ExitConfig && strings.HasPrefix(r.out, "RESULT queued "), "page --resolve: %+v; want queued beside the config problem (78)", r)
 }

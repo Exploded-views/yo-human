@@ -141,8 +141,8 @@ func TestResolveThroughUsesTheRecordedInstances(t *testing.T) {
 	if err != nil || r.Status != core.StatusResolved {
 		t.Fatalf("ResolveThrough = %q, %v; want resolved", r.Status, err)
 	}
-	if len(e.fakes["a"].Resolved) != 2 || len(e.fakes["n"].Sent) != 3 {
-		t.Errorf("a resolved %v, n got %d sends; want the closed record's instances told again", e.fakes["a"].Resolved, len(e.fakes["n"].Sent))
+	if len(e.fakes["a"].Resolved) != 2 || len(e.fakes["n"].Sent) != 2 {
+		t.Errorf("a resolved %v, n got %d sends; want the resolver told again and no second passive note", e.fakes["a"].Resolved, len(e.fakes["n"].Sent))
 	}
 }
 
@@ -205,5 +205,13 @@ func TestResolveThroughStoreFailures(t *testing.T) {
 	}
 	if _, err := through(e, "k", "a"); err == nil {
 		t.Error("a failing recovery went unreported")
+	}
+}
+
+func TestResolveThroughWithNothingToSendFails(t *testing.T) {
+	e := newEnv(t, incCfg(0, "a"), closer)
+	r, err := through(e, "k")
+	if pr, ok := problem.As(err); !ok || pr.Kind != problem.Unavailable || r.Status != core.StatusFailed {
+		t.Errorf("ResolveThrough = %q, %v; want failed: a resolve that sent nothing is never a success", r.Status, err)
 	}
 }
