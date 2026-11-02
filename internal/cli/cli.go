@@ -27,6 +27,7 @@ commands:
   resolve --dedup-key <key>        close an incident
   page [--low] <summary> [details] [dedup-key] | page [--low] --resolve <dedup-key>
                                    the drop-in for the old paging script, mapped by the config's shim: block
+  page --check                     print the shim's level, ask and sends for each mode, and send nothing
   flush                            send whatever is queued and due
   status                           the queue, the dead letter and the open incidents
   channel test <instance>          send one test message through one channel

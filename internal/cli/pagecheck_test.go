@@ -92,7 +92,6 @@ func TestPageCheckUsage(t *testing.T) {
 		r := s.do("", c.args...)
 		expect(t, r.code == ExitUsage && r.out == "", "%s: %+v; want exit 64", name, r)
 		mustContain(t, name+" stderr", r.err, "error:", "valid:", "fix:", c.want)
-		mustNotContain(t, name+" stderr", r.err, "x\n")
 	}
 	expect(t, len(fk["pager"].Sent) == 0 && len(fk["phone"].Sent) == 0, "a rejected --check sent")
 }

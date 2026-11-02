@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 	"unicode/utf8"
@@ -15,12 +16,13 @@ import (
 	"github.com/Exploded-views/yo-human/internal/problem"
 )
 
-const pageUsage = `yo-human page [--low] "<summary>" [details] [dedup-key]   or   yo-human page [--low] --resolve <dedup-key>`
+const pageUsage = `yo-human page [--low] "<summary>" [details] [dedup-key]   or   yo-human page [--low] --resolve <dedup-key>   or   yo-human page --check`
 
 // pageCall is a validated page: either a message to send, or a key to resolve.
 type pageCall struct {
 	low     bool
 	resolve bool
+	check   bool
 	key     string
 	msg     channel.Message
 }
@@ -31,14 +33,22 @@ func (e *env) parsePage(args []string) (pageCall, error) {
 	fs := newFlags("page")
 	low := fs.Bool("low", false, "")
 	resolve := fs.String("resolve", "", "")
+	check := fs.Bool("check", false, "")
 	if err := fs.Parse(args); errors.Is(err, flag.ErrHelp) {
 		return pageCall{}, errHelp
 	} else if err != nil {
 		return pageCall{}, problem.Usagef("%s was given a flag it does not know, or a flag with no value (the text is not echoed)", pageUsage,
-			`use only --low and --resolve <dedup-key>, before the summary; use -- before a summary that starts with "-"`, "page")
+			`use only --low, --resolve <dedup-key> and --check, before the summary; use -- before a summary that starts with "-"`, "page")
 	}
 	call := pageCall{low: *low, resolve: setFlags(fs)["resolve"]}
 	pos := fs.Args()
+	if *check {
+		call.check = true
+		if len(pos) > 0 || call.low || call.resolve {
+			return call, problem.Usagef("page --check takes no other argument and no other flag", pageUsage, "run `yo-human page --check` on its own; it prints the shim's mapping and sends nothing")
+		}
+		return call, nil
+	}
 	if call.resolve {
 		if len(pos) > 0 {
 			return call, problem.Usagef("page --resolve takes a key and nothing else", pageUsage, "run `yo-human page --resolve <dedup-key>`")
@@ -122,6 +132,9 @@ func cmdPage(e *env, args []string) int {
 	if cfg.Shim == nil {
 		return e.fail(noShim())
 	}
+	if call.check {
+		return e.pageCheck(cfg)
+	}
 	if call.resolve {
 		proj, err := sourceArg("--project", "", "YO_HUMAN_PROJECT")
 		if err != nil {
@@ -135,6 +148,71 @@ func cmdPage(e *env, args []string) int {
 	}
 	call.msg.Level, call.msg.Ask, call.msg.Agent = mode.Level, flatLine(mode.Ask), pageAgent(cfg)
 	return e.sendNotify(cfg, st, notifyCall{level: mode.Level, msg: call.msg, askPath: askPath, showKey: true})
+}
+
+// checkSend and checkMode are the JSON shapes of `page --check`: instance names and interruptions
+// only, never a server, topic, key or path.
+type checkSend struct {
+	Channel      string `json:"channel"`
+	Interruption string `json:"interruption"`
+}
+
+type checkMode struct {
+	Level string      `json:"level"`
+	Ask   string      `json:"ask"`
+	Sends []checkSend `json:"sends"`
+}
+
+// checkModeOf is what one mode of the shim sends: its level, ask and the level's sends in config
+// order. It reads the config only.
+func checkModeOf(cfg *config.Config, low bool) (checkMode, error) {
+	mode, path, err := shimModeOf(cfg.Shim, low)
+	if err != nil {
+		return checkMode{}, err
+	}
+	out := checkMode{Level: mode.Level, Ask: flatLine(mode.Ask), Sends: []checkSend{}}
+	for _, l := range cfg.Levels {
+		if l.Name != mode.Level {
+			continue
+		}
+		for _, s := range l.Send {
+			out.Sends = append(out.Sends, checkSend{Channel: s.Channel, Interruption: string(s.Interruption)})
+		}
+		return out, nil
+	}
+	return out, problem.Configf("%s names no level in the config", "a level name from the config",
+		"set "+strings.TrimSuffix(path, ".ask")+".level to one of the names under levels", strings.TrimSuffix(path, ".ask"))
+}
+
+// pageCheck prints what `page` and `page --low` would send, and sends nothing: it opens no channel,
+// flushes nothing and writes nothing, so it is safe to run anywhere.
+func (e *env) pageCheck(cfg *config.Config) int {
+	def, err := checkModeOf(cfg, false)
+	if err != nil {
+		return e.fail(err)
+	}
+	low, err := checkModeOf(cfg, true)
+	if err != nil {
+		return e.fail(err)
+	}
+	agent := flatLine(cfg.Shim.Agent)
+	if agent == "" {
+		agent = "unknown"
+	}
+	line := func(label string, m checkMode) []string {
+		sends := make([]string, len(m.Sends))
+		for i, s := range m.Sends {
+			sends[i] = s.Channel + " " + s.Interruption
+		}
+		return []string{
+			fmt.Sprintf("%s level %s, ask %q", label, m.Level, m.Ask),
+			"            sends: " + strings.Join(sends, ", "),
+		}
+	}
+	lines := append(line("page:      ", def), line("page --low:", low)...)
+	lines = append(lines, "agent: "+agent)
+	e.ok(lines, map[string]any{"default": def, "low": low, "agent": agent})
+	return ExitOK
 }
 
 // randomHex is n random bytes in hex: the suffix that makes the shim's default key its own, so two
