@@ -2,9 +2,10 @@
 // time exceeds the budget in perf-budgets.json. CI=true applies the headroom.
 //
 // Each command scenario first runs once untimed, so cold caches do not count. A scenario whose p95
-// is over budget is measured once more, from a fresh temp dir; it fails only if that is over
-// budget too, so a one-off runner stall passes while a real regression fails both. Both p95s are
-// printed, and appended to $GITHUB_STEP_SUMMARY when it is set.
+// is over budget is measured once more, from a fresh temp dir, after every scenario has been
+// measured once and a 5s pause, so one runner stall cannot cover both measurements. It fails only
+// if that is over budget too, so a one-off runner stall passes while a real regression fails
+// both. Both p95s are printed, and appended to $GITHUB_STEP_SUMMARY when it is set.
 //
 // Exit codes: 0 within budget, 1 over budget, 2 usage or a scenario that could not run.
 package main
@@ -116,46 +117,45 @@ func runWith(args []string, stdout, stderr io.Writer, scs []Scenario, ci bool, m
 	return 0
 }
 
-// measureAll measures every scenario, re-measuring a budget miss once, and returns the samples
-// each scenario is judged by plus the first p95 of each re-measured one.
+// measureAll measures every scenario once, in order. It then pauses once and re-measures each one
+// that missed, in the same order: a miss must reproduce, and the pause keeps one runner stall from
+// covering both measurements. It returns the samples each scenario is judged by plus the first p95
+// of each re-measured one.
 func measureAll(stdout, stderr io.Writer, scs []Scenario, b Budgets, ci bool, measure measureFunc) (map[string][]time.Duration, map[string]time.Duration, error) {
 	results := map[string][]time.Duration{}
 	firstMiss := map[string]time.Duration{}
+	var missed []Scenario
 	for _, s := range scs {
-		samples, first, err := measureOne(stdout, stderr, s, b, ci, measure)
+		samples, err := measure(s, b.Runs)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%s: %w", s.Name, err)
 		}
-		if first > 0 {
-			firstMiss[s.Name] = first
+		_, _ = fmt.Fprintf(stdout, "%s: p95 %s, budget %dms (ci=%t)\n", s.Name, ms(P95(samples)), b.Budgets[s.Name].P95Ms, ci)
+		results[s.Name] = samples
+		if OverBudget(s.Name, samples, b, ci) {
+			firstMiss[s.Name] = P95(samples)
+			missed = append(missed, s)
+		}
+	}
+	if len(missed) == 0 {
+		return results, firstMiss, nil
+	}
+	_, _ = fmt.Fprintf(stdout, "re-measuring %d over-budget scenario(s) after a %s pause\n", len(missed), remeasurePause)
+	pause(remeasurePause)
+	for _, s := range missed {
+		samples, err := measure(s, b.Runs)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%s: %w", s.Name, err)
+		}
+		again := OverBudget(s.Name, samples, b, ci)
+		budgetMs := b.Budgets[s.Name].P95Ms
+		_, _ = fmt.Fprintf(stdout, "%s: over budget, re-measured: p95 %s (%s)\n", s.Name, ms(P95(samples)), remeasureVerdict(again))
+		if err := appendSummary(os.Getenv("GITHUB_STEP_SUMMARY"), s.Name, firstMiss[s.Name], P95(samples), budgetMs, again); err != nil {
+			_, _ = fmt.Fprintln(stderr, "perf: step summary:", err)
 		}
 		results[s.Name] = samples
 	}
 	return results, firstMiss, nil
-}
-
-// measureOne measures s and, when it is over budget, once more, fresh: a miss must reproduce. It
-// returns the samples s is judged by, and the first p95 when it was re-measured (zero otherwise).
-func measureOne(stdout, stderr io.Writer, s Scenario, b Budgets, ci bool, measure measureFunc) ([]time.Duration, time.Duration, error) {
-	samples, err := measure(s, b.Runs)
-	if err != nil {
-		return nil, 0, err
-	}
-	budgetMs := b.Budgets[s.Name].P95Ms
-	_, _ = fmt.Fprintf(stdout, "%s: p95 %s, budget %dms (ci=%t)\n", s.Name, ms(P95(samples)), budgetMs, ci)
-	if !OverBudget(s.Name, samples, b, ci) {
-		return samples, 0, nil
-	}
-	first := P95(samples)
-	if samples, err = measure(s, b.Runs); err != nil {
-		return nil, 0, err
-	}
-	again := OverBudget(s.Name, samples, b, ci)
-	_, _ = fmt.Fprintf(stdout, "%s: over budget, re-measured: p95 %s (%s)\n", s.Name, ms(P95(samples)), remeasureVerdict(again))
-	if err := appendSummary(os.Getenv("GITHUB_STEP_SUMMARY"), s.Name, first, P95(samples), budgetMs, again); err != nil {
-		_, _ = fmt.Fprintln(stderr, "perf: step summary:", err)
-	}
-	return samples, first, nil
 }
 
 func remeasureVerdict(stillOver bool) string {
