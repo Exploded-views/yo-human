@@ -1,5 +1,6 @@
 # Pre-commit runs the fast gates every commit must pass, a RED commit (a deliberately failing
-# test) included: so it runs no tests. Pre-push runs the tests: a RED commit is never pushed as a
+# test) included: so it runs no tests, and its lint reports only new issues (pre-push also lints
+# every touched package in full). Pre-push runs the tests: a RED commit is never pushed as a
 # branch tip on its own, so a push always carries its fix. `make ci` runs everything, the
 # full-history secret scan and the perf budgets included. Never --no-verify.
 pre-commit:
@@ -20,3 +21,5 @@ pre-push:
   commands:
     test:
       run: go test -race ./...
+    lint:
+      run: sh scripts/lint-touched.sh {push_files}
