@@ -1,8 +1,9 @@
 #!/bin/sh
 # lint-touched.sh [file...]: lint.sh on each Go package the given files belong to, once each. The
-# package of an argument ending in .go is its directory; a directory that no longer exists (its
-# file was deleted) is skipped. With no Go package left it prints that and exits 0 without running
-# lint.sh. The pre-push hook passes the files a push touches, so every touched package is linted in
+# package of an argument ending in .go is its directory. Skipped: a directory that no longer exists
+# or holds no .go file (its files were deleted), and a directory the go tool ignores (testdata, or
+# a path element starting with _ or .). With no Go package left it prints that and exits 0 without
+# running lint.sh. The pre-push hook passes the files a push touches, so every touched package is linted in
 # full, not only the lines the push changed. Paths with spaces are passed through intact.
 # Exit: lint.sh's exit code (0 clean, 1 issues, 2 golangci-lint failed), or 0 when no Go package
 # is left.
@@ -14,6 +15,13 @@ for f in "$@"; do
   case $f in *.go) ;; *) continue ;; esac
   d=$(dirname -- "$f")
   [ -d "$d" ] || continue
+  case /$d/ in */testdata/* | */[._][!/]*) continue ;; esac
+  # golangci-lint fails on a directory with no Go file, so one with none left is skipped.
+  has=
+  for g in "$d"/*.go; do
+    if [ -e "$g" ]; then has=1; break; fi
+  done
+  [ -n "$has" ] || continue
   case $list in *"$nl./$d$nl"*) continue ;; esac
   list="$list./$d$nl"
 done
