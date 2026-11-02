@@ -77,12 +77,14 @@ func resolveKeyOnly(call pageCall, pos []string) error {
 	return checkKeyAs("the dedup key after --resolve", call.key)
 }
 
-// pageFlagWords are page's own flags and the help and version flags, spelled as a caller might type
-// them after the summary. --json and --config are not here: they are global flags, taken anywhere
-// after the command before page sees its arguments.
+// pageFlagWords are page's own flags, the help and version flags, and the global --json and
+// --config, spelled as a caller might type them among page's arguments. The exact global forms
+// (`--json`, `--config <file>`) are taken out before page sees its arguments, so one that arrives
+// here is a near miss (`-json`, `--JSON`, `--json=true`, `-config f`) and must not page.
 var pageFlagWords = map[string]bool{
 	"--low": true, "-low": true, "--check": true, "-check": true, "--resolve": true, "-resolve": true,
 	"--help": true, "-help": true, "-h": true, "--version": true, "-version": true, "-v": true,
+	"--json": true, "-json": true, "--config": true, "-config": true,
 }
 
 // isPageFlagWord reports whether a positional argument is really a flag: Go's flag parsing stops at
@@ -106,7 +108,7 @@ func refuseLoneWord(args, pos []string) error {
 	}
 	for _, a := range pos {
 		if isPageFlagWord(a) {
-			return problem.Usagef("page was given %q after the summary, where it is not a flag; nothing was sent", pageUsage,
+			return problem.Usagef("page was given %q among its arguments, where it is not read as a flag; nothing was sent", pageUsage,
 				"put the flags before the summary (yo-human page --low \"<summary>\"); to send that text on purpose, put -- before the summary", strings.TrimSpace(a))
 		}
 	}

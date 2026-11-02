@@ -140,13 +140,14 @@ func TestPageFlagAfterTheSummarySendsNothing(t *testing.T) {
 		{"page", "x", "--check"}, {"page", "x", "--low"}, {"page", "x", "-low"}, {"page", "version", "--check"},
 		{"page", "version", "--help"}, {"page", "version", "--version"}, {"page", "x", "details", "--low"},
 		{"page", "x", "--resolve=k"}, {"page", "x", "-h"}, {"page", " --version"}, {"page", " -h"},
-		{"page", "x", " --CHECK "},
+		{"page", "x", " --CHECK "}, {"page", "x", "-json"}, {"page", "x", "--JSON"}, {"page", "x", "--json=true"},
+		{"page", "x", "-config", "f"},
 	} {
 		r := s.do("", args...)
 		expect(t, r.code == ExitUsage, "%v: %+v; want exit 64", args, r)
 	}
 	r := s.do("", "page", "x", "--check")
-	mustContain(t, "stderr", r.err, "error:", "before the summary", "--")
+	mustContain(t, "stderr", r.err, "error:", "among its arguments", "before the summary", "--")
 	for name, f := range fk {
 		expect(t, len(f.Sent) == 0, "channel %s was called %d times", name, len(f.Sent))
 	}
@@ -188,5 +189,16 @@ func TestPageCheckModeProblems(t *testing.T) {
 		if code != ExitConfig || !strings.Contains(errb.String(), c.want) || out.String() != "" {
 			t.Errorf("%s: exit %d, stdout %q, stderr %q; want exit 78 naming %q", c.name, code, out.String(), errb.String(), c.want)
 		}
+	}
+}
+
+// A level with no sends (built by hand; the loader requires one) shows `sends: none`, not an empty list.
+func TestPageCheckLevelWithNoSends(t *testing.T) {
+	var out, errb strings.Builder
+	e := &env{stdout: &out, stderr: &errb}
+	shim := config.Shim{Default: config.ShimMode{Level: "quiet"}, Low: config.ShimMode{Level: "quiet"}}
+	code := e.pageCheck(&config.Config{Levels: []config.Level{{Name: "quiet"}}, Shim: &shim})
+	if code != ExitOK || strings.Count(out.String(), "sends: none") != 2 {
+		t.Errorf("exit %d, stdout %q, stderr %q; want exit 0 and `sends: none` for both modes", code, out.String(), errb.String())
 	}
 }
