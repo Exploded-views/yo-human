@@ -32,6 +32,8 @@ with the merge base of HEAD and `BASE` (default `origin/main`; pass
 When the base commit has no floors or budgets file, that comparison is skipped,
 as in CI. `make ci` alone needs no base.
 
+`make cover` runs the tests with coverage and fails when a package is below its floor in `coverage-floors.json`, which is the same check CI runs.
+
 Perf runs each command scenario once untimed first (the hosted `Sample`
 scenarios time their own calls), and a scenario that misses its budget is
 re-measured once from a fresh temp dir. Only a miss on both fails, so a one-off

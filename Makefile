@@ -6,7 +6,7 @@ VERSION := $(shell git describe --tags --always --dirty | sed 's/^v//')
 COMMIT  := $(shell git rev-parse --short=12 HEAD)
 LDFLAGS := -s -w -X $(MODULE)/internal/version.Version=$(VERSION) -X $(MODULE)/internal/version.Commit=$(COMMIT)
 
-.PHONY: build smoke test e2e nohooks nodeps lint lint-rules-test release-net-check tools hooks hooks-check hooks-test workflows ci ci-base cover floors perf secrets secrets-test scripts-test vuln release-check
+.PHONY: build smoke test e2e nohooks nodeps lint lint-rules-test release-net-check tools hooks hooks-check hooks-test workflows ci ci-base cover cover-profile floors perf secrets secrets-test scripts-test vuln release-check
 
 # The release's settings: CGO_ENABLED=0; no GOFLAGS, GOEXPERIMENT, GOAMD64, GOARM64 or go env
 # file from the developer's setup; no go.work.
@@ -87,12 +87,14 @@ hooks-test:
 workflows:
 	sed 's/  # .*//' tools/check-workflows.sha256 | shasum -a 256 -c - && python3 tools/check-workflows.py
 
-cover:
+cover: floors
+
+cover-profile:
 	mkdir -p .cache
 	go list ./... > .cache/pkgs.txt
 	go test -race -coverprofile=.cache/cover.out ./...
 
-floors: cover
+floors: cover-profile
 	go run ./tools/coverfloors --profile .cache/cover.out --packages .cache/pkgs.txt $(FLOORS_ARGS)
 
 perf: build
