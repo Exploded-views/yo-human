@@ -1,0 +1,43 @@
+name: Bug
+description: Something yo-human did that it should not, or did not do that it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste secrets, tokens, device keys, routing keys or topic names. Replace them with placeholders.
+  - type: textarea
+    id: ran
+    attributes:
+      label: What you ran
+      description: The exact command, with secrets and private names removed.
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+      description: The output and the exit code.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: version
+    attributes:
+      label: Version
+      description: The output of `yo-human version`.
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Host OS and arch
+      description: For example darwin/arm64 or linux/amd64.
+      placeholder: darwin/arm64
+    validations:
+      required: true

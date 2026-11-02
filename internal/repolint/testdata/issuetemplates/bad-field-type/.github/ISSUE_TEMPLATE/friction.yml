@@ -1,0 +1,16 @@
+name: Friction
+description: Fixture friction form
+labels: ["friction"]
+body:
+  - type: textarea
+    id: slowed
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    validations:
+      required: true
+  - type: textarea
+    id: cost
+    validations:
+      required: true

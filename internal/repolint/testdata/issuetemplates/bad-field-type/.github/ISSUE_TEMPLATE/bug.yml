@@ -1,0 +1,24 @@
+name: Bug
+description: Fixture bug form, with the platform field as a textarea
+labels: ["bug"]
+body:
+  - type: textarea
+    id: ran
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    validations:
+      required: true
+  - type: textarea
+    id: version
+    validations:
+      required: true
+  - type: textarea
+    id: platform
+    validations:
+      required: true

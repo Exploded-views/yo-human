@@ -1,0 +1,24 @@
+name: Bug
+description: Fixture bug form, with a label that is not listed
+labels: ["bug", "triage"]
+body:
+  - type: textarea
+    id: ran
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    validations:
+      required: true
+  - type: textarea
+    id: version
+    validations:
+      required: true
+  - type: input
+    id: platform
+    validations:
+      required: true
