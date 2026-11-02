@@ -144,3 +144,6 @@ before relying on a migrated host.
 New code uses `notify`, not `page`.
 Always pass a dedup key as the last argument (use `""` for no details): without one every call is
 its own incident, named by the clock, and you could not resolve it. `--resolve` needs the same key.
+`page --resolve` always tells the alert to close, even for a key yo-human has no open incident for
+(one the old script opened, or one past its TTL), so it never answers `noop`. Exit 75 means the close
+is queued: run `next`. Exit 69 means the alert is still open: tell the human.
