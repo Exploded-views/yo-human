@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `yo-human page --resolve <key>` no longer answers `noop` for a key yo-human holds no open incident for: it resolves the alert on the instances a record lists, on a single other project's incident (only when no `YO_HUMAN_PROJECT` is set), or on every resolving instance of the shim level (with the project's namespaced key when a project is set, the bare key when not), so a key past `incident_ttl` is closed in PagerDuty. An alert the old script opened with a bare key is closed only when the resolve runs with `YO_HUMAN_PROJECT` unset; with a project set, only the project's own namespaced key is resolved, so resolve a pre-cutover alert from a shell with it unset. A key already closed is re-sent only to channels that can resolve, with no new ntfy note. A key written in yo-human's internal provider-key form is refused (64).
 - A send whose request went out but whose answer never came (a timeout, or on Bark a 2xx reply cut
   off) is no longer retried on ntfy or Bark below a paging level (a level with a critical send), so
   a push the server already delivered is not delivered twice. The channel is reported `sent`, with

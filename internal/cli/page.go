@@ -1,12 +1,14 @@
 package cli
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -190,11 +192,7 @@ func cmdPage(e *env, args []string) int {
 		return e.pageCheck(cfg)
 	}
 	if call.resolve {
-		proj, err := sourceArg("--project", "", "YO_HUMAN_PROJECT")
-		if err != nil {
-			return e.fail(err)
-		}
-		return e.closeIncident(cfg, st, core.IncidentKey(proj, call.key), "", false, "yo-human page --resolve "+problem.ShellQuote(call.key))
+		return e.pageResolve(cfg, st, call)
 	}
 	mode, askPath, err := shimModeOf(cfg.Shim, call.low)
 	if err != nil {
@@ -202,6 +200,93 @@ func cmdPage(e *env, args []string) int {
 	}
 	call.msg.Level, call.msg.Ask, call.msg.Agent = mode.Level, flatLine(mode.Ask), pageAgent(cfg)
 	return e.sendNotify(cfg, st, notifyCall{level: mode.Level, msg: call.msg, askPath: askPath, showKey: true})
+}
+
+// pageResolve is the shim's --resolve. An open incident under the project is resolved as `resolve`
+// does. Otherwise the old script would still have told PagerDuty, so the shim passes the resolve
+// through (see core.Pipeline.ResolveThrough): it never ends as a noop.
+func (e *env) pageResolve(cfg *config.Config, st *core.State, call pageCall) int {
+	proj, err := sourceArg("--project", "", "YO_HUMAN_PROJECT")
+	if err != nil {
+		return e.fail(err)
+	}
+	if core.LooksNamespaced(call.key) {
+		return e.fail(problem.Usagef("the dedup key after --resolve looks like an internal provider key (it is not echoed); nothing was sent",
+			"the key the page was opened with", "pass the key the page was opened with, not one a provider shows"))
+	}
+	again := "yo-human page --resolve " + problem.ShellQuote(call.key)
+	// Another project's incidents are looked for only by a caller with no project of its own (the
+	// gate of `status --all`); a project-scoped agent never sees or closes another project's.
+	scoped := flatLine(os.Getenv("YO_HUMAN_PROJECT")) != ""
+	src, err := st.ResolveSource(cfg, proj, call.key, now(), !scoped)
+	if err != nil {
+		return e.reportResolve(core.Result{}, err, again)
+	}
+	switch src.Kind {
+	case core.SourceOpen:
+		return e.closeIncident(cfg, st, core.IncidentKey(proj, call.key), "", false, again)
+	case core.SourceOther:
+		return e.closeIncident(cfg, st, core.IncidentKey(src.Projects[0], call.key), "", false, again)
+	case core.SourceSeveral:
+		return e.fail(problem.Usagef("page --resolve found the key open under %d other projects (%s) and none under this one; nothing was changed",
+			"one project's incident to close", "set YO_HUMAN_PROJECT to the project to close and run the resolve again",
+			len(src.Projects), strings.Join(src.Projects, ", ")))
+	}
+	return e.passResolve(cfg, st, call, proj, src, again)
+}
+
+// passResolve resolves a key yo-human holds no open incident for. Where a record still lists the
+// instances it was delivered to, exactly those are told; otherwise every instance of the shim
+// mode's level that can resolve is, with the bare key.
+func (e *env) passResolve(cfg *config.Config, st *core.State, call pageCall, proj string, src core.ResolveSource, again string) int {
+	level, instances, ferr := resolvable(cfg, call.low)
+	reached := src.Reached
+	if src.Closed { // the human heard of it: only the channels that can resolve are told again
+		caps := capsOf(cfg)
+		reached = slices.DeleteFunc(slices.Clone(reached), func(r core.Reach) bool {
+			c, configured := caps[r.Instance]
+			return configured && !c.Resolve // one gone from the config is kept: its close parks, visibly
+		})
+	}
+	if len(reached) == 0 { // no record to answer with: the level's resolvers are told, and only then built
+		for _, name := range instances {
+			reached = append(reached, core.Reach{Instance: name, Delivered: true})
+		}
+	}
+	if len(reached) == 0 { // nothing to tell and no resolver at the level: say which level, and send nothing
+		return e.report(core.Result{Status: core.StatusFailed, ID: newID()}, ferr)
+	}
+	chans, problems := e.reachedChannels(cfg, st, reached)
+	sendProject := ""                                  // no project: the bare key, which is what the old script sent
+	if flatLine(os.Getenv("YO_HUMAN_PROJECT")) != "" { // the same test as the gate above
+		sendProject = proj
+	}
+	res, err := e.pipeline(cfg, st, chans).ResolveThrough(context.Background(), proj, sendProject, call.key, level, instances)
+	return e.reportResolve(res, errors.Join(append(problems, err)...), again)
+}
+
+// resolvable is the shim mode's level and the instances of it that can resolve an alert, once each,
+// in config order. A level with none is an Unavailable problem naming it: the alert cannot be
+// closed from here, and a silent success would leave it open.
+func resolvable(cfg *config.Config, low bool) (string, []string, error) {
+	level, path := cfg.Shim.Default.Level, "shim.default" // the config check has made the level one of the config's
+	if low {
+		level, path = cfg.Shim.Low.Level, "shim.low"
+	}
+	caps := capsOf(cfg)
+	var names []string
+	for _, s := range levelNamed(cfg, level).Send {
+		if caps[s.Channel].Resolve && !slices.Contains(names, s.Channel) {
+			names = append(names, s.Channel)
+		}
+	}
+	if len(names) == 0 {
+		return "", nil, &problem.Problem{Kind: problem.Unavailable,
+			What:  "level " + level + " has no channel that can resolve an alert, so page --resolve has nothing to close; nothing was sent",
+			Valid: "a level with a channel that can resolve (type pagerduty)",
+			Fix:   "tell the human: the alert is still open and they resolve it there; to fix the shim, point " + path + ".level at a level that sends to a pagerduty channel"}
+	}
+	return level, names, nil
 }
 
 // checkSend and checkMode are the JSON shapes of `page --check`: instance names and interruptions
