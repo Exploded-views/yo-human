@@ -54,6 +54,13 @@ func main() {
 }
 
 func run(args []string, stdout, stderr io.Writer, scs []Scenario, ci bool) int {
+	return runWith(args, stdout, stderr, scs, ci, measure)
+}
+
+// measureFunc takes n timings of a scenario. runWith takes it so a test can stand in for real processes.
+type measureFunc func(s Scenario, n int) ([]time.Duration, error)
+
+func runWith(args []string, stdout, stderr io.Writer, scs []Scenario, ci bool, measure measureFunc) int {
 	fs := flag.NewFlagSet("perf", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	path := fs.String("budgets", "perf-budgets.json", "budgets file")
