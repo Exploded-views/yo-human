@@ -208,3 +208,12 @@ func TestResolveCommandUnchangedForUnknownKey(t *testing.T) {
 	expect(t, r.code == ExitOK && strings.HasPrefix(r.out, "RESULT noop "), "resolve of an expired key: %+v; want noop, exit 0", r)
 	expect(t, len(fk["pager"].Resolved) == 0 && len(fk["pager2"].Resolved) == 0, "resolved pager %v pager2 %v; want nothing sent", fk["pager"].Resolved, fk["pager2"].Resolved)
 }
+
+// A shim level the config does not have is refused when the config is read (78), never a silent success.
+func TestPageResolveShimLevelUnknown(t *testing.T) {
+	s, fk := passThroughSandbox(t)
+	body := strings.Replace(passThroughShim, "default: { level: page,", "default: { level: ghost,", 1)
+	write(t, s.userConfig(), strings.Replace(notifyConfigBody, "  journal: {", "  pager2: { type: pagerduty, routing_key: { secret: pd-low } }\n  journal: {", 1)+body)
+	r := s.do("", "page", "--resolve", "k")
+	expect(t, r.code == ExitConfig && !strings.HasPrefix(r.out, "RESULT resolved") && len(fk["pager"].Resolved) == 0, "page --resolve: %+v; want exit 78 and nothing sent", r)
+}

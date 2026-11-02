@@ -263,28 +263,24 @@ func (e *env) passResolve(cfg *config.Config, st *core.State, call pageCall, pro
 // in config order. A level with none is an Unavailable problem naming it: the alert cannot be
 // closed from here, and a silent success would leave it open.
 func resolvable(cfg *config.Config, low bool) (string, []string, error) {
-	mode, err := checkModeOf(cfg, low)
-	if err != nil {
-		return "", nil, err
+	level, path := cfg.Shim.Default.Level, "shim.default" // the config check has made the level one of the config's
+	if low {
+		level, path = cfg.Shim.Low.Level, "shim.low"
 	}
 	caps := capsOf(cfg)
 	var names []string
-	for _, s := range mode.Sends {
+	for _, s := range levelNamed(cfg, level).Send {
 		if caps[s.Channel].Resolve && !slices.Contains(names, s.Channel) {
 			names = append(names, s.Channel)
 		}
 	}
 	if len(names) == 0 {
-		path := "shim.default"
-		if low {
-			path = "shim.low"
-		}
 		return "", nil, &problem.Problem{Kind: problem.Unavailable,
-			What:  "level " + mode.Level + " has no channel that can resolve an alert, so page --resolve has nothing to close; nothing was sent",
+			What:  "level " + level + " has no channel that can resolve an alert, so page --resolve has nothing to close; nothing was sent",
 			Valid: "a level with a channel that can resolve (type pagerduty)",
 			Fix:   "tell the human: the alert is still open and they resolve it there; to fix the shim, point " + path + ".level at a level that sends to a pagerduty channel"}
 	}
-	return mode.Level, names, nil
+	return level, names, nil
 }
 
 // checkSend and checkMode are the JSON shapes of `page --check`: instance names and interruptions
