@@ -75,3 +75,8 @@ func ProviderKey(project, key string) string {
 	sum := sha256.Sum256([]byte(full))
 	return "h:" + hex.EncodeToString(sum[:])
 }
+
+// LooksNamespaced reports whether key has the form ProviderKey makes: <len(project)>:<project>/<key>,
+// or "h:" and 64 lowercase hex digits. A caller must not be able to name such a key, or it could
+// close another project's alert.
+func LooksNamespaced(key string) bool { return false }

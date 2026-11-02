@@ -75,25 +75,44 @@ func TestPageResolveExpiredKeyUsesRecordedInstances(t *testing.T) {
 	expect(t, len(phone) == 2 && phone[1].Resolved, "phone got %+v; want the passive resolve note, as for any resolve", phone)
 }
 
+// openUnder pages key under project, then leaves the environment set to project again.
+func openUnder(s *sandbox, t *testing.T, key string, projects ...string) {
+	t.Helper()
+	for _, p := range projects {
+		t.Setenv("YO_HUMAN_PROJECT", p)
+		s.do("", "page", "db down", "d", key)
+	}
+}
+
+// With a project set, --resolve never looks at another project: its incident stays open, and the
+// resolve takes the pass-through path with the key in this project's namespace.
 func TestPageResolveOtherProjectSingleMatch(t *testing.T) {
 	s, fk := passThroughSandbox(t)
-	t.Setenv("YO_HUMAN_PROJECT", "alpha")
-	s.do("", "page", "db down", "d", "shared")
+	openUnder(s, t, "shared", "alpha")
 	t.Setenv("YO_HUMAN_PROJECT", "beta")
 	r := s.do("", "page", "--resolve", "shared")
 	expect(t, r.code == ExitOK && strings.HasPrefix(r.out, "RESULT resolved "), "page --resolve: %+v; want resolved, exit 0", r)
-	expect(t, len(fk["pager"].Resolved) == 1 && fk["pager"].Resolved[0] == "5:alpha/shared", "pager resolved %v; want alpha's incident closed with alpha's key", fk["pager"].Resolved)
+	expect(t, sameKeys(fk["pager"].Resolved, "4:beta/shared"), "pager resolved %v; want only beta's own key, never alpha's", fk["pager"].Resolved)
+	t.Setenv("YO_HUMAN_PROJECT", "alpha")
+	mustContain(t, "alpha status", s.do("", "status").out, "incidents: 1")
+}
+
+// With no project set, the other project's single incident is closed, as before.
+func TestPageResolveOtherProjectSingleMatchWithNoProject(t *testing.T) {
+	s, fk := passThroughSandbox(t)
+	openUnder(s, t, "shared", "alpha")
+	t.Setenv("YO_HUMAN_PROJECT", "")
+	r := s.do("", "page", "--resolve", "shared")
+	expect(t, r.code == ExitOK && strings.HasPrefix(r.out, "RESULT resolved "), "page --resolve: %+v; want resolved, exit 0", r)
+	expect(t, sameKeys(fk["pager"].Resolved, "5:alpha/shared"), "pager resolved %v; want alpha's incident closed with alpha's key", fk["pager"].Resolved)
 	t.Setenv("YO_HUMAN_PROJECT", "alpha") // status counts the caller's own project
 	mustContain(t, "alpha status", s.do("", "status").out, "incidents: 0")
 }
 
 func TestPageResolveOtherProjectSeveralMatches(t *testing.T) {
 	s, fk := passThroughSandbox(t)
-	for _, p := range []string{"beta", "alpha"} {
-		t.Setenv("YO_HUMAN_PROJECT", p)
-		s.do("", "page", "db down", "d", "shared")
-	}
-	t.Setenv("YO_HUMAN_PROJECT", "gamma")
+	openUnder(s, t, "shared", "beta", "alpha")
+	t.Setenv("YO_HUMAN_PROJECT", "")
 	r := s.do("", "page", "--resolve", "shared")
 	r.fails(t, "several matches", ExitUsage, "alpha, beta")
 	mustContain(t, "stderr", r.err, "YO_HUMAN_PROJECT", "error:", "valid:", "fix:")
@@ -101,6 +120,44 @@ func TestPageResolveOtherProjectSeveralMatches(t *testing.T) {
 	for _, p := range []string{"alpha", "beta"} {
 		t.Setenv("YO_HUMAN_PROJECT", p)
 		mustContain(t, p+" status", s.do("", "status").out, "incidents: 1")
+	}
+}
+
+// A project-scoped caller learns nothing about other projects: not their names, not that they exist.
+func TestPageResolveSeveralMatchesNamesNothingToAProjectCaller(t *testing.T) {
+	s, fk := passThroughSandbox(t)
+	openUnder(s, t, "shared", "beta", "alpha")
+	t.Setenv("YO_HUMAN_PROJECT", "gamma")
+	r := s.do("", "page", "--resolve", "shared")
+	expect(t, r.code == ExitOK && strings.HasPrefix(r.out, "RESULT resolved "), "page --resolve: %+v; want the pass-through, exit 0", r)
+	mustNotContain(t, "stdout", r.out, "alpha", "beta")
+	mustNotContain(t, "stderr", r.err, "alpha", "beta")
+	expect(t, sameKeys(fk["pager"].Resolved, "5:gamma/shared"), "pager resolved %v; want gamma's own key", fk["pager"].Resolved)
+}
+
+func TestPageResolveNeverSeenKeyCarriesTheProjectsProviderKey(t *testing.T) {
+	s, fk := passThroughSandbox(t)
+	t.Setenv("YO_HUMAN_PROJECT", "beta")
+	r := s.do("", "page", "--resolve", "fresh")
+	expect(t, r.code == ExitOK && sameKeys(fk["pager"].Resolved, "4:beta/fresh"), "%+v, pager resolved %v; want the project's provider key", r, fk["pager"].Resolved)
+}
+
+func TestPageResolveRefusesProviderFormKeys(t *testing.T) {
+	s, fk := passThroughSandbox(t)
+	openUnder(s, t, "x", "alpha")
+	t.Setenv("YO_HUMAN_PROJECT", "beta")
+	for _, key := range []string{"5:alpha/x", "h:" + strings.Repeat("a1", 32)} {
+		r := s.do("", "page", "--resolve", key)
+		r.fails(t, key, ExitUsage, "internal provider key")
+		mustContain(t, "stderr", r.err, "the key the page was opened with")
+	}
+	expect(t, len(fk["pager"].Resolved) == 0 && len(fk["phone"].Sent) == 1 && s.entries("queue") == 0, "pager resolved %v; want nothing sent", fk["pager"].Resolved)
+	t.Setenv("YO_HUMAN_PROJECT", "alpha")
+	mustContain(t, "alpha status", s.do("", "status").out, "incidents: 1")
+	t.Setenv("YO_HUMAN_PROJECT", "beta")
+	for _, key := range []string{"5:ab/x", "abc:def", "h:xyz", "h:" + strings.Repeat("A", 64)} {
+		r := s.do("", "page", "--resolve", key)
+		expect(t, r.code == ExitOK && strings.HasPrefix(r.out, "RESULT resolved "), "%q: %+v; want an ordinary key, resolved", key, r)
 	}
 }
 
