@@ -1,0 +1,27 @@
+name: Friction
+description: Something that slowed you down, with a proposal
+labels: ["friction"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste secrets, tokens, device keys, routing keys or topic names. Replace them with placeholders.
+  - type: textarea
+    id: slowed
+    attributes:
+      label: What slowed you down
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+    validations:
+      required: true
+  - type: textarea
+    id: cost
+    attributes:
+      label: Cost
+      description: What the change costs, in time, complexity or a behaviour change.
+    validations:
+      required: true

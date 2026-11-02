@@ -1,0 +1,23 @@
+# The labels the issue forms use. The owner creates them once with the GitHub UI or API.
+# repolint (internal/repolint, TestRepoIssueTemplates) checks that every label a form uses is listed here.
+- name: bug
+  color: "d73a4a"
+  description: Something yo-human does wrong
+- name: friction
+  color: "fbca04"
+  description: Something that slowed a user down
+- name: docs
+  color: "0075ca"
+  description: Documentation
+- name: dogfood
+  color: "5319e7"
+  description: Found while using yo-human on our own work
+- name: area:notify
+  color: "c5def5"
+  description: The notify, page and resolve paths
+- name: type:decision
+  color: "ededed"
+  description: A question that needs a recorded decision
+- name: type:feat
+  color: "ededed"
+  description: A unit of work from the plan
