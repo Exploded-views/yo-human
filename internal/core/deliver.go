@@ -65,7 +65,7 @@ func (b *batch) send(ctx context.Context, c store.Claimed, pl payload) (ChannelR
 		spec.DeliverAt = c.DeliverAt
 	}
 	started := time.Now() // real time: how long the send ran, against the deadline
-	rcpt, serr := b.dispatch(ctx, ch, pl, spec)
+	rcpt, serr := b.dispatch(ctx, ch, pl, spec, c.DeliverAt)
 	return b.settle(ctx, sendOutcome{c: c, pl: pl, rcpt: rcpt, err: serr, took: time.Since(started)})
 }
 
@@ -115,12 +115,17 @@ func (b *batch) lostClaim(pd store.Pending) (ChannelResult, error) {
 // lateAfter is how long a page may wait in the queue before its title says when it was queued.
 const lateAfter = 5 * time.Minute
 
-// dispatch makes the call for a claimed entry: a resolve note to a channel that can close an
+// dispatch makes the call for a claimed entry (due is when it was first meant to go: the end of its
+// hold, or zero): a resolve note to a channel that can close an
 // incident closes it, anything else is sent.
-func (b *batch) dispatch(ctx context.Context, ch channel.Channel, pl payload, spec channel.SendSpec) (channel.Receipt, error) {
+func (b *batch) dispatch(ctx context.Context, ch channel.Channel, pl payload, spec channel.SendSpec, due time.Time) (channel.Receipt, error) {
 	m := pl.Message
 	m.DedupKey = ProviderKey(m.Project, m.DedupKey) // the provider sees the project's key, never the bare one
-	if !m.Resolved && spec.DeliverAt.IsZero() && b.now.Sub(pl.Enqueued) > lateAfter && b.p.paging(m.Level) {
+	// A page is late when it goes out more than lateAfter after it was first meant to: queued, or, for
+	// one held on purpose, released. DeliverAt does not move when a retry is scheduled (NextAttempt
+	// does), so it is the end of the hold. The spec.DeliverAt clause is defensive: a send the channel
+	// holds for later is not late yet.
+	if !m.Resolved && !pl.Enqueued.IsZero() && spec.DeliverAt.IsZero() && b.now.Sub(laterOf(pl.Enqueued, due)) > lateAfter && b.p.paging(m.Level) {
 		mark := "[queued since " + pl.Enqueued.UTC().Format("15:04") + " UTC]" // on the copy sent, never the stored payload
 		if m.Title != "" {
 			mark += " " + m.Title
@@ -271,4 +276,12 @@ func (b *batch) finish(c store.Claimed, pl payload, res ChannelResult, storeErr 
 func instanceOf(key string) string {
 	_, inst, _ := strings.Cut(key, ".")
 	return inst
+}
+
+// laterOf is the later of two times.
+func laterOf(a, b time.Time) time.Time {
+	if b.After(a) {
+		return b
+	}
+	return a
 }

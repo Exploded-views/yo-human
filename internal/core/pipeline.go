@@ -225,13 +225,22 @@ func incidentOf(m channel.Message) string {
 
 // enqueue writes one queue entry per planned send. Every entry is on disk before the first send.
 func (p *Pipeline) enqueue(m channel.Message, gen int, plan []PlannedSend) ([]entry, error) {
+	return p.enqueueAt(m, gen, plan, time.Time{})
+}
+
+// enqueueAt is enqueue stamping the entries with the time the message was first queued, for one
+// admitted after waiting in the queue; the zero time means now.
+func (p *Pipeline) enqueueAt(m channel.Message, gen int, plan []PlannedSend, queuedAt time.Time) ([]entry, error) {
+	if queuedAt.IsZero() {
+		queuedAt = p.d.Now()
+	}
 	out := make([]entry, 0, len(plan))
 	for _, s := range plan {
 		fp := p.fingerprint(s.Instance)
 		if s.Pinned {
 			fp = s.Fingerprint
 		}
-		data, err := json.Marshal(payload{Message: m, Generation: gen, Enqueued: p.d.Now(), Instance: s.Instance,
+		data, err := json.Marshal(payload{Message: m, Generation: gen, Enqueued: queuedAt, Instance: s.Instance,
 			Fingerprint: fp, Config: p.d.ConfigPath, Interruption: s.Interruption, Options: s.Options})
 		if err != nil {
 			return nil, problem.Internalf("cannot encode the message for %s: %v", "a JSON-encodable message",
