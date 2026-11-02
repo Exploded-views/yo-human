@@ -2,6 +2,7 @@ package core_test
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"testing"
 	"time"
@@ -174,5 +175,95 @@ func TestOnTimePageHasNoMarker(t *testing.T) {
 	}
 	if got := ts.last(); got != "disk full" {
 		t.Errorf("title = %q", got)
+	}
+}
+
+// lateHoldCfg is lateCfg with quiet hours from 13:00 to 14:00 UTC that "page" holds for.
+func lateHoldCfg() *config.Config {
+	c := lateCfg()
+	c.Levels[0].HoldInQuietHours = true
+	c.QuietHours = config.QuietHours{Location: time.UTC, Windows: []config.Window{{From: 13 * 60, To: 14 * 60}}}
+	return c
+}
+
+// A page held for quiet hours is released on purpose at the end of the window: it is not late.
+func TestPageHeldForQuietHoursIsNotLateWhenReleased(t *testing.T) {
+	e := newEnv(t, lateHoldCfg(), one) // "a" cannot schedule: the queue holds the page
+	var ts titleLog
+	ts.install(e, 0)
+	e.clk.Advance(90 * time.Minute) // 13:30
+	if r := e.say("page", "", "disk full"); r.Status != core.StatusHeld {
+		t.Fatalf("setup: status = %q, want held", r.Status)
+	}
+	e.flushAt(30 * time.Minute) // 14:00, the window's end
+	if got := ts.last(); got != "disk full" {
+		t.Errorf("title = %q; a page held on purpose and released at the end of the hold is not late", got)
+	}
+}
+
+// Once released, a page that fails and is retried more than five minutes after the end of the hold is
+// late, and says when it was queued, not when the hold ended.
+func TestHeldPageRetriedLateIsMarkedWithItsQueueTime(t *testing.T) {
+	e := newEnv(t, lateHoldCfg(), one)
+	var ts titleLog
+	ts.install(e, 1)
+	e.clk.Advance(90 * time.Minute) // 13:30
+	e.say("page", "", "disk full")
+	e.flushAt(30 * time.Minute) // 14:00: released, fails
+	if got := ts.seen[0]; got != "disk full" {
+		t.Errorf("first send at the end of the hold = %q, want no marker", got)
+	}
+	e.flushAt(7 * time.Minute) // 14:07
+	if got, want := ts.last(), "[queued since 13:30 UTC] disk full"; got != want {
+		t.Errorf("retry title = %q, want %q", got, want)
+	}
+}
+
+// A page deferred behind the incident lock and admitted late is still the page queued earlier: its
+// retries say when that was.
+func TestAdmittedPageKeepsItsQueueTime(t *testing.T) {
+	e := newEnv(t, lateCfg(), one)
+	var ts titleLog
+	ts.install(e, 1)
+	_, release := deferred(t, e) // queued at 12:00
+	release()
+	e.flushAt(20 * time.Minute) // admitted at 12:20: sent late, fails
+	e.flushAt(2 * time.Minute)  // retried
+	for i, got := range ts.seen {
+		if want := "[queued since 12:00 UTC] t"; got != want {
+			t.Errorf("send %d title = %q, want %q", i, got, want)
+		}
+	}
+	if len(ts.seen) < 2 {
+		t.Errorf("sends = %v; want the failed admission and its retry", ts.seen)
+	}
+}
+
+// An entry with no queue time (hand-written or corrupt) cannot say when it was queued, so it is not marked.
+func TestEntryWithNoEnqueueTimeHasNoMarker(t *testing.T) {
+	e := newEnv(t, lateCfg(), one)
+	var ts titleLog
+	ts.install(e, 1)
+	e.say("page", "", "disk full")
+	due, err := e.st.Due(e.clk.Now().Add(time.Hour))
+	if err != nil || len(due) != 1 {
+		t.Fatalf("setup: %v %v", due, err)
+	}
+	c, ok, err := e.st.Claim(due[0].Key)
+	if !ok || err != nil {
+		t.Fatalf("claim: %v %v", ok, err)
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(c.Data, &raw); err != nil {
+		t.Fatal(err)
+	}
+	delete(raw, "enqueued")
+	c.Data, _ = json.Marshal(raw)
+	if err := e.st.Release(c, e.clk.Now()); err != nil {
+		t.Fatal(err)
+	}
+	e.flushAt(30 * time.Minute)
+	if got := ts.last(); got != "disk full" {
+		t.Errorf("title = %q; an entry with no queue time gets no marker", got)
 	}
 }
