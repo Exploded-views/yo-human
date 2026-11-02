@@ -6,14 +6,14 @@ import (
 	"testing"
 )
 
-// TestMakeCoverChecksFloors: make cover is the one command a developer runs for coverage, and
-// CI's floor check runs in its place, so cover must depend on floors.
+// TestMakeCoverChecksFloors: make cover is the coverage command developers run, so it must fail
+// exactly where CI's floor check fails: cover depends on floors.
 func TestMakeCoverChecksFloors(t *testing.T) {
-	md, err := os.ReadFile("../../Makefile")
+	mk, err := os.ReadFile("../../Makefile")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, line := range strings.Split(string(md), "\n") {
+	for _, line := range strings.Split(string(mk), "\n") {
 		if !strings.HasPrefix(line, "cover:") {
 			continue
 		}
