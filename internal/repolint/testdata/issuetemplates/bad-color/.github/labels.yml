@@ -1,0 +1,15 @@
+- name: bug
+  color: "#d73a4a"
+  description: Something yo-human does wrong
+- name: friction
+  color: "fbca04"
+  description: Something that slowed a user down
+- name: docs
+  color: "0075ca"
+  description: Documentation
+- name: dogfood
+  color: "5319e7"
+  description: Found while using yo-human on our own work
+- name: area:notify
+  color: "c5def5"
+  description: The notify, page and resolve paths

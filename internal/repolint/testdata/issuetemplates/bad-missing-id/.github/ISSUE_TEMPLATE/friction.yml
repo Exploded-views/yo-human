@@ -1,0 +1,12 @@
+name: Friction
+description: Fixture friction form, with no cost field
+labels: ["friction"]
+body:
+  - type: textarea
+    id: slowed
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    validations:
+      required: true
