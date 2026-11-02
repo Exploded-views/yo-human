@@ -62,6 +62,14 @@ func (e *env) parsePage(args []string) (pageCall, error) {
 	if len(pos) < 1 || len(pos) > 3 {
 		return call, problem.Usagef("page takes a summary, then optional details and a dedup key", pageUsage, `run yo-human page "<summary>" ["<details>" [<dedup-key>]]; use -- before a summary that starts with "-"`)
 	}
+	// After --, the word is a summary on purpose; the flags before it are only --low here.
+	dashed := len(args) > len(pos) && args[len(args)-len(pos)-1] == "--"
+	if len(pos) == 1 && !dashed {
+		if w := strings.ToLower(strings.TrimSpace(pos[0])); w == "version" || w == "help" || w == "-v" {
+			return call, problem.Usagef("page was given only %q, which looks like a request for the version or help, not a summary; nothing was sent", pageUsage,
+				"to send that word as the summary on purpose, put -- before it: yo-human page -- <summary>; yo-human help prints the usage", w)
+		}
+	}
 	return call, e.pageMessage(&call.msg, pos)
 }
 
