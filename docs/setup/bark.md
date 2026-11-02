@@ -70,6 +70,14 @@ op read "op://$OP_VAULT/$OP_ITEM/password" | yo-human secret set bark-password
 - A 418 or 401 answer fails the page permanently, with a hint to set `username` and `password`. Fix the credentials and send again.
 - The public server needs none of this.
 
+The first push after a long idle can take about a second, because the server's connection to Apple is cold. The default `deadline` of 1s can cut it off. The send is then reported `sent (unconfirmed)` below a paging level, or retried at a paging level. Raise the deadline at the top level of your config:
+
+```yaml
+deadline: 3s
+```
+
+3s to 5s suits a self-hosted server. The deadline bounds the whole call, so it also bounds how long the agent waits.
+
 ## Critical alerts need a permission
 
 The `critical` level reaches your phone through iOS critical alerts. These need the **critical-alerts permission for the Bark app**. Grant it in the Bark app's notification settings on the iPhone. Without it, a `critical` page still arrives, but as a normal notification: it respects the silent switch and Focus modes. If a critical page does not break through, check this permission first.
