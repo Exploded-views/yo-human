@@ -50,7 +50,7 @@ func TestResolveSource(t *testing.T) {
 		store.Incident{Key: "closed", Project: "p1", LastSent: t0},
 		store.Incident{Key: "done", Project: "me", LastSent: t0, Updated: t0, Reached: delivered},
 		store.Incident{Key: "old", Project: "me", LastSent: t0, Updated: t0.Add(-2 * time.Hour), Reached: delivered},
-		store.Incident{Key: "undelivered", Project: "me", LastSent: t0, Reached: []store.Reached{{Instance: "b"}}},
+		store.Incident{Key: "undelivered", Project: "me", LastSent: t0, Updated: t0, Reached: []store.Reached{{Instance: "b"}}},
 	)
 	s := openState(t, e)
 	for _, c := range []struct {
