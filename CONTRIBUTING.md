@@ -36,6 +36,9 @@ What `make ci-base` cannot reproduce:
 
 - The OS matrix. CI runs the test and perf jobs on both `ubuntu-latest` and
   `macos-latest`; a local run covers only your OS.
+- Perf stalls. Each perf scenario runs once untimed first, and one that misses
+  its budget is re-measured once from a fresh temp dir; only a miss on both
+  fails, so a one-off runner stall passes and a real regression does not.
 - Perf headroom. CI sets `CI=true`, which applies the budgets' headroom; a
   local run has none, so it is stricter, not looser.
 - Push events. On a push to `main`, CI compares against the previous tip
