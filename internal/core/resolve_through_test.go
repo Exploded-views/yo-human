@@ -217,3 +217,18 @@ func TestResolveThroughWithNothingToSendFails(t *testing.T) {
 		t.Errorf("ResolveThrough = %q, %v; want failed: a resolve that sent nothing is never a success", r.Status, err)
 	}
 }
+
+// A passive channel that fails to hear of a re-resolve does not decide the status.
+func TestResolveThroughIgnoresAPassiveChannelsFailure(t *testing.T) {
+	e := newEnv(t, incCfg(0, "a", "n"), closer)
+	e.cfg.IncidentTTL = time.Hour
+	e.say("page", "k", "t")
+	e.clk.Advance(2 * time.Hour) // expired, never closed: the full fan-out
+	e.fakes["n"].SendFunc = func(context.Context, channel.Message, channel.SendSpec) (channel.Receipt, error) {
+		return channel.Receipt{}, channel.Transient(errors.New("n is down"))
+	}
+	r, _ := through(e, "k")
+	if r.Status != core.StatusResolved || len(e.fakes["a"].Resolved) != 1 {
+		t.Errorf("status %q, a resolved %v; want resolved, the failing note aside", r.Status, e.fakes["a"].Resolved)
+	}
+}

@@ -138,14 +138,13 @@ func (s *State) ResolveSource(cfg *config.Config, project, key string, at time.T
 	if err != nil {
 		return ResolveSource{}, err
 	}
-	live := func(inc store.Incident) bool { return inc.Open && at.Sub(inc.LastSent) <= cfg.IncidentTTL }
 	own, held := incs[IncidentKey(project, key)]
-	if held && live(own) {
+	if held && isLive(own, cfg, at) {
 		return ResolveSource{Kind: SourceOpen}, nil
 	}
 	var others []string
 	if across {
-		others = openElsewhere(incs, project, key, live)
+		others = openElsewhere(incs, project, key, cfg, at)
 	}
 	switch {
 	case len(others) == 1:
@@ -153,17 +152,22 @@ func (s *State) ResolveSource(cfg *config.Config, project, key string, at time.T
 	case len(others) > 1:
 		return ResolveSource{Kind: SourceSeveral, Projects: others}, nil
 	}
-	if held && !own.Open && at.Sub(own.Updated) > cfg.IncidentTTL { // as good as pruned: the next write removes it
+	if !held || (!own.Open && at.Sub(own.Updated) > cfg.IncidentTTL) { // none, or as good as pruned: the next write removes it
 		return ResolveSource{Kind: SourceNone}, nil
 	}
 	return recordedSource(own), nil
 }
 
+// isLive is an incident that is open and not silent for longer than incident_ttl at at.
+func isLive(inc store.Incident, cfg *config.Config, at time.Time) bool {
+	return inc.Open && at.Sub(inc.LastSent) <= cfg.IncidentTTL
+}
+
 // openElsewhere lists, sorted, the other projects that hold a live incident for the bare key.
-func openElsewhere(incs map[string]store.Incident, project, key string, live func(store.Incident) bool) []string {
+func openElsewhere(incs map[string]store.Incident, project, key string, cfg *config.Config, at time.Time) []string {
 	var out []string
 	for id, inc := range incs {
-		if inc.Key == key && inc.Project != project && id == IncidentKey(inc.Project, inc.Key) && live(inc) {
+		if inc.Key == key && inc.Project != project && id == IncidentKey(inc.Project, inc.Key) && isLive(inc, cfg, at) {
 			out = append(out, inc.Project)
 		}
 	}
