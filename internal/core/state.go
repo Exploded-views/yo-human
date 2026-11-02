@@ -122,6 +122,7 @@ type ResolveSource struct {
 	Kind     SourceKind
 	Projects []string
 	Reached  []Reach
+	Closed   bool // SourceRecorded: the record was already closed (not merely expired)
 }
 
 // ResolveSource looks up what a shim resolve of key, for project, has to close. An open incident is
@@ -152,6 +153,9 @@ func (s *State) ResolveSource(cfg *config.Config, project, key string, at time.T
 	case len(others) > 1:
 		return ResolveSource{Kind: SourceSeveral, Projects: others}, nil
 	}
+	if held && !own.Open && at.Sub(own.Updated) > cfg.IncidentTTL { // as good as pruned: the next write removes it
+		return ResolveSource{Kind: SourceNone}, nil
+	}
 	return recordedSource(own), nil
 }
 
@@ -179,7 +183,7 @@ func recordedSource(rec store.Incident) ResolveSource {
 	if len(reached) == 0 {
 		return ResolveSource{Kind: SourceNone}
 	}
-	return ResolveSource{Kind: SourceRecorded, Reached: reached}
+	return ResolveSource{Kind: SourceRecorded, Reached: reached, Closed: !rec.Open}
 }
 
 // CreateFile writes a new file holding data, mode 0600, and fails with an error wrapping

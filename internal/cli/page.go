@@ -239,16 +239,16 @@ func (e *env) pageResolve(cfg *config.Config, st *core.State, call pageCall) int
 // instances it was delivered to, exactly those are told; otherwise every instance of the shim
 // mode's level that can resolve is, with the bare key.
 func (e *env) passResolve(cfg *config.Config, st *core.State, call pageCall, proj string, src core.ResolveSource, again string) int {
-	level, reached := "", src.Reached
-	var instances []string
-	if src.Kind == core.SourceNone {
-		var err error
-		if level, instances, err = resolvable(cfg, call.low); err != nil {
-			return e.report(core.Result{Status: core.StatusFailed, ID: newID()}, err)
-		}
-		for _, name := range instances {
-			reached = append(reached, core.Reach{Instance: name, Delivered: true})
-		}
+	level, instances, ferr := resolvable(cfg, call.low)
+	if src.Kind == core.SourceNone && ferr != nil {
+		return e.report(core.Result{Status: core.StatusFailed, ID: newID()}, ferr)
+	}
+	reached := src.Reached
+	if src.Closed { // the human heard of it: only the channels that can resolve are told again
+		reached = slices.DeleteFunc(slices.Clone(reached), func(r core.Reach) bool { return !capsOf(cfg)[r.Instance].Resolve })
+	}
+	for _, name := range instances { // the fallback, should the record be gone by the time the resolve runs
+		reached = append(reached, core.Reach{Instance: name, Delivered: true})
 	}
 	chans, problems := e.reachedChannels(cfg, st, reached)
 	sendProject := ""                                  // no project: the bare key, which is what the old script sent

@@ -48,7 +48,8 @@ func TestResolveSource(t *testing.T) {
 		store.Incident{Key: "many", Project: "mid", Open: true, LastSent: t0},
 		store.Incident{Key: "stale", Project: "p1", Open: true, LastSent: t0.Add(-2 * time.Hour)},
 		store.Incident{Key: "closed", Project: "p1", LastSent: t0},
-		store.Incident{Key: "done", Project: "me", LastSent: t0, Reached: delivered},
+		store.Incident{Key: "done", Project: "me", LastSent: t0, Updated: t0, Reached: delivered},
+		store.Incident{Key: "old", Project: "me", LastSent: t0, Updated: t0.Add(-2 * time.Hour), Reached: delivered},
 		store.Incident{Key: "undelivered", Project: "me", LastSent: t0, Reached: []store.Reached{{Instance: "b"}}},
 	)
 	s := openState(t, e)
@@ -57,16 +58,17 @@ func TestResolveSource(t *testing.T) {
 		at   time.Time
 		want string
 	}{
-		{"own", t0, "{0 [] []}"},                                          // open under the project: resolve it
-		{"one", t0, "{1 [p1] []}"},                                        // open under exactly one other project
-		{"many", t0, "{2 [alpha mid zed] []}"},                            // two or more: sorted
-		{"own", t0.Add(2 * time.Hour), "{3 [] [{a true}]}"},               // expired: what it delivered is still recorded
-		{"done", t0, "{3 [] [{a true}]}"},                                 // closed: the same
-		{"undelivered", t0, "{4 [] []}"},                                  // nothing delivered to list
-		{"stale", t0, "{4 [] []}"},                                        // another project's expired incident is not open
-		{"closed", t0, "{4 [] []}"},                                       // nor is a closed one
-		{"never", t0, "{4 [] []}"},                                        // never seen
-		{"own", t0.Add(time.Hour + time.Nanosecond), "{3 [] [{a true}]}"}, // at the TTL it is still open; one nanosecond past, it is not
+		{"own", t0, "{0 [] [] false}"},                                          // open under the project: resolve it
+		{"one", t0, "{1 [p1] [] false}"},                                        // open under exactly one other project
+		{"many", t0, "{2 [alpha mid zed] [] false}"},                            // two or more: sorted
+		{"own", t0.Add(2 * time.Hour), "{3 [] [{a true}] false}"},               // expired: what it delivered is still recorded
+		{"done", t0, "{3 [] [{a true}] true}"},                                  // closed: the same
+		{"undelivered", t0, "{4 [] [] false}"},                                  // nothing delivered to list
+		{"stale", t0, "{4 [] [] false}"},                                        // another project's expired incident is not open
+		{"closed", t0, "{4 [] [] false}"},                                       // nor is a closed one
+		{"old", t0, "{4 [] [] false}"},                                          // closed longer than the TTL ago: as good as pruned
+		{"never", t0, "{4 [] [] false}"},                                        // never seen
+		{"own", t0.Add(time.Hour + time.Nanosecond), "{3 [] [{a true}] false}"}, // at the TTL it is still open; one nanosecond past, it is not
 	} {
 		got, err := s.ResolveSource(e.cfg, "me", c.key, c.at, true)
 		if err != nil || fmt.Sprint(got) != c.want {

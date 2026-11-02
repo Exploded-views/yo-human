@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/Exploded-views/yo-human/internal/channel"
+	"github.com/Exploded-views/yo-human/internal/problem"
+	"github.com/Exploded-views/yo-human/internal/store"
 )
 
 // ResolveThrough is the resolve of the page shim for a key with no open incident. The old paging
@@ -41,14 +43,25 @@ func (p *Pipeline) ResolveThrough(ctx context.Context, project, sendProject, key
 	if inc.Open { // expired: over already, but its held pages must still not fire
 		cancels = b.cancelScheduled(ctx, inc)
 	}
-	entries, notes := b.enqueueNotes(id, "", b.prior)
+	rec := b.prior
+	if !rec.Open { // already closed: the human heard of it; only the idempotent resolves are sent again
+		rec.Reached = b.resolvers(rec.Reached)
+	}
+	entries, notes := b.enqueueNotes(id, "", rec)
 	if len(notes) == 0 {
 		entries, notes = b.enqueueBare(id, sendProject, key, level, instances)
 	}
+	if len(entries) == 0 { // never a success that sent nothing
+		b.fail(&problem.Problem{Kind: problem.Unavailable, What: "nothing was sent to resolve " + problem.Clip(key),
+			Valid: "a channel that can resolve an alert", Fix: "tell the human: the alert may still be open, so they resolve it there"})
+	}
 	closes := b.fanOut(ctx, entries, notes)
 	res.Channels = append(append(res.Channels, cancels...), closes...)
-	res.Next = b.closeOutcome(incID, cancels, closes)
+	res.Next = b.closeOutcome(key, cancels, closes)
 	res.Status = b.throughStatus(closes)
+	if len(entries) == 0 {
+		res.Status = StatusFailed
+	}
 	skip := map[string]bool{}
 	for _, e := range entries {
 		skip[e.pending.Key] = true
@@ -74,13 +87,24 @@ func (b *batch) enqueueBare(id, project, key, level string, instances []string) 
 	return entries, plan[:len(entries)]
 }
 
+// resolvers keeps the reached instances whose channel can resolve an alert.
+func (b *batch) resolvers(rs []store.Reached) []store.Reached {
+	var out []store.Reached
+	for _, r := range rs {
+		if b.p.d.Caps[r.Instance].Resolve {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
 // throughStatus is the status of a pass-through: the first close on a channel that can resolve that
 // is not done decides it, in the order closeOutcome reports its problems, so the status and the
 // exit code agree.
 func (b *batch) throughStatus(closes []ChannelResult) Status {
 	for _, c := range closes {
-		if !b.p.d.Caps[c.Channel].Resolve {
-			continue
+		if caps, known := b.p.d.Caps[c.Channel]; known && !caps.Resolve {
+			continue // a channel gone from the config is unknown: its close is unfinished, whatever its type was
 		}
 		switch c.Status {
 		case ChannelQueued:
