@@ -294,3 +294,19 @@ func TestPageResolveClosedRecordOfPassiveChannelsFallsBack(t *testing.T) {
 	r := s.do("", "page", "--resolve", "k7")
 	expect(t, r.code == ExitOK && sameKeys(fk["pager"].Resolved, "k7"), "%+v, pager resolved %v; want the default level's resolver sent the bare key", r, fk["pager"].Resolved)
 }
+
+// A closed record of channels that cannot resolve, under a shim level with no resolver either, fails
+// with 69 and names the level, as for a never-seen key.
+func TestPageResolveClosedPassiveRecordWithNoResolverNamesTheLevel(t *testing.T) {
+	s, fk := passThroughSandbox(t)
+	body := strings.Replace(passThroughShim, "default: { level: page,", "default: { level: note,", 1)
+	body = strings.Replace(body, "low:     { level: low-page,", "low:     { level: note,", 1)
+	write(t, s.userConfig(), strings.Replace(notifyConfigBody, "  journal: {", "  pager2: { type: pagerduty, routing_key: { secret: pd-low } }\n  journal: {", 1)+body)
+	s.do("", "page", "ci", "d", "k8")
+	closed := s.do("", "resolve", "--dedup-key", "k8") // closes the record; the phone and journal heard of it
+	expect(t, closed.code == ExitOK && strings.HasPrefix(closed.out, "RESULT resolved "), "setup: %+v", closed)
+	r := s.do("", "page", "--resolve", "k8")
+	expect(t, r.code == ExitFailed && strings.HasPrefix(r.out, "RESULT failed "), "page --resolve: %+v; want failed, exit 69", r)
+	mustContain(t, "stderr", r.err, "level note")
+	expect(t, len(fk["pager"].Resolved) == 0 && len(fk["pager2"].Resolved) == 0, "something was resolved")
+}
