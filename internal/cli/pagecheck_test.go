@@ -116,7 +116,11 @@ func TestPageVersionAndHelpWordsSendNothing(t *testing.T) {
 		{"page", "help"}, {"page", "Help"}, {"page", "--low", "help"}, {"page", "--low", "-v"}, {"page", "--help"}, {"page", "-h"},
 	} {
 		r := s.do("", args...)
-		expect(t, r.code == ExitUsage || r.code == ExitOK, "%v: %+v; want exit 64 or 0", args, r)
+		want := ExitUsage
+		if args[len(args)-1] == "--help" || args[len(args)-1] == "-h" {
+			want = ExitOK
+		}
+		expect(t, r.code == want, "%v: %+v; want exit %d", args, r, want)
 		expect(t, !strings.HasPrefix(r.out, "RESULT "+"delivered") && !strings.HasPrefix(r.out, "RESULT queued"), "%v: %+v; sent something", args, r)
 	}
 	r := s.do("", "page", "version")
@@ -125,6 +129,35 @@ func TestPageVersionAndHelpWordsSendNothing(t *testing.T) {
 		expect(t, len(f.Sent) == 0, "channel %s was called %d times", name, len(f.Sent))
 	}
 	expect(t, s.entries("queue") == 0, "queue holds %d entries", s.entries("queue"))
+}
+
+// Go's flag parsing stops at the first positional, so a flag typed after the summary would become
+// the details or the key and page for real: `page "test" --check`, meant as a dry run, must not
+// send. Leading whitespace must not get a flag word past the check either.
+func TestPageFlagAfterTheSummarySendsNothing(t *testing.T) {
+	s, fk := pageSandbox(t)
+	for _, args := range [][]string{
+		{"page", "x", "--check"}, {"page", "x", "--low"}, {"page", "x", "-low"}, {"page", "version", "--check"},
+		{"page", "version", "--help"}, {"page", "version", "--version"}, {"page", "x", "details", "--low"},
+		{"page", "x", "--resolve=k"}, {"page", "x", "--json"}, {"page", "x", "-h"}, {"page", " --version"}, {"page", " -h"},
+		{"page", "x", " --CHECK "},
+	} {
+		r := s.do("", args...)
+		expect(t, r.code == ExitUsage, "%v: %+v; want exit 64", args, r)
+	}
+	r := s.do("", "page", "x", "--check")
+	mustContain(t, "stderr", r.err, "error:", "before the summary", "--")
+	for name, f := range fk {
+		expect(t, len(f.Sent) == 0, "channel %s was called %d times", name, len(f.Sent))
+	}
+	expect(t, s.entries("queue") == 0, "queue holds %d entries", s.entries("queue"))
+}
+
+// After --, a flag word is text on purpose.
+func TestPageFlagWordAfterDashDashIsText(t *testing.T) {
+	s, fk := pageSandbox(t)
+	r := s.do("", "page", "--", "x", "--check")
+	expect(t, r.code == ExitOK && len(fk["pager"].Sent) == 1 && fk["pager"].Sent[0].Body == "--check", "page -- x --check: %+v; want one send with details --check", r)
 }
 
 func TestPageAfterDashDashSendsTheWord(t *testing.T) {
