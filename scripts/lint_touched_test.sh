@@ -21,6 +21,10 @@ fi
 tree() {
   mkdir -p "$t/$1/scripts" "$t/$1/pkg/a" "$t/$1/pkg/b" "$t/$1/docs" || exit 1
   touch "$t/$1/pkg/a/x.go" "$t/$1/pkg/a/y.go" "$t/$1/pkg/b/z.go" "$t/$1/docs/readme.md" || exit 1
+  # Directories the go tool ignores, and one with a space in its name, all present on disk.
+  mkdir -p "$t/$1/pkg/a/testdata" "$t/$1/pkg/_x" "$t/$1/pkg/.x" "$t/$1/pkg/a b" "$t/$1/emptydir" || exit 1
+  touch "$t/$1/pkg/a/testdata/f.go" "$t/$1/pkg/_x/f.go" "$t/$1/pkg/.x/f.go" "$t/$1/pkg/a b/s.go" \
+    "$t/$1/emptydir/readme.md" || exit 1
   cp "$root/scripts/lint-touched.sh" "$t/$1/scripts/" || exit 1
   cat >"$t/$1/scripts/lint.sh" <<EOF
 #!/bin/sh
@@ -66,6 +70,27 @@ skipped "no file arguments" empty
 
 tree fail
 want "lint.sh's exit code 1 is passed through" 1 "$t/fail" env FAKE_EXIT=1 sh scripts/lint-touched.sh pkg/a/x.go
+
+tree td
+want "a file under testdata is ignored, as the go tool ignores it" 0 "$t/td" sh scripts/lint-touched.sh pkg/a/testdata/f.go
+skipped "testdata only" td
+
+tree ign
+want "a _ or . path element is ignored, as the go tool ignores it" 0 "$t/ign" sh scripts/lint-touched.sh pkg/_x/f.go pkg/.x/f.go
+skipped "_x and .x only" ign
+
+tree bare
+want "a directory with no Go file left is skipped" 0 "$t/bare" sh scripts/lint-touched.sh emptydir/gone.go
+skipped "a directory with no Go file" bare
+
+tree root
+touch "$t/root/x.go"
+want "a Go file in the repo root gives ./." 0 "$t/root" sh scripts/lint-touched.sh x.go
+[ "$(packages root)" = "./. " ] || { echo "FAIL root package: '$(packages root)', want './.'"; fails=$((fails + 1)); }
+
+tree sp
+want "a directory name with a space is passed intact" 0 "$t/sp" sh scripts/lint-touched.sh "pkg/a b/s.go"
+[ "$(cat "$t/sp/args" 2>/dev/null)" = "./pkg/a b" ] || { echo "FAIL space path: args '$(cat "$t/sp/args" 2>/dev/null)', want exactly './pkg/a b' on one line"; fails=$((fails + 1)); }
 
 [ "$fails" = 0 ] && { echo "lint_touched_test: all cases pass"; exit 0; }
 echo "lint_touched_test: $fails case(s) failed"
