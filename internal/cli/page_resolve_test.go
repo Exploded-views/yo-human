@@ -257,3 +257,40 @@ func TestPageResolveExpiredRecordOfARemovedInstanceIsQueued(t *testing.T) {
 	r := s.do("", "page", "--resolve", "k3")
 	expect(t, r.code == ExitConfig && strings.HasPrefix(r.out, "RESULT queued "), "page --resolve: %+v; want queued beside the config problem (78)", r)
 }
+
+// An unrelated instance that cannot be built takes no part in a resolve the record answers: no
+// config problem, and no claim of a queued note that does not exist.
+func TestPageResolveRecordPathIgnoresAnUnbuildableUnrelatedInstance(t *testing.T) {
+	s, fk := passThroughSandbox(t)
+	s.do("", "page", "--low", "ci", "d", "k5")
+	s.advance(25 * time.Hour)
+	removeSecrets(t, s, "ntfy-topic", "pd-low") // pd-critical is gone: the default level's pager, which this key never reached
+	r := s.do("", "page", "--resolve", "k5")
+	expect(t, r.code == ExitOK && strings.HasPrefix(r.out, "RESULT resolved ") && r.err == "", "page --resolve: %+v; want resolved, exit 0, nothing on stderr", r)
+	expect(t, sameKeys(fk["pager2"].Resolved, "7:unknown/k5") && s.entries("queue") == 0, "pager2 resolved %v, queue %d; want the recorded close and an empty queue", fk["pager2"].Resolved, s.entries("queue"))
+}
+
+// A closed record whose recorded instance has left the config is not dropped: the close parks, and
+// the fallback does not stand in for it.
+func TestPageResolveClosedRecordOfARemovedInstanceParks(t *testing.T) {
+	s, fk := passThroughSandbox(t)
+	s.do("", "page", "--low", "ci", "d", "k6")
+	s.do("", "page", "--resolve", "k6")
+	body := strings.Replace(passThroughShim, "{ channel: pager2, interruption: active }", "{ channel: phone, interruption: active }", 1)
+	write(t, s.userConfig(), notifyConfigBody+body)
+	r := s.do("", "page", "--resolve", "k6")
+	expect(t, r.code == ExitConfig && strings.HasPrefix(r.out, "RESULT queued "), "page --resolve: %+v; want queued beside the config problem (78)", r)
+	expect(t, len(fk["pager"].Resolved) == 0 && s.entries("queue") == 1, "pager resolved %v, queue %d; want the close parked, none sent to the default service", fk["pager"].Resolved, s.entries("queue"))
+}
+
+// A closed record that reached only channels that cannot resolve leaves nothing to re-send, so the
+// shim level's resolvers get the bare key.
+func TestPageResolveClosedRecordOfPassiveChannelsFallsBack(t *testing.T) {
+	s, fk := passThroughSandbox(t)
+	body := strings.Replace(passThroughShim, "low:     { level: low-page,", "low:     { level: note,", 1)
+	write(t, s.userConfig(), strings.Replace(notifyConfigBody, "  journal: {", "  pager2: { type: pagerduty, routing_key: { secret: pd-low } }\n  journal: {", 1)+body)
+	s.do("", "page", "--low", "ci", "d", "k7")
+	s.do("", "page", "--low", "--resolve", "k7") // closes it: a note level has nothing to resolve, so it fails
+	r := s.do("", "page", "--resolve", "k7")
+	expect(t, r.code == ExitOK && sameKeys(fk["pager"].Resolved, "k7"), "%+v, pager resolved %v; want the default level's resolver sent the bare key", r, fk["pager"].Resolved)
+}
