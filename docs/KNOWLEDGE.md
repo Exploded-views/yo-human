@@ -5,7 +5,7 @@ Written 2026-10-26 by the session that ran the original design conversation, for
 ## How the owner works (apply to everything)
 
 - **Strict test-first.** The failing test is committed first with its RED proof recorded, then the fix, then a mutation check on the key line. Reviews check the RED proof.
-- **Ratchets in CI:** a coverage floor per package that only rises, and performance budgets that only tighten (p95 over N runs, a recorded headroom factor, process counts asserted exactly where they're deterministic). A perf scenario warms up once untimed, and a budget miss is re-measured once; only a miss on both fails.
+- **Ratchets in CI:** a coverage floor per package that only rises, and performance budgets that only tighten (p95 over N runs, a recorded headroom factor, process counts asserted exactly where they're deterministic). A perf command scenario warms up once untimed, and a budget miss is re-measured once; only a miss on both fails.
 - **Performance matters.** Hot paths take milliseconds: no network or decryption on an agent's critical path; fail silent with exit 0 rather than block. Fix slow hooks properly; don't raise timeouts.
 - **Docs ship with every feature.** Setup docs open with an **Inputs** list (one bullet per value, `NAME="<placeholder>"` plus a one-line description), then "Already set". Every value appears once (**DRY**); steps use `$NAME`; a command run twice is a shell function. Use `$HOME/...`, not a quoted `~`.
 - **Mechanisms, not preferences.** Anything that is a user preference is configurable, set by the user (ideally conversationally through an agent), never hard-coded.

@@ -149,7 +149,7 @@ func appendSummary(path, name string, first, second time.Duration, budgetMs int,
 	if err != nil {
 		return err
 	}
-	outcome := "passed on the re-measure"
+	outcome := "passed on the re-measure; the first miss was probably a runner stall"
 	if stillOver {
 		outcome = "FAILED: over budget on the re-measure too"
 	}

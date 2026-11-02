@@ -43,7 +43,7 @@ func TestConsistentlySlowScenarioStillFailsNamingBothP95s(t *testing.T) {
 	if code != 1 || sc.calls["x"] != 2 {
 		t.Fatalf("exit %d after %d measurements, output %q; want exit 1 after 2", code, sc.calls["x"], out)
 	}
-	if !strings.Contains(out, "x: p95 90.0ms > budget 60.0ms") || !strings.Contains(out, "215.0ms") {
+	if !strings.Contains(out, "x: p95 90.0ms > budget 60.0ms") || !strings.Contains(out, "; first measurement p95 215.0ms") {
 		t.Errorf("output %q; want a violation naming the re-measured p95 90.0ms and the first, 215.0ms", out)
 	}
 }
@@ -124,8 +124,9 @@ func TestEachScenarioWarmsUpOnceUntimed(t *testing.T) {
 
 func TestAWarmUpThatExitsWrongIsAnError(t *testing.T) {
 	sc := Scenario{Name: "w", Argv: []string{"sh", "-c", "exit 3"}, Exit: 64}
-	if _, err := measure(sc, 1); err == nil {
-		t.Error("measure succeeded although the command exits 3, want 64")
+	_, err := measure(sc, 1)
+	if err == nil || !strings.Contains(err.Error(), "warm-up") {
+		t.Errorf("measure error %v; want a warm-up error, since the command exits 3, not 64", err)
 	}
 }
 
