@@ -110,6 +110,7 @@ scripts-test:
 	sh scripts/grep_status_test.sh
 	sh scripts/nodeps_test.sh
 	sh scripts/release_build_test.sh
+	sh scripts/lint_touched_test.sh
 
 vuln:
 	govulncheck ./...
