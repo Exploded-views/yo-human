@@ -54,6 +54,12 @@ var scenarios = []Scenario{
 	{Name: "hosted-revise", Sample: hostedSample("revise")},
 }
 
+// remeasurePause is how long a run waits, once, before it re-measures the scenarios that missed.
+const remeasurePause = 5 * time.Second
+
+// pause is time.Sleep; a test replaces it.
+var pause = time.Sleep
+
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr, scenarios, os.Getenv("CI") == "true"))
 }
