@@ -105,3 +105,31 @@ func TestPageCheckShowsNoDestinationOrSecret(t *testing.T) {
 		mustNotContain(t, "stdout", r.out, "ntfy.example.com", "ntfy-topic", "pd-critical", "FAKE-NTFY-TOPIC", "FAKE-PD-CRITICAL", "yo-human-test.log", "https://")
 	}
 }
+
+// An old caller's `page --version` must not page the human; a lone "version" or "help" is a request
+// for information, not a summary, unless -- says otherwise.
+func TestPageVersionAndHelpWordsSendNothing(t *testing.T) {
+	s, fk := pageSandbox(t)
+	for _, args := range [][]string{
+		{"page", "--version"}, {"page", "-version"}, {"page", "-v"}, {"page", "version"}, {"page", "VERSION"},
+		{"page", "help"}, {"page", "Help"}, {"page", "--low", "help"}, {"page", "--low", "-v"}, {"page", "--help"}, {"page", "-h"},
+	} {
+		r := s.do("", args...)
+		expect(t, r.code == ExitUsage || r.code == ExitOK, "%v: %+v; want exit 64 or 0", args, r)
+		expect(t, !strings.HasPrefix(r.out, "RESULT "+"delivered") && !strings.HasPrefix(r.out, "RESULT queued"), "%v: %+v; sent something", args, r)
+	}
+	r := s.do("", "page", "version")
+	mustContain(t, "stderr", r.err, "error:", "--")
+	for name, f := range fk {
+		expect(t, len(f.Sent) == 0, "channel %s was called %d times", name, len(f.Sent))
+	}
+	expect(t, s.entries("queue") == 0, "queue holds %d entries", s.entries("queue"))
+}
+
+func TestPageAfterDashDashSendsTheWord(t *testing.T) {
+	s, fk := pageSandbox(t)
+	r := s.do("", "page", "--", "version")
+	expect(t, r.code == ExitOK && len(fk["pager"].Sent) == 1 && fk["pager"].Sent[0].Title == "version", "page -- version: %+v, pager %d; want one send titled version", r, len(fk["pager"].Sent))
+	r = s.do("", "page", "--low", "--", "help")
+	expect(t, r.code == ExitOK && len(fk["phone"].Sent) == 2 && fk["phone"].Sent[1].Title == "help", "page --low -- help: %+v; want one send", r)
+}
