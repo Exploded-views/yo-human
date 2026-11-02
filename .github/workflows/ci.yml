@@ -96,6 +96,10 @@ jobs:
           fi
           echo "base=${base:-none} args=${args:-none}"
           make perf $args
+      - name: TEMPORARY perf probe (FU-PERFFLAKE)
+        if: always() && matrix.os == 'ubuntu-latest'
+        continue-on-error: true
+        run: make build && scripts/perf_probe.sh dist/yo-human
 
   coverage:
     runs-on: ubuntu-latest
