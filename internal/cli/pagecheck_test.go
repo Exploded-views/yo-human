@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Exploded-views/yo-human/internal/channel"
+	"github.com/Exploded-views/yo-human/internal/config"
 )
 
 func TestPageCheckPrintsTheMapping(t *testing.T) {
@@ -132,4 +133,27 @@ func TestPageAfterDashDashSendsTheWord(t *testing.T) {
 	expect(t, r.code == ExitOK && len(fk["pager"].Sent) == 1 && fk["pager"].Sent[0].Title == "version", "page -- version: %+v, pager %d; want one send titled version", r, len(fk["pager"].Sent))
 	r = s.do("", "page", "--low", "--", "help")
 	expect(t, r.code == ExitOK && len(fk["phone"].Sent) == 2 && fk["phone"].Sent[1].Title == "help", "page --low -- help: %+v; want one send", r)
+}
+
+// A mode with no level is a config problem naming that mode; a level the config does not have
+// (the loader refuses one, so this is built by hand) is one too.
+func TestPageCheckModeProblems(t *testing.T) {
+	levels := []config.Level{{Name: "page"}}
+	for _, c := range []struct {
+		name string
+		shim config.Shim
+		want string
+	}{
+		{"default without a level", config.Shim{Low: config.ShimMode{Level: "page"}}, "shim.default.level is not set"},
+		{"low without a level", config.Shim{Default: config.ShimMode{Level: "page"}}, "shim.low.level is not set"},
+		{"an unknown level", config.Shim{Default: config.ShimMode{Level: "gone"}, Low: config.ShimMode{Level: "page"}}, "shim.default names no level"},
+	} {
+		shim := c.shim
+		var out, errb strings.Builder
+		e := &env{stdout: &out, stderr: &errb}
+		code := e.pageCheck(&config.Config{Levels: levels, Shim: &shim})
+		if code != ExitConfig || !strings.Contains(errb.String(), c.want) || out.String() != "" {
+			t.Errorf("%s: exit %d, stdout %q, stderr %q; want exit 78 naming %q", c.name, code, out.String(), errb.String(), c.want)
+		}
+	}
 }

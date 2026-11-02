@@ -40,37 +40,55 @@ func (e *env) parsePage(args []string) (pageCall, error) {
 		return pageCall{}, problem.Usagef("%s was given a flag it does not know, or a flag with no value (the text is not echoed)", pageUsage,
 			`use only --low, --resolve <dedup-key> and --check, before the summary; use -- before a summary that starts with "-"`, "page")
 	}
-	call := pageCall{low: *low, resolve: setFlags(fs)["resolve"]}
+	call := pageCall{low: *low, resolve: setFlags(fs)["resolve"], check: *check}
 	pos := fs.Args()
-	if *check {
-		call.check = true
-		if len(pos) > 0 || call.low || call.resolve {
-			return call, problem.Usagef("page --check takes no other argument and no other flag", pageUsage, "run `yo-human page --check` on its own; it prints the shim's mapping and sends nothing")
-		}
-		return call, nil
-	}
-	if call.resolve {
-		if len(pos) > 0 {
-			return call, problem.Usagef("page --resolve takes a key and nothing else", pageUsage, "run `yo-human page --resolve <dedup-key>`")
-		}
+	switch {
+	case call.check:
+		return call, checkOnly(call, pos)
+	case call.resolve:
 		call.key = *resolve
-		if call.key == "" {
-			return call, problem.Usagef("page --resolve needs a dedup key", pageUsage, "pass the key the incident was opened with")
-		}
-		return call, checkKeyAs("the dedup key after --resolve", call.key)
+		return call, resolveKeyOnly(call, pos)
 	}
 	if len(pos) < 1 || len(pos) > 3 {
 		return call, problem.Usagef("page takes a summary, then optional details and a dedup key", pageUsage, `run yo-human page "<summary>" ["<details>" [<dedup-key>]]; use -- before a summary that starts with "-"`)
 	}
-	// After --, the word is a summary on purpose; the flags before it are only --low here.
-	dashed := len(args) > len(pos) && args[len(args)-len(pos)-1] == "--"
-	if len(pos) == 1 && !dashed {
-		if w := strings.ToLower(strings.TrimSpace(pos[0])); w == "version" || w == "help" || w == "-v" {
-			return call, problem.Usagef("page was given only %q, which looks like a request for the version or help, not a summary; nothing was sent", pageUsage,
-				"to send that word as the summary on purpose, put -- before it: yo-human page -- <summary>; yo-human help prints the usage", w)
-		}
+	if err := refuseLoneWord(args, pos); err != nil {
+		return call, err
 	}
 	return call, e.pageMessage(&call.msg, pos)
+}
+
+// checkOnly refuses anything given with --check: it takes no other argument and no other flag.
+func checkOnly(call pageCall, pos []string) error {
+	if len(pos) > 0 || call.low || call.resolve {
+		return problem.Usagef("page --check takes no other argument and no other flag", pageUsage, "run `yo-human page --check` on its own; it prints the shim's mapping and sends nothing")
+	}
+	return nil
+}
+
+// resolveKeyOnly checks a --resolve call: a key, and nothing else.
+func resolveKeyOnly(call pageCall, pos []string) error {
+	if len(pos) > 0 {
+		return problem.Usagef("page --resolve takes a key and nothing else", pageUsage, "run `yo-human page --resolve <dedup-key>`")
+	}
+	if call.key == "" {
+		return problem.Usagef("page --resolve needs a dedup key", pageUsage, "pass the key the incident was opened with")
+	}
+	return checkKeyAs("the dedup key after --resolve", call.key)
+}
+
+// refuseLoneWord refuses a page whose only argument is "version", "help" or "-v" (any case), which
+// is a request for the version or help, not a summary. After --, the word is a summary on purpose.
+func refuseLoneWord(args, pos []string) error {
+	dashed := len(args) > len(pos) && args[len(args)-len(pos)-1] == "--"
+	if len(pos) != 1 || dashed {
+		return nil
+	}
+	if w := strings.ToLower(strings.TrimSpace(pos[0])); w == "version" || w == "help" || w == "-v" {
+		return problem.Usagef("page was given only %q, which looks like a request for the version or help, not a summary; nothing was sent", pageUsage,
+			"to send that word as the summary on purpose, put -- before it: yo-human page -- <summary>; yo-human help prints the usage", w)
+	}
+	return nil
 }
 
 // pageMessage fills m from the positional arguments: summary, details, key.
