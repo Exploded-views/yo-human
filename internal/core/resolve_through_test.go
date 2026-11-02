@@ -68,13 +68,39 @@ func TestResolveSource(t *testing.T) {
 		{"never", t0, "{4 [] []}"},                                        // never seen
 		{"own", t0.Add(time.Hour + time.Nanosecond), "{3 [] [{a true}]}"}, // at the TTL it is still open; one nanosecond past, it is not
 	} {
-		got, err := s.ResolveSource(e.cfg, "me", c.key, c.at)
+		got, err := s.ResolveSource(e.cfg, "me", c.key, c.at, true)
 		if err != nil || fmt.Sprint(got) != c.want {
 			t.Errorf("ResolveSource(%s, +%v) = %v, %v; want %s", c.key, c.at.Sub(t0), got, err, c.want)
 		}
 	}
-	if got, _ := s.ResolveSource(e.cfg, "me", "own", t0.Add(time.Hour)); got.Kind != core.SourceOpen {
+	if got, _ := s.ResolveSource(e.cfg, "me", "own", t0.Add(time.Hour), true); got.Kind != core.SourceOpen {
 		t.Errorf("at the TTL: %v; want it still open", got)
+	}
+}
+
+func TestResolveSourceNeverLooksAcrossForAProjectCaller(t *testing.T) {
+	e := newEnv(t, incCfg(0, "a"), one)
+	putAt(t, e,
+		store.Incident{Key: "k", Project: "p1", Open: true, LastSent: t0},
+		store.Incident{Key: "k", Project: "p2", Open: true, LastSent: t0})
+	for _, key := range []string{"k", "other"} {
+		got, err := openState(t, e).ResolveSource(e.cfg, "me", key, t0, false)
+		if err != nil || got.Kind != core.SourceNone || len(got.Projects) != 0 {
+			t.Errorf("ResolveSource(%s, across=false) = %+v, %v; want none, naming no project", key, got, err)
+		}
+	}
+}
+
+func TestResolveThroughSendsTheKeyInTheSendProjectsNamespace(t *testing.T) {
+	e := newEnv(t, incCfg(0, "a"), closer)
+	e.cfg.IncidentTTL = time.Hour
+	e.say("page", "k", "t") // an incident with a different record, generation 1, under no project
+	e.resolve("k", "")
+	if _, err := e.p.ResolveThrough(context.Background(), "me", "me", "fresh", "page", []string{"a"}); err != nil {
+		t.Fatal(err)
+	}
+	if want := core.ProviderKey("me", "fresh"); !slices.Equal(e.fakes["a"].Resolved[len(e.fakes["a"].Resolved)-1:], []string{want}) {
+		t.Errorf("a resolved %v; want %q", e.fakes["a"].Resolved, want)
 	}
 }
 
@@ -83,13 +109,13 @@ func TestResolveSourceStoreFailure(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(e.dir, "incidents.json"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := openState(t, e).ResolveSource(e.cfg, "me", "k", t0); err == nil {
+	if _, err := openState(t, e).ResolveSource(e.cfg, "me", "k", t0, true); err == nil {
 		t.Error("an unreadable incident store went unreported")
 	}
 }
 
 func through(e *env, key string, instances ...string) (core.Result, error) {
-	return e.p.ResolveThrough(context.Background(), "", key, "page", instances)
+	return e.p.ResolveThrough(context.Background(), "", "", key, "page", instances)
 }
 
 func TestResolveThroughSendsTheBareKeyToTheInstances(t *testing.T) {

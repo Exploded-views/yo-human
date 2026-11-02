@@ -210,8 +210,15 @@ func (e *env) pageResolve(cfg *config.Config, st *core.State, call pageCall) int
 	if err != nil {
 		return e.fail(err)
 	}
+	if core.LooksNamespaced(call.key) {
+		return e.fail(problem.Usagef("the dedup key after --resolve looks like an internal provider key (it is not echoed); nothing was sent",
+			"the key the page was opened with", "pass the key the page was opened with, not one a provider shows"))
+	}
 	again := "yo-human page --resolve " + problem.ShellQuote(call.key)
-	src, err := st.ResolveSource(cfg, proj, call.key, now())
+	// Another project's incidents are looked for only by a caller with no project of its own (the
+	// gate of `status --all`); a project-scoped agent never sees or closes another project's.
+	scoped := flatLine(os.Getenv("YO_HUMAN_PROJECT")) != ""
+	src, err := st.ResolveSource(cfg, proj, call.key, now(), !scoped)
 	if err != nil {
 		return e.reportResolve(core.Result{}, err, again)
 	}
@@ -244,7 +251,11 @@ func (e *env) passResolve(cfg *config.Config, st *core.State, call pageCall, pro
 		}
 	}
 	chans, problems := e.reachedChannels(cfg, st, reached)
-	res, err := e.pipeline(cfg, st, chans).ResolveThrough(context.Background(), proj, call.key, level, instances)
+	sendProject := ""                                  // no project: the bare key, which is what the old script sent
+	if flatLine(os.Getenv("YO_HUMAN_PROJECT")) != "" { // the same test as the gate above
+		sendProject = proj
+	}
+	res, err := e.pipeline(cfg, st, chans).ResolveThrough(context.Background(), proj, sendProject, call.key, level, instances)
 	return e.reportResolve(res, errors.Join(append(problems, err)...), again)
 }
 

@@ -79,4 +79,14 @@ func ProviderKey(project, key string) string {
 // LooksNamespaced reports whether key has the form ProviderKey makes: <len(project)>:<project>/<key>,
 // or "h:" and 64 lowercase hex digits. A caller must not be able to name such a key, or it could
 // close another project's alert.
-func LooksNamespaced(key string) bool { return false }
+func LooksNamespaced(key string) bool {
+	if h, ok := strings.CutPrefix(key, "h:"); ok {
+		return len(h) == 64 && !strings.ContainsFunc(h, func(r rune) bool { return !strings.ContainsRune("0123456789abcdef", r) })
+	}
+	digits, rest, ok := strings.Cut(key, ":")
+	n, err := strconv.Atoi(digits)
+	if !ok || err != nil || n < 1 || strconv.Itoa(n) != digits {
+		return false
+	}
+	return len(rest) >= n+2 && rest[n] == '/'
+}

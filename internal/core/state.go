@@ -125,12 +125,14 @@ type ResolveSource struct {
 }
 
 // ResolveSource looks up what a shim resolve of key, for project, has to close. An open incident is
-// one not silent for longer than incident_ttl at at. Other projects' incidents are looked for by the
-// bare key: the shim's trigger and resolve may run under different YO_HUMAN_PROJECT values. A
+// one not silent for longer than incident_ttl at at. Only when across is set (the caller has no
+// project of its own) are other projects' incidents looked for by the bare key, for a shim whose
+// trigger and resolve ran under different YO_HUMAN_PROJECT values; a caller with a project never
+// sees another project's incidents. A
 // record of the project's own that is closed, or expired and still marked open, still lists the
 // destinations that delivered (the incident record keeps them until it is pruned), and those are
 // returned in the order they were recorded.
-func (s *State) ResolveSource(cfg *config.Config, project, key string, at time.Time) (ResolveSource, error) {
+func (s *State) ResolveSource(cfg *config.Config, project, key string, at time.Time, across bool) (ResolveSource, error) {
 	incs, err := s.incidents()
 	if err != nil {
 		return ResolveSource{}, err
@@ -140,7 +142,10 @@ func (s *State) ResolveSource(cfg *config.Config, project, key string, at time.T
 	if held && live(own) {
 		return ResolveSource{Kind: SourceOpen}, nil
 	}
-	others := openElsewhere(incs, project, key, live)
+	var others []string
+	if across {
+		others = openElsewhere(incs, project, key, live)
+	}
 	switch {
 	case len(others) == 1:
 		return ResolveSource{Kind: SourceOther, Projects: others}, nil

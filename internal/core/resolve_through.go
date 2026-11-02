@@ -14,12 +14,14 @@ import (
 // withdrawn, scheduled sends of an expired incident cancelled). Then, if the record still lists
 // where the key was delivered, each of those destinations hears of it exactly as in Resolve: pinned
 // to the fingerprint that delivered, with the key as the record holds it. Otherwise a resolve for
-// the bare key goes to each of instances (the instances of level that can resolve), the key the old
-// script sent and PagerDuty holds. Notes go through the queue like any send.
+// the key goes to each of instances (the instances of level that can resolve) as ProviderKey makes it
+// for sendProject: bare for none, which is what the old script sent and PagerDuty holds, and inside
+// the project's namespace otherwise. project is the record's project, sendProject the one whose
+// namespace the key is sent in. Notes go through the queue like any send.
 //
 // It is never a noop. A close queued for another try is StatusQueued and a close refused for good
 // is StatusFailed, with the same problems Resolve reports.
-func (p *Pipeline) ResolveThrough(ctx context.Context, project, key, level string, instances []string) (Result, error) {
+func (p *Pipeline) ResolveThrough(ctx context.Context, project, sendProject, key, level string, instances []string) (Result, error) {
 	ctx, cancel := context.WithTimeout(ctx, p.d.Config.Deadline)
 	defer cancel()
 	p = p.within(ctx)
@@ -41,7 +43,7 @@ func (p *Pipeline) ResolveThrough(ctx context.Context, project, key, level strin
 	}
 	entries, notes := b.enqueueNotes(id, "", b.prior)
 	if len(notes) == 0 {
-		entries, notes = b.enqueueBare(id, key, level, instances)
+		entries, notes = b.enqueueBare(id, sendProject, key, level, instances)
 	}
 	closes := b.fanOut(ctx, entries, notes)
 	res.Channels = append(append(res.Channels, cancels...), closes...)
@@ -57,15 +59,15 @@ func (p *Pipeline) ResolveThrough(ctx context.Context, project, key, level strin
 	return res, err
 }
 
-// enqueueBare queues a resolve for the bare key on each instance, at the instance's quietest
+// enqueueBare queues a resolve for the key, in project's namespace, on each instance, at the instance's quietest
 // interruption, and returns what reached the queue.
-func (b *batch) enqueueBare(id, key, level string, instances []string) ([]entry, []PlannedSend) {
+func (b *batch) enqueueBare(id, project, key, level string, instances []string) ([]entry, []PlannedSend) {
 	plan := make([]PlannedSend, 0, len(instances))
 	for _, name := range instances {
 		plan = append(plan, PlannedSend{Instance: name, Interruption: b.p.quietest(name)})
 	}
-	m := channel.Message{ID: id, Level: level, Title: "Resolved: " + key, DedupKey: key, Created: b.now, Resolved: true}
-	entries, err := b.p.enqueue(m, 0, plan)
+	m := channel.Message{ID: id, Level: level, Title: "Resolved: " + key, DedupKey: key, Project: project, Created: b.now, Resolved: true}
+	entries, err := b.p.enqueue(m, b.prior.Generation, plan)
 	if err != nil {
 		b.fail(err)
 	}
