@@ -12,6 +12,8 @@ import (
 type Fake struct {
 	Caps     channel.Capabilities
 	SendFunc func(ctx context.Context, m channel.Message, s channel.SendSpec) (channel.Receipt, error)
+	// ResolveFunc answers a Resolve; nil means it succeeds.
+	ResolveFunc func(ctx context.Context, dedupKey string, m channel.Message) error
 
 	mu        sync.Mutex
 	Sent      []channel.Message
@@ -43,11 +45,16 @@ func (f *Fake) Send(ctx context.Context, m channel.Message, s channel.SendSpec) 
 	return channel.Receipt{Instance: s.Instance}, nil
 }
 
-// Resolve records the dedup key.
-func (f *Fake) Resolve(_ context.Context, dedupKey string, _ channel.Message) error {
+// Resolve records the dedup key, then answers through ResolveFunc, or succeeds when it is nil.
+// ResolveFunc runs outside the lock.
+func (f *Fake) Resolve(ctx context.Context, dedupKey string, m channel.Message) error {
 	f.mu.Lock()
-	defer f.mu.Unlock()
 	f.Resolved = append(f.Resolved, dedupKey)
+	resolve := f.ResolveFunc
+	f.mu.Unlock()
+	if resolve != nil {
+		return resolve(ctx, dedupKey, m)
+	}
 	return nil
 }
 

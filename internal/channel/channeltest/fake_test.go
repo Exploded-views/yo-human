@@ -60,6 +60,18 @@ func TestFakeRecordsResolveAndCancel(t *testing.T) {
 	}
 }
 
+func TestFakeResolveRecordsAndScripts(t *testing.T) {
+	f := channeltest.NewFake(channel.Capabilities{})
+	boom := errors.New("down")
+	f.ResolveFunc = func(_ context.Context, key string, _ channel.Message) error {
+		return channel.Transient(errors.New(key + ": " + boom.Error()))
+	}
+	err := f.Resolve(context.Background(), "k", channel.Message{})
+	if channel.KindOf(err) != channel.TransientError || len(f.Resolved) != 1 || f.Resolved[0] != "k" {
+		t.Errorf("scripted resolve = %v, recorded %v; want a transient error, and the key still recorded", err, f.Resolved)
+	}
+}
+
 func TestFakeIsConcurrentSafe(t *testing.T) {
 	f := channeltest.NewFake(channel.Capabilities{})
 	var wg sync.WaitGroup
