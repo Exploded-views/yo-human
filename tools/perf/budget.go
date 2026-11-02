@@ -76,10 +76,9 @@ func Check(results map[string][]time.Duration, b Budgets, ci bool) []Violation {
 			vs = append(vs, Violation{name, "no budget in perf-budgets.json"})
 			continue
 		}
-		limit := time.Duration(bud.P95Ms) * time.Millisecond
+		limit := limitFor(bud, b, ci)
 		note := ""
 		if ci {
-			limit = time.Duration(float64(limit) * b.CIHeadroom)
 			note = fmt.Sprintf(" (%dms x %.1f CI headroom)", bud.P95Ms, b.CIHeadroom)
 		}
 		if p := P95(results[name]); p > limit {
@@ -92,6 +91,35 @@ func Check(results map[string][]time.Duration, b Budgets, ci bool) []Violation {
 		}
 	}
 	return vs
+}
+
+// limitFor is a budget's ceiling: headroom multiplies it only when ci is true.
+func limitFor(bud Budget, b Budgets, ci bool) time.Duration {
+	limit := time.Duration(bud.P95Ms) * time.Millisecond
+	if ci {
+		limit = time.Duration(float64(limit) * b.CIHeadroom)
+	}
+	return limit
+}
+
+// OverBudget reports whether samples' p95 is over the scenario's ceiling. A scenario with no
+// budget is not over: Check reports that.
+func OverBudget(name string, samples []time.Duration, b Budgets, ci bool) bool {
+	bud, ok := b.Budgets[name]
+	return ok && P95(samples) > limitFor(bud, b, ci)
+}
+
+// WithFirstMiss adds the first measurement's p95 to the violation of each re-measured scenario, so
+// the log names both.
+func WithFirstMiss(vs []Violation, first map[string]time.Duration) []Violation {
+	out := make([]Violation, len(vs))
+	for i, v := range vs {
+		if p, ok := first[v.Scenario]; ok {
+			v.Message += "; first measurement p95 " + ms(p)
+		}
+		out[i] = v
+	}
+	return out
 }
 
 func ms(d time.Duration) string { return fmt.Sprintf("%.1fms", float64(d)/float64(time.Millisecond)) }

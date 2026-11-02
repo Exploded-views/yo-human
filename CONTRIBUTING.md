@@ -32,6 +32,11 @@ with the merge base of HEAD and `BASE` (default `origin/main`; pass
 When the base commit has no floors or budgets file, that comparison is skipped,
 as in CI. `make ci` alone needs no base.
 
+Perf runs each command scenario once untimed first (the hosted `Sample`
+scenarios time their own calls), and a scenario that misses its budget is
+re-measured once from a fresh temp dir. Only a miss on both fails, so a one-off
+runner stall passes and a real regression does not.
+
 What `make ci-base` cannot reproduce:
 
 - The OS matrix. CI runs the test and perf jobs on both `ubuntu-latest` and
