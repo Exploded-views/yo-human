@@ -294,7 +294,14 @@ func (p *Pipeline) retriesUnconfirmed(pl payload) bool {
 	if p.d.Caps[pl.Instance].NativeDedup {
 		return true
 	}
-	lv, ok := find(p.d.Config, pl.Message.Level)
+	return p.paging(pl.Message.Level)
+}
+
+// paging reports whether level is a paging level: one with a critical send on any channel, whatever
+// it is named, or one the config no longer has, which is taken for one. The level is read from the
+// config now, not as it stood when an entry was queued.
+func (p *Pipeline) paging(level string) bool {
+	lv, ok := find(p.d.Config, level)
 	if !ok {
 		return true
 	}

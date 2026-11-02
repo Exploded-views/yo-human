@@ -112,11 +112,21 @@ func (b *batch) lostClaim(pd store.Pending) (ChannelResult, error) {
 	return res, err
 }
 
+// lateAfter is how long a page may wait in the queue before its title says when it was queued.
+const lateAfter = 5 * time.Minute
+
 // dispatch makes the call for a claimed entry: a resolve note to a channel that can close an
 // incident closes it, anything else is sent.
 func (b *batch) dispatch(ctx context.Context, ch channel.Channel, pl payload, spec channel.SendSpec) (channel.Receipt, error) {
 	m := pl.Message
 	m.DedupKey = ProviderKey(m.Project, m.DedupKey) // the provider sees the project's key, never the bare one
+	if !m.Resolved && spec.DeliverAt.IsZero() && b.now.Sub(pl.Enqueued) > lateAfter && b.p.paging(m.Level) {
+		mark := "[queued since " + pl.Enqueued.UTC().Format("15:04") + " UTC]" // on the copy sent, never the stored payload
+		if m.Title != "" {
+			mark += " " + m.Title
+		}
+		m.Title = mark
+	}
 	if m.Resolved && b.p.d.Caps[pl.Instance].Resolve {
 		return channel.Receipt{}, ch.Resolve(ctx, m.DedupKey, m)
 	}

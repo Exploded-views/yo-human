@@ -140,7 +140,7 @@ How a channel shows the core fields when it supports them (from the 2026-10-26 d
   - closes the incident with channels that can resolve (PagerDuty)
   - sends a "resolved: …" note to the other channels the incident **actually reached**, with `passive` interruption (or the channel's quietest), ignoring quiet hours, since it doesn't buzz (owner, with the details as the **builder's call**). The incident records each reached channel instance, so it can be addressed later.
   - an unknown or already-resolved key exits 0 with status `noop`
-- `yo-human flush`: send whatever is queued or held and now due, within the deadline.
+- `yo-human flush`: send whatever is queued or held and now due, within the deadline. A page on a paging level (one with a critical send) that is sent more than 5 minutes after it was queued has its title prefixed `[queued since HH:MM UTC]`, the time it was queued.
 - `yo-human status`: queued, held, dead-lettered and open incidents (by dedup key).
 - `yo-human levels`: the configured levels, quietest first, with `use_when`. This is how an agent's skill learns the human's ladder (owner: names from config).
 - `yo-human config init`: write a starter config, refusing to overwrite an existing one.

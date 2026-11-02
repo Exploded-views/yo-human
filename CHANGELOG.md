@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A page on a paging level (one with a critical send) that is delivered more than 5 minutes after it
+  was queued, such as one retried after an outage, has its title prefixed `[queued since HH:MM UTC]`,
+  the time it was queued, so a late page does not pass for a fresh one. Resolves, resolve notes and
+  levels with no critical send are not marked.
+
 ## [v0.2.0] - 2026-11-02
 
 ### Added
