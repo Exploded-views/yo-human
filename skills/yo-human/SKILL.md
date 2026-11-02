@@ -133,11 +133,14 @@ the config's `shim:` block maps them to levels.
 ```
 yo-human page [--low] "<summary>" [details] [dedup-key]
 yo-human page [--low] --resolve <dedup-key>
+yo-human page --check
 ```
 
 Default is the "need the human now" service; `--low` is for "CI/CD broken while production is up".
 Put `--low` before the summary. Exit codes are the same as above. A trigger prints the key it used
 on a `key:` line (`dedup_key` in `--json`), so a page sent without a key can still be resolved.
+`page --check` prints which level each mode maps to and what each sends, and sends nothing; run it
+before relying on a migrated host.
 New code uses `notify`, not `page`.
 Always pass a dedup key as the last argument (use `""` for no details): without one every call is
 its own incident, named by the clock, and you could not resolve it. `--resolve` needs the same key.

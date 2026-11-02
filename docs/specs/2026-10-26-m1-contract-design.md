@@ -172,6 +172,7 @@ shim:
 - Migration is one line per host: the old script becomes `exec yo-human page "$@"`.
 - Output is the normal `RESULT` line, not PagerDuty's JSON. Exit codes are yo-human's; callers that only test for zero or non-zero behave as before, and a queued page (75) is correctly non-zero.
 - Without a `shim` block, `yo-human page` exits 78 and names the block to add.
+- `yo-human page --check` (also `--json`) shows the mapping without paging anyone: for `page` and `page --low`, the level, the ask and that level's sends (instance name and interruption, in config order), then the `agent` (`shim.agent`, or `unknown`). `--json` is `{"default":{"level","ask","sends":[{"channel","interruption"}]},"low":{…},"agent"}`. It prints instance names and interruptions only, never a server, topic, key or path; it builds no channel, flushes nothing and writes nothing, so it is safe to run anywhere. It takes no other argument or flag (`--check` with a summary, `--resolve` or `--low` exits 64), and without a `shim` block it exits 78 as `page` does. Its agent is `shim.agent` only: `YO_HUMAN_AGENT` is per call and is not read.
 
 Every command takes `--json`. Every command first sends anything due in the queue, within the same deadline (constitution V), except `secret`, `config` and `version`.
 

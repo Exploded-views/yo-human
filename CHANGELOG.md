@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `yo-human page --check` prints the shim's level, ask and sends for `page` and `page --low`, and the
+  agent, without sending anything, so a host can see the mapping before it migrates.
+
 ### Changed
 
 - A send whose request went out but whose answer never came (a timeout, or on Bark a 2xx reply cut
