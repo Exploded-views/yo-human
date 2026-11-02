@@ -91,7 +91,7 @@ func (b *batch) enqueueBare(id, project, key, level string, instances []string) 
 func (b *batch) resolvers(rs []store.Reached) []store.Reached {
 	var out []store.Reached
 	for _, r := range rs {
-		if b.p.d.Caps[r.Instance].Resolve {
+		if c, known := b.p.d.Caps[r.Instance]; !known || c.Resolve { // one gone from the config is kept, as throughStatus does
 			out = append(out, r)
 		}
 	}

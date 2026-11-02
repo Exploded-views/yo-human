@@ -245,10 +245,16 @@ func (e *env) passResolve(cfg *config.Config, st *core.State, call pageCall, pro
 	}
 	reached := src.Reached
 	if src.Closed { // the human heard of it: only the channels that can resolve are told again
-		reached = slices.DeleteFunc(slices.Clone(reached), func(r core.Reach) bool { return !capsOf(cfg)[r.Instance].Resolve })
+		caps := capsOf(cfg)
+		reached = slices.DeleteFunc(slices.Clone(reached), func(r core.Reach) bool {
+			c, configured := caps[r.Instance]
+			return configured && !c.Resolve // one gone from the config is kept: its close parks, visibly
+		})
 	}
-	for _, name := range instances { // the fallback, should the record be gone by the time the resolve runs
-		reached = append(reached, core.Reach{Instance: name, Delivered: true})
+	if len(reached) == 0 { // no record to answer with: the level's resolvers are told, and only then built
+		for _, name := range instances {
+			reached = append(reached, core.Reach{Instance: name, Delivered: true})
+		}
 	}
 	chans, problems := e.reachedChannels(cfg, st, reached)
 	sendProject := ""                                  // no project: the bare key, which is what the old script sent
