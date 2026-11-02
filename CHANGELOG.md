@@ -117,6 +117,7 @@ the M0 scaffold.
   (marked as not shipped), a message-path diagram, build-from-source steps and
   the milestone roadmap. Theme-aware banner in `docs/assets/`.
 
-[Unreleased]: https://github.com/Exploded-views/yo-human/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/Exploded-views/yo-human/compare/v0.2.0...HEAD
+[v0.2.0]: https://github.com/Exploded-views/yo-human/compare/v0.1.1...v0.2.0
 [v0.1.1]: https://github.com/Exploded-views/yo-human/compare/v0.1.0...v0.1.1
 [v0.1.0]: https://github.com/Exploded-views/yo-human/releases/tag/v0.1.0
