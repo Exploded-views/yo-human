@@ -128,3 +128,29 @@ func TestAWarmUpThatExitsWrongIsAnError(t *testing.T) {
 		t.Error("measure succeeded although the command exits 3, want 64")
 	}
 }
+
+func TestAFailedRemeasureIsAnErrorNamingTheScenario(t *testing.T) {
+	calls := 0
+	m := func(Scenario, int) ([]time.Duration, error) {
+		calls++
+		if calls == 2 {
+			return nil, os.ErrInvalid
+		}
+		return []time.Duration{ms100(215)}, nil
+	}
+	var out, errb strings.Builder
+	code := runWith([]string{"--budgets", writeBudgets(t, heldBudgets)}, &out, &errb, []Scenario{{Name: "x"}}, true, m)
+	if code != 2 || !strings.Contains(errb.String(), "x") {
+		t.Errorf("exit %d, stderr %q; want exit 2 naming x", code, errb.String())
+	}
+}
+
+func TestAnUnwritableStepSummaryIsReportedButDoesNotChangeTheVerdict(t *testing.T) {
+	t.Setenv("GITHUB_STEP_SUMMARY", t.TempDir()) // a directory, so it cannot be opened for append
+	sc := &scripted{p95: map[string][]int{"x": {215, 7}}}
+	var out, errb strings.Builder
+	code := runWith([]string{"--budgets", writeBudgets(t, heldBudgets)}, &out, &errb, []Scenario{{Name: "x"}}, true, sc.measure)
+	if code != 0 || !strings.Contains(errb.String(), "step summary") {
+		t.Errorf("exit %d, stderr %q; want exit 0 with the summary failure on stderr", code, errb.String())
+	}
+}
