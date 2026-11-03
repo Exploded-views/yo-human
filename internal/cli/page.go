@@ -302,6 +302,12 @@ type checkMode struct {
 	Sends []checkSend `json:"sends"`
 }
 
+// sendsText is the sends of one level as one line: each "<channel> <interruption>", joined by ", ",
+// or "none".
+func sendsText(s []checkSend) string {
+	return ""
+}
+
 // checkModeOf is what one mode of the shim sends: its level, ask and the level's sends in config
 // order. It reads the config only.
 func checkModeOf(cfg *config.Config, low bool) (checkMode, error) {

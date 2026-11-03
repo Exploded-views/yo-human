@@ -2,12 +2,17 @@ package cli
 
 import "fmt"
 
+// levelsUsage is the valid text of every levels usage error.
+const levelsUsage = `yo-human levels [--sends]`
+
 // cmdLevels prints the configured levels, quietest first, with use_when: how an agent learns the
 // human's ladder. Like every command but secret, config and version, it first sends what is due;
 // use_when comes from a file, so both forms carry it as one plain line.
 func cmdLevels(e *env, args []string) int {
-	if len(args) > 0 {
-		return e.fail(usageErr("levels"))
+	fs := newFlags("levels")
+	_ = fs.Bool("sends", false, "")
+	if err := parseFlags(fs, "levels", levelsUsage, args); err != nil {
+		return e.fail(err)
 	}
 	cfg, st, err := e.loadWithStore()
 	if err != nil {
