@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.3.0] - 2026-11-04
+
 ### Added
 
 - `yo-human channel test <instance> --interruption passive|active|time-sensitive|critical` sends the
@@ -148,7 +150,8 @@ the M0 scaffold.
   (marked as not shipped), a message-path diagram, build-from-source steps and
   the milestone roadmap. Theme-aware banner in `docs/assets/`.
 
-[Unreleased]: https://github.com/Exploded-views/yo-human/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Exploded-views/yo-human/compare/v0.3.0...HEAD
+[v0.3.0]: https://github.com/Exploded-views/yo-human/compare/v0.2.0...v0.3.0
 [v0.2.0]: https://github.com/Exploded-views/yo-human/compare/v0.1.1...v0.2.0
 [v0.1.1]: https://github.com/Exploded-views/yo-human/compare/v0.1.0...v0.1.1
 [v0.1.0]: https://github.com/Exploded-views/yo-human/releases/tag/v0.1.0
