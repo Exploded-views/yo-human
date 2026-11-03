@@ -31,7 +31,8 @@ commands:
   page --check                     print the shim's level, ask and sends for each mode, and send nothing
   flush                            send whatever is queued and due
   status                           the queue, the dead letter and the open incidents
-  channel test <instance>          send one test message through one channel
+  channel test <instance> [--interruption <level>]
+                                   send one test message through one channel (passive unless a level is named)
   config init|check|schema         write, validate or print the schema of a config
   config trust [<file>]            the human trusts a project file, typing yes at their own terminal
   secret set <name>                the human stores a secret piped in on stdin, typing yes at their own terminal

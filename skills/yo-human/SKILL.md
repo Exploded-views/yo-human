@@ -66,6 +66,18 @@ on that it is over. Run it once the problem is fixed and verified. Do not send a
 say "fixed". An unknown or already-resolved key exits 0 with `RESULT noop`, and so does a key
 whose incident expired (silent past the config's `incident_ttl`).
 
+## Channel test
+
+```
+yo-human channel test <instance>
+```
+
+Sends one passive test message through one channel and prints `RESULT delivered` when it arrives.
+Its `--interruption` flag can send a louder one. **Never run `channel test` with an interruption
+above `passive`.** That check is for the human, at their own terminal: `critical` wakes them and, on
+PagerDuty, opens a real incident they must then close. yo-human cannot resolve a `channel test` key
+(`resolve` answers `noop`); the owner closes that incident in the provider.
+
 ## Trust and secrets are the human's
 
 Never run `yo-human config trust` or `yo-human secret set`, and never try to get around the prompt
@@ -83,7 +95,7 @@ Errors go to stderr as `error:`, `valid:` and `fix:` lines (in `--json`, an `err
 | Exit | Status | What you do |
 |---|---|---|
 | 0 | delivered, partial, held, suppressed, resolved, noop | Done. Carry on. `held` means it waits for the human's quiet hours to end; that is intended. |
-| 64 | (usage) | Your call is wrong. Read `error`/`valid`/`fix`, fix the call, run it again. |
+| 64 | (usage) | Your call is wrong. Read `error`/`valid`/`fix`, fix the call, run it again. The exception: a 64 from `channel test --interruption` is never retried with another interruption; leave the flag out. |
 | 75 | queued | No channel reachable yet. Follow `next` (below), then tell the human. `flush` exits 75 too, while a send is still queued; so does `resolve` while a cancel or a PagerDuty close is queued. |
 | 69 | failed | Every channel rejected it for good. **Stop.** Retrying cannot help, so do not retry or switch levels. Tell the human in your session. |
 | 78 | (config) | Missing secret, bad config or loose permissions. **Stop.** Tell the human; only they can fix it. Quote the `error` and `fix` lines. Do not edit the config or secrets yourself. A channel listed `skipped` could not be built (say, its secret is missing): the level's other channels still went out, and the `error` names the one to fix. A skipped channel is not queued or retried: it stays unreached until the human fixes it and you send again. |
