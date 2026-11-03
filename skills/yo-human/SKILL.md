@@ -24,7 +24,8 @@ yo-human levels --json
 
 Prints `{"version":1,"status":"ok","levels":[{"name","use_when","ask","quiet_hours"}, ...]}`,
 quietest first. Choose the level whose `use_when` matches your situation. Read it once per
-session. A wrong name exits 64 and the error lists the valid ones.
+session. A wrong name exits 64 and the error lists the valid ones. For how common events (a
+release, a green PR, a vendor incident) map onto a ladder, see [docs/paging-guide.md](../../docs/paging-guide.md).
 
 ## Send
 

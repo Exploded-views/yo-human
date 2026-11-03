@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `docs/paging-guide.md` maps common events (an outage, a decision, a green PR, a vendor incident,
+  a release, a finished task) onto the starter levels, with three copyable examples in
+  `docs/examples/`. A repolint check holds them to the starter config's level names.
 - A page on a paging level (one with a critical send) that is delivered more than 5 minutes after it
   was queued, such as one retried after an outage, has its title prefixed `[queued since HH:MM UTC]`,
   the time it was queued, so a late page does not pass for a fresh one. Resolves, resolve notes and
