@@ -32,7 +32,7 @@ One page per thing you set up. Each page is checked by `go test ./internal/repol
 
   It is an environment variable, not a flag, so an agent that may only run `yo-human …` cannot use it. Never set it where an agent runs commands, and never tell an agent about it.
 - **No home paths.** Pages say `$HOME` or `$XDG_CONFIG_HOME`, never `~/`. yo-human's files are `$XDG_CONFIG_HOME/yo-human/config.yaml` and `secrets.yaml` (usually under `$HOME/.config`), and its state is under `$XDG_STATE_HOME/yo-human/`.
-- **Check before you test.** `yo-human config check` validates the config and lists each secret you have not stored, with the command that stores it. It exits 0 for a missing secret and 78 for a bad config. `yo-human channel test <instance>` sends one passive test message through one channel; a missing secret there exits 78.
+- **Check before you test.** `yo-human config check` validates the config and lists each secret you have not stored, with the command that stores it. It exits 0 for a missing secret and 78 for a bad config. `yo-human channel test <instance>` sends one passive test message through one channel; a missing secret there exits 78. A paging level's channel can be checked with `--interruption critical`, by the owner only and at their own terminal, because it really wakes them and, on PagerDuty, opens an incident they then close.
 
 ## Agent harness setup
 

@@ -64,6 +64,17 @@ on that it is over. Run it once the problem is fixed and verified. Do not send a
 say "fixed". An unknown or already-resolved key exits 0 with `RESULT noop`, and so does a key
 whose incident expired (silent past the config's `incident_ttl`).
 
+## Channel test
+
+```
+yo-human channel test <instance>
+```
+
+Sends one passive test message through one channel and prints `RESULT delivered` when it arrives.
+Its `--interruption` flag can send a louder one. **Never run `channel test` with an interruption
+above `passive`.** That check is for the human, at their own terminal: `critical` wakes them and, on
+PagerDuty, opens a real incident they must then close.
+
 ## Trust and secrets are the human's
 
 Never run `yo-human config trust` or `yo-human secret set`, and never try to get around the prompt

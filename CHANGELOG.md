@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `yo-human channel test <instance> --interruption passive|active|time-sensitive|critical` sends the
+  test at that interruption, so a paging level's channel can be checked at the interruption it pages
+  with (the default stays `passive`, and its output is unchanged). An interruption the channel type
+  cannot send is a usage error (64) naming the ones it can, and nothing is sent. `--json` gains
+  `interruption` and, above `passive`, `dedup_key`; the text prints the `key:` and a `close:` line,
+  because `resolve` cannot close what a test opened. A new optional flag and field: the next release
+  is a minor one. Above `passive` is for the owner, at their own terminal; the agent skill forbids it.
 - `yo-human page --check` prints the shim's level, ask and sends for `page` and `page --low`, and the
   agent, without sending anything, so a host can see the mapping before it migrates.
 - `yo-human page version` and `page help` (any case, with or without `--low`) are usage errors (64)

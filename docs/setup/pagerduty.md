@@ -81,6 +81,8 @@ yo-human channel test "$CRITICAL_INSTANCE"
 yo-human channel test "$LOW_INSTANCE"
 ```
 
+To check the channel a paging level uses, run `yo-human channel test "$CRITICAL_INSTANCE" --interruption critical`. Only the owner runs that, at their own terminal: it really wakes them and opens an incident they then close in the PagerDuty app.
+
 Each test sends a passive (severity `info`) alert through that one service, so it can open a real alert on that service. Resolve it from the PagerDuty app afterwards. `config check` lists any secret you have not stored yet, each with the command that stores it. A working channel prints:
 
 ```

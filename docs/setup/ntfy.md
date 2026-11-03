@@ -82,6 +82,8 @@ yo-human config check
 yo-human channel test "$INSTANCE"
 ```
 
+A paging level's channel can be checked at the interruption it pages with: `yo-human channel test "$INSTANCE" --interruption time-sensitive` (ntfy has no `critical`, and the command refuses it). Only the owner runs that, at their own terminal, because it really wakes them.
+
 `config check` lists any secret you have not stored yet, each with the command that stores it. A working channel prints:
 
 ```
