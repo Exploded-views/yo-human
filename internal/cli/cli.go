@@ -21,7 +21,7 @@ const usage = `usage: yo-human <command> [flags]   (--json and --config <file> g
 
 commands:
   version                          print the version
-  levels                           the configured levels, quietest first
+  levels [--sends]                 the configured levels, quietest first; --sends adds each level's channels
   notify --level <name> --title <text> [--ask <text>] [flags]
                                    send a message at a level; the other flags are in the error a bad call prints
   resolve --dedup-key <key>        close an incident
@@ -53,7 +53,7 @@ type env struct {
 
 // verbUsages are the commands whose help leads with their own valid line, flags and all.
 var verbUsages = map[string]string{
-	"notify": notifyUsage, "resolve": resolveUsage, "page": pageUsage, "status": statusUsage,
+	"notify": notifyUsage, "resolve": resolveUsage, "page": pageUsage, "status": statusUsage, "levels": levelsUsage,
 }
 
 type handler func(e *env, args []string) int
