@@ -58,6 +58,62 @@ func TestLevelNamesUnknownFlag(t *testing.T) {
 	if len(got) != 2 || got[0].Line != 2 || got[1].Line != 3 {
 		t.Errorf("findings = %+v; want two, on lines 2 and 3", got)
 	}
+	for _, f := range got {
+		if !strings.Contains(f.Msg, "urgent") {
+			t.Errorf("finding %+v does not name urgent", f)
+		}
+	}
+}
+
+const levelTable = "| Event | Example level | Why |\n|---|---|---|\n"
+
+func TestLevelNamesSpacedToken(t *testing.T) {
+	got := CheckLevelNames(levelTable+"| x | `heads up` | typo |\n| y | `urgent page` | no |\n", known)
+	if len(got) != 2 || got[0].Line != 3 || got[1].Line != 4 {
+		t.Errorf("findings = %+v; want two, on lines 3 and 4", got)
+	}
+}
+
+func TestLevelNamesCommandCellIsSkipped(t *testing.T) {
+	page := levelTable + "| x | `yo-human resolve --dedup-key <key>` | closes it |\n"
+	if got := CheckLevelNames(page, known); len(got) != 0 {
+		t.Errorf("command cell: %+v; want none", got)
+	}
+}
+
+func TestLevelNamesBareCell(t *testing.T) {
+	got := CheckLevelNames(levelTable+"| x | urgent | no |\n| y | note | fine |\n", known)
+	if len(got) != 1 || got[0].Line != 3 || !strings.Contains(got[0].Msg, "urgent") {
+		t.Errorf("findings = %+v; want one on line 3 naming urgent", got)
+	}
+}
+
+func TestLevelNamesEscapedPipe(t *testing.T) {
+	got := CheckLevelNames(levelTable+"| uses `--action \"a\\|b\"` | `urgent` | no |\n", known)
+	if len(got) != 1 || got[0].Line != 3 || !strings.Contains(got[0].Msg, "urgent") {
+		t.Errorf("findings = %+v; want one on line 3 naming urgent", got)
+	}
+}
+
+func TestLevelNamesOtherHeaderIgnored(t *testing.T) {
+	page := "| Event | Level | Why |\n|---|---|---|\n| x | `urgent` | no |\n"
+	if got := CheckLevelNames(page, known); len(got) != 0 {
+		t.Errorf("table without an Example level header: %+v; want none", got)
+	}
+}
+
+func TestLevelNamesFencedTableIgnored(t *testing.T) {
+	page := "```md\n" + levelTable + "| x | `urgent` | no |\n```\n"
+	if got := CheckLevelNames(page, known); len(got) != 0 {
+		t.Errorf("fenced table: %+v; want none", got)
+	}
+}
+
+func TestLevelNamesNonTableLineResetsColumn(t *testing.T) {
+	page := levelTable + "| x | `note` | ok |\n\n| a | `urgent` | headerless |\n"
+	if got := CheckLevelNames(page, known); len(got) != 0 {
+		t.Errorf("row after a break: %+v; want none", got)
+	}
 }
 
 func repoPages(t *testing.T) (guide string, examples []string) {
@@ -72,6 +128,15 @@ func repoPages(t *testing.T) (guide string, examples []string) {
 	}
 	if len(examples) < 3 {
 		t.Errorf("docs/examples has %d pages, want at least 3", len(examples))
+	}
+	for _, want := range []string{"release-ready.md", "vendor-incident.md", "ci-ready-link.md"} {
+		var found []string
+		for _, e := range examples {
+			found = append(found, filepath.Base(e))
+		}
+		if !contains(found, want) {
+			t.Errorf("docs/examples/%s is missing", want)
+		}
 	}
 	return guide, examples
 }
