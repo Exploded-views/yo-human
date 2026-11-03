@@ -142,7 +142,7 @@ How a channel shows the core fields when it supports them (from the 2026-10-26 d
   - an unknown or already-resolved key exits 0 with status `noop`
 - `yo-human flush`: send whatever is queued or held and now due, within the deadline. A page on a paging level (one with a critical send) that is sent more than 5 minutes after it was queued has its title prefixed `[queued since HH:MM UTC]`, the time it was queued. A page held for quiet hours counts from the end of the hold, so one released on time is not marked.
 - `yo-human status`: queued, held, dead-lettered and open incidents (by dedup key).
-- `yo-human levels`: the configured levels, quietest first, with `use_when`. This is how an agent's skill learns the human's ladder (owner: names from config).
+- `yo-human levels [--sends]`: the configured levels, quietest first, with `use_when`; `--sends` adds each level's sends (amendment 4). This is how an agent's skill learns the human's ladder (owner: names from config).
 - `yo-human config init`: write a starter config, refusing to overwrite an existing one.
 - `yo-human config trust [<file>]`: trust the project-level config file (it is re-checked by sha256 on every call).
 - `yo-human config check`: validate the config and secrets, and print capability warnings.
@@ -314,7 +314,7 @@ The owner approved these changes so that the spec matches the shipped behaviour.
 1. **No per-send routing key.** The PagerDuty routing key per service is not a per-send option. Two services are two channel instances, and credentials arrive only at construction (see the channel interface). A PagerDuty send takes no options at all.
 2. **Send order.** The new message goes first, then the backlog, in the same call.
 3. **Help and usage.** Running `yo-human` with no arguments prints the usage and exits 64. `--help` (like any word that is not a command) exits 64 with the unknown-command error, which lists the commands and points at the no-argument usage. *The code differs from the approved wording here: `--help` does not print the usage itself.*
-4. **`levels --json`** has no `send` field. It lists each level's name, `use_when`, `ask` and `quiet_hours`.
+4. **`levels --json`** has no `send` field. It lists each level's name, `use_when`, `ask` and `quiet_hours`. `levels --sends` adds each level's `sends` (instance and interruption, never a destination), and without the flag there is still no `sends` field.
 5. **`problem.Unavailable` maps to exit 69.**
 6. **ntfy has no priority 5.** ntfy maps `passive`, `active` and `time-sensitive` to priorities 2, 3 and 4. It declares no `critical`, and `config check` warns when a level sends `critical` to it. Critical pages go through Bark or PagerDuty.
 7. **`--json` output.** stdout always carries exactly one object. Problems that come with a result are in its `errors` array, and warnings are in `warnings`.

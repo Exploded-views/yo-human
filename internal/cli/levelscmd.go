@@ -10,7 +10,7 @@ const levelsUsage = `yo-human levels [--sends]`
 // use_when comes from a file, so both forms carry it as one plain line.
 func cmdLevels(e *env, args []string) int {
 	fs := newFlags("levels")
-	_ = fs.Bool("sends", false, "")
+	sends := fs.Bool("sends", false, "")
 	if err := parseFlags(fs, "levels", levelsUsage, args); err != nil {
 		return e.fail(err)
 	}
@@ -20,13 +20,14 @@ func cmdLevels(e *env, args []string) int {
 	}
 	e.flushFirst(cfg, st)
 	type level struct {
-		Name       string `json:"name"`
-		UseWhen    string `json:"use_when"`
-		Ask        string `json:"ask"`
-		QuietHours string `json:"quiet_hours"`
+		Name       string       `json:"name"`
+		UseWhen    string       `json:"use_when"`
+		Ask        string       `json:"ask"`
+		QuietHours string       `json:"quiet_hours"`
+		Sends      *[]checkSend `json:"sends,omitempty"` // only under --sends; an empty list is still written
 	}
 	levels := make([]level, len(cfg.Levels))
-	lines := make([]string, len(cfg.Levels))
+	lines := make([]string, 0, 2*len(cfg.Levels))
 	for i, l := range cfg.Levels {
 		levels[i] = level{Name: l.Name, UseWhen: oneLine(l.UseWhen), Ask: "optional", QuietHours: "send"}
 		if l.AskRequired {
@@ -35,7 +36,12 @@ func cmdLevels(e *env, args []string) int {
 		if l.HoldInQuietHours {
 			levels[i].QuietHours = "hold"
 		}
-		lines[i] = fmt.Sprintf("%s (ask %s, quiet hours %s): %s", l.Name, levels[i].Ask, levels[i].QuietHours, levels[i].UseWhen)
+		lines = append(lines, fmt.Sprintf("%s (ask %s, quiet hours %s): %s", l.Name, levels[i].Ask, levels[i].QuietHours, levels[i].UseWhen))
+		if *sends {
+			sd := sendsOf(l)
+			levels[i].Sends = &sd
+			lines = append(lines, "  sends: "+sendsText(sd))
+		}
 	}
 	e.ok(lines, map[string]any{"levels": levels})
 	return ExitOK
