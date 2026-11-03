@@ -239,18 +239,38 @@ func checkShim(c *Config) []*problem.Problem {
 		return nil
 	}
 	var out []*problem.Problem
-	for _, m := range []struct{ path, level string }{{"shim.default.level", c.Shim.Default.Level}, {"shim.low.level", c.Shim.Low.Level}} {
+	for _, m := range []struct{ mode, level, ask string }{
+		{"default", c.Shim.Default.Level, c.Shim.Default.Ask},
+		{"low", c.Shim.Low.Level, c.Shim.Low.Ask},
+	} {
 		if m.level == "" {
 			continue
 		}
+		path := "shim." + m.mode
 		if _, ok := c.Rank(m.level); !ok {
 			var names []string
 			for _, l := range c.Levels {
 				names = append(names, l.Name)
 			}
 			out = append(out, problem.Configf("%s names unknown level %q", "a name under levels: "+strings.Join(names, ", "),
-				"set "+m.path+" to one of the names under levels", m.path, m.level))
+				"set "+path+".level to one of the names under levels", path+".level", m.level))
+			continue
+		}
+		// A real page refuses this (askMissing), so the no-send checks must too.
+		if strings.TrimSpace(m.ask) == "" && askRequired(c, m.level) {
+			out = append(out, problem.Configf("level %q needs an ask, and %s.ask is empty", "a sentence saying what the human must do",
+				"set "+path+`.ask in the shim: block of the config, or give the level "ask: optional"`, m.level, path))
 		}
 	}
 	return out
+}
+
+// askRequired reports whether the named level exists and needs an ask.
+func askRequired(c *Config, name string) bool {
+	for _, l := range c.Levels {
+		if l.Name == name {
+			return l.AskRequired
+		}
+	}
+	return false
 }

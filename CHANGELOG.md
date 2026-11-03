@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   levels with no critical send are not marked. A page held for quiet hours counts from the end of the
   hold.
 
+### Fixed
+
+- `config check` and `page --check` now refuse an empty `shim.default.ask` or `shim.low.ask` under a
+  level that needs an ask (exit 78), as a real `page` already did, so a config that passes both
+  checks no longer fails on its first page (#39).
+
 ## [v0.2.0] - 2026-11-02
 
 ### Added
