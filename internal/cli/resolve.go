@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/Exploded-views/yo-human/internal/channel"
 	"github.com/Exploded-views/yo-human/internal/config"
 	"github.com/Exploded-views/yo-human/internal/core"
 	"github.com/Exploded-views/yo-human/internal/problem"
@@ -70,6 +71,12 @@ func (e *env) closeIncident(cfg *config.Config, st *core.State, key, note string
 		res, err = e.resolveWith(cfg, st, key, note, reached)
 		e.warnRedacted(redactedNote, res)
 	}
+	return e.reportResolve(res, err, again)
+}
+
+// reportResolve prints a resolve's result. One that could not take the incident lock changed
+// nothing, and its next step is the same resolve again (again).
+func (e *env) reportResolve(res core.Result, err error, again string) int {
 	if res.Status == "" && core.IsBusy(err) {
 		res = e.retryResult(res.ID, again)
 	}
@@ -94,6 +101,15 @@ func (e *env) retryResult(id, again string) core.Result {
 // it cannot reach). A reached channel that cannot be built, or is no longer configured, is a
 // problem printed after the result. Only a channel that delivered has a resolve note waiting.
 func (e *env) resolveWith(cfg *config.Config, st *core.State, key, note string, reached []core.Reach) (core.Result, error) {
+	chans, problems := e.reachedChannels(cfg, st, reached)
+	res, rerr := e.pipeline(cfg, st, chans).Resolve(context.Background(), key, note)
+	return res, errors.Join(append(problems, rerr)...)
+}
+
+// reachedChannels builds the channels of the instances an incident reached, and those of the
+// backlog. A reached channel that cannot be built, or is no longer configured, is a problem to print
+// after the result.
+func (e *env) reachedChannels(cfg *config.Config, st *core.State, reached []core.Reach) (map[string]channel.Channel, []error) {
 	var gone, present []string
 	delivered := map[string]bool{}
 	for _, r := range reached {
@@ -112,8 +128,7 @@ func (e *env) resolveWith(cfg *config.Config, st *core.State, key, note string, 
 	for _, name := range sortedNames(failed) {
 		problems = append(problems, noteProblems(name, failed[name], delivered[name])...)
 	}
-	res, rerr := e.pipeline(cfg, st, chans).Resolve(context.Background(), key, note)
-	return res, errors.Join(append(problems, rerr)...)
+	return chans, problems
 }
 
 // removedProblem is the problem for a reached channel the config no longer has. Its queued sends

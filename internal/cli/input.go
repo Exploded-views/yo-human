@@ -66,7 +66,7 @@ func parseFlags(fs *flag.FlagSet, command, valid string, args []string) error {
 }
 
 // flatLine makes s one line of plain text: control and format characters become spaces.
-func flatLine(s string) string { return strings.TrimSpace(oneLine(s)) }
+func flatLine(s string) string { return problem.FlatLine(s) }
 
 // utf8Check refuses text that is not valid UTF-8, naming the flag but not the text.
 func utf8Check(flagName, s string) error {

@@ -12,6 +12,8 @@ Export each one in your shell before you start. The device key is a secret: it g
 - `OP_VAULT="<vault>"` — the 1Password vault that holds the device key
 - `OP_ITEM="<item>"` — the 1Password item whose `device_key` field holds the key
 
+The device key is the short key in the server URL the Bark app shows (`https://<server>/<key>/...`), not the phone's 64-character APNs device token. With the token, every send fails with HTTP 400.
+
 ## Already set
 
 - `yo-human` is installed, and `yo-human config check` runs.
@@ -69,6 +71,14 @@ op read "op://$OP_VAULT/$OP_ITEM/password" | yo-human secret set bark-password
 - Set both or neither. One without the other is refused with exit 78, and the message names the instance and both fields, never a value.
 - A 418 or 401 answer fails the page permanently, with a hint to set `username` and `password`. Fix the credentials and send again.
 - The public server needs none of this.
+
+The first push after a long idle can take about a second, because the server's connection to Apple is cold. The default `deadline` of 1s can cut it off. Below a paging level, the send is then reported as `sent (unconfirmed: the request went out but no complete answer came back)`. A paging level retries it. Raise the deadline at the top level of your config:
+
+```yaml
+deadline: 3s
+```
+
+3s to 5s suits a self-hosted server. The deadline bounds the whole call, so it also bounds how long the agent waits.
 
 ## Critical alerts need a permission
 

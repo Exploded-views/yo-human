@@ -105,6 +105,9 @@ func cmdCheck(e *env, args []string) int {
 	if err != nil {
 		return e.fail(err)
 	}
+	if err := shimAskError(cfg); err != nil {
+		return e.fail(err)
+	}
 	stored, err := secrets.List(e.secretsFile())
 	if err != nil {
 		return e.fail(err)

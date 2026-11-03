@@ -254,3 +254,28 @@ func checkShim(c *Config) []*problem.Problem {
 	}
 	return out
 }
+
+// ShimAskProblems lists the shim modes (default, then low) whose level needs an ask but whose ask
+// is empty, which a real page refuses. It is not part of Check: Check runs at every load, and an
+// unused shim mode with no ask must not stop notify, flush or status. Only config check and
+// page --check call it. A mode whose level is unknown is left to Check, which reports it. The ask
+// is normalized as page does, so an ask of only control or format characters is empty too.
+func ShimAskProblems(c *Config) []*problem.Problem {
+	if c.Shim == nil {
+		return nil
+	}
+	var out []*problem.Problem
+	for _, m := range []struct{ mode, level, ask string }{
+		{"default", c.Shim.Default.Level, c.Shim.Default.Ask},
+		{"low", c.Shim.Low.Level, c.Shim.Low.Ask},
+	} {
+		i, ok := c.Rank(m.level)
+		if !ok || !c.Levels[i].AskRequired || problem.FlatLine(m.ask) != "" {
+			continue
+		}
+		path := "shim." + m.mode + ".ask"
+		out = append(out, problem.Configf("level %q needs an ask, and %s is empty", "a sentence saying what the human must do",
+			"set "+path+` in the shim: block of the config, or give the level "ask: optional"`, m.level, path))
+	}
+	return out
+}

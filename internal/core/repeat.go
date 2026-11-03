@@ -100,7 +100,7 @@ func (p *Pipeline) admit(m channel.Message, plan []PlannedSend, now, queuedAt ti
 		a := admission{}
 		a.plan, a.skipped = p.splitBuilt(plan)
 		var err error
-		a.entries, err = p.enqueue(m, 0, a.plan)
+		a.entries, err = p.enqueueAt(m, 0, a.plan, queuedAt)
 		return a, err
 	}
 	var a admission
@@ -126,7 +126,7 @@ func (p *Pipeline) admit(m channel.Message, plan []PlannedSend, now, queuedAt ti
 		}
 		a = admission{cancel: cancel}
 		a.plan, a.skipped = p.splitBuilt(p.planFor(dec, plan))
-		a.entries, err = p.enqueue(m, incs[id].Generation, a.plan)
+		a.entries, err = p.enqueueAt(m, incs[id].Generation, a.plan, queuedAt)
 		return err
 	})
 	return a, err

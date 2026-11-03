@@ -92,3 +92,121 @@ func TestLevelsJSONFlattensUseWhen(t *testing.T) {
 	expect(t, json.Unmarshal([]byte(r.out), &obj) == nil && len(obj.Levels) == 2 && obj.Levels[0].UseWhen == "FYI  only fix: run x",
 		"levels --json: %+v; want use_when as one plain line", obj.Levels)
 }
+
+// sendsConfig is a config whose channels carry a distinctive server, topic and key name, so a test
+// can prove none of them reaches the output of levels --sends.
+const sendsConfig = `version: 1
+channels:
+  phone: { type: ntfy, server: "https://distinct-server.invalid", topic: { secret: distinct-topic-ref } }
+  pager: { type: pagerduty, routing_key: { secret: distinct-key-ref } }
+  journal: { type: log, path: /var/distinct-path/yo.log }
+levels:
+  - name: note
+    use_when: "FYI only"
+    send:
+      - { channel: journal, interruption: passive }
+      - { channel: phone, interruption: passive }
+  - name: mid
+    use_when: "needs a look"
+    send:
+      - { channel: phone, interruption: active }
+  - name: page
+    use_when: "production is down"
+    send:
+      - { channel: phone, interruption: time-sensitive }
+      - { channel: pager, interruption: critical }
+`
+
+func TestLevelsSendsText(t *testing.T) {
+	s := newSandbox(t)
+	write(t, s.userConfig(), sendsConfig)
+	code, out, _ := s.run("", "levels", "--sends")
+	want := "RESULT ok\n" +
+		"note (ask required, quiet hours send): FYI only\n  sends: journal passive, phone passive\n" +
+		"mid (ask required, quiet hours send): needs a look\n  sends: phone active\n" +
+		"page (ask required, quiet hours send): production is down\n  sends: phone time-sensitive, pager critical\n"
+	if code != ExitOK || out != want {
+		t.Errorf("code=%d out=%q, want %q", code, out, want)
+	}
+}
+
+func TestLevelsSendsJSON(t *testing.T) {
+	s := newSandbox(t)
+	write(t, s.userConfig(), sendsConfig)
+	r := s.do("", "levels", "--sends", "--json")
+	var obj struct {
+		Levels []struct {
+			Name  string
+			Sends []checkSend
+		}
+	}
+	err := json.Unmarshal([]byte(r.out), &obj)
+	expect(t, err == nil && r.code == ExitOK, "code=%d out=%q (%v)", r.code, r.out, err)
+	got := map[string][]checkSend{}
+	var order []string
+	for _, l := range obj.Levels {
+		got[l.Name] = l.Sends
+		order = append(order, l.Name)
+	}
+	want := map[string][]checkSend{
+		"note": {{"journal", "passive"}, {"phone", "passive"}},
+		"mid":  {{"phone", "active"}},
+		"page": {{"phone", "time-sensitive"}, {"pager", "critical"}},
+	}
+	expect(t, reflect.DeepEqual(order, []string{"note", "mid", "page"}), "order = %v", order)
+	expect(t, reflect.DeepEqual(got, want), "sends = %+v, want %+v", got, want)
+}
+
+// Amendment 4: without the flag there is no sends field and no sends line.
+func TestLevelsWithoutSendsHasNoSendsField(t *testing.T) {
+	s := newSandbox(t)
+	write(t, s.userConfig(), sendsConfig)
+	r := s.do("", "levels", "--json")
+	var obj struct{ Levels []map[string]any }
+	err := json.Unmarshal([]byte(r.out), &obj)
+	expect(t, err == nil && r.code == ExitOK && len(obj.Levels) == 3, "code=%d out=%q (%v)", r.code, r.out, err)
+	for _, l := range obj.Levels {
+		if _, has := l["sends"]; has {
+			t.Errorf("level %v has a sends key without --sends", l["name"])
+		}
+	}
+	_, out, _ := s.run("", "levels")
+	if strings.Contains(out, "sends:") {
+		t.Errorf("plain text has a sends line: %q", out)
+	}
+}
+
+func TestLevelsSendsNeverShowsDestinations(t *testing.T) {
+	s := newSandbox(t)
+	write(t, s.userConfig(), sendsConfig)
+	_, text, _ := s.run("", "levels", "--sends")
+	r := s.do("", "levels", "--sends", "--json")
+	for _, out := range []string{text, r.out} {
+		for _, secret := range []string{"distinct-server", "distinct-topic-ref", "distinct-key-ref", "distinct-path"} {
+			if strings.Contains(out, secret) {
+				t.Errorf("output leaks %q: %q", secret, out)
+			}
+		}
+	}
+}
+
+func TestLevelsUnknownFlag(t *testing.T) {
+	s := newSandbox(t)
+	write(t, s.userConfig(), sendsConfig)
+	for _, args := range [][]string{{"levels", "--bogus"}, {"levels", "extra"}, {"levels", "--sends", "extra"}} {
+		code, out, errb := s.run("", args...)
+		if code != ExitUsage || out != "" || !strings.Contains(errb, "yo-human levels [--sends]") {
+			t.Errorf("%v: code=%d out=%q err=%q", args, code, out, errb)
+		}
+	}
+}
+
+func TestSendsTextShared(t *testing.T) {
+	two := []checkSend{{"a", "passive"}, {"b", "critical"}}
+	if got := sendsText(two); got != "a passive, b critical" {
+		t.Errorf("two sends = %q", got)
+	}
+	if got := sendsText(nil); got != "none" {
+		t.Errorf("no sends = %q", got)
+	}
+}

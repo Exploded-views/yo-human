@@ -17,6 +17,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   carries `dedup_key` and the text prints a `key:` and a `close:` line, because `resolve` cannot
   close what a test opened. A new optional flag and field: the next release is a minor one. Above
   `passive` is for the owner, at their own terminal; the agent skill forbids it.
+- `levels --sends`: each level's channels and interruptions, never a destination.
+- `docs/paging-guide.md` maps common events (an outage, a decision, a green PR, a vendor incident,
+  a release, a finished task) onto the starter levels, with three copyable examples in
+  `docs/examples/`. A repolint check holds them to the starter config's level names.
+- A page on a paging level (one with a critical send) that is delivered more than 5 minutes after it
+  was queued, such as one retried after an outage, has its title prefixed `[queued since HH:MM UTC]`,
+  the time it was queued, so a late page does not pass for a fresh one. Resolves, resolve notes and
+  levels with no critical send are not marked. A page held for quiet hours counts from the end of the
+  hold.
+
+### Fixed
+
+- `config check` and `page --check` now refuse an empty `shim.default.ask` or `shim.low.ask` under a
+  level that needs an ask (exit 78), as a real `page` already did, so a config that passes both
+  checks no longer fails on its first page (#39). An ask of only whitespace or control characters
+  counts as empty. Only those two commands refuse it: `notify`, `flush`, `status` and the other
+  commands are unaffected.
+
+## [v0.2.0] - 2026-11-02
+
+### Added
+
 - `yo-human page --check` prints the shim's level, ask and sends for `page` and `page --low`, and the
   agent, without sending anything, so a host can see the mapping before it migrates.
 - `yo-human page version` and `page help` (any case, with or without `--low`) are usage errors (64)
@@ -28,6 +50,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `yo-human page --resolve <key>` no longer answers `noop` for a key yo-human holds no open incident
+  for: it resolves the alert on the instances a record lists, on a single other project's incident
+  (only when no `YO_HUMAN_PROJECT` is set), or on every resolving instance of the shim level (with
+  the project's namespaced key when a project is set, the bare key when not), so a key past
+  `incident_ttl` is closed in PagerDuty. An alert the old script opened with a bare key is closed
+  only when the resolve runs with `YO_HUMAN_PROJECT` unset; with a project set, only the project's
+  own namespaced key is resolved, so resolve a pre-cutover alert from a shell with it unset. A key
+  already closed is re-sent only to channels that can resolve, with no new ntfy note. A key written
+  in yo-human's internal provider-key form is refused (64).
 - A send whose request went out but whose answer never came (a timeout, or on Bark a 2xx reply cut
   off) is no longer retried on ntfy or Bark below a paging level (a level with a critical send), so
   a push the server already delivered is not delivered twice. The channel is reported `sent`, with
@@ -35,6 +66,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   failures before the request went out retry as before.
 - Bark: an error answer whose body breaks off is classified by its status, as a whole error answer
   is. A 5xx, 408 or 429 is still retried; any other 4xx, which was retried before, is now refused.
+- Bark: a 400 answer, when `device_key` is 64 hexadecimal characters (the shape of an APNs device
+  token, not a Bark key), now carries a hint to use the key from the Bark app's server URL. The hint
+  names the shape only, never the value (#41).
 
 ## [v0.1.1] - 2026-10-31
 
@@ -114,6 +148,7 @@ the M0 scaffold.
   (marked as not shipped), a message-path diagram, build-from-source steps and
   the milestone roadmap. Theme-aware banner in `docs/assets/`.
 
-[Unreleased]: https://github.com/Exploded-views/yo-human/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/Exploded-views/yo-human/compare/v0.2.0...HEAD
+[v0.2.0]: https://github.com/Exploded-views/yo-human/compare/v0.1.1...v0.2.0
 [v0.1.1]: https://github.com/Exploded-views/yo-human/compare/v0.1.0...v0.1.1
 [v0.1.0]: https://github.com/Exploded-views/yo-human/releases/tag/v0.1.0

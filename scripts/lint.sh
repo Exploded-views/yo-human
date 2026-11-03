@@ -6,14 +6,19 @@
 # host. The cgo pass is host-only: cgo for another GOOS needs that target's C toolchain (stdlib
 # packages such as plugin fail to type-check without it). GOFLAGS, GOEXPERIMENT, the go env file
 # (GOENV=off), GOWORK, GOAMD64 and GOARM64 (their feature tags, amd64.v3 and the like) are cleared so a developer's shell or `go env -w` cannot change the
-# build. Exit: 0 clean, 1 issues in any pass, 2 golangci-lint failed or RELEASE_TARGETS is bad.
+# build. --host-only (first argument) runs only the host pass, as make lint's -tags e2e run does.
+# Exit: 0 clean, 1 issues in any pass, 2 golangci-lint failed or RELEASE_TARGETS is bad.
 set -u
+host_only=
+if [ "${1-}" = --host-only ]; then host_only=1; shift; fi
 targets=$(sh "$(dirname "$0")/release-targets.sh") || exit 2
+if [ -n "$host_only" ]; then targets=; fi
 worst=0
 note() { # keep the worst code: an error (2) beats issues (1) beats clean (0)
   if [ "$1" -gt 1 ]; then worst=2; elif [ "$1" = 1 ] && [ "$worst" = 0 ]; then worst=1; fi
 }
 while read -r os arch; do
+  [ -n "$os" ] || continue # --host-only leaves $targets empty, and the heredoc still has one empty line
   echo "== golangci-lint GOOS=$os GOARCH=$arch CGO_ENABLED=0"
   env GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 GOFLAGS= GOENV=off GOEXPERIMENT= GOWORK=off GOAMD64= GOARM64= golangci-lint run "$@"
   note $?
