@@ -18,6 +18,8 @@ Export each one in your shell before you start.
 
 ## Send it
 
+A title is at most 200 characters, so keep `PR_TITLE` plus " is ready" within that.
+
 ```sh
 yo-human notify --level heads-up \
   --title "$PR_TITLE is ready" \

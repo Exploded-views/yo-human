@@ -19,7 +19,7 @@ Paging means "production is down or impaired". Everything else belongs on a quie
 - A critical send is only for production down or impaired. If a level sends `critical`, only a real outage belongs on it.
 - Use one dedup key per incident, named for the problem (`vendor-acme-incident`), never a timestamp or a counter.
 - Resolve what you raised: `yo-human resolve --dedup-key <key>` once it is fixed and verified.
-- A repeat at the same level is suppressed until the level's `reminder` interval passes, so do not loop on your own to nag.
+- Repeat the same call with the same key while the problem lasts. yo-human suppresses repeats until the level's `reminder` is due, so repeating never nags. Never change the key to get a fresh send.
 - When unsure, take the quieter level and say why in `--body`.
 
 ## More
