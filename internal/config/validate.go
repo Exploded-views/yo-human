@@ -274,3 +274,6 @@ func askRequired(c *Config, name string) bool {
 	}
 	return false
 }
+
+// ShimAskProblems is a stub.
+func ShimAskProblems(c *Config) []*problem.Problem { return nil }

@@ -205,18 +205,54 @@ func TestPageCheckLevelWithNoSends(t *testing.T) {
 
 func TestNoSendChecksRefuseAnEmptyShimAskOnAnAskRequiredLevel(t *testing.T) {
 	for _, mode := range []string{"default", "low"} {
-		s, fk := notifySandbox(t)
-		shim := "shim:\n  default: { level: page, ask: x }\n  low: { level: page, ask: x }\n"
-		shim = strings.Replace(shim, mode+": { level: page, ask: x }", mode+": { level: page }", 1)
-		write(t, s.userConfig(), notifyConfigBody+shim)
-		path := "shim." + mode + ".ask"
-		for _, args := range [][]string{{"config", "check"}, {"page", "--check"}} {
-			r := s.do("", args...)
-			expect(t, r.code == ExitConfig && r.out == "", "%s %v: %+v; want exit 78", mode, args, r)
-			mustContain(t, strings.Join(args, " ")+" stderr", r.err, `level "page" needs an ask, and `+path+" is empty", "fix: set "+path)
+		for _, ask := range []string{"", `"\u200b"`, `"\u0001"`} {
+			s, fk := notifySandbox(t)
+			shim := "shim:\n  default: { level: page, ask: x }\n  low: { level: page, ask: x }\n"
+			repl := mode + ": { level: page }"
+			if ask != "" {
+				repl = mode + ": { level: page, ask: " + ask + " }"
+			}
+			shim = strings.Replace(shim, mode+": { level: page, ask: x }", repl, 1)
+			write(t, s.userConfig(), notifyConfigBody+shim)
+			path := "shim." + mode + ".ask"
+			for _, args := range [][]string{{"config", "check"}, {"page", "--check"}} {
+				r := s.do("", args...)
+				expect(t, r.code == ExitConfig && r.out == "", "%s %q %v: %+v; want exit 78", mode, ask, args, r)
+				mustContain(t, strings.Join(args, " ")+" stderr", r.err, `level "page" needs an ask, and `+path+" is empty",
+					"fix: set "+path+` in the shim: block of the config, or give the level "ask: optional"`)
+			}
+			expect(t, len(fk["pager"].Sent) == 0 && len(fk["phone"].Sent) == 0, "a no-send check sent")
 		}
-		expect(t, len(fk["pager"].Sent) == 0 && len(fk["phone"].Sent) == 0, "a no-send check sent")
 	}
+}
+
+// Only the two no-send checks refuse: an unused shim mode with no ask must not stop the human
+// being paged by anything else.
+func TestAnEmptyShimAskStopsOnlyTheNoSendChecks(t *testing.T) {
+	s, fk := notifySandbox(t)
+	write(t, s.userConfig(), notifyConfigBody+"shim:\n  default: { level: page }\n  low: { level: page, ask: look }\n")
+	for _, args := range [][]string{
+		{"notify", "--level", "note", "hello"},
+		{"page", "--low", "hello"},
+		{"page", "--resolve", "some-key"},
+		{"status"},
+		{"flush"},
+		{"levels"},
+	} {
+		r := s.do("", args...)
+		expect(t, r.code != ExitConfig, "%v: %+v; want it not refused as a config problem", args, r)
+	}
+	expect(t, len(fk["journal"].Sent) > 0, "notify at an unrelated level was not sent")
+}
+
+func TestPageWithAnEmptyShimAskStillRefusesAtRuntimeWithTheSameFix(t *testing.T) {
+	s, fk := notifySandbox(t)
+	write(t, s.userConfig(), notifyConfigBody+"shim:\n  default: { level: page }\n  low: { level: page, ask: look }\n")
+	r := s.do("", "page", "x")
+	expect(t, r.code == ExitConfig && r.out == "", "page: %+v; want exit 78", r)
+	mustContain(t, "stderr", r.err, `level "page" needs an ask, and shim.default.ask is empty`,
+		`fix: set shim.default.ask in the shim: block of the config, or give the level "ask: optional"`)
+	expect(t, len(fk["pager"].Sent) == 0, "a page with no ask was sent")
 }
 
 func TestPageCheckAcceptsAnEmptyShimAskOnAnOptionalLevel(t *testing.T) {

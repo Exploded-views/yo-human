@@ -234,8 +234,8 @@ func askRequiredShim() *config.Config {
 }
 
 func TestShimEmptyAskOnAskRequiredLevel(t *testing.T) {
-	if got := config.Check(askRequiredShim(), registry()); len(got) != 0 {
-		t.Fatalf("Check = %+v, want no problems when both asks are set", got)
+	if got := config.ShimAskProblems(askRequiredShim()); len(got) != 0 {
+		t.Fatalf("ShimAskProblems = %+v, want none when both asks are set", got)
 	}
 	for _, mode := range []string{"default", "low"} {
 		t.Run(mode, func(t *testing.T) {
@@ -246,9 +246,9 @@ func TestShimEmptyAskOnAskRequiredLevel(t *testing.T) {
 			} else {
 				c.Shim.Default.Ask = ""
 			}
-			got := config.Check(c, registry())
+			got := config.ShimAskProblems(c)
 			if len(got) != 1 {
-				t.Fatalf("Check = %+v, want exactly one problem", got)
+				t.Fatalf("ShimAskProblems = %+v, want exactly one problem", got)
 			}
 			p, path := got[0], "shim."+mode+".ask"
 			want := `level "` + level + `" needs an ask, and ` + path + ` is empty`
@@ -261,27 +261,65 @@ func TestShimEmptyAskOnAskRequiredLevel(t *testing.T) {
 	}
 }
 
-func TestShimEmptyAskOnOptionalLevelIsFine(t *testing.T) {
-	c := valid() // AskRequired is false on both levels
-	if got := config.Check(c, registry()); len(got) != 0 {
-		t.Errorf("Check = %+v, want no problems for an empty ask on an ask: optional level", got)
+func TestShimBothAsksEmptyGiveTwoProblemsDefaultFirst(t *testing.T) {
+	c := askRequiredShim()
+	c.Shim.Default.Ask, c.Shim.Low.Ask = "", ""
+	got := config.ShimAskProblems(c)
+	if len(got) != 2 || !strings.Contains(got[0].What, "shim.default.ask") || !strings.Contains(got[1].What, "shim.low.ask") {
+		t.Errorf("ShimAskProblems = %+v, want default then low", got)
 	}
 }
 
-func TestShimSpacesOnlyAskIsEmpty(t *testing.T) {
+// Check runs at every load, so it must not stop notify, flush or status over an empty shim ask:
+// only the no-send checks call ShimAskProblems.
+func TestCheckDoesNotReportAnEmptyShimAsk(t *testing.T) {
 	c := askRequiredShim()
-	c.Shim.Default.Ask = " \t "
-	got := config.Check(c, registry())
-	if len(got) != 1 || !strings.Contains(got[0].What, "shim.default.ask is empty") {
-		t.Errorf("Check = %+v, want one problem for shim.default.ask", got)
+	c.Shim.Default.Ask, c.Shim.Low.Ask = "", ""
+	if got := config.Check(c, registry()); len(got) != 0 {
+		t.Errorf("Check = %+v, want no problems for an empty shim ask", got)
+	}
+}
+
+func TestShimEmptyAskOnOptionalLevelIsFine(t *testing.T) {
+	c := valid() // AskRequired is false on both levels
+	if got := config.ShimAskProblems(c); len(got) != 0 {
+		t.Errorf("ShimAskProblems = %+v, want none for an empty ask on an ask: optional level", got)
+	}
+}
+
+// An ask is empty when a real page would see it as empty: control and format characters count as
+// spaces, as flatLine treats them.
+func TestShimSpacesOnlyAskIsEmpty(t *testing.T) {
+	for name, ask := range map[string]string{
+		"spaces": " \t ", "zero-width space": "\u200b", "control": "\x01", "mixed": " \u200b\x01\u2028 ",
+	} {
+		t.Run(name, func(t *testing.T) {
+			c := askRequiredShim()
+			c.Shim.Default.Ask = ask
+			got := config.ShimAskProblems(c)
+			if len(got) != 1 || !strings.Contains(got[0].What, "shim.default.ask is empty") {
+				t.Errorf("ShimAskProblems = %+v, want one problem for shim.default.ask", got)
+			}
+		})
 	}
 }
 
 func TestShimUnknownLevelNotDoubleReported(t *testing.T) {
 	c := askRequiredShim()
 	c.Shim.Low.Level, c.Shim.Low.Ask = "ghost", ""
+	if got := config.ShimAskProblems(c); len(got) != 0 {
+		t.Errorf("ShimAskProblems = %+v, want none for an unknown level", got)
+	}
 	got := config.Check(c, registry())
 	if len(got) != 1 || !strings.Contains(got[0].What, `shim.low.level names unknown level "ghost"`) {
 		t.Errorf("Check = %+v, want only the unknown-level problem", got)
+	}
+}
+
+func TestShimAskProblemsWithoutAShimBlock(t *testing.T) {
+	c := askRequiredShim()
+	c.Shim = nil
+	if got := config.ShimAskProblems(c); len(got) != 0 {
+		t.Errorf("ShimAskProblems = %+v, want none without a shim block", got)
 	}
 }
