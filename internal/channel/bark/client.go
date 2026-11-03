@@ -128,7 +128,7 @@ func (c *barkChannel) do(ctx context.Context, req *http.Request) error {
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		// A complete status line is an answer, whatever the body does after it.
-		return classify("HTTP", resp.StatusCode)
+		return classify("HTTP", resp.StatusCode, c.key)
 	}
 	if err != nil {
 		return transport.TransportError(ctx, "bark", err, true) // a 2xx whose body broke off: the push may have gone out
@@ -145,19 +145,38 @@ func (c *barkChannel) do(ctx context.Context, req *http.Request) error {
 	if *env.Code == http.StatusOK {
 		return nil
 	}
-	return classify("code", *env.Code)
+	return classify("code", *env.Code, c.key)
 }
 
 // classify maps a status or envelope code to an error kind. The text holds the number only: the
-// envelope's message is the server's, and may echo what it was sent.
-func classify(what string, code int) error {
+// envelope's message is the server's, and may echo what it was sent. A hint may name the shape of
+// key, never its value.
+func classify(what string, code int, key string) error {
 	err := fmt.Errorf("bark answered %s %d", what, code)
 	if code == http.StatusTeapot || code == http.StatusUnauthorized {
 		// A basic-auth server answers 418 to a push without credentials; 401 is a wrong pair.
 		err = fmt.Errorf("%w; the server wants basic auth or rejected it: set username and password (secrets) on this channel instance", err)
 	}
+	if code == http.StatusBadRequest && looksLikeAPNsToken(key) {
+		// The phone's APNs token passes the device_key check, and the server refuses it with a bare 400.
+		err = fmt.Errorf("%w; device_key looks like an APNs device token: use the key from the Bark app's server URL (https://<server>/<key>/...)", err)
+	}
 	if code == http.StatusRequestTimeout || code == http.StatusTooManyRequests || code >= 500 {
 		return channel.Transient(err)
 	}
 	return channel.Permanent(err)
+}
+
+// looksLikeAPNsToken reports whether key is 64 hexadecimal characters, the shape of an APNs device
+// token. A Bark key is not that shape.
+func looksLikeAPNsToken(key string) bool {
+	if len(key) != 64 {
+		return false
+	}
+	for _, r := range key {
+		if !strings.ContainsRune("0123456789abcdefABCDEF", r) {
+			return false
+		}
+	}
+	return true
 }

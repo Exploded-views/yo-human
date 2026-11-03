@@ -12,6 +12,8 @@ Export each one in your shell before you start. The device key is a secret: it g
 - `OP_VAULT="<vault>"` — the 1Password vault that holds the device key
 - `OP_ITEM="<item>"` — the 1Password item whose `device_key` field holds the key
 
+The device key is the short key in the server URL the Bark app shows (`https://<server>/<key>/...`), not the phone's 64-character APNs device token. With the token, every send fails with HTTP 400.
+
 ## Already set
 
 - `yo-human` is installed, and `yo-human config check` runs.
