@@ -52,7 +52,7 @@ func checkInterruptionSent(t *testing.T, name, level string, args []string) {
 	expect(t, strings.Contains(strings.ToLower(f.Sent[0].Title), "test") && f.Sent[0].Ask != "", "%v: message = %+v; want a test message", args, f.Sent[0])
 	id := f.Sent[0].ID
 	mustContain(t, "text", r.out, "RESULT delivered "+id, name+": sent", "key: "+id, "resolve the incident in the provider")
-	mustNotContain(t, "text", r.out, "yo-human resolve")
+	mustNotContain(t, "text", r.out, "resolve --dedup-key", "next:")
 	j := s.do("", append(append([]string{}, args...), "--json")...)
 	if len(f.Sent) != 2 {
 		t.Errorf("%v: the json run sent %d; want 2 in all", args, len(f.Sent))
@@ -100,7 +100,7 @@ func TestChannelTestRefusalComesAfterTheFlush(t *testing.T) {
 func TestChannelTestBadInterruptionIsAUsageError(t *testing.T) {
 	s, fk := notifySandbox(t)
 	for _, v := range []string{"loud", "", "Critical", "passive,critical"} {
-		s.do("", "channel", "test", "pager", "--interruption", v).fails(t, "value "+v, ExitUsage, "passive, active, time-sensitive, critical")
+		s.do("", "channel", "test", "pager", "--interruption", v).fails(t, "value "+v, ExitUsage, "not one of the four interruptions")
 	}
 	s.do("", "channel", "test", "pager", "--interruption").fails(t, "no value", ExitUsage, "--interruption")
 	s.do("", "channel", "test", "--interruption", "critical").fails(t, "no name", ExitUsage, "takes one channel name")

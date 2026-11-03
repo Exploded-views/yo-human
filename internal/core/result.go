@@ -35,7 +35,10 @@ type Result struct {
 	ID       string          `json:"id"`
 	Channels []ChannelResult `json:"channels"`
 	Next     *Next           `json:"next,omitempty"`
-	DedupKey string          `json:"dedup_key,omitempty"` // set by the page shim, whose caller may not have chosen the key
+	DedupKey string          `json:"dedup_key,omitempty"` // set by the page shim, whose caller may not have chosen the key, and by channel test above passive
+
+	// Interruption is set by channel test when the caller named one: the interruption the test was sent at.
+	Interruption string `json:"interruption,omitempty"`
 
 	// Warnings are problems that came with the result but do not change its exit code.
 	Warnings []error `json:"-"`
