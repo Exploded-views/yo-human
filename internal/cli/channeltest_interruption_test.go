@@ -149,6 +149,14 @@ func TestChannelTestRefusalSteersNoOneLouder(t *testing.T) {
 	mustNotContain(t, "stderr", r.err, "pass one of those")
 }
 
+// An unknown value is refused the same way: its fix names no louder value to try.
+func TestChannelTestUnknownValueSteersNoOneLouder(t *testing.T) {
+	s, _ := notifySandbox(t)
+	r := s.do("", "channel", "test", "pager", "--interruption", "loud")
+	mustContain(t, "stderr", r.err, "only the human runs channel test above passive", "leaves --interruption out")
+	mustNotContain(t, "stderr", r.err, "fix: pass --interruption")
+}
+
 func TestChannelTestHelpPrintsUsage(t *testing.T) {
 	s, fk := notifySandbox(t)
 	for _, args := range [][]string{{"channel", "test", "pager", "--help"}, {"channel", "test", "pager", "-h"}, {"channel", "test", "--interruption", "critical", "pager", "-h"}} {
