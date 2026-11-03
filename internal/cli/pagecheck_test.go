@@ -202,3 +202,28 @@ func TestPageCheckLevelWithNoSends(t *testing.T) {
 		t.Errorf("exit %d, stdout %q, stderr %q; want exit 0 and `sends: none` for both modes", code, out.String(), errb.String())
 	}
 }
+
+func TestNoSendChecksRefuseAnEmptyShimAskOnAnAskRequiredLevel(t *testing.T) {
+	for _, mode := range []string{"default", "low"} {
+		s, fk := notifySandbox(t)
+		shim := "shim:\n  default: { level: page, ask: x }\n  low: { level: page, ask: x }\n"
+		shim = strings.Replace(shim, mode+": { level: page, ask: x }", mode+": { level: page }", 1)
+		write(t, s.userConfig(), notifyConfigBody+shim)
+		path := "shim." + mode + ".ask"
+		for _, args := range [][]string{{"config", "check"}, {"page", "--check"}} {
+			r := s.do("", args...)
+			expect(t, r.code == ExitConfig && r.out == "", "%s %v: %+v; want exit 78", mode, args, r)
+			mustContain(t, strings.Join(args, " ")+" stderr", r.err, `level "page" needs an ask, and `+path+" is empty", "fix: set "+path)
+		}
+		expect(t, len(fk["pager"].Sent) == 0 && len(fk["phone"].Sent) == 0, "a no-send check sent")
+	}
+}
+
+func TestPageCheckAcceptsAnEmptyShimAskOnAnOptionalLevel(t *testing.T) {
+	s, _ := notifySandbox(t)
+	write(t, s.userConfig(), notifyConfigBody+"shim:\n  default: { level: note }\n  low: { level: note }\n")
+	for _, args := range [][]string{{"config", "check"}, {"page", "--check"}} {
+		r := s.do("", args...)
+		expect(t, r.code == ExitOK, "%v: %+v; want exit 0", args, r)
+	}
+}

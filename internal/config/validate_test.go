@@ -224,3 +224,64 @@ func TestSchemaIsValidJSONAndRejectsUnknownKeys(t *testing.T) {
 		t.Errorf("additionalProperties = %v, want false at the top level", doc["additionalProperties"])
 	}
 }
+
+// askRequiredShim is valid() with both shim levels needing an ask and both shim asks set.
+func askRequiredShim() *config.Config {
+	c := valid()
+	c.Levels[0].AskRequired, c.Levels[1].AskRequired = true, true
+	c.Shim.Default.Ask, c.Shim.Low.Ask = "decide now", "look later"
+	return c
+}
+
+func TestShimEmptyAskOnAskRequiredLevel(t *testing.T) {
+	if got := config.Check(askRequiredShim(), registry()); len(got) != 0 {
+		t.Fatalf("Check = %+v, want no problems when both asks are set", got)
+	}
+	for _, mode := range []string{"default", "low"} {
+		t.Run(mode, func(t *testing.T) {
+			c := askRequiredShim()
+			level := c.Shim.Default.Level
+			if mode == "low" {
+				c.Shim.Low.Ask, level = "", c.Shim.Low.Level
+			} else {
+				c.Shim.Default.Ask = ""
+			}
+			got := config.Check(c, registry())
+			if len(got) != 1 {
+				t.Fatalf("Check = %+v, want exactly one problem", got)
+			}
+			p, path := got[0], "shim."+mode+".ask"
+			want := `level "` + level + `" needs an ask, and ` + path + ` is empty`
+			if p.Kind != problem.Config || p.What != want || config.IsWarning(p) ||
+				p.Valid != "a sentence saying what the human must do" ||
+				p.Fix != "set "+path+` in the shim: block of the config, or give the level "ask: optional"` {
+				t.Errorf("problem = %+v, want What %q", p, want)
+			}
+		})
+	}
+}
+
+func TestShimEmptyAskOnOptionalLevelIsFine(t *testing.T) {
+	c := valid() // AskRequired is false on both levels
+	if got := config.Check(c, registry()); len(got) != 0 {
+		t.Errorf("Check = %+v, want no problems for an empty ask on an ask: optional level", got)
+	}
+}
+
+func TestShimSpacesOnlyAskIsEmpty(t *testing.T) {
+	c := askRequiredShim()
+	c.Shim.Default.Ask = " \t "
+	got := config.Check(c, registry())
+	if len(got) != 1 || !strings.Contains(got[0].What, "shim.default.ask is empty") {
+		t.Errorf("Check = %+v, want one problem for shim.default.ask", got)
+	}
+}
+
+func TestShimUnknownLevelNotDoubleReported(t *testing.T) {
+	c := askRequiredShim()
+	c.Shim.Low.Level, c.Shim.Low.Ask = "ghost", ""
+	got := config.Check(c, registry())
+	if len(got) != 1 || !strings.Contains(got[0].What, `shim.low.level names unknown level "ghost"`) {
+		t.Errorf("Check = %+v, want only the unknown-level problem", got)
+	}
+}
