@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   checks no longer fails on its first page (#39). An ask of only whitespace or control characters
   counts as empty. Only those two commands refuse it: `notify`, `flush`, `status` and the other
   commands are unaffected.
+- Bark: a 400 answer, when `device_key` is 64 hexadecimal characters (the shape of an APNs device
+  token, not a Bark key), now carries a hint to use the key from the Bark app's server URL. The hint
+  names the shape only, never the value (#41).
 
 ## [v0.2.0] - 2026-11-02
 
@@ -66,9 +69,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   failures before the request went out retry as before.
 - Bark: an error answer whose body breaks off is classified by its status, as a whole error answer
   is. A 5xx, 408 or 429 is still retried; any other 4xx, which was retried before, is now refused.
-- Bark: a 400 answer, when `device_key` is 64 hexadecimal characters (the shape of an APNs device
-  token, not a Bark key), now carries a hint to use the key from the Bark app's server URL. The hint
-  names the shape only, never the value (#41).
 
 ## [v0.1.1] - 2026-10-31
 
