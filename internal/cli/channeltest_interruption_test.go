@@ -19,6 +19,8 @@ func TestChannelTestWithoutTheFlagPrintsExactlyWhatItAlwaysDid(t *testing.T) {
 	var m map[string]any
 	expect(t, json.Unmarshal([]byte(r.out), &m) == nil, "json = %q", r.out)
 	mustNotContain(t, "json", r.out, `"interruption"`, `"dedup_key"`)
+	want := `{"version":1,"status":"delivered","id":"` + id + `","channels":[{"channel":"phone","status":"sent"}]}` + "\n"
+	expect(t, strings.Replace(r.out, jsonID(r.out), id, 1) == want, "json = %q; want %q with the id substituted", r.out, want)
 	expect(t, len(fk["phone"].Specs) == 2 && fk["phone"].Specs[0].Interruption == channel.Passive && fk["phone"].Specs[1].Interruption == channel.Passive, "specs = %+v; want passive", fk["phone"].Specs)
 }
 
@@ -114,4 +116,47 @@ func TestChannelTestRepeatedFlagTakesTheLast(t *testing.T) {
 	s, fk := notifySandbox(t)
 	s.do("", "channel", "test", "pager", "--interruption", "critical", "--interruption", "active")
 	expect(t, len(fk["pager"].Specs) == 1 && fk["pager"].Specs[0].Interruption == channel.Active, "specs = %+v; want active", fk["pager"].Specs)
+}
+
+// jsonID is the "id" of a result object.
+func jsonID(out string) string {
+	var m struct{ ID string }
+	_ = json.Unmarshal([]byte(out), &m)
+	return m.ID
+}
+
+// A key and a close line belong to a channel type with incidents (PagerDuty). ntfy, Bark and the
+// log have none, so they print neither and carry no dedup_key.
+func TestChannelTestShowsAKeyOnlyWhereIncidentsExist(t *testing.T) {
+	s, fk := notifySandbox(t)
+	write(t, s.userConfig(), strings.Replace(notifyConfigBody, "  journal:", `  bell: { type: bark, server: "https://bark.example", device_key: { secret: bark-key } }
+  journal:`, 1))
+	s.setSecret("bark-key")
+	fk["bell"] = s.useFakes("journal", "phone", "pager", "bell")["bell"]
+	for _, c := range []struct{ name, level string }{{"phone", "time-sensitive"}, {"bell", "critical"}, {"journal", "critical"}} {
+		r := s.do("", "channel", "test", c.name, "--interruption", c.level)
+		expect(t, r.code == ExitOK && strings.HasPrefix(r.out, "RESULT delivered "), "%s: %+v", c.name, r)
+		mustNotContain(t, c.name+" text", r.out, "key:", "close:")
+		j := s.do("", "channel", "test", c.name, "--interruption", c.level, "--json")
+		mustContain(t, c.name+" json", j.out, `"interruption":"`+c.level+`"`)
+		mustNotContain(t, c.name+" json", j.out, `"dedup_key"`)
+	}
+	expect(t, len(fk["bell"].Specs) == 2 && fk["bell"].Specs[0].Interruption == channel.Critical, "bark specs = %+v; want critical, sent", fk["bell"].Specs)
+}
+
+// A refusal must not lead a caller to a louder test.
+func TestChannelTestRefusalSteersNoOneLouder(t *testing.T) {
+	s, _ := notifySandbox(t)
+	r := s.do("", "channel", "test", "phone", "--interruption", "critical")
+	mustContain(t, "stderr", r.err, "only the human runs channel test above passive", "leaves --interruption out", "valid: an interruption it supports: passive, active, time-sensitive")
+	mustNotContain(t, "stderr", r.err, "pass one of those")
+}
+
+func TestChannelTestHelpPrintsUsage(t *testing.T) {
+	s, fk := notifySandbox(t)
+	for _, args := range [][]string{{"channel", "test", "pager", "--help"}, {"channel", "test", "pager", "-h"}, {"channel", "test", "--interruption", "critical", "pager", "-h"}} {
+		r := s.do("", args...)
+		expect(t, r.code == ExitOK && strings.Contains(r.out+r.err, "usage: yo-human"), "%v: %+v; want usage and exit 0", args, r)
+	}
+	expect(t, len(fk["pager"].Sent) == 0, "help sent something")
 }
