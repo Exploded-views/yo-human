@@ -32,8 +32,7 @@ while :; do
       --title "$VENDOR reports an incident" --ask "Check whether it affects us" \
       --body "$(printf 'Status: %.200s' "$now")"
     rc=$?
-    [ "$rc" -eq 0 ] || exit "$rc"
-    sent=1
+    case $rc in 0 | 75) sent=1 ;; *) exit "$rc" ;; esac
   elif [ -n "$sent" ]; then
     yo-human resolve --dedup-key "$key"
     exit $?
@@ -44,6 +43,7 @@ done
 A bad `POLL_SECONDS` (empty, or still the placeholder) exits 64 before anything is sent, and so does any failed `sleep`. A first fetch that fails exits 69. A later failed poll is skipped and tried again on the next pass. Read the exit code as the skill's table says:
 
 - `0`: done. This includes `suppressed` (an earlier send for this incident is still pending or was delivered) and `held`. The loop goes on.
-- `75`: queued. The watcher stops with 75. Follow the `next` line it printed (usually `yo-human flush`), bounded by its `attempts_left`; if the last attempt still exits 75, stop and tell the human in your session. Do not run `notify` again for that message.
-- `64`: your call is wrong. Read the `error` and `fix` lines and correct the call.
-- `69`, `78`, `74`, `70`: stop and tell the human in your session, quoting the `error` and `fix` lines.
+- `75`: queued. The loop goes on, and its repeats retry the queued send. If no cron flush is set up (see [cron-flush](../setup/cron-flush.md)), follow the `next` line it printed (usually `yo-human flush`), bounded by its `attempts_left`; if the last attempt still exits 75, tell the human in your session.
+- `resolve` can exit 75 too, while its close is queued. The watcher then exits 75: follow that `next` line the same way.
+- `64`: the watcher exits 64. Your call is wrong: read the `error` and `fix` lines and correct the call.
+- `69`, `78`, `74`, `70`: the watcher exits with that code. Stop and tell the human in your session, quoting the `error` and `fix` lines.
