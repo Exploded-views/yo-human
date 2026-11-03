@@ -302,6 +302,29 @@ type checkMode struct {
 	Sends []checkSend `json:"sends"`
 }
 
+// sendsText is the sends of one level as one line: each "<channel> <interruption>", joined by ", ",
+// or "none".
+func sendsText(s []checkSend) string {
+	if len(s) == 0 {
+		return "none"
+	}
+	parts := make([]string, len(s))
+	for i, x := range s {
+		parts[i] = x.Channel + " " + x.Interruption
+	}
+	return strings.Join(parts, ", ")
+}
+
+// sendsOf is the sends of one level in config order: instance names and interruptions, never a
+// destination. It is never nil, so it encodes as [] in JSON.
+func sendsOf(l config.Level) []checkSend {
+	out := make([]checkSend, 0, len(l.Send))
+	for _, s := range l.Send {
+		out = append(out, checkSend{Channel: s.Channel, Interruption: string(s.Interruption)})
+	}
+	return out
+}
+
 // checkModeOf is what one mode of the shim sends: its level, ask and the level's sends in config
 // order. It reads the config only.
 func checkModeOf(cfg *config.Config, low bool) (checkMode, error) {
@@ -314,9 +337,7 @@ func checkModeOf(cfg *config.Config, low bool) (checkMode, error) {
 		if l.Name != mode.Level {
 			continue
 		}
-		for _, s := range l.Send {
-			out.Sends = append(out.Sends, checkSend{Channel: s.Channel, Interruption: string(s.Interruption)})
-		}
+		out.Sends = sendsOf(l)
 		return out, nil
 	}
 	return out, problem.Configf("%s names no level in the config", "a level name from the config",
@@ -339,16 +360,9 @@ func (e *env) pageCheck(cfg *config.Config) int {
 		agent = "unknown"
 	}
 	line := func(label string, m checkMode) []string {
-		sends := make([]string, len(m.Sends))
-		for i, s := range m.Sends {
-			sends[i] = s.Channel + " " + s.Interruption
-		}
-		if len(sends) == 0 {
-			sends = []string{"none"}
-		}
 		return []string{
 			fmt.Sprintf("%s level %s, ask %q", label, m.Level, m.Ask),
-			"            sends: " + strings.Join(sends, ", "),
+			"            sends: " + sendsText(m.Sends),
 		}
 	}
 	lines := append(line("page:      ", def), line("page --low:", low)...)

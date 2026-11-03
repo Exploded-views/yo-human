@@ -26,6 +26,7 @@ Prints `{"version":1,"status":"ok","levels":[{"name","use_when","ask","quiet_hou
 quietest first. Choose the level whose `use_when` matches your situation. Read it once per
 session. A wrong name exits 64 and the error lists the valid ones. For how common events (a
 release, a green PR, a vendor incident) map onto a ladder, see [docs/paging-guide.md](../../docs/paging-guide.md).
+`yo-human levels --sends --json` also shows which channels and interruptions each level uses.
 
 ## Send
 

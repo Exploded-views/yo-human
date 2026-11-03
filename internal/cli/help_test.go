@@ -43,3 +43,12 @@ func TestHelpAfterACommandShowsItsFlags(t *testing.T) {
 		expect(t, r.code == ExitOK && strings.HasPrefix(r.out, "usage: yo-human") && strings.Contains(r.out, want), "%s: %+v; want its usage, with %s", args, r, want)
 	}
 }
+
+// levels has a flag of its own, so its help leads with its own usage line, as status's does.
+func TestLevelsHelpLeadsWithItsUsage(t *testing.T) {
+	s := newSandbox(t)
+	for _, args := range [][]string{{"levels", "--help"}, {"levels", "-h"}} {
+		r := s.do("", args...)
+		expect(t, r.code == ExitOK && strings.HasPrefix(r.out, "usage: yo-human levels [--sends]") && r.err == "", "%v: %+v; want it to lead with the levels usage", args, r)
+	}
+}
