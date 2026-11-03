@@ -91,7 +91,7 @@ func parseChannelTest(args []string) (name string, level channel.Interruption, g
 	if given {
 		if level, err = channel.ParseInterruption(*raw); err != nil {
 			return "", "", false, problem.Usagef("--interruption is not one of the four interruptions (the value is not echoed)", "one of "+interruptionList(interruptionOrder),
-				"pass --interruption passive, active, time-sensitive or critical, or leave it out for passive")
+				"only the human runs channel test above passive, at their own terminal; an agent leaves --interruption out")
 		}
 	}
 	return names[0], level, given, nil
