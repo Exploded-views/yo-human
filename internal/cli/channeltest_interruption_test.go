@@ -27,10 +27,7 @@ func TestChannelTestWithoutTheFlagPrintsExactlyWhatItAlwaysDid(t *testing.T) {
 // A level above passive reaches the channel as asked, and the result names the key the provider used.
 func TestChannelTestSendsTheRequestedInterruption(t *testing.T) {
 	for _, level := range []string{"active", "time-sensitive", "critical"} {
-		name := "pager"
-		if level != "critical" {
-			name = "phone" // ntfy has no critical; pagerduty has them all
-		}
+		name := "pager" // pagerduty sends all four and has incidents, so it shows a key
 		for _, args := range [][]string{
 			{"channel", "test", name, "--interruption", level},
 			{"channel", "test", "--interruption", level, name},

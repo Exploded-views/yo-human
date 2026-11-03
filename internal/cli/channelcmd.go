@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"strings"
@@ -38,14 +39,21 @@ func cmdChannelTest(e *env, args []string) int {
 	ctx, cancel := deadlineCtx(cfg) // one deadline for the flush and the test
 	defer cancel()
 	e.flushWarn(ctx, e.pipeline(cfg, st, chans))
-	if err := checkSendable(capsOf(cfg)[name], name, level); err != nil {
+	caps := capsOf(cfg)[name]
+	if err := checkSendable(caps, name, level); err != nil {
 		return e.fail(err)
 	}
 	res, err := sendTest(ctx, chans[name], name, level)
+	return e.reportTest(res, err, level, given, caps.Resolve)
+}
+
+// reportTest prints the test's result. Only a type with incidents (caps.Resolve: PagerDuty) has
+// anything to close above passive; ntfy, Bark and the log ignore the key, so they show none.
+func (e *env) reportTest(res core.Result, err error, level channel.Interruption, given, hasIncidents bool) int {
 	if given {
 		res.Interruption = string(level)
 	}
-	above := level != channel.Passive && res.Status == core.StatusDelivered
+	above := level != channel.Passive && hasIncidents && res.Status == core.StatusDelivered
 	if above {
 		res.DedupKey = res.ID // the test carries no key of its own, so the provider keys it by the message id
 	}
@@ -63,7 +71,9 @@ func parseChannelTest(args []string) (name string, level channel.Interruption, g
 	raw := fs.String("interruption", "", "")
 	var names []string
 	for rest := args; ; {
-		if perr := fs.Parse(rest); perr != nil {
+		if perr := fs.Parse(rest); errors.Is(perr, flag.ErrHelp) {
+			return "", "", false, errHelp
+		} else if perr != nil {
 			return "", "", false, problem.Usagef("%s was given a flag it does not know, or --interruption with no value (the text is not echoed)", channelTestUsage,
 				"check the spelling against the valid line", "channel test")
 		}
@@ -100,7 +110,7 @@ func checkSendable(caps channel.Capabilities, name string, level channel.Interru
 		}
 	}
 	return problem.Usagef("channel %s cannot send %s", "an interruption it supports: "+interruptionList(can),
-		"pass one of those with --interruption, or test a channel that supports "+string(level), name, level)
+		"only the human runs channel test above passive, at their own terminal; an agent leaves --interruption out", name, level)
 }
 
 func interruptionList(is []channel.Interruption) string {
