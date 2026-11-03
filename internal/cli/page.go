@@ -347,6 +347,9 @@ func checkModeOf(cfg *config.Config, low bool) (checkMode, error) {
 // pageCheck prints what `page` and `page --low` would send, and sends nothing: it opens no channel,
 // flushes nothing and changes no queue entry or incident, so it is safe to run anywhere.
 func (e *env) pageCheck(cfg *config.Config) int {
+	if err := shimAskError(cfg); err != nil {
+		return e.fail(err)
+	}
 	def, err := checkModeOf(cfg, false)
 	if err != nil {
 		return e.fail(err)
@@ -377,4 +380,14 @@ func randomHex(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b) // crypto/rand.Read never fails on supported platforms
 	return hex.EncodeToString(b)
+}
+
+// shimAskError is the empty-ask problems of the shim as one error, or nil. Only the two no-send
+// checks call it: a real page refuses at askMissing, and no other command is held up by it.
+func shimAskError(cfg *config.Config) error {
+	var errs []error
+	for _, p := range config.ShimAskProblems(cfg) {
+		errs = append(errs, p)
+	}
+	return errors.Join(errs...)
 }

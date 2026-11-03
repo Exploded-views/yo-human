@@ -87,7 +87,7 @@ func linkOf(link string, given bool) error {
 func askMissing(level, askPath string) error {
 	if askPath != "" {
 		return problem.Configf("level %q needs an ask, and %s is empty", "a sentence saying what the human must do",
-			"set "+askPath+" in the shim: block of the config", level, askPath)
+			"set "+askPath+` in the shim: block of the config, or give the level "ask: optional"`, level, askPath)
 	}
 	return problem.Usagef("level %q needs --ask, and none was given", `a sentence saying what the human must do, or a level with "ask: optional"`,
 		`add --ask "<what the human must do>"`, level)

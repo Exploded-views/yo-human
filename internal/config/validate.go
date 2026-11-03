@@ -239,41 +239,43 @@ func checkShim(c *Config) []*problem.Problem {
 		return nil
 	}
 	var out []*problem.Problem
-	for _, m := range []struct{ mode, level, ask string }{
-		{"default", c.Shim.Default.Level, c.Shim.Default.Ask},
-		{"low", c.Shim.Low.Level, c.Shim.Low.Ask},
-	} {
+	for _, m := range []struct{ path, level string }{{"shim.default.level", c.Shim.Default.Level}, {"shim.low.level", c.Shim.Low.Level}} {
 		if m.level == "" {
 			continue
 		}
-		path := "shim." + m.mode
 		if _, ok := c.Rank(m.level); !ok {
 			var names []string
 			for _, l := range c.Levels {
 				names = append(names, l.Name)
 			}
 			out = append(out, problem.Configf("%s names unknown level %q", "a name under levels: "+strings.Join(names, ", "),
-				"set "+path+".level to one of the names under levels", path+".level", m.level))
-			continue
-		}
-		// A real page refuses this (askMissing), so the no-send checks must too.
-		if strings.TrimSpace(m.ask) == "" && askRequired(c, m.level) {
-			out = append(out, problem.Configf("level %q needs an ask, and %s.ask is empty", "a sentence saying what the human must do",
-				"set "+path+`.ask in the shim: block of the config, or give the level "ask: optional"`, m.level, path))
+				"set "+m.path+" to one of the names under levels", m.path, m.level))
 		}
 	}
 	return out
 }
 
-// askRequired reports whether the named level exists and needs an ask.
-func askRequired(c *Config, name string) bool {
-	for _, l := range c.Levels {
-		if l.Name == name {
-			return l.AskRequired
-		}
+// ShimAskProblems lists the shim modes (default, then low) whose level needs an ask but whose ask
+// is empty, which a real page refuses. It is not part of Check: Check runs at every load, and an
+// unused shim mode with no ask must not stop notify, flush or status. Only config check and
+// page --check call it. A mode whose level is unknown is left to Check, which reports it. The ask
+// is normalized as page does, so an ask of only control or format characters is empty too.
+func ShimAskProblems(c *Config) []*problem.Problem {
+	if c.Shim == nil {
+		return nil
 	}
-	return false
+	var out []*problem.Problem
+	for _, m := range []struct{ mode, level, ask string }{
+		{"default", c.Shim.Default.Level, c.Shim.Default.Ask},
+		{"low", c.Shim.Low.Level, c.Shim.Low.Ask},
+	} {
+		i, ok := c.Rank(m.level)
+		if !ok || !c.Levels[i].AskRequired || problem.FlatLine(m.ask) != "" {
+			continue
+		}
+		path := "shim." + m.mode + ".ask"
+		out = append(out, problem.Configf("level %q needs an ask, and %s is empty", "a sentence saying what the human must do",
+			"set "+path+` in the shim: block of the config, or give the level "ask: optional"`, m.level, path))
+	}
+	return out
 }
-
-// ShimAskProblems is a stub.
-func ShimAskProblems(c *Config) []*problem.Problem { return nil }

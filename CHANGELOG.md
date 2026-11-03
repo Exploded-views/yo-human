@@ -23,7 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `config check` and `page --check` now refuse an empty `shim.default.ask` or `shim.low.ask` under a
   level that needs an ask (exit 78), as a real `page` already did, so a config that passes both
-  checks no longer fails on its first page (#39).
+  checks no longer fails on its first page (#39). An ask of only whitespace or control characters
+  counts as empty. Only those two commands refuse it: `notify`, `flush`, `status` and the other
+  commands are unaffected.
 
 ## [v0.2.0] - 2026-11-02
 

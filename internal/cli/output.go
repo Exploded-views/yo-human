@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"unicode"
 
 	"github.com/Exploded-views/yo-human/internal/core"
 	"github.com/Exploded-views/yo-human/internal/problem"
@@ -17,14 +16,7 @@ const jsonVersion = 1
 
 // oneLine keeps a value on its own line and free of control, format (BiDi overrides, joiners) and
 // line-separator characters (a terminal would act on an escape sequence), so the error: / valid: / fix: shape cannot be forged.
-func oneLine(s string) string {
-	return strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) || r == '\u2028' || r == '\u2029' {
-			return ' '
-		}
-		return r
-	}, s)
-}
+func oneLine(s string) string { return problem.OneLine(s) }
 
 // jsonResult is the spec's result object, with the problems that came with it, and the notices and
 // warnings the run produced.

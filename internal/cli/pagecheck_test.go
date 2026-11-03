@@ -231,8 +231,9 @@ func TestNoSendChecksRefuseAnEmptyShimAskOnAnAskRequiredLevel(t *testing.T) {
 func TestAnEmptyShimAskStopsOnlyTheNoSendChecks(t *testing.T) {
 	s, fk := notifySandbox(t)
 	write(t, s.userConfig(), notifyConfigBody+"shim:\n  default: { level: page }\n  low: { level: page, ask: look }\n")
+	r := s.notify("note")
+	expect(t, r.code == ExitOK && len(fk["journal"].Sent) == 1, "notify at an unrelated level: %+v; want it sent", r)
 	for _, args := range [][]string{
-		{"notify", "--level", "note", "hello"},
 		{"page", "--low", "hello"},
 		{"page", "--resolve", "some-key"},
 		{"status"},
@@ -242,7 +243,6 @@ func TestAnEmptyShimAskStopsOnlyTheNoSendChecks(t *testing.T) {
 		r := s.do("", args...)
 		expect(t, r.code != ExitConfig, "%v: %+v; want it not refused as a config problem", args, r)
 	}
-	expect(t, len(fk["journal"].Sent) > 0, "notify at an unrelated level was not sent")
 }
 
 func TestPageWithAnEmptyShimAskStillRefusesAtRuntimeWithTheSameFix(t *testing.T) {
