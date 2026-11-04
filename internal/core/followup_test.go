@@ -98,12 +98,36 @@ func holdLockFor(t *testing.T, e *env, d time.Duration) {
 // R3: a send that arrived is recorded on its incident even while another process holds the lock past
 // the deadline, and a delivered page never exits 75 because of the lock.
 func TestALandingIsRecordedBehindABusyLock(t *testing.T) {
+	landingBehindABusyLock(t, func(*env) {})
+}
+
+// The same, when the call is slow between writing its message to disk and sending it, as it is on a
+// loaded test runner. The outcome must not depend on how fast the machine is. (#47)
+func TestALandingIsRecordedBehindABusyLockAfterASlowStart(t *testing.T) {
+	landingBehindABusyLock(t, func(e *env) { slowOnce(e, 250*time.Millisecond) })
+}
+
+// slowOnce makes the next call pause once, after its message is on disk and before its send, the
+// window in which a loaded runner spent the deadline in #47.
+func slowOnce(e *env, d time.Duration) {
+	var done bool
+	core.AfterEnqueue(e.p, func() {
+		if !done {
+			done = true
+			time.Sleep(d)
+		}
+	})
+}
+
+func landingBehindABusyLock(t *testing.T, slowStart func(*env)) {
+	t.Helper()
 	e := newEnv(t, incCfg(0, "a"), one)
 	e.cfg.Deadline = 200 * time.Millisecond
 	e.fakes["a"].SendFunc = func(context.Context, channel.Message, channel.SendSpec) (channel.Receipt, error) {
 		holdLockFor(t, e, 400*time.Millisecond)
 		return channel.Receipt{Instance: "a", ProviderID: "PD-FAKE-1"}, nil
 	}
+	slowStart(e)
 	var r core.Result
 	var err error
 	within(t, func() {
