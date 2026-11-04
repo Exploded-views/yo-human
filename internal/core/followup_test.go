@@ -75,9 +75,34 @@ func TestAWaitingRepeatOfAStrandedIncidentIsSent(t *testing.T) {
 	}
 }
 
-// holdLockFor takes the incident lock through a second handle, as another process would, and lets
-// it go after d. It returns once the lock is held.
-func holdLockFor(t *testing.T, e *env, d time.Duration) {
+// R3: a send that arrived is recorded on its incident even while another process holds the lock past
+// the deadline, and a delivered page never exits 75 because of the lock.
+func TestALandingIsRecordedBehindABusyLock(t *testing.T) {
+	landingBehindABusyLock(t, func(*env) {})
+}
+
+// The same, when the call is slow between writing its message to disk and sending it, as it is on a
+// loaded test runner. The outcome must not depend on how fast the machine is. (#47)
+func TestALandingIsRecordedBehindABusyLockAfterASlowStart(t *testing.T) {
+	landingBehindABusyLock(t, func(e *env) { slowOnce(e, 250*time.Millisecond) })
+}
+
+// slowOnce makes the next call pause once, after its message is on disk and before its send, the
+// window in which a loaded runner spent the deadline in #47.
+func slowOnce(e *env, d time.Duration) {
+	var done bool
+	core.AfterEnqueue(e.p, func() {
+		if !done {
+			done = true
+			time.Sleep(d)
+		}
+	})
+}
+
+// holdLockPastDeadline takes the incident lock through a second handle, as another process would, and
+// keeps it until ctx's deadline has passed, then a little longer, so the holder outlasts the call's
+// deadline whatever the machine's speed. It returns once the lock is held.
+func holdLockPastDeadline(t *testing.T, e *env, ctx context.Context) {
 	t.Helper()
 	other, err := store.Open(e.dir)
 	if err != nil {
@@ -88,22 +113,25 @@ func holdLockFor(t *testing.T, e *env, d time.Duration) {
 	go func() {
 		_ = other.WithIncidents(func(map[string]*store.Incident) error {
 			close(held)
-			time.Sleep(d)
+			<-ctx.Done()
+			time.Sleep(100 * time.Millisecond)
 			return nil
 		})
 	}()
 	<-held
 }
 
-// R3: a send that arrived is recorded on its incident even while another process holds the lock past
-// the deadline, and a delivered page never exits 75 because of the lock.
-func TestALandingIsRecordedBehindABusyLock(t *testing.T) {
+// The deadline is long enough that no runner spends it before the send (#47); the lock is held
+// past it, measured from the call's own deadline, not from a fixed margin.
+func landingBehindABusyLock(t *testing.T, slowStart func(*env)) {
+	t.Helper()
 	e := newEnv(t, incCfg(0, "a"), one)
-	e.cfg.Deadline = 200 * time.Millisecond
-	e.fakes["a"].SendFunc = func(context.Context, channel.Message, channel.SendSpec) (channel.Receipt, error) {
-		holdLockFor(t, e, 400*time.Millisecond)
+	e.cfg.Deadline = time.Second
+	e.fakes["a"].SendFunc = func(ctx context.Context, _ channel.Message, _ channel.SendSpec) (channel.Receipt, error) {
+		holdLockPastDeadline(t, e, ctx)
 		return channel.Receipt{Instance: "a", ProviderID: "PD-FAKE-1"}, nil
 	}
+	slowStart(e)
 	var r core.Result
 	var err error
 	within(t, func() {

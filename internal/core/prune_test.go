@@ -49,9 +49,23 @@ func TestAClosedRecordIsPrunedAfterIncidentTTL(t *testing.T) {
 // A closed record a waiting message still needs for its drop check (R1) is not pruned, however old:
 // the message, claimed before the resolve, is dropped and pages nobody.
 func TestAClosedRecordAWaitingMessageNeedsIsKept(t *testing.T) {
+	closedRecordAWaitingMessageNeeds(t, func(*env) {})
+}
+
+// The same, when the other incident's page is slow between writing its message to disk and sending
+// it, as it is on a loaded test runner. The outcome must not depend on how fast the machine is. (#47)
+func TestAClosedRecordAWaitingMessageNeedsIsKeptAfterASlowStart(t *testing.T) {
+	closedRecordAWaitingMessageNeeds(t, func(e *env) { slowOnce(e, 250*time.Millisecond) })
+}
+
+func closedRecordAWaitingMessageNeeds(t *testing.T, slowStart func(*env)) {
+	t.Helper()
 	e := newEnv(t, incCfg(0, "a"), one)
 	_, release := deferred(t, e)
 	release()
+	// deferred needs a short deadline only to defer the message; the rest of the scenario must not
+	// race the clock (#47), so it gets the config's own deadline back.
+	e.cfg.Deadline = incCfg(0).Deadline
 	fired := false
 	core.BeforeAdmit(e.p, func() {
 		if fired {
@@ -61,6 +75,7 @@ func TestAClosedRecordAWaitingMessageNeedsIsKept(t *testing.T) {
 		e.clk.Advance(time.Second)
 		e.resolve("k", "")
 		e.clk.Advance(25 * time.Hour)
+		slowStart(e)
 		e.say("page", "other", "t") // writes the incidents, past incident_ttl
 	})
 	fr := e.flush()
