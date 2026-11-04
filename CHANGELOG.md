@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.3.0] - 2026-11-04
+
 ### Added
 
 - `yo-human channel test <instance> --interruption passive|active|time-sensitive|critical` sends the
@@ -15,8 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cannot send is a usage error (64) naming the ones it can, and nothing is sent. `--json` gains
   `interruption`. Above `passive` on a channel type with incidents (PagerDuty), `--json` also
   carries `dedup_key` and the text prints a `key:` and a `close:` line, because `resolve` cannot
-  close what a test opened. A new optional flag and field: the next release is a minor one. Above
-  `passive` is for the owner, at their own terminal; the agent skill forbids it.
+  close what a test opened. Above `passive` is for the owner, at their own terminal; the agent skill
+  forbids it.
 - `levels --sends`: each level's channels and interruptions, never a destination.
 - `docs/paging-guide.md` maps common events (an outage, a decision, a green PR, a vendor incident,
   a release, a finished task) onto the starter levels, with three copyable examples in
@@ -148,7 +150,8 @@ the M0 scaffold.
   (marked as not shipped), a message-path diagram, build-from-source steps and
   the milestone roadmap. Theme-aware banner in `docs/assets/`.
 
-[Unreleased]: https://github.com/Exploded-views/yo-human/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Exploded-views/yo-human/compare/v0.3.0...HEAD
+[v0.3.0]: https://github.com/Exploded-views/yo-human/compare/v0.2.0...v0.3.0
 [v0.2.0]: https://github.com/Exploded-views/yo-human/compare/v0.1.1...v0.2.0
 [v0.1.1]: https://github.com/Exploded-views/yo-human/compare/v0.1.0...v0.1.1
 [v0.1.0]: https://github.com/Exploded-views/yo-human/releases/tag/v0.1.0
