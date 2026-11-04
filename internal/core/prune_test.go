@@ -63,6 +63,9 @@ func closedRecordAWaitingMessageNeeds(t *testing.T, slowStart func(*env)) {
 	e := newEnv(t, incCfg(0, "a"), one)
 	_, release := deferred(t, e)
 	release()
+	// deferred needs a short deadline only to defer the message; the rest of the scenario must not
+	// race the clock (#47), so it gets the config's own deadline back.
+	e.cfg.Deadline = incCfg(0).Deadline
 	fired := false
 	core.BeforeAdmit(e.p, func() {
 		if fired {
