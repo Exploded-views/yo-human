@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/Exploded-views/yo-human/internal/hosted/bus"
@@ -107,5 +108,28 @@ func TestWalledStatusSessionNamesAreIds(t *testing.T) {
 	crew := json.RawMessage(`{"swarm":"crew","sessions":[{"name":"build-1","state":"idle"}],"waiting_on_human":[],"main_health":"ok","spend":0,"ts":1}`)
 	if err := pushTo(e, "crew", crew); err != nil {
 		t.Errorf("unwalled: %v", err)
+	}
+}
+
+// encoding/json matches struct fields without regard to case, so a second spelling of a key would
+// reach the struct while the digit check read the first: the keys must be exactly the six, spelled so.
+func TestStatusRefusesCaseVariantKeys(t *testing.T) {
+	for name, doc := range map[string]string{
+		"spend twice":       `{"swarm":"client","sessions":[],"waiting_on_human":[],"main_health":"ok","spend":1,"Spend":123456789012345,"ts":1}`,
+		"main_health twice": `{"swarm":"client","sessions":[],"waiting_on_human":[],"main_health":"ok","Main_Health":"payroll-outage","spend":1,"ts":1}`,
+		"only SPEND":        `{"swarm":"client","sessions":[],"waiting_on_human":[],"main_health":"ok","SPEND":1,"ts":1}`,
+		"an extra key":      `{"swarm":"client","sessions":[],"waiting_on_human":[],"main_health":"ok","spend":1,"ts":1,"note":"x"}`,
+	} {
+		for _, swarm := range []string{"client", "crew"} {
+			e := newEnvWalled(t, "client")
+			d := json.RawMessage(strings.Replace(doc, `"client"`, `"`+swarm+`"`, 1))
+			err := pushTo(e, swarm, d)
+			if be := errWithCode(t, err, bus.CodeInvalid); be.What != "status" {
+				t.Errorf("%s in %s: What = %q, want status", name, swarm, be.What)
+			}
+			if st, _ := e.b.SwarmStatus(context.Background(), duet, ""); len(st) != 0 {
+				t.Errorf("%s in %s: stored %+v", name, swarm, st)
+			}
+		}
 	}
 }

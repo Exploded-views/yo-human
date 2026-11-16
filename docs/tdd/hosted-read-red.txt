@@ -163,3 +163,12 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.921s
 FAIL
 exit=1
+
+# Review round 5, 2026-11-16T05:06:18Z: case-variant and extra status keys
+$ go test -count=1 ./internal/hosted/bus/
+--- FAIL: TestStatusRefusesCaseVariantKeys (0.02s)
+    status_wall_test.go:127: err = <nil> (<nil>), want a *bus.Error with code invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.072s
+FAIL
+exit=1
