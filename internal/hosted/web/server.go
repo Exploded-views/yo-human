@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -41,13 +42,19 @@ type service struct {
 	duet, node, empty    *mcp.Server
 }
 
-// New returns the two listeners' handlers. extra serves the OAuth routes and metadata documents
+// New returns the two listeners' handlers. It panics when a configured origin has no host, or both
+// have the same one. extra serves the OAuth routes and metadata documents
 // (Task 10) on the MCP listener only.
 func New(b *bus.Bus, v *auth.Verifier, cfg Config, extra http.Handler) Handlers {
 	if cfg.ToolDeadline <= 0 {
 		cfg.ToolDeadline = 5 * time.Second
 	}
 	s := &service{cfg: cfg, mcpHost: hostOf(cfg.PublicURL), approveHost: hostOf(cfg.ApproveOrigin), extra: extra}
+	if s.mcpHost == "" || s.approveHost == "" || s.mcpHost == s.approveHost {
+		// An empty host would match a request with no Host, and one shared host would put both
+		// surfaces on one listener's name. app.LoadConfig checks both; this is the last guard.
+		panic("web: the public URL and the approve origin must be two different origins with a host")
+	}
 	s.duet, s.node, s.empty = s.servers(b)
 	s.pipeline = s.mcpPipeline(v)
 	return Handlers{MCP: http.HandlerFunc(s.serveMCP), Approve: http.HandlerFunc(s.serveApprove)}
@@ -76,6 +83,10 @@ func isApprovePath(p string) bool {
 	return strings.HasPrefix(p, "/approve") || p == "/passkey" || strings.HasPrefix(p, "/passkey/")
 }
 
+// canonical: a path path.Clean would change (a dot segment, a doubled or trailing slash) is
+// refused before routing, so no handler behind a listener has to clean one.
+func canonical(p string) bool { return path.Clean(p) == p }
+
 // notFound is the one 404 for both listeners, so a probe cannot tell which one it reached.
 func notFound(w http.ResponseWriter, r *http.Request) { http.NotFound(w, r) }
 
@@ -91,6 +102,8 @@ func isHealthz(r *http.Request) bool { return r.Method == http.MethodGet && r.UR
 // only. The approval routes are never served here.
 func (s *service) serveMCP(w http.ResponseWriter, r *http.Request) {
 	switch p := r.URL.Path; {
+	case !canonical(p):
+		notFound(w, r)
 	case isHealthz(r):
 		healthz(w, r)
 	case !hostIs(r, s.mcpHost) || isApprovePath(p):
@@ -108,6 +121,8 @@ func (s *service) serveMCP(w http.ResponseWriter, r *http.Request) {
 // no /mcp, no OAuth route and no extra.
 func (s *service) serveApprove(w http.ResponseWriter, r *http.Request) {
 	switch {
+	case !canonical(r.URL.Path):
+		notFound(w, r)
 	case isHealthz(r):
 		healthz(w, r)
 	case !hostIs(r, s.approveHost) || !isApprovePath(r.URL.Path) || s.cfg.Approve == nil:

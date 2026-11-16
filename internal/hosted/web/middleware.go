@@ -23,7 +23,7 @@ const principalKey = "principal"
 // The host check has already run in serveMCP, before any of these.
 func (s *service) mcpPipeline(v *auth.Verifier) http.Handler {
 	var h http.Handler = mcp.NewStreamableHTTPHandler(s.getServer, &mcp.StreamableHTTPOptions{
-		Stateless: true, JSONResponse: true, MaxRequestBodyBytes: maxBody,
+		Stateless: true, JSONResponse: true,
 		// The SDK's DNS-rebinding guard refuses a non-local Host on a loopback address, which is
 		// every request here: the MCP listener is loopback and the tunnel forwards the public Host.
 		// serveMCP's own host check is the stricter one.
