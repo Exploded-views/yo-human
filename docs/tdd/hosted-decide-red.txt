@@ -1,0 +1,34 @@
+$ go test ./internal/hosted/bus/ ./internal/repolint/   (failing lines only; stubs: RecordAnswer, RecordApproval and RelayWords return an internal error, PasskeyKind returns nil)
+--- FAIL: TestDecideStoreFailureIsInternalAndRollsBack (0.03s)
+--- FAIL: TestUniqueConflictFromRacingWriterIsRuleSix (0.00s)
+--- FAIL: TestConcurrentAnswersOneWins (0.00s)
+--- FAIL: TestConcurrentDeskAndDuetAnswers (0.00s)
+--- FAIL: TestSecondDifferentApprovalRejectedWithWinner (0.00s)
+--- FAIL: TestIdenticalRetryIsIdempotent (0.00s)
+--- FAIL: TestRevisionVoidsThenReapprove (0.00s)
+--- FAIL: TestHumanAnswerSupersedesAgent (0.00s)
+--- FAIL: TestRetriesAfterSupersede (0.00s)
+--- FAIL: TestAgentAfterHumanRefused (0.00s)
+--- FAIL: TestRecordedEvents (0.00s)
+--- FAIL: TestRelayNeverResolves (0.00s)
+--- FAIL: TestRelayFromNodesAndDuet (0.00s)
+--- FAIL: TestWalledRelayOnlyGoOrHold (0.00s)
+--- FAIL: TestApprovalForOldRevisionIsRejected (0.00s)
+--- FAIL: TestNonPasskeyActionRejectedForEveryone (0.00s)
+--- FAIL: TestExcludedActionNeverDecidable (0.00s)
+--- FAIL: TestApprovalOnQuestionIsNotApprovable (0.01s)
+--- FAIL: TestMissingItemIsNotFound (0.00s)
+--- FAIL: TestNodeCannotRecordAnswerOrApproval (0.00s)
+--- FAIL: TestOnlyTheRightCredentialsDecide (0.01s)
+--- FAIL: TestWalledAnswerOnlyGoOrHold (0.00s)
+--- FAIL: TestDuetCannotApprove (0.00s)
+--- FAIL: TestActorKindFollowsCredential (0.00s)
+--- FAIL: TestSourceComesFromCredential (0.00s)
+--- FAIL: TestDecisionInputRules (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.507s
+--- FAIL: TestPasskeyKindFixtures (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.314s
+FAIL
+exit=1
