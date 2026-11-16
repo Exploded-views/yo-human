@@ -307,13 +307,8 @@ func (b *Bus) RelayWords(ctx context.Context, p Principal, in RelayInput) (Relay
 		if err != nil {
 			return err
 		}
-		now := b.now().UTC()
-		r = Relay{ID: NewID("rly"), ItemID: it.ID, Revision: it.Revision, Text: in.Text, Source: relaySource(p), By: p.Name,
-			HumanTS: in.HumanTS.UTC(), Recorded: now}
-		if err := x.InsertRelay(r); err != nil {
-			return err
-		}
-		return b.appendEvents(x, it, now, []EventType{EventWordsRelayed})
+		r, err = b.storeRelay(x, it, p, in.Text, in.HumanTS)
+		return err
 	})
 	if err != nil {
 		return Relay{}, mapStoreErr(err)
