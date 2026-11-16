@@ -1,6 +1,7 @@
 package bus_test
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -47,7 +48,26 @@ func TestWalledApprovalTextOnlyGoOrHold(t *testing.T) {
 	}
 }
 
-var badSourceMessages = []string{strings.Repeat("a", 65), "bad\xffutf8", "esc\x1b[31m", "nul\x00", "has space", "owner said: tell the client", "a_b", "tab\t", "new\nline"}
+var badSourceMessages = []string{strings.Repeat("a", 65), "bad\xffutf8", "esc\x1b[31m", "nul\x00", "has space", "owner said: tell the client", "tab\t", "new\nline"}
+
+type srcEnv struct {
+	name string
+	e    *env
+	q    bus.Item
+	text string
+	wall bool
+}
+
+// fresh posts another open question in the env's swarm.
+func (s srcEnv) fresh(t *testing.T, i int) bus.Item {
+	t.Helper()
+	if s.wall {
+		d := typed(strconv.Itoa(20 + i))
+		d.Kind = bus.KindQuestion
+		return s.e.post(t, walledNode, d).Item
+	}
+	return s.e.post(t, node("ci-1", "crew"), askQuestion("gq"+strconv.Itoa(i))).Item
+}
 
 // SourceMessage is untrusted data from Duet: optional, and when present an id token.
 func TestSourceMessageRules(t *testing.T) {
@@ -56,12 +76,7 @@ func TestSourceMessageRules(t *testing.T) {
 	wd := typed("12")
 	wd.Kind = bus.KindQuestion
 	wq := w.post(t, walledNode, wd).Item
-	for _, env := range []struct {
-		name string
-		e    *env
-		q    bus.Item
-		text string
-	}{{"crew", e, e.questionItem(t), "use 8080"}, {"walled", w, wq, "go sl:12"}} {
+	for _, env := range []srcEnv{{"crew", e, e.questionItem(t), "use 8080", false}, {"walled", w, wq, "go sl:12", true}} {
 		s := env.e.snap(t, env.q.ID)
 		for _, sm := range badSourceMessages {
 			in := answerIn(env.q)
@@ -72,8 +87,9 @@ func TestSourceMessageRules(t *testing.T) {
 			}
 		}
 		env.e.unchanged(t, env.name+" refused source messages", s)
-		for _, sm := range []string{"", "msg-9", "m.1:x-2", strings.Repeat("a", 64)} {
-			in := answerIn(env.q)
+		for i, sm := range []string{"", "msg-9", "m.1:x-2", "a_b", strings.Repeat("a", 64)} {
+			q := env.fresh(t, i) // a retry on the first item would return its record, so each id gets an item
+			in := answerIn(q)
 			in.Text, in.SourceMessage = env.text, sm
 			r, err := env.e.b.RecordAnswer(ctx, duet, in)
 			if err != nil || r.SourceMessage != sm {

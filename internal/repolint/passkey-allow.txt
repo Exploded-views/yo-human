@@ -1,0 +1,7 @@
+# Paths and directory prefixes (ending in /) outside internal/hosted/bus and internal/hosted/approval
+# where the string "passkey" is not the passkey principal kind. Every line is reviewed.
+#
+# The policy's mode of that name, and its tests.
+internal/hosted/policy/
+# The lint itself, whose code and doc comments name the string.
+internal/repolint/passkey.go

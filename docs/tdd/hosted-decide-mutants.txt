@@ -130,3 +130,175 @@ MUTANT: repolint: string conversion check dropped
   exit=1
   caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.647s; FAIL
 
+
+=== Review round 1 (Opus review of f9af348) ===
+Run 3 tried 14 mutants. Seven survived or were not clean and were redone: 'length cap widened' panicked the regexp compiler (re-run at {1,1000}); concatenation, parentheses and named constants survived because the fixtures did not exercise them alone (and stringConsts wrongly counted vars, which masked the concatenation fixture; fixed to consts only); 'escapes not decoded' and 'allowlist ignored' did not build (re-run cleanly). Runs 4 and 5 are the re-runs, after the fixtures bad_parencat.go and bad_constcat.go were added.
+--- Run 3 ---
+MUTANT: walled approval text unchecked
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestWalledApprovalTextOnlyGoOrHold (0.02s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.292s; FAIL
+
+MUTANT: walled approval: go/hold not tied to the decision
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestWalledApprovalTextOnlyGoOrHold (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.605s; FAIL
+
+MUTANT: source message unchecked
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestSourceMessageRules (0.02s); --- FAIL: TestApprovalSourceMessageRules (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.071s; FAIL
+
+MUTANT: source message length cap widened
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.278s; FAIL
+
+MUTANT: source message not checked for approvals
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestApprovalSourceMessageRules (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.033s; FAIL
+
+MUTANT: unnamed desk may answer
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestDeskWithoutNameIsForbidden (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.301s; FAIL
+
+MUTANT: event Created differs from the row's Recorded
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestRecordedEventsMatchRowRecordedTime (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.256s; FAIL
+
+MUTANT: repolint: homes match by prefix
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	1.098s; FAIL
+
+MUTANT: repolint: concatenation not evaluated
+  file: internal/repolint/passkey.go
+  exit=0
+  caught by: NOT CAUGHT
+
+MUTANT: repolint: parentheses not evaluated
+  file: internal/repolint/passkey.go
+  exit=0
+  caught by: NOT CAUGHT
+
+MUTANT: repolint: named constants not resolved
+  file: internal/repolint/passkey.go
+  exit=0
+  caught by: NOT CAUGHT
+
+MUTANT: repolint: escapes not decoded
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: FAIL	github.com/Exploded-views/yo-human/internal/repolint [build failed]; FAIL
+
+MUTANT: repolint: allowlist ignored
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: FAIL	github.com/Exploded-views/yo-human/internal/repolint [build failed]; FAIL; internal/repolint/passkey.go:94:9: declared and not used: a
+
+MUTANT: repolint: composite-literal strings not evaluated (literals only inside conversions)
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.568s; FAIL
+
+--- Run 4 (re-run) ---
+MUTANT: source message length cap widened
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestSourceMessageRules (0.01s); --- FAIL: TestApprovalSourceMessageRules (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.289s; FAIL
+
+MUTANT: repolint: concatenation not evaluated
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.898s; FAIL
+
+MUTANT: repolint: parentheses not evaluated
+  file: internal/repolint/passkey.go
+  exit=0
+  caught by: NOT CAUGHT
+
+MUTANT: repolint: named constants not resolved
+  file: internal/repolint/passkey.go
+  exit=0
+  caught by: NOT CAUGHT
+
+MUTANT: repolint: a var counts as a constant
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.525s; FAIL
+
+MUTANT: repolint: escapes not decoded
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: FAIL	github.com/Exploded-views/yo-human/internal/repolint [build failed]; FAIL
+
+MUTANT: repolint: allowlist ignored
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); --- FAIL: TestPasskeyKindOnlyInApproval (0.08s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.539s; FAIL
+
+--- Run 5 (re-run after the new fixtures) ---
+MUTANT: repolint: parentheses not evaluated
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.497s; FAIL
+
+MUTANT: repolint: named constants not resolved
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.506s; FAIL
+
+MUTANT: repolint: escapes not decoded
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.479s; FAIL
+
+--- Run 6: the same mutants against the code after it was split for gocyclo. The last entry (string() conversion) did not build and was withdrawn together with the unused string() case it targeted. ---
+MUTANT: walled approval text unchecked
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestWalledApprovalTextOnlyGoOrHold (0.03s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	3.763s; FAIL
+
+MUTANT: walled approval: go/hold not tied to the decision
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestWalledApprovalTextOnlyGoOrHold (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.889s; FAIL
+
+MUTANT: repolint: homes match by prefix
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.896s; FAIL
+
+MUTANT: repolint: concatenation not evaluated
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.694s; FAIL
+
+MUTANT: repolint: parentheses not evaluated
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.964s; FAIL
+
+MUTANT: repolint: named constants not resolved
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	1.201s; FAIL
+
+MUTANT: repolint: escapes not decoded
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	1.068s; FAIL
+
+MUTANT: repolint: allowlist ignored
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); --- FAIL: TestPasskeyKindOnlyInApproval (0.19s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.934s; FAIL
+
+MUTANT: repolint: string() conversion not evaluated
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: FAIL	github.com/Exploded-views/yo-human/internal/repolint [build failed]; FAIL; internal/repolint/passkey.go:182:5: declared and not used: f
+

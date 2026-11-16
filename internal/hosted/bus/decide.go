@@ -3,6 +3,7 @@ package bus
 import (
 	"context"
 	"errors"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -54,7 +55,7 @@ type decideReq struct {
 // under desk Option A, the desk (a human one) may call it; the actor kind comes from that
 // credential alone. A node relays the owner's words instead (RelayWords).
 func (b *Bus) RecordAnswer(ctx context.Context, p Principal, in AnswerInput) (Record, error) {
-	if p.Kind != PrincipalDuet && p.Kind != PrincipalDesk {
+	if p.Kind != PrincipalDuet && p.Kind != PrincipalDesk || p.Kind == PrincipalDesk && p.Name == "" {
 		return Record{}, forbidden("a Duet or desk credential", "a node passes the owner's words on with relay; it never answers")
 	}
 	return b.decide(ctx, p, decideReq{itemID: in.ItemID, rev: in.Revision, kind: RecordAnswer, text: in.Text,
@@ -171,16 +172,49 @@ func notApprovable(want string) *Error {
 	return &Error{Code: CodeNotApprovable, What: "item", Valid: "an item of kind " + want, Fix: "check the item's kind before deciding it"}
 }
 
-// checkDecisionInput is rules 4a and 5: a walled answer is go or hold, an approval has a decision,
-// and the text is non-empty after trimming, within the limit, and plain.
+// checkDecisionInput is rules 4a and 5: a walled answer or approval is go or hold, an approval has a
+// decision, the text is non-empty after trimming, within the limit, and plain, and the source message,
+// when there is one, is an id token.
 func (b *Bus) checkDecisionInput(it Item, rq decideReq) error {
+	var err error
 	if rq.kind == RecordAnswer {
-		return b.checkWords(it.Swarm, rq.text)
+		err = b.checkWords(it.Swarm, rq.text)
+	} else {
+		err = b.checkApprovalText(it.Swarm, rq)
 	}
-	if rq.decision != DecisionApprove && rq.decision != DecisionReject {
+	if err != nil {
+		return err
+	}
+	return checkSourceMessage(rq.sourceMessage)
+}
+
+// checkApprovalText: the decision is approve or reject; in a walled swarm the text is exactly go
+// sl:<n> for approve and hold sl:<n> for reject, so the words can't contradict the decision.
+func (b *Bus) checkApprovalText(swarm string, rq decideReq) error {
+	word := map[Decision]string{DecisionApprove: "go ", DecisionReject: "hold "}[rq.decision]
+	switch {
+	case word == "":
 		return invalid("decision", "approve or reject")
+	case b.isWalled(swarm) && !goHoldWord(rq.text, word):
+		return wallInvalid("text", "go sl:<n> to approve or hold sl:<n> to reject, exactly")
 	}
 	return checkText(rq.text)
+}
+
+// goHoldWord: text is exactly go sl:<n> or hold sl:<n>, and begins with word.
+func goHoldWord(text, word string) bool {
+	return wallGoHoldRE.MatchString(text) && strings.HasPrefix(text, word)
+}
+
+var sourceMessageRE = regexp.MustCompile(`^[A-Za-z0-9._:-]{1,64}$`)
+
+// checkSourceMessage: the id of the owner's message is optional; Duet supplies it, so it is data,
+// and it is a short token in every swarm.
+func checkSourceMessage(sm string) error {
+	if sm != "" && !sourceMessageRE.MatchString(sm) {
+		return invalid("source_message", "empty, or an id of 1 to 64 characters from A-Z a-z 0-9 . _ : -")
+	}
+	return nil
 }
 
 // checkWords is the content rule for the owner's words entering a swarm: behind the wall they are
