@@ -11,7 +11,7 @@ import (
 // with RelayWords, the owner decides on the approval page). It runs the rules a decision on an
 // approval does, so Duet learns at once that it cannot be decided: the item must be an approval
 // the policy still puts behind a passkey (not_approvable, standing or excluded_action), at the
-// revision the owner saw (stale_revision), with a decision of approve or reject whose text, in a
+// revision the owner saw (stale_revision) that has no decision yet (already_decided, with the winner), with a decision of approve or reject whose text, in a
 // walled swarm, is exactly go sl:<n> or hold sl:<n> to match. The decision is checked, not stored:
 // the relay keeps the owner's words, and the words are what an agent reads.
 func (b *Bus) RelayApproval(ctx context.Context, p Principal, in ApprovalInput) (Relay, error) {
@@ -20,10 +20,18 @@ func (b *Bus) RelayApproval(ctx context.Context, p Principal, in ApprovalInput) 
 	}
 	rq := decideReq{itemID: in.ItemID, rev: in.Revision, kind: RecordApproval, decision: in.Decision, text: in.Text}
 	var r Relay
+	var swarm string
 	err := b.s.Tx(ctx, func(x Tx) error {
 		it, err := b.decidable(x, p, rq)
 		if err != nil {
 			return err
+		}
+		swarm = it.Swarm
+		if cur, found, err := x.Decision(it.ID, it.Revision); err != nil || found {
+			if err != nil {
+				return err
+			}
+			return alreadyDecided(cur) // the revision is closed: Duet must not hand out a link to it
 		}
 		if err := b.checkApprovalText(it.Swarm, rq); err != nil {
 			return err
@@ -34,6 +42,7 @@ func (b *Bus) RelayApproval(ctx context.Context, p Principal, in ApprovalInput) 
 	if err != nil {
 		return Relay{}, mapStoreErr(err)
 	}
+	b.committed(swarm)
 	return r, nil
 }
 
