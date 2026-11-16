@@ -160,6 +160,23 @@ linters:
             - "!$test"
           allow:
             - $gostd
+        # hostname is a leaf below app and the web layer: standard library only, so the config's
+        # same-host check and the listeners' routing check share one normaliser.
+        hosted-hostname-leaf:
+          files:
+            - "**/internal/hosted/hostname/**"
+            - "!$test"
+          allow:
+            - $gostd
+        # auth verifies against the TokenStore interface and the bus's principal: standard
+        # library and bus, never db (a verifier that can reach SQL is a second query path).
+        hosted-auth-imports:
+          files:
+            - "**/internal/hosted/auth/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/hosted/bus$
         # An egress package (one per outbound destination) imports only the standard library
         # and the notify interface it implements.
         hosted-egress-imports:

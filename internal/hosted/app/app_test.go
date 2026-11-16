@@ -34,7 +34,7 @@ func TestHostedUnknownVerbIsUsage(t *testing.T) {
 
 // The exit codes are a contract with callers, so pin the literals.
 func TestHostedExitCodeValues(t *testing.T) {
-	if ExitOK != 0 || ExitUsage != 64 {
-		t.Fatalf("ExitOK=%d ExitUsage=%d, want 0 and 64", ExitOK, ExitUsage)
+	if ExitOK != 0 || ExitUsage != 64 || ExitFailed != 69 || ExitStore != 74 {
+		t.Fatalf("ExitOK=%d ExitUsage=%d ExitFailed=%d ExitStore=%d, want 0, 64, 69 and 74", ExitOK, ExitUsage, ExitFailed, ExitStore)
 	}
 }
