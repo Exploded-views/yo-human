@@ -5,6 +5,7 @@ package perf
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -34,6 +35,14 @@ func Post(n int) ([]time.Duration, error) { return inTempDir(SeedItems, n, PostI
 // its event appends.
 func Revise(n int) ([]time.Duration, error) { return inTempDir(SeedItems, n, ReviseIn) }
 
+// Wake times n long-poll waiters: how long Answers took to return after the commit that woke it.
+func Wake(n int) ([]time.Duration, error) { return inTempDir(SeedItems, n, WakeIn) }
+
+// WakeIn is Wake against a database of items items in dir. (not implemented)
+func WakeIn(dir string, items, n int) ([]time.Duration, error) {
+	return nil, errors.New("not implemented")
+}
+
 // inTempDir runs fn in a fresh 0700 temp directory and removes it afterwards.
 func inTempDir(items, n int, fn sampler) ([]time.Duration, error) {
 	dir, err := os.MkdirTemp(tmpRoot, "yh-perf-")
@@ -51,10 +60,10 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	n := 0
 	if len(args) == 2 {
 		n, _ = strconv.Atoi(args[1])
-		fn = map[string]sampler{"post": PostIn, "revise": ReviseIn}[args[0]]
+		fn = map[string]sampler{"post": PostIn, "revise": ReviseIn, "wake": WakeIn}[args[0]]
 	}
 	if fn == nil || n < 1 {
-		_, _ = fmt.Fprintln(stderr, "usage: perf post|revise N")
+		_, _ = fmt.Fprintln(stderr, "usage: perf post|revise|wake N")
 		return 2
 	}
 	samples, err := inTempDir(seedItems, n, fn)

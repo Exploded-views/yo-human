@@ -1,0 +1,104 @@
+# H1 Task 7 RED, 2026-11-16T01:42:49Z: bus stubs (Inbox, Item, Ack, Answers, PushStatus and SwarmStatus return an error), a db ListThreadItems that returns nothing, and a perf WakeIn that returns an error
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestAnswersSinceCursorNoLoss (0.09s)
+    answers_test.go:50: Answers: not implemented
+--- FAIL: TestAnswersExcludesWhatTheNodeCaused (0.00s)
+    answers_test.go:80: not implemented
+--- FAIL: TestAnswersReturnsWhatOthersDid (0.01s)
+    answers_test.go:92: not implemented
+--- FAIL: TestAnswersCarryTheRecord (0.00s)
+    answers_test.go:117: Answers: not implemented
+--- FAIL: TestAnswersScopedToSwarm (0.00s)
+    answers_test.go:133: Answers: not implemented
+--- FAIL: TestAnswersOnlyForNodes (0.00s)
+    answers_test.go:148: err = not implemented (*errors.errorString), want a *bus.Error with code forbidden
+--- FAIL: TestAnswersLongPollWakesOnCommit (5.00s)
+    answers_test.go:210: the waiter never started its timer
+--- FAIL: TestAnswersLongPollIgnoresOtherSwarms (5.01s)
+    answers_test.go:251: the waiter never started its timer
+--- FAIL: TestAnswersLongPollTimesOutEmpty (5.01s)
+    answers_test.go:278: the waiter never started its timer
+--- FAIL: TestAnswersLongPollKeepsWaitingThroughOwnEvents (5.01s)
+    answers_test.go:295: the waiter never started its timer
+--- FAIL: TestAnswersWaitIsCappedAt25s (5.01s)
+    answers_test.go:313: the waiter never started its timer
+--- FAIL: TestAnswersLongPollCancelReturnsAtOnce (5.00s)
+    answers_test.go:343: the waiter never started its timer
+--- FAIL: TestAnswersLongPollSeesACommitBetweenReadAndWait (0.00s)
+    answers_test.go:387: not implemented
+    answers_test.go:376: internal: the bus (valid: a retry)
+--- FAIL: TestInboxGroupsAndExcludesDuetPosts (0.01s)
+    read_test.go:34: Inbox: not implemented
+--- FAIL: TestInboxSummaryFields (0.01s)
+    read_test.go:52: Inbox: not implemented
+--- FAIL: TestInboxInterruptLaneIsItsOwnGroup (0.01s)
+    read_test.go:65: Inbox: not implemented
+--- FAIL: TestInboxIsReadOnly (0.01s)
+    read_test.go:78: Inbox: not implemented
+--- FAIL: TestInboxSinceAndNext (0.01s)
+    read_test.go:87: Inbox: not implemented
+--- FAIL: TestInboxForbiddenForNode (0.01s)
+    read_test.go:108: err = not implemented (*errors.errorString), want a *bus.Error with code forbidden
+--- FAIL: TestAckHidesUntilNewActivity (0.00s)
+    read_test.go:118: not implemented
+--- FAIL: TestAckUnknownItemIsNotFound (0.00s)
+    read_test.go:133: err = not implemented (*errors.errorString), want a *bus.Error with code not_found
+--- FAIL: TestInboxThreadsListDuetItemsWithNewMessagesFromOthers (0.01s)
+    read_test.go:148: Inbox: not implemented
+--- FAIL: TestItemIncludesThread (0.00s)
+    read_test.go:178: not implemented
+--- FAIL: TestItemShowsOnlyTheCurrentRevisionsDecision (0.01s)
+    read_test.go:194: not implemented
+--- FAIL: TestItemCrossSwarmIsIndistinguishableFromMissing (0.01s)
+    read_test.go:215: err = not implemented (*errors.errorString), want a *bus.Error with code not_found
+--- FAIL: TestStatusPushAndSwarmStatus (0.00s)
+    status_test.go:21: not implemented
+--- FAIL: TestStatusDocRoundTrips (0.00s)
+    status_test.go:36: not implemented
+--- FAIL: TestStatusPushReplacesAndAppendsAnEvent (0.00s)
+    status_test.go:54: not implemented
+--- FAIL: TestStatusReadsAreDuetOnly (0.00s)
+    status_test.go:70: err = not implemented (*errors.errorString), want a *bus.Error with code forbidden
+--- FAIL: TestStatusPushOnlyForNodes (0.00s)
+    status_test.go:79: err = not implemented (*errors.errorString), want a *bus.Error with code forbidden
+--- FAIL: TestStatusPushRejectsOtherSwarm (0.00s)
+    status_test.go:86: err = not implemented (*errors.errorString), want a *bus.Error with code invalid
+--- FAIL: TestStatusPushRejectsBadShape (0.00s)
+    status_test.go:120: err = not implemented (*errors.errorString), want a *bus.Error with code invalid
+--- FAIL: TestStatusIsStoredCanonical (0.00s)
+    status_test.go:135: not implemented
+--- FAIL: TestWalledStatusDocIdsOnly (0.00s)
+    status_test.go:149: a typed document: not implemented
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	30.790s
+FAIL
+exit=1
+$ go test -count=1 -timeout 300s ./internal/hosted/db/
+--- FAIL: TestListThreadItems (0.01s)
+    thread_items_test.go:29: got 0 items, want itm_a then itm_b: []
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.467s
+FAIL
+exit=1
+$ go test -count=1 -timeout 300s ./internal/hosted/perf/
+--- FAIL: TestSamplersTimeEachCall (0.02s)
+    perf_test.go:28: wake: not implemented
+--- FAIL: TestRunPrintsOneTimingPerLine (0.02s)
+    perf_test.go:61: wake: code 1, stderr "perf: not implemented\n"
+--- FAIL: TestSamplersOnTheRealSize (1.00s)
+    perf_test.go:101: wake: not implemented, 0 samples
+--- FAIL: TestWakeSamplesAreTheWaitersLatency (0.00s)
+    perf_test.go:175: not implemented, 0 samples
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	1.247s
+FAIL
+exit=1
+$ go test -count=1 -timeout 300s ./tools/perf/
+--- FAIL: TestHostedScenariosAreRegistered (0.00s)
+    hosted_test.go:23: scenario hosted-answers-wake is not registered with a Sample
+--- FAIL: TestWakeBudgetIsUnderTheCeiling (0.00s)
+    hosted_test.go:92: no budget for hosted-answers-wake
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	7.739s
+FAIL
+exit=1

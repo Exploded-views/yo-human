@@ -147,3 +147,7 @@ func (x *txn) ListOpenForHuman() ([]bus.Item, error) {
 	}
 	return out, rows.Err()
 }
+
+// ListThreadItems returns the open items Duet started, addressed to a swarm, with activity after
+// both since and the ack mark, in last_seq order. (not implemented)
+func (x *txn) ListThreadItems(since int64) ([]bus.Item, error) { return nil, nil }
