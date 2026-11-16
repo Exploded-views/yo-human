@@ -31,7 +31,7 @@ func TestConfigLinkHostsAreDNSNames(t *testing.T) {
 			t.Errorf("YH_LINK_HOSTS=%.20q (%d bytes): %v, want it accepted", v, len(v), err)
 		}
 	}
-	for _, v := range []string{"10.0.0.1", "127.0.0.1", "1.2.3.4", "999.999.999.999", "0x7f.1", "1234", strings.Repeat("a", 64) + ".example.org", long + "a", "[::1]", "::1"} {
+	for _, v := range []string{"10.0.0.1", "127.0.0.1", "1.2.3.4", "999.999.999.999", "0x7f.1", "1234", "0x7f000001", "0X7F", "0x", "a.0x7f", "a.0XaBc", strings.Repeat("a", 64) + ".example.org", long + "a", "[::1]", "::1"} {
 		if _, err := LoadConfig(envOf(with("YH_LINK_HOSTS", v))); err == nil {
 			t.Errorf("YH_LINK_HOSTS=%.20q accepted, want it refused", v)
 		}

@@ -269,3 +269,16 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	2.769s
 FAIL
 exit=1
+
+== Section 10: review round 2 (Opus delta on ae0332f), D1: bareHost refuses a hex last label (RED)
+$ go test -count=1 -run TestConfigLinkHostsAreDNSNames ./internal/hosted/app/
+--- FAIL: TestConfigLinkHostsAreDNSNames (0.00s)
+    config_review_test.go:36: YH_LINK_HOSTS="0x7f000001" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="0X7F" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="0x" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="a.0x7f" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="a.0XaBc" accepted, want it refused
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.243s
+FAIL
+exit=1
