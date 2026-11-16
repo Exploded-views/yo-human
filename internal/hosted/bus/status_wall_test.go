@@ -85,3 +85,27 @@ func TestStatusPushRefusesInvalidUTF8(t *testing.T) {
 		}
 	}
 }
+
+// A walled session name is a typed id, like the ids in waiting_on_human: a free token would be a
+// channel across the wall (lead ruling on N7). An unwalled swarm keeps the plain name rule.
+func TestWalledStatusSessionNamesAreIds(t *testing.T) {
+	e := newEnvWalled(t, "client")
+	session := func(name string) json.RawMessage {
+		return json.RawMessage(`{"swarm":"client","sessions":[{"name":"` + name + `","state":"idle"}],"waiting_on_human":[],"main_health":"ok","spend":0,"ts":1}`)
+	}
+	for _, name := range []string{"s1", "s42", "s999999"} {
+		if err := pushTo(e, "client", session(name)); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	for _, name := range []string{"build-1", "review-2", "s0", "s01", "s1234567", "S1", "s", "s1-a", "ob-1"} {
+		err := pushTo(e, "client", session(name))
+		if be := errWithCode(t, err, bus.CodeInvalid); be.What != "sessions.name" {
+			t.Errorf("%s: What = %q", name, be.What)
+		}
+	}
+	crew := json.RawMessage(`{"swarm":"crew","sessions":[{"name":"build-1","state":"idle"}],"waiting_on_human":[],"main_health":"ok","spend":0,"ts":1}`)
+	if err := pushTo(e, "crew", crew); err != nil {
+		t.Errorf("unwalled: %v", err)
+	}
+}

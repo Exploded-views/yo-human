@@ -154,3 +154,12 @@ exit=1
 $ go test -count=1 -timeout 300s ./tools/perf/
 ok  	github.com/Exploded-views/yo-human/tools/perf	8.701s
 exit=0
+
+# Review round 4, 2026-11-16T04:35:23Z: walled session names are typed ids (lead ruling on N7)
+$ go test -count=1 ./internal/hosted/bus/
+--- FAIL: TestWalledStatusSessionNamesAreIds (0.01s)
+    status_wall_test.go:103: err = <nil> (<nil>), want a *bus.Error with code invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.921s
+FAIL
+exit=1

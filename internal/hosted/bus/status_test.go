@@ -144,14 +144,14 @@ func TestStatusIsStoredCanonical(t *testing.T) {
 func TestWalledStatusDocIdsOnly(t *testing.T) {
 	e := newEnvWalled(t, "client")
 	n := node("ci-9", "client")
-	ok := `{"swarm":"client","sessions":[{"name":"build-1","state":"working"}],"waiting_on_human":["ob-12"],"main_health":"ok","spend":3,"ts":9}`
+	ok := `{"swarm":"client","sessions":[{"name":"s1","state":"working"}],"waiting_on_human":["ob-12"],"main_health":"ok","spend":3,"ts":9}`
 	if err := e.b.PushStatus(context.Background(), n, json.RawMessage(ok)); err != nil {
 		t.Fatalf("a typed document: %v", err)
 	}
 	bad := map[string]struct{ doc, field string }{
-		"free-text session name": {strings.Replace(ok, `build-1`, `Fix the Acme payroll bug`, 1), "sessions.name"},
-		"upper-case name":        {strings.Replace(ok, `build-1`, `Build`, 1), "sessions.name"},
-		"41-char name":           {strings.Replace(ok, `build-1`, strings.Repeat("a", 41), 1), "sessions.name"},
+		"free-text session name": {strings.Replace(ok, `s1`, `Fix the Acme payroll bug`, 1), "sessions.name"},
+		"upper-case name":        {strings.Replace(ok, `s1`, `Build`, 1), "sessions.name"},
+		"41-char name":           {strings.Replace(ok, `s1`, strings.Repeat("a", 41), 1), "sessions.name"},
 		"free-text waiting":      {strings.Replace(ok, `ob-12`, `needs the owner for the Acme deploy`, 1), "waiting_on_human"},
 		"zero id":                {strings.Replace(ok, `ob-12`, `ob-0`, 1), "waiting_on_human"},
 		"leading-zero id":        {strings.Replace(ok, `ob-12`, `ob-012`, 1), "waiting_on_human"},
