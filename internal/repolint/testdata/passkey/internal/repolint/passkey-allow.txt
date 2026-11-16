@@ -1,0 +1,2 @@
+# Paths (or directory prefixes ending in /) where the string "passkey" is not the principal kind.
+internal/hosted/web/fine.go
