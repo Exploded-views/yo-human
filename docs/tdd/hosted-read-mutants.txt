@@ -374,3 +374,20 @@ mutant 52: status: key-count check removed
   FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.162s
   FAIL
 
+
+# Round 6: the key checks moved to statusKeysOf (re-run on its new text) and the spelling check. 53 in all, all killed. The stored-spend check (walledSpendOK's second regex test) has no mutant: with exact keys and a bounded written form, the stored form is always bounded too, so it is defence in depth.
+
+mutant 52: status: key-count check removed
+  KILLED by TestStatusRefusesCaseVariantKeys, TestWalledStatusCaseVariantKeyRefused
+      status_wall_test.go:174: err = <nil> (<nil>), want a *bus.Error with code invalid
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.435s
+  FAIL
+
+mutant 53: status: byte-exact key spelling not checked (count only)
+  KILLED by TestStatusRefusesCaseVariantKeys, TestWalledStatusCaseVariantKeyRefused
+      status_wall_test.go:174: err = <nil> (<nil>), want a *bus.Error with code invalid
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.509s
+  FAIL
+
