@@ -133,3 +133,50 @@ func TestStatusRefusesCaseVariantKeys(t *testing.T) {
 		}
 	}
 }
+
+var statusKeyOrder = []string{"swarm", "sessions", "waiting_on_human", "main_health", "spend", "ts"}
+
+// caseVariantDocs makes, for each of the six keys, three documents in which that key has an
+// upper-case variant: after the real key, before it, and in its place.
+func caseVariantDocs(swarm string) map[string]json.RawMessage {
+	values := map[string]string{"swarm": `"` + swarm + `"`, "sessions": `[]`, "waiting_on_human": `[]`, "main_health": `"ok"`, "spend": `1`, "ts": `1`}
+	build := func(k string, keys func(key string) []string) json.RawMessage {
+		var parts []string
+		for _, key := range statusKeyOrder {
+			names := []string{key}
+			if key == k {
+				names = keys(key)
+			}
+			for _, n := range names {
+				parts = append(parts, fmt.Sprintf(`"%s":%s`, n, values[key]))
+			}
+		}
+		return json.RawMessage("{" + strings.Join(parts, ",") + "}")
+	}
+	up := func(key string) string { return strings.ToUpper(key[:1]) + key[1:] }
+	docs := map[string]json.RawMessage{}
+	for _, k := range statusKeyOrder {
+		docs[k+" variant after"] = build(k, func(key string) []string { return []string{key, up(key)} })
+		docs[k+" variant before"] = build(k, func(key string) []string { return []string{up(key), key} })
+		docs[k+" variant instead"] = build(k, func(key string) []string { return []string{strings.ToUpper(key)} })
+	}
+	return docs
+}
+
+// Every key has a case variant that encoding/json would match to the same field. Each one, put
+// before or after the real key, or in its place, is refused, in a walled swarm and an unwalled one,
+// and nothing is stored.
+func TestWalledStatusCaseVariantKeyRefused(t *testing.T) {
+	for _, swarm := range []string{"client", "crew"} {
+		for name, doc := range caseVariantDocs(swarm) {
+			e := newEnvWalled(t, "client")
+			err := pushTo(e, swarm, doc)
+			if be := errWithCode(t, err, bus.CodeInvalid); be.What != "status" {
+				t.Errorf("%s %s: What = %q", swarm, name, be.What)
+			}
+			if st, _ := e.b.SwarmStatus(context.Background(), duet, ""); len(st) != 0 {
+				t.Errorf("%s %s: stored %+v", swarm, name, st)
+			}
+		}
+	}
+}

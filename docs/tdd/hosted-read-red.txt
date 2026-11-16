@@ -172,3 +172,12 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.072s
 FAIL
 exit=1
+
+# Review round 6, 2026-11-16T05:09:37Z: the gocyclo limit on parseStatus (complexity 11 at 70cfa63, once the exact-key check was added), and TestWalledStatusCaseVariantKeyRefused (it passes already: the exact-key check is in e13b21a)
+$ golangci-lint run ./internal/hosted/bus/
+internal/hosted/bus/status.go:102:1: cyclomatic complexity 11 of func `parseStatus` is high (> 10) (gocyclo)
+func parseStatus(doc json.RawMessage) (statusDoc, *Error) {
+^
+1 issues:
+* gocyclo: 1
+exit=1
