@@ -53,3 +53,50 @@ func TestNewDefaultsAndNoExtra(t *testing.T) {
 		t.Errorf("/approve/x with no approval handler: %d, want 404", w.Code)
 	}
 }
+
+// TestDeadlineMiddlewareBoundsTheWholeRequest: the context a request reaches the MCP handler with
+// ends at the tool deadline plus the longest wait a call may ask for, which also bounds a JSON-RPC
+// batch of calls.
+func TestDeadlineMiddlewareBoundsTheWholeRequest(t *testing.T) {
+	s := &service{cfg: Config{ToolDeadline: 3 * time.Second}}
+	var left time.Duration
+	var has bool
+	h := s.deadline(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		d, ok := r.Context().Deadline()
+		left, has = time.Until(d), ok
+	}))
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/mcp", nil))
+	if want := 3*time.Second + bus.MaxWait; !has || left > want || left < want-2*time.Second {
+		t.Errorf("deadline in %v (set %v), want about %v", left, has, want)
+	}
+}
+
+// TestHostIsFailsClosedOnEmptyHosts: an empty Host never matches, even an empty configured host.
+func TestHostIsFailsClosedOnEmptyHosts(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Host = ""
+	if hostIs(r, "") {
+		t.Error("an empty Host matched an empty configured host")
+	}
+}
+
+// TestNewRefusesAnUnusableOrigin: a public or approve origin with no host would match a request
+// with no host, so New refuses to start with one.
+func TestNewRefusesAnUnusableOrigin(t *testing.T) {
+	for _, c := range []Config{
+		{PublicURL: "", ApproveOrigin: "https://approve.example.com"},
+		{PublicURL: "https://bus.example.com", ApproveOrigin: ""},
+		{PublicURL: "://bad", ApproveOrigin: "https://approve.example.com"},
+		{PublicURL: "https://bus.example.com", ApproveOrigin: "https:///path"},
+		{PublicURL: "https://bus.example.com", ApproveOrigin: "https://bus.example.com"},
+	} {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("New(%+v) did not refuse", c)
+				}
+			}()
+			New(bus.New(nil, time.Now, bus.Limits{}), auth.NewVerifier(nil, time.Now, time.Minute), c, nil)
+		}()
+	}
+}

@@ -159,3 +159,16 @@ func TestToolsRefuseMissingRequiredArguments(t *testing.T) {
 	}
 	eq(t, "rows after refused calls", h.counts(), before)
 }
+
+// TestRecordApprovalOnADecidedRevisionIsAlreadyDecided: Duet is not handed a link to an approval
+// the owner has already decided, and the owner's words it was sent are not stored.
+func TestRecordApprovalOnADecidedRevisionIsAlreadyDecided(t *testing.T) {
+	h := newHarness(t)
+	it := h.seed(nodeP, mergeApproval("m7"))
+	passkey := bus.Principal{Kind: bus.PrincipalPasskey, Name: "phone"}
+	_, err := h.b.RecordApproval(ctx, passkey, bus.ApprovalInput{ItemID: it.ID, Revision: 1, Decision: bus.DecisionApprove, Text: "yes", HumanTS: time.Now()})
+	eq(t, "the passkey approval", err, error(nil))
+	e := mustFail(t, h.session(h.duet), "record_approval", obj{"item_id": it.ID, "revision": 1, "decision": "reject", "text": "no, hold it", "human_ts": humanTS}, "already_decided")
+	has(t, "winner", at(e, "winner").(obj), obj{"decision": "approve", "actor_kind": "human", "text": "yes"})
+	eq(t, "relays stored", h.counts().Relays, 0)
+}

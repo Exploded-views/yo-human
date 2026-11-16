@@ -72,13 +72,6 @@ func TestBodyOver64KiBRejected(t *testing.T) {
 	if resp, _ := h.do(h.h.MCP, r); resp.StatusCode != http.StatusRequestEntityTooLarge {
 		t.Errorf("a body over 64 KiB: %d, want 413", resp.StatusCode)
 	}
-	// Without a Content-Length the reader's own limit applies.
-	r = mcpPost(h.node)
-	r.body = `{"jsonrpc":"2.0","id":1,"method":"ping","params":{"x":"` + strings.Repeat("a", 64<<10) + `"}}`
-	r.hdr["Transfer-Encoding"] = "chunked"
-	if resp, _ := h.do(h.h.MCP, r); resp.StatusCode < 400 {
-		t.Errorf("a chunked body over 64 KiB: %d, want an error status", resp.StatusCode)
-	}
 }
 
 func TestHTTPServerTimeouts(t *testing.T) {
@@ -104,5 +97,46 @@ func TestEveryOriginHeaderIsChecked(t *testing.T) {
 		if status, _ := h.raw(h.h.MCP, request); status != http.StatusForbidden {
 			t.Errorf("Origin headers %v: %d, want 403", origins, status)
 		}
+	}
+}
+
+func bigPing() string {
+	return `{"jsonrpc":"2.0","id":1,"method":"ping","params":{"x":"` + strings.Repeat("a", 64<<10) + `"}}`
+}
+
+// TestBodyLimitIsOutermost: the body limit runs before the Origin and bearer checks, so an
+// oversize body is 413 with no token and with a bad Origin.
+func TestBodyLimitIsOutermost(t *testing.T) {
+	h := newHarness(t)
+	for name, c := range map[string]struct{ token, origin string }{
+		"no token": {"", ""}, "a bad Origin": {h.node, "https://evil.example"}, "an unknown token": {h.node + "x", ""}, "a good token": {h.node, ""},
+	} {
+		r := mcpPost(c.token)
+		r.body = bigPing()
+		if c.origin != "" {
+			r.hdr["Origin"] = c.origin
+		}
+		if resp, _ := h.do(h.h.MCP, r); resp.StatusCode != http.StatusRequestEntityTooLarge {
+			t.Errorf("%s: %d, want 413", name, resp.StatusCode)
+		}
+	}
+}
+
+// chunked is a POST /mcp with the body in one chunk and no Content-Length.
+func chunked(token, body string) string {
+	return "POST /mcp HTTP/1.1\r\nHost: " + mcpHost + "\r\nAuthorization: Bearer " + token + "\r\n" +
+		"Content-Type: application/json\r\nAccept: application/json, text/event-stream\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n" +
+		strconv.FormatInt(int64(len(body)), 16) + "\r\n" + body + "\r\n0\r\n\r\n"
+}
+
+// TestChunkedBodyIsLimitedWhileRead: with no declared length the reader's own limit applies, and
+// a body just under the limit still goes through.
+func TestChunkedBodyIsLimitedWhileRead(t *testing.T) {
+	h := newHarness(t)
+	if status, _ := h.raw(h.h.MCP, chunked(h.node, bigPing())); status != http.StatusRequestEntityTooLarge {
+		t.Errorf("a chunked body over 64 KiB: %d, want 413", status)
+	}
+	if status, _ := h.raw(h.h.MCP, chunked(h.node, initBody)); status != http.StatusOK {
+		t.Errorf("a small chunked body: %d, want 200", status)
 	}
 }

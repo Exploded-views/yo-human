@@ -250,3 +250,22 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.182s
 FAIL
 exit=1
+
+## 9. review round 1, web: New refuses an unusable origin; a non-canonical path is the shared 404 (against the code of f9d14d7; the other new web tests pin behaviour that already held and are checked by the mutants)
+$ go test ./internal/hosted/web -count=1
+--- FAIL: TestNewRefusesAnUnusableOrigin (0.01s)
+    internal_test.go:96: New({PublicURL: ApproveOrigin:https://approve.example.com OriginAllow:[] ToolDeadline:0s Log:<nil> Approve:<nil>}) did not refuse
+    internal_test.go:96: New({PublicURL:https://bus.example.com ApproveOrigin: OriginAllow:[] ToolDeadline:0s Log:<nil> Approve:<nil>}) did not refuse
+    internal_test.go:96: New({PublicURL:://bad ApproveOrigin:https://approve.example.com OriginAllow:[] ToolDeadline:0s Log:<nil> Approve:<nil>}) did not refuse
+    internal_test.go:96: New({PublicURL:https://bus.example.com ApproveOrigin:https:///path OriginAllow:[] ToolDeadline:0s Log:<nil> Approve:<nil>}) did not refuse
+    internal_test.go:96: New({PublicURL:https://bus.example.com ApproveOrigin:https://bus.example.com OriginAllow:[] ToolDeadline:0s Log:<nil> Approve:<nil>}) did not refuse
+--- FAIL: TestNonCanonicalPathsAre404 (0.01s)
+    listeners_test.go:200: Approve /approve/../mcp: 200 "approve-page", want the shared 404
+    listeners_test.go:200: Approve /approve/./x: 200 "approve-page", want the shared 404
+    listeners_test.go:200: Approve /approve//x: 200 "approve-page", want the shared 404
+    listeners_test.go:200: Approve /passkey/../approve/x: 200 "approve-page", want the shared 404
+    listeners_test.go:200: Approve /approve/x/: 200 "approve-page", want the shared 404
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	2.769s
+FAIL
+exit=1

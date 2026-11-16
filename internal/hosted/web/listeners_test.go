@@ -171,6 +171,41 @@ func TestHostNormalisationRawRequests(t *testing.T) {
 	}
 }
 
+// TestAbsoluteFormURIHostIsTheHost: Go reads the host of an absolute-form request URI into r.Host
+// (RFC 9112 3.2.2), so it is the one host value there is, whatever the Host header says. Each
+// listener serves only its own host, by that value.
+func TestAbsoluteFormURIHostIsTheHost(t *testing.T) {
+	h := newHarness(t)
+	status, _ := h.raw(h.h.MCP, "POST http://bus.example.com/mcp HTTP/1.1\r\nHost: approve.example.com\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+	if status != 401 {
+		t.Errorf("MCP, URI naming the MCP host, Host header naming the approval host: %d, want 401 (served)", status)
+	}
+	status, body := h.raw(h.h.Approve, "GET http://approve.example.com/approve/x HTTP/1.1\r\nHost: bus.example.com\r\nConnection: close\r\n\r\n")
+	if status != 200 || body != "approve-page" {
+		t.Errorf("Approve, URI naming the approval host, Host header naming the MCP host: %d %q, want it served", status, body)
+	}
+}
+
+// TestNonCanonicalPathsAre404: a path path.Clean would change never reaches routing, so no later
+// handler has to clean one, on either listener.
+func TestNonCanonicalPathsAre404(t *testing.T) {
+	h := newHarness(t)
+	for _, p := range []string{"/approve/../mcp", "/approve/./x", "/approve//x", "/passkey/../approve/x", "/a/../mcp", "//mcp", "/./mcp", "/mcp/", "/healthz/", "/approve/x/"} {
+		for name, c := range map[string]struct {
+			handler http.Handler
+			host    string
+		}{"MCP": {h.h.MCP, mcpHost}, "Approve": {h.h.Approve, approveHost}} {
+			status, body := h.raw(c.handler, "GET "+p+" HTTP/1.1\r\nHost: "+c.host+"\r\nConnection: close\r\n\r\n")
+			if status != 404 || body != "404 page not found\n" {
+				t.Errorf("%s %s: %d %q, want the shared 404", name, p, status, body)
+			}
+		}
+	}
+	if h.extraHits != 0 {
+		t.Error("extra served a non-canonical path")
+	}
+}
+
 // TestHostNormalisationHTTP2: an HTTP/2 request's :authority is its host, and a listener that
 // reads r.Host sees it. :authority naming the other host is 404.
 func TestHostNormalisationHTTP2(t *testing.T) {
