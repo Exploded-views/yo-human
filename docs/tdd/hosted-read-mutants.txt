@@ -364,3 +364,13 @@ mutant 51: status: walled session id allows a leading zero
   FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.801s
   FAIL
 
+
+# Round 5: case-variant and extra status keys. One more mutant, killed (52 in all).
+
+mutant 52: status: key-count check removed
+  KILLED by TestStatusRefusesCaseVariantKeys
+      status_wall_test.go:127: err = <nil> (<nil>), want a *bus.Error with code invalid
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.162s
+  FAIL
+
