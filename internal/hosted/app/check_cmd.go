@@ -20,6 +20,9 @@ func (a admin) check(args []string) int {
 		}
 		_, _ = fmt.Fprintf(a.stdout, "integrity: %s\nitems: %d\ndecisions: %d\nrelays: %d\nevents: %d\nmessages: %d\ntokens: %d\n",
 			c.Integrity, c.Items, c.Decisions, c.Relays, c.Events, c.Messages, c.Tokens)
+		if c.Integrity != "ok" {
+			return errDamaged
+		}
 		return nil
 	})
 }

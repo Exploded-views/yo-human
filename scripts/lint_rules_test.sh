@@ -143,8 +143,8 @@ internal/hosted/db/caseweb|hosted-db-imports|x.go|M/internal/hosted/web|hosted d
 internal/hosted/db/casestore|hosted-db-imports|x.go|M/internal/store|hosted db imports the CLI store
 internal/hosted/bus/casesqlite|hosted-imports|x.go|modernc.org/sqlite|hosted bus imports the SQLite driver
 internal/hosted/auth/casehttp|internal-no-network|x.go|net/http|hosted auth imports net/http
-internal/hosted/auth/casestore|hosted-imports|x.go|M/internal/store|hosted auth imports the CLI store
-internal/hosted/auth/casesqlite|hosted-imports|x.go|modernc.org/sqlite|hosted auth imports the SQLite driver
+internal/hosted/auth/casestore|hosted-auth-imports hosted-imports|x.go|M/internal/store|hosted auth imports the CLI store
+internal/hosted/auth/casesqlite|hosted-auth-imports hosted-imports|x.go|modernc.org/sqlite|hosted auth imports the SQLite driver
 internal/hosted/auth/caseok|clean|x.go|crypto/rand crypto/sha256 M/internal/hosted/bus|hosted auth imports crypto and bus
 internal/hosted/auth/casedb|hosted-auth-imports|x.go|M/internal/hosted/db|hosted auth imports db
 internal/hosted/hostname/caseok|clean|x.go|strings|hosted hostname imports the standard library

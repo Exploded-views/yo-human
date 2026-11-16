@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Exploded-views/yo-human/internal/hosted/bus"
+	"github.com/Exploded-views/yo-human/internal/hosted/hostname"
 )
 
 // Secret is a configuration value that must never reach output: every formatting verb prints a
@@ -24,6 +25,9 @@ func (s Secret) String() string { return "[redacted]" }
 
 // GoString is what %#v prints.
 func (s Secret) GoString() string { return "app.Secret([redacted])" }
+
+// MarshalText is what JSON and the text encoders, including slog's handlers, write.
+func (s Secret) MarshalText() ([]byte, error) { return []byte("[redacted]"), nil }
 
 // Config is yo-human-hosted's configuration, read from the environment. Its secrets are Secret
 // values, so printing a Config prints none of them.
@@ -82,13 +86,14 @@ func LoadConfig(env func(string) string) (Config, error) {
 		RefreshTTL:         l.dur("YH_REFRESH_TTL", "720h", 0),
 		ToolDeadline:       l.dur("YH_TOOL_DEADLINE", "5s", 0),
 		WebAuthnRPID:       l.required("YH_WEBAUTHN_RP_ID"),
-		ApproveOrigin:      l.origin("YH_APPROVE_ORIGIN", l.required("YH_APPROVE_ORIGIN")),
+		ApproveOrigin:      l.approveOrigin(l.required("YH_APPROVE_ORIGIN")),
 		ChallengeTTL:       l.dur("YH_CHALLENGE_TTL", "5m", maxChallengeTTL),
 		DeskTTL:            l.dur("YH_DESK_TTL", "15m", maxDeskTTL),
 	}
 	c.WalledSwarms = l.walled()
 	c.ListenMCP, c.ListenApprove = l.listeners()
 	l.distinctHosts(c.PublicURL, c.ApproveOrigin)
+	l.rpIDMatches(c.WebAuthnRPID, c.ApproveOrigin)
 	if l.err != nil {
 		return Config{}, l.err
 	}
@@ -208,6 +213,26 @@ func (l *loader) origin(name, raw string) string {
 	return strings.TrimSuffix(raw, "/")
 }
 
+// approveOrigin is an origin that must be https: it is the one WebAuthn origin.
+func (l *loader) approveOrigin(raw string) string {
+	if raw != "" && !strings.HasPrefix(raw, "https://") {
+		l.fail("YH_APPROVE_ORIGIN", "must be an https origin")
+	}
+	return l.origin("YH_APPROVE_ORIGIN", raw)
+}
+
+// rpIDMatches requires the WebAuthn RP ID to be the approval origin's exact host: bare, lower
+// case, no port, and not a parent domain, which would let sibling hosts ask for assertions.
+func (l *loader) rpIDMatches(rpID, origin string) {
+	if l.err != nil {
+		return // the origin is already refused, or unset
+	}
+	u, _ := url.Parse(origin)
+	if rpID != strings.TrimSuffix(strings.ToLower(u.Hostname()), ".") {
+		l.fail("YH_WEBAUTHN_RP_ID", "must be the exact host of YH_APPROVE_ORIGIN, lower case, with no port or scheme, never a parent domain")
+	}
+}
+
 func isOrigin(raw string) bool {
 	u, err := url.Parse(raw)
 	if err != nil {
@@ -253,24 +278,9 @@ func listenPort(addr string) (uint16, bool) {
 func (l *loader) distinctHosts(public, approve string) {
 	pu, _ := url.Parse(public)
 	au, _ := url.Parse(approve)
-	if l.err == nil && NormaliseHost(pu.Host) == NormaliseHost(au.Host) {
+	if l.err == nil && hostname.Normalise(pu.Host) == hostname.Normalise(au.Host) {
 		l.fail("YH_PUBLIC_URL", "and YH_APPROVE_ORIGIN must be on different hosts")
 	}
-}
-
-// NormaliseHost puts a host or host:port in a form where two spellings of one host compare
-// equal: lower case, no trailing dot, no default :443. Task 9 reuses it for its origin checks.
-func NormaliseHost(hostport string) string {
-	h := strings.ToLower(hostport)
-	host, port := h, ""
-	if i := strings.LastIndex(h, ":"); i >= 0 && !strings.Contains(h[i:], "]") {
-		host, port = h[:i], h[i+1:]
-	}
-	host = strings.TrimSuffix(host, ".")
-	if port == "" || port == "443" {
-		return host
-	}
-	return host + ":" + port
 }
 
 // dbPath is the database path: the --db flag, else YH_DB_PATH, else /data/bus.db.

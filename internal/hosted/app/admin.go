@@ -23,6 +23,10 @@ type admin struct {
 // errNoLiveToken is what `token revoke --name` finds when no live token has the name.
 var errNoLiveToken = errors.New("no live token has that name")
 
+// errDamaged is what `check` returns when SQLite's integrity check reports problems; the counts
+// are still printed first.
+var errDamaged = errors.New("the database failed its integrity check")
+
 // maxLiveStarters is the cap on live desk starters.
 const maxLiveStarters = 2
 
