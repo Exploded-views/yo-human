@@ -49,7 +49,7 @@ What `make ci-base` cannot reproduce:
   local run has none, so it is stricter, not looser.
 - Push events. On a push to `main`, CI compares against the previous tip
   (`github.event.before`), not a merge base.
-- The toolchain. CI pins Go 1.27.3 with `GOTOOLCHAIN=local` and installs the
+- The toolchain. CI pins Go 1.27.4 with `GOTOOLCHAIN=local` and installs the
   pinned linters fresh; locally you get whatever `make tools` installed.
 
 ## Work from an issue
