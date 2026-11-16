@@ -165,9 +165,11 @@ func TestToolsRefuseMissingRequiredArguments(t *testing.T) {
 func TestRecordApprovalOnADecidedRevisionIsAlreadyDecided(t *testing.T) {
 	h := newHarness(t)
 	it := h.seed(nodeP, mergeApproval("m7"))
-	passkey := bus.Principal{Kind: bus.PrincipalPasskey, Name: "phone"}
-	_, err := h.b.RecordApproval(ctx, passkey, bus.ApprovalInput{ItemID: it.ID, Revision: 1, Decision: bus.DecisionApprove, Text: "yes", HumanTS: time.Now()})
-	eq(t, "the passkey approval", err, error(nil))
+	// The owner's passkey approval, as the approval page stores it (the passkey principal itself
+	// is named only in the bus and the approval package).
+	rec := bus.Record{ItemID: it.ID, Revision: 1, Kind: bus.RecordApproval, Decision: bus.DecisionApprove, ActorKind: bus.ActorHuman,
+		Text: "yes", Source: "passkey:phone", By: "phone", HumanTS: time.Now(), Recorded: time.Now()}
+	eq(t, "storing the decision", h.d.Tx(ctx, func(x bus.Tx) error { return x.InsertDecision(rec) }), error(nil))
 	e := mustFail(t, h.session(h.duet), "record_approval", obj{"item_id": it.ID, "revision": 1, "decision": "reject", "text": "no, hold it", "human_ts": humanTS}, "already_decided")
 	has(t, "winner", at(e, "winner").(obj), obj{"decision": "approve", "actor_kind": "human", "text": "yes"})
 	eq(t, "relays stored", h.counts().Relays, 0)
