@@ -56,7 +56,7 @@ func New(b *bus.Bus, v *auth.Verifier, cfg Config, extra http.Handler) Handlers 
 		panic("web: the public URL and the approve origin must be two different origins with a host")
 	}
 	s.duet, s.node, s.empty = s.servers(b)
-	s.pipeline = s.mcpPipeline(v)
+	s.pipeline = s.mcpPipeline(v, s.sdkHandler())
 	return Handlers{MCP: http.HandlerFunc(s.serveMCP), Approve: http.HandlerFunc(s.serveApprove)}
 }
 

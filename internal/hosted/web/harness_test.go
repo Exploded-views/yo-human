@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -120,7 +121,7 @@ func newHarnessOver(t *testing.T, wrap func(*db.DB) bus.Store, edit ...func(*web
 	// test can tell the MCP listener's own guard from extra's routing, a mux that wrongly answers
 	// the approval paths too.
 	extra := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		p := r.URL.Path
+		p := path.Clean(r.URL.Path) // a mux that cleans, as net/http's ServeMux does
 		if p != "/oauth/github/callback" && p != "/.well-known/oauth-protected-resource/mcp" &&
 			!strings.HasPrefix(p, "/approve") && !strings.HasPrefix(p, "/passkey") {
 			http.NotFound(w, r)

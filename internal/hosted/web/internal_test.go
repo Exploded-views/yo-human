@@ -54,18 +54,36 @@ func TestNewDefaultsAndNoExtra(t *testing.T) {
 	}
 }
 
-// TestDeadlineMiddlewareBoundsTheWholeRequest: the context a request reaches the MCP handler with
-// ends at the tool deadline plus the longest wait a call may ask for, which also bounds a JSON-RPC
-// batch of calls.
-func TestDeadlineMiddlewareBoundsTheWholeRequest(t *testing.T) {
-	s := &service{cfg: Config{ToolDeadline: 3 * time.Second}}
+// tokens is a one-node auth.TokenStore.
+type tokens struct{ hash string }
+
+func (t tokens) NodeByHash(h string) (bus.Node, bool, error) {
+	return bus.Node{Name: "ci-1", Swarm: "crew"}, h == t.hash, nil
+}
+func (tokens) AccessByHash(string) (bus.Access, bool, error)   { return bus.Access{}, false, nil }
+func (tokens) DeskByHash(string) (bus.Desk, bool, error)       { return bus.Desk{}, false, nil }
+func (tokens) StarterByHash(string) (bus.Starter, bool, error) { return bus.Starter{}, false, nil }
+func (tokens) TouchNode(string, time.Time) error               { return nil }
+
+// TestPipelineBoundsTheWholeRequest: the context a request reaches the MCP handler with ends at
+// the tool deadline plus the longest wait a call may ask for, which also bounds a JSON-RPC batch
+// of calls.
+func TestPipelineBoundsTheWholeRequest(t *testing.T) {
+	tok, hash, err := auth.Mint(auth.PrefixNode)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := &service{cfg: Config{ToolDeadline: 3 * time.Second, PublicURL: "https://bus.example.com"}}
 	var left time.Duration
 	var has bool
-	h := s.deadline(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+	probe := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		d, ok := r.Context().Deadline()
 		left, has = time.Until(d), ok
-	}))
-	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/mcp", nil))
+	})
+	h := s.mcpPipeline(auth.NewVerifier(tokens{hash}, time.Now, time.Minute), probe)
+	r := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+	r.Header.Set("Authorization", "Bearer "+tok)
+	h.ServeHTTP(httptest.NewRecorder(), r)
 	if want := 3*time.Second + bus.MaxWait; !has || left > want || left < want-2*time.Second {
 		t.Errorf("deadline in %v (set %v), want about %v", left, has, want)
 	}

@@ -21,15 +21,8 @@ const principalKey = "principal"
 // mcpPipeline is POST /mcp, the middleware outermost first: the body limit, the Origin allow-list,
 // the bearer token (a desk starter is refused), the per-request deadline, then the MCP handler.
 // The host check has already run in serveMCP, before any of these.
-func (s *service) mcpPipeline(v *auth.Verifier) http.Handler {
-	var h http.Handler = mcp.NewStreamableHTTPHandler(s.getServer, &mcp.StreamableHTTPOptions{
-		Stateless: true, JSONResponse: true,
-		// The SDK's DNS-rebinding guard refuses a non-local Host on a loopback address, which is
-		// every request here: the MCP listener is loopback and the tunnel forwards the public Host.
-		// serveMCP's own host check is the stricter one.
-		DisableLocalhostProtection: true,
-	})
-	h = s.deadline(h)
+func (s *service) mcpPipeline(v *auth.Verifier, inner http.Handler) http.Handler {
+	h := s.deadline(inner)
 	h = refuseDeskStarter(h)
 	h = mcpauth.RequireBearerToken(verifier(v), &mcpauth.RequireBearerTokenOptions{
 		ResourceMetadataURL: s.cfg.PublicURL + "/.well-known/oauth-protected-resource/mcp",
@@ -109,5 +102,16 @@ func (s *service) deadline(next http.Handler) http.Handler {
 		ctx, cancel := context.WithTimeout(r.Context(), s.cfg.ToolDeadline+bus.MaxWait)
 		defer cancel()
 		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// sdkHandler is the Streamable HTTP handler: stateless, JSON responses, one server per principal.
+func (s *service) sdkHandler() http.Handler {
+	return mcp.NewStreamableHTTPHandler(s.getServer, &mcp.StreamableHTTPOptions{
+		Stateless: true, JSONResponse: true,
+		// The SDK's DNS-rebinding guard refuses a non-local Host on a loopback address, which is
+		// every request here: the MCP listener is loopback and the tunnel forwards the public Host.
+		// serveMCP's own host check is the stricter one.
+		DisableLocalhostProtection: true,
 	})
 }

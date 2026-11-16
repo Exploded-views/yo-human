@@ -190,7 +190,7 @@ func TestAbsoluteFormURIHostIsTheHost(t *testing.T) {
 // handler has to clean one, on either listener.
 func TestNonCanonicalPathsAre404(t *testing.T) {
 	h := newHarness(t)
-	for _, p := range []string{"/approve/../mcp", "/approve/./x", "/approve//x", "/passkey/../approve/x", "/a/../mcp", "//mcp", "/./mcp", "/mcp/", "/healthz/", "/approve/x/"} {
+	for _, p := range []string{"/approve/../mcp", "/approve/./x", "/approve//x", "/passkey/../approve/x", "/a/../mcp", "//mcp", "/./mcp", "/mcp/", "/healthz/", "/approve/x/", "/oauth//github/callback", "/oauth/../oauth/github/callback", "/.well-known/./oauth-protected-resource/mcp"} {
 		for name, c := range map[string]struct {
 			handler http.Handler
 			host    string
