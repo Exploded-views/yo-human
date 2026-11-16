@@ -35,6 +35,12 @@ type Tx interface {
 	// same transaction with Event.Created equal to the record's Recorded. Answers finds the record an
 	// event wrote by that equality, because an event names no revision.
 	DecisionRecorded(itemID string, kind RecordKind, recorded time.Time) (Record, bool, error)
+	// InsertDecision stores a decision row. Convention for readers of the event log: the event
+	// the bus appends for a row (answer_recorded, approval_recorded, words_relayed for a relay)
+	// has Created equal to the row's Recorded, and answer_superseded has Created equal to the
+	// human row's Recorded. An event has no row id or revision, so a reader finds its row by
+	// (item, Recorded): that row's revision is the event's, and the agent row it supersedes is
+	// the agent row of the same item and revision. Pinned by TestSupersededEventIdentifiesRows.
 	InsertDecision(Record) error
 
 	InsertRelay(Relay) error

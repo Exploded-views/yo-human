@@ -1,0 +1,304 @@
+H1 Task 6 mutants, applied by hand one at a time to the GREEN code, each run with go test -count=1 on the package (bus, or repolint for the lint check). The baseline passes (exit=0). The plan's six: skip the revision check; check the policy only for Duet (never for the passkey); rule 0 dropped; ActorKind human for a node; a conflict treated as success; the idempotent branch dropped. The rest are extras.
+Run 1: 24 mutants, 22 caught; 'approval on any kind of item' survived (a question with no action is also not_approvable through the policy) and 'repolint: string conversion check dropped' did not apply (indentation). Run 2 follows the fixes: TestApprovalOnQuestionWithActionIsNotApprovable was added for the survivor, and the repolint mutant's text was corrected; both are caught.
+
+=== Run 1 ===
+MUTANT: skip the revision check
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestApprovalForOldRevisionIsRejected (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.067s; FAIL
+
+MUTANT: check the policy only for Duet (never for the passkey)
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestNonPasskeyActionRejectedForEveryone (0.00s); --- FAIL: TestExcludedActionNeverDecidable (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.518s; FAIL
+
+MUTANT: rule 0 dropped: any principal approves
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestNonPasskeyActionRejectedForEveryone (0.01s); --- FAIL: TestNodeCannotRecordAnswerOrApproval (0.00s); --- FAIL: TestOnlyTheRightCredentialsDecide (0.00s); --- FAIL: TestDuetCannotApprove (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.933s
+
+MUTANT: rule 0 dropped: any principal answers
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestNodeCannotRecordAnswerOrApproval (0.06s); --- FAIL: TestOnlyTheRightCredentialsDecide (0.03s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	5.269s; FAIL
+
+MUTANT: ActorKind() returns human for a node
+  file: internal/hosted/bus/types.go
+  exit=1
+  caught by: --- FAIL: TestActorKind (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	11.672s; FAIL
+
+MUTANT: treat a conflict as success
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestUniqueConflictFromRacingWriterIsRuleSix (0.12s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	11.728s; FAIL
+
+MUTANT: drop the idempotent branch
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestUniqueConflictFromRacingWriterIsRuleSix (0.06s); --- FAIL: TestIdenticalRetryIsIdempotent (0.18s); --- FAIL: TestRetriesAfterSupersede (0.15s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	14.028s; FAIL
+
+MUTANT: idempotence ignores the text
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestUniqueConflictFromRacingWriterIsRuleSix (0.09s); --- FAIL: TestConcurrentAnswersOneWins (2.16s); --- FAIL: TestConcurrentDeskAndDuetAnswers (0.71s); --- FAIL: TestSecondDifferentApprovalRejectedWithWinner (0.10s); --- FAIL: TestAgentAfterHumanRefused (0.12s); FAIL
+
+MUTANT: idempotence ignores the recorder
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestSecondDifferentApprovalRejectedWithWinner (0.05s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	6.652s; FAIL
+
+MUTANT: agent after human supersedes too
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestConcurrentDeskAndDuetAnswers (0.66s); --- FAIL: TestRetriesAfterSupersede (0.01s); --- FAIL: TestAgentAfterHumanRefused (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.869s; FAIL
+
+MUTANT: human after agent refused (no supersede)
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestDecideStoreFailureIsInternalAndRollsBack (0.21s); --- FAIL: TestHumanAnswerSupersedesAgent (0.02s); --- FAIL: TestRetriesAfterSupersede (0.02s); --- FAIL: TestActorKindFollowsCredential (0.04s); --- FAIL: TestSourceComesFromCredential (0.02s); FAIL
+
+MUTANT: no answer_superseded event
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestDecideStoreFailureIsInternalAndRollsBack (1.80s); --- FAIL: TestHumanAnswerSupersedesAgent (0.16s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	11.601s; FAIL
+
+MUTANT: every record sourced as duet
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestSourceComesFromCredential (0.08s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	12.543s; FAIL
+
+MUTANT: walled answers unchecked
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestWalledRelayOnlyGoOrHold (0.12s); --- FAIL: TestWalledAnswerOnlyGoOrHold (0.11s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	13.635s; FAIL
+
+MUTANT: answer on any kind of item
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestApprovalOnQuestionIsNotApprovable (0.08s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	11.430s; FAIL
+
+MUTANT: approval on any kind of item
+  file: internal/hosted/bus/decide.go
+  exit=0
+  caught by: NOT CAUGHT
+
+MUTANT: excluded answer action allowed
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestExcludedActionNeverDecidable (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.240s; FAIL
+
+MUTANT: relay resolves the item
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestConcurrentAnswersOneWins (0.46s); --- FAIL: TestRelayNeverResolves (0.00s); --- FAIL: TestRelayFromNodesAndDuet (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.542s; FAIL
+
+MUTANT: relay ignores the item's visibility
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestRelayFromNodesAndDuet (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.866s; FAIL
+
+MUTANT: text not trimmed
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestRelayFromNodesAndDuet (0.01s); --- FAIL: TestDecisionInputRules (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.536s; FAIL
+
+MUTANT: db: conflict not mapped to ErrConflict
+  file: internal/hosted/db/decisions.go
+  exit=1
+  caught by: --- FAIL: TestUniqueConflictFromRacingWriterIsRuleSix (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.853s; FAIL
+
+MUTANT: repolint: identifier check dropped
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.408s; FAIL
+
+MUTANT NOT APPLIED: repolint: string conversion check dropped
+
+MUTANT: repolint: approval package not exempt
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.364s; FAIL
+
+=== Run 2 (after the new test) ===
+MUTANT: approval on any kind of item
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestApprovalOnQuestionWithActionIsNotApprovable (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.534s; FAIL
+
+MUTANT: repolint: string conversion check dropped
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.647s; FAIL
+
+
+=== Review round 1 (Opus review of f9af348) ===
+Run 3 tried 14 mutants. Seven survived or were not clean and were redone: 'length cap widened' panicked the regexp compiler (re-run at {1,1000}); concatenation, parentheses and named constants survived because the fixtures did not exercise them alone (and stringConsts wrongly counted vars, which masked the concatenation fixture; fixed to consts only); 'escapes not decoded' and 'allowlist ignored' did not build (re-run cleanly). Runs 4 and 5 are the re-runs, after the fixtures bad_parencat.go and bad_constcat.go were added.
+--- Run 3 ---
+MUTANT: walled approval text unchecked
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestWalledApprovalTextOnlyGoOrHold (0.02s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.292s; FAIL
+
+MUTANT: walled approval: go/hold not tied to the decision
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestWalledApprovalTextOnlyGoOrHold (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.605s; FAIL
+
+MUTANT: source message unchecked
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestSourceMessageRules (0.02s); --- FAIL: TestApprovalSourceMessageRules (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.071s; FAIL
+
+MUTANT: source message length cap widened
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.278s; FAIL
+
+MUTANT: source message not checked for approvals
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestApprovalSourceMessageRules (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.033s; FAIL
+
+MUTANT: unnamed desk may answer
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestDeskWithoutNameIsForbidden (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.301s; FAIL
+
+MUTANT: event Created differs from the row's Recorded
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestRecordedEventsMatchRowRecordedTime (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.256s; FAIL
+
+MUTANT: repolint: homes match by prefix
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	1.098s; FAIL
+
+MUTANT: repolint: concatenation not evaluated
+  file: internal/repolint/passkey.go
+  exit=0
+  caught by: NOT CAUGHT
+
+MUTANT: repolint: parentheses not evaluated
+  file: internal/repolint/passkey.go
+  exit=0
+  caught by: NOT CAUGHT
+
+MUTANT: repolint: named constants not resolved
+  file: internal/repolint/passkey.go
+  exit=0
+  caught by: NOT CAUGHT
+
+MUTANT: repolint: escapes not decoded
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: FAIL	github.com/Exploded-views/yo-human/internal/repolint [build failed]; FAIL
+
+MUTANT: repolint: allowlist ignored
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: FAIL	github.com/Exploded-views/yo-human/internal/repolint [build failed]; FAIL; internal/repolint/passkey.go:94:9: declared and not used: a
+
+MUTANT: repolint: composite-literal strings not evaluated (literals only inside conversions)
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.568s; FAIL
+
+--- Run 4 (re-run) ---
+MUTANT: source message length cap widened
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestSourceMessageRules (0.01s); --- FAIL: TestApprovalSourceMessageRules (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.289s; FAIL
+
+MUTANT: repolint: concatenation not evaluated
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.898s; FAIL
+
+MUTANT: repolint: parentheses not evaluated
+  file: internal/repolint/passkey.go
+  exit=0
+  caught by: NOT CAUGHT
+
+MUTANT: repolint: named constants not resolved
+  file: internal/repolint/passkey.go
+  exit=0
+  caught by: NOT CAUGHT
+
+MUTANT: repolint: a var counts as a constant
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.525s; FAIL
+
+MUTANT: repolint: escapes not decoded
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: FAIL	github.com/Exploded-views/yo-human/internal/repolint [build failed]; FAIL
+
+MUTANT: repolint: allowlist ignored
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); --- FAIL: TestPasskeyKindOnlyInApproval (0.08s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.539s; FAIL
+
+--- Run 5 (re-run after the new fixtures) ---
+MUTANT: repolint: parentheses not evaluated
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.497s; FAIL
+
+MUTANT: repolint: named constants not resolved
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.506s; FAIL
+
+MUTANT: repolint: escapes not decoded
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.479s; FAIL
+
+--- Run 6: the same mutants against the code after it was split for gocyclo. The last entry (string() conversion) did not build and was withdrawn together with the unused string() case it targeted. ---
+MUTANT: walled approval text unchecked
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestWalledApprovalTextOnlyGoOrHold (0.03s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	3.763s; FAIL
+
+MUTANT: walled approval: go/hold not tied to the decision
+  file: internal/hosted/bus/decide.go
+  exit=1
+  caught by: --- FAIL: TestWalledApprovalTextOnlyGoOrHold (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.889s; FAIL
+
+MUTANT: repolint: homes match by prefix
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.896s; FAIL
+
+MUTANT: repolint: concatenation not evaluated
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.694s; FAIL
+
+MUTANT: repolint: parentheses not evaluated
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.01s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.964s; FAIL
+
+MUTANT: repolint: named constants not resolved
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	1.201s; FAIL
+
+MUTANT: repolint: escapes not decoded
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	1.068s; FAIL
+
+MUTANT: repolint: allowlist ignored
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: --- FAIL: TestPasskeyKindFixtures (0.00s); --- FAIL: TestPasskeyKindOnlyInApproval (0.19s); FAIL; FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.934s; FAIL
+
+MUTANT: repolint: string() conversion not evaluated
+  file: internal/repolint/passkey.go
+  exit=1
+  caught by: FAIL	github.com/Exploded-views/yo-human/internal/repolint [build failed]; FAIL; internal/repolint/passkey.go:182:5: declared and not used: f
+

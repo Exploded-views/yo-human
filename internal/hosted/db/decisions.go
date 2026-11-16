@@ -77,6 +77,9 @@ func (x *txn) InsertDecision(r bus.Record) error {
 		source, by_name, source_message, human_ts, recorded) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		r.ItemID, r.Revision, r.Kind, r.Decision, r.ActorKind, r.Text, r.Source, r.By, r.SourceMessage,
 		fmtTime(r.HumanTS), fmtTime(r.Recorded))
+	if IsConflict(err) {
+		return fmt.Errorf("db: insert decision: %w: %w", bus.ErrConflict, err)
+	}
 	if err != nil {
 		return fmt.Errorf("db: insert decision: %w", err)
 	}

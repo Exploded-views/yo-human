@@ -1,0 +1,53 @@
+$ go test ./internal/hosted/bus/ ./internal/repolint/   (failing lines only; stubs: RecordAnswer, RecordApproval and RelayWords return an internal error, PasskeyKind returns nil)
+--- FAIL: TestDecideStoreFailureIsInternalAndRollsBack (0.03s)
+--- FAIL: TestUniqueConflictFromRacingWriterIsRuleSix (0.00s)
+--- FAIL: TestConcurrentAnswersOneWins (0.00s)
+--- FAIL: TestConcurrentDeskAndDuetAnswers (0.00s)
+--- FAIL: TestSecondDifferentApprovalRejectedWithWinner (0.00s)
+--- FAIL: TestIdenticalRetryIsIdempotent (0.00s)
+--- FAIL: TestRevisionVoidsThenReapprove (0.00s)
+--- FAIL: TestHumanAnswerSupersedesAgent (0.00s)
+--- FAIL: TestRetriesAfterSupersede (0.00s)
+--- FAIL: TestAgentAfterHumanRefused (0.00s)
+--- FAIL: TestRecordedEvents (0.00s)
+--- FAIL: TestRelayNeverResolves (0.00s)
+--- FAIL: TestRelayFromNodesAndDuet (0.00s)
+--- FAIL: TestWalledRelayOnlyGoOrHold (0.00s)
+--- FAIL: TestApprovalForOldRevisionIsRejected (0.00s)
+--- FAIL: TestNonPasskeyActionRejectedForEveryone (0.00s)
+--- FAIL: TestExcludedActionNeverDecidable (0.00s)
+--- FAIL: TestApprovalOnQuestionIsNotApprovable (0.01s)
+--- FAIL: TestMissingItemIsNotFound (0.00s)
+--- FAIL: TestNodeCannotRecordAnswerOrApproval (0.00s)
+--- FAIL: TestOnlyTheRightCredentialsDecide (0.01s)
+--- FAIL: TestWalledAnswerOnlyGoOrHold (0.00s)
+--- FAIL: TestDuetCannotApprove (0.00s)
+--- FAIL: TestActorKindFollowsCredential (0.00s)
+--- FAIL: TestSourceComesFromCredential (0.00s)
+--- FAIL: TestDecisionInputRules (0.01s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.507s
+--- FAIL: TestPasskeyKindFixtures (0.00s)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.314s
+FAIL
+exit=1
+
+=== Review round 1 (Opus review of f9af348): M1, M2, S1, S2 and the desk nit ===
+$ go test -count=1 -run "TestWalledApprovalTextOnlyGoOrHold|TestSourceMessageRules|TestDeskWithoutNameIsForbidden|TestRecordedEventsMatchRowRecordedTime|TestSupersededEventIdentifiesRows|TestPasskeyKind" ./internal/hosted/bus ./internal/hosted/db ./internal/repolint
+(the two convention tests, S2, already pass: they pin the convention the code follows. The rest fail on assertions.)
+--- FAIL: TestWalledApprovalTextOnlyGoOrHold (0.02s)
+    decide_review_test.go:33: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestSourceMessageRules (0.02s)
+    decide_review_test.go:69: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestDeskWithoutNameIsForbidden (0.01s)
+    decide_review_test.go:106: err = <nil> (<nil>), want a *bus.Error with code forbidden
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.192s
+ok  	github.com/Exploded-views/yo-human/internal/hosted/db	0.149s
+--- FAIL: TestPasskeyKindFixtures (0.00s)
+    passkey_test.go:28: PasskeyKind paths = [internal/hosted/db/bad_ident.go internal/hosted/web/bad_conv.go internal/hosted/web/bad_pkgconv.go internal/hosted/web/bad_test.go], want [internal/hosted/approval/sub/bad_sub.go internal/hosted/bus/sub/bad_sub.go internal/hosted/db/bad_ident.go internal/hosted/web/bad_alias.go internal/hosted/web/bad_assign.go internal/hosted/web/bad_composite.go internal/hosted/web/bad_concat.go internal/hosted/web/bad_const.go internal/hosted/web/bad_conv.go internal/hosted/web/bad_hex.go internal/hosted/web/bad_paren.go internal/hosted/web/bad_pkgconv.go internal/hosted/web/bad_test.go internal/hosted/web/bad_var.go]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.166s
+FAIL
+exit=1
