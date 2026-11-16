@@ -347,3 +347,20 @@ mutant 49: message times may repeat
   FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.444s
   FAIL
 
+
+# Round 4 (lead ruling on N7): walled session names are typed ids. Two more mutants, both killed (51 in all).
+
+mutant 50: status: walled session name is a free token
+  KILLED by TestWalledStatusSessionNamesAreIds
+      status_wall_test.go:103: err = <nil> (<nil>), want a *bus.Error with code invalid
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.899s
+  FAIL
+
+mutant 51: status: walled session id allows a leading zero
+  KILLED by TestWalledStatusSessionNamesAreIds
+      status_wall_test.go:103: err = <nil> (<nil>), want a *bus.Error with code invalid
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.801s
+  FAIL
+
