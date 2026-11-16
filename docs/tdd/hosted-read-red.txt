@@ -181,3 +181,17 @@ func parseStatus(doc json.RawMessage) (statusDoc, *Error) {
 1 issues:
 * gocyclo: 1
 exit=1
+
+# Review fix round (merge 34d2aa3), 2026-11-16: MF1, Task 6's decide and RelayWords never call committed, so an answers long-poll sleeps through an answer, an approval, a supersede and a relay. SF1, TestAnswersReadsTask6Writes (through RecordAnswer, RecordApproval, RelayWords, no putAnswer) PASSES at once: it is a guard, not a RED; the convention already holds. TestAnswersLongPollIgnoresAnswerInOtherSwarm also passes (a guard: nothing fires today).
+$ go test -count=1 ./internal/hosted/bus/
+--- FAIL: TestAnswersLongPollWakesOnAnswer (5.01s)
+    answers_wake_test.go:35: waiter: no return within 5s
+--- FAIL: TestAnswersLongPollWakesOnApproval (5.02s)
+    answers_wake_test.go:48: waiter: no return within 5s
+--- FAIL: TestAnswersLongPollWakesOnSupersede (5.01s)
+    answers_wake_test.go:64: waiter: no return within 5s
+--- FAIL: TestAnswersLongPollWakesOnRelay (0.21s)
+    answers_wake_test.go:116: a relay did not wake the waiter: it never read again
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	17.508s
+exit=1
