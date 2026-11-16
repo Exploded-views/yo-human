@@ -100,7 +100,15 @@ func newHarness(t *testing.T, edit ...func(*web.Config)) *harness {
 	for _, f := range edit {
 		f(&h.cfg)
 	}
-	extra := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { h.extraHits++; _, _ = io.WriteString(w, "extra-route") })
+	// extra stands for the OAuth mux: two routes, and net/http's own 404 for anything else.
+	extra := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/oauth/github/callback" && r.URL.Path != "/.well-known/oauth-protected-resource/mcp" {
+			http.NotFound(w, r)
+			return
+		}
+		h.extraHits++
+		_, _ = io.WriteString(w, "extra-route")
+	})
 	h.h = web.New(b, auth.NewVerifier(ts, time.Now, 15*time.Minute), h.cfg, extra)
 	return h
 }
