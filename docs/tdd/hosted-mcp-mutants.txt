@@ -1,0 +1,587 @@
+H1 Task 9 mutants, applied one at a time to the Task 9 tree (the feature commit, on 7bcb59d) by a script and reverted. Each Go mutant runs
+`go test <package> -count=1 -timeout 90s` and must fail. Baseline: the web, bus and app packages pass.
+The first seven are the plan's. The rest cover host routing and the 404 identity, the bearer, Origin and body rules, the choice of server by principal, the
+schema and internal error shapes, the deadline and the answers wait, the Duet and node tools' argument rules, the read-only hints and the data note, the bus's
+RelayApproval and the wake on a decision, and the config shapes: 52 Go mutants, all killed in the final full run.
+Earlier runs found three weak spots, fixed before this record: a body without thread_id and a second Origin header survived (each got a test), and the
+deadline mutant was caught only by a test timeout (the test's cleanup order now lets it fail on its own assertion). Five mutants did not compile or match their file and were
+rewritten; a mutant that does not compile is not a kill and is not recorded.
+Four more mutate .golangci.yml and run scripts/lint_rules_test.sh with LINT_RULES_CONFIG: each makes the named cases fail.
+
+MUTANT: plan: one tool registered on both servers (a node's relay also on Duet's server)
+FILE: internal/hosted/web/mcp.go
+CHANGE: 's.nodeTools(node, b) \n 	return duet' -> 's.nodeTools(node, b) \n 	s.nodeTools(duet, b) \n 	return duet'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestToolInputsTheSchemaCannotCheck; TestThreadsAndMessagesOnTheWire; TestDuetWriteTools; TestToolListsPerPrincipal; TestToolSchemasHaveNoFileFields
+TAIL:
+        more_tools_test.go:19: what = arguments, want body
+        more_tools_test.go:41: post: isError=true result=map[error:map[code:invalid fix:send every required argument, no others, each of the right type valid:the tool's input schema, from tools/list what:
+        tools_duet_test.go:116: post: isError=true result=map[error:map[code:invalid fix:send every required argument, no others, each of the right type valid:the tool's input schema, from tools/list what
+        --- FAIL: TestToolListsPerPrincipal/Duet_sees_exactly_the_seven_Duet_tools (0.00s)
+----
+MUTANT: plan: the Origin check skipped
+FILE: internal/hosted/web/middleware.go
+CHANGE: 'if !slices.Contains(s.cfg.OriginAllow, o) {' -> 'if false && !slices.Contains(s.cfg.OriginAllow, o) {'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestBadOriginGets403; TestEveryOriginHeaderIsChecked
+TAIL:
+        middleware_test.go:63: Origin "https://evil.example", token true: 200, want 403
+        middleware_test.go:63: Origin "https://evil.example", token false: 401, want 403
+        middleware_test.go:63: Origin "https://claude.ai/", token true: 200, want 403
+        middleware_test.go:63: Origin "http://claude.ai", token true: 200, want 403
+----
+MUTANT: plan: the deadline not applied
+FILE: internal/hosted/web/results.go
+CHANGE: 'ctx, cancel := context.WithTimeout(ctx, s.cfg.ToolDeadline+wait)' -> 'ctx, cancel := context.WithCancel(ctx)'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestDeadlineBoundsToolCall
+TAIL:
+        tools_agent_test.go:134: the call did not return a result: context deadline exceeded (after 5.000235042s)
+----
+MUTANT: plan: /mcp mounted on Approve
+FILE: internal/hosted/web/server.go
+CHANGE: 'case !hostIs(r, s.approveHost) || !isApprovePath(r.URL.Path) || s.cfg.Approve == nil:' -> 'case r.URL.Path == "/mcp": \n 		s.pipeline.ServeHTTP(w, r) \n 	case !hostIs(r, s.approveHost) || !isApprovePath(r.URL.Path) || s.cfg.Approve == nil:'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestApproveListenerServesOnlyApprovalHost; TestNotFoundIdentical
+TAIL:
+        listeners_test.go:69: the MCP host, POST /mcp: 401, want 404
+        listeners_test.go:69: the approval host, POST /mcp: 401, want 404
+        listeners_test.go:241: /mcp: 401, want 404
+----
+MUTANT: plan: the Host check on MCP dropped
+FILE: internal/hosted/web/server.go
+CHANGE: 'case !hostIs(r, s.mcpHost) || isApprovePath(p):' -> 'case isApprovePath(p):'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestMCPListenerRefusesApprovalRoutes; TestHostNormalisationIgnoresForwardedHeaders; TestHostNormalisationRawRequests; TestHostNormalisationHTTP2; TestNotFoundIdentical
+TAIL:
+        listeners_test.go:87: POST /mcp under the approval host: 415, want 404
+        listeners_test.go:135: MCP, Host approve.example.com with X-Forwarded-Host naming the MCP host: 401, want 404
+        listeners_test.go:135: MCP, Host approve.example.com with Forwarded naming the MCP host: 401, want 404
+        listeners_test.go:135: MCP, Host approve.example.com with Fly-Forwarded-Host naming the MCP host: 401, want 404
+----
+MUTANT: plan: X-Forwarded-Host preferred over r.Host
+FILE: internal/hosted/web/server.go
+CHANGE: 'func normHost(r *http.Request) string { return hostname.Normalise(r.Host) }' -> 'func normHost(r *http.Request) string { \n 	if f := r.Header.Get("X-Forwarded-Host"); f != "" { \n 		return hostname.Normalise(f) \n 	} \n 	return hos'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestHostNormalisationIgnoresForwardedHeaders
+TAIL:
+        listeners_test.go:135: MCP, Host approve.example.com with X-Forwarded-Host naming the MCP host: 401, want 404
+        listeners_test.go:139: Approve, Host bus.example.com with X-Forwarded-Host naming the approval host: 200, want 404
+----
+MUTANT: plan: a second 404 handler on one listener (Approve's wrong-host branch)
+FILE: internal/hosted/web/server.go
+CHANGE: 'case !hostIs(r, s.approveHost) || !isApprovePath(r.URL.Path) || s.cfg.Approve == nil: \n 		notFound(w, r)' -> 'case !hostIs(r, s.approveHost) || !isApprovePath(r.URL.Path) || s.cfg.Approve == nil: \n 		http.Error(w, "not found", http.StatusNotFound)'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestNotFoundIdentical
+TAIL:
+        listeners_test.go:247: 404 3 differs from the first: "404 Not Found|Content-Length=10;Content-Type=text/plain; charset=utf-8;X-Content-Type-Options=nosniff|not found\n" vs "404 Not Found|Content-L
+        listeners_test.go:247: 404 4 differs from the first: "404 Not Found|Content-Length=10;Content-Type=text/plain; charset=utf-8;X-Content-Type-Options=nosniff|not found\n" vs "404 Not Found|Content-L
+        listeners_test.go:247: 404 5 differs from the first: "404 Not Found|Content-Length=10;Content-Type=text/plain; charset=utf-8;X-Content-Type-Options=nosniff|not found\n" vs "404 Not Found|Content-L
+----
+MUTANT: the bearer check ahead of the host check (/mcp routed before the host is compared)
+FILE: internal/hosted/web/server.go
+CHANGE: 'switch p := r.URL.Path; { \n 	case isHealthz(r): \n 		healthz(w, r) \n 	case !hostIs' -> 'switch p := r.URL.Path; { \n 	case isHealthz(r): \n 		healthz(w, r) \n 	case p == "/mcp": \n 		s.pipeline.ServeHTTP(w, r) \n 	case !hostIs'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestMCPListenerRefusesApprovalRoutes; TestHostNormalisationIgnoresForwardedHeaders; TestHostNormalisationRawRequests; TestHostNormalisationHTTP2; TestNotFoundIdentical
+TAIL:
+        listeners_test.go:87: POST /mcp under the approval host: 415, want 404
+        listeners_test.go:135: MCP, Host approve.example.com with X-Forwarded-Host naming the MCP host: 401, want 404
+        listeners_test.go:135: MCP, Host approve.example.com with Forwarded naming the MCP host: 401, want 404
+        listeners_test.go:135: MCP, Host approve.example.com with Fly-Forwarded-Host naming the MCP host: 401, want 404
+----
+MUTANT: a desk starter token allowed on /mcp
+FILE: internal/hosted/web/middleware.go
+CHANGE: 'Kind == bus.PrincipalDeskStart {' -> 'Kind == bus.PrincipalKind("never") {'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestDeskStarterGets403OnMCP
+TAIL:
+        middleware_test.go:34: a desk starter: 200, want 403
+----
+MUTANT: the body limit raised to 1 MiB
+FILE: internal/hosted/web/middleware.go
+CHANGE: 'const maxBody = 64 << 10' -> 'const maxBody = 1 << 20'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestBodyOver64KiBRejected
+TAIL:
+        middleware_test.go:73: a body over 64 KiB: 200, want 413
+        middleware_test.go:80: a chunked body over 64 KiB: 200, want an error status
+----
+MUTANT: the resource metadata URL points at the wrong document
+FILE: internal/hosted/web/middleware.go
+CHANGE: '"/.well-known/oauth-protected-resource/mcp"' -> '"/.well-known/oauth-protected-resource"'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestNoTokenGets401WithResourceMetadata
+TAIL:
+        middleware_test.go:20: an unknown token: 401, WWW-Authenticate "Bearer resource_metadata=\"https://bus.example.com/.well-known/oauth-protected-resource\"", want 401 and "Bearer resource_metadata=\
+        middleware_test.go:20: no token: 401, WWW-Authenticate "Bearer resource_metadata=\"https://bus.example.com/.well-known/oauth-protected-resource\"", want 401 and "Bearer resource_metadata=\"https:/
+        middleware_test.go:20: a malformed token: 401, WWW-Authenticate "Bearer resource_metadata=\"https://bus.example.com/.well-known/oauth-protected-resource\"", want 401 and "Bearer resource_metadata=
+----
+MUTANT: /healthz answered only under the Approve host
+FILE: internal/hosted/web/server.go
+CHANGE: 'func isHealthz(r *http.Request) bool { return r.Method == http.MethodGet && r.URL.Path == "/healthz" }' -> 'func isHealthz(r *http.Request) bool { \n 	return r.Method == http.MethodGet && r.URL.Path == "/healthz" && normHost(r) != "bus.example.com" \n }'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestNotFoundIdentical
+TAIL:
+        listeners_test.go:253: /healthz differs between listeners or is not ok: "200 OK|Content-Length=2;Content-Type=text/plain; charset=utf-8|ok" vs "404 Not Found|Content-Length=19;Content-Type=text/pl
+----
+MUTANT: host read with strings.ToLower only (no shared normaliser)
+FILE: internal/hosted/web/server.go
+CHANGE: 'func normHost(r *http.Request) string { return hostname.Normalise(r.Host) }' -> 'func normHost(r *http.Request) string { return strings.ToLower(r.Host) }'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestHostNormalisation
+TAIL:
+        listeners_test.go:111: MCP, Host "bus.example.com:443": 404, want it served (401 from the bearer check)
+        listeners_test.go:111: MCP, Host "bus.example.com.": 404, want it served (401 from the bearer check)
+        listeners_test.go:111: MCP, Host "bus.example.com:80": 404, want it served (401 from the bearer check)
+        listeners_test.go:116: Approve, Host "approve.example.com:443": 404 "404 page not found\n", want it served
+----
+MUTANT: extra mounted on Approve
+FILE: internal/hosted/web/server.go
+CHANGE: 'case !hostIs(r, s.approveHost) || !isApprovePath(r.URL.Path) || s.cfg.Approve == nil:' -> 'case s.extra != nil && hostIs(r, s.approveHost) && !isApprovePath(r.URL.Path): \n 		s.extra.ServeHTTP(w, r) \n 	case !hostIs(r, s.approveHost) || !isA'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestApproveListenerServesOnlyApprovalHost
+TAIL:
+        listeners_test.go:69: the approval host, oauth callback: 200, want 404
+        listeners_test.go:73: the extra (OAuth) handler was reached through the Approve listener
+----
+MUTANT: approval paths handed to extra on the MCP listener
+FILE: internal/hosted/web/server.go
+CHANGE: 'case !hostIs(r, s.mcpHost) || isApprovePath(p):' -> 'case !hostIs(r, s.mcpHost):'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestMCPListenerRefusesApprovalRoutes; TestNotFoundIdentical
+TAIL:
+        listeners_test.go:82: host bus.example.com, /approve/x: 200, want 404
+        listeners_test.go:82: host bus.example.com, /approve: 200, want 404
+        listeners_test.go:82: host bus.example.com, /approve/static/app.js: 200, want 404
+        listeners_test.go:82: host bus.example.com, /approvexyz: 200, want 404
+----
+MUTANT: a desk or executor credential gets Duet's tools
+FILE: internal/hosted/web/mcp.go
+CHANGE: 'return s.empty \n }' -> 'return s.duet \n }'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestToolListsPerPrincipal
+TAIL:
+        --- FAIL: TestToolListsPerPrincipal/a_desk_token_has_no_tools,_so_every_call_is_an_unknown_tool (0.00s)
+            tools_lists_test.go:37: desk tools = [ack inbox_for_claude item post record_answer record_approval swarm_status], want []
+            tools_lists_test.go:39: post is an unknown tool = false, want true
+            tools_lists_test.go:39: item is an unknown tool = false, want true
+----
+MUTANT: a node gets Duet's tools
+FILE: internal/hosted/web/mcp.go
+CHANGE: 'case bus.PrincipalNode: \n 		return s.node' -> 'case bus.PrincipalNode: \n 		return s.duet'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestInternalErrorCarriesNoCause; TestToolInputsTheSchemaCannotCheck; TestStatusPushAcceptsNullLists; TestThreadsAndMessagesOnTheWire; TestNodeWriteTools; TestNodeReadTools
+TAIL:
+        failures_test.go:59: answers: protocol error calling "tools/call": sending "tools/call": unknown tool "answers": rejected by transport: Bad Request, want a tool error internal
+        more_tools_test.go:14: relay: protocol error calling "tools/call": sending "tools/call": unknown tool "relay": rejected by transport: Bad Request, want a tool error invalid
+        more_tools_test.go:25: status_push: calling "tools/call": sending "tools/call": unknown tool "status_push": rejected by transport: Bad Request
+        more_tools_test.go:37: reply: calling "tools/call": sending "tools/call": unknown tool "reply": rejected by transport: Bad Request
+----
+MUTANT: schema errors left in the SDK's own text
+FILE: internal/hosted/web/mcp.go
+CHANGE: 'srv.AddReceivingMiddleware(schemaErrors)' -> ''
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestToolInputsTheSchemaCannotCheck; TestToolsRefuseMissingRequiredArguments; TestForgedActorKindRejected; TestNoFileHandOff
+TAIL:
+        more_tools_test.go:15: structured content = <nil> <nil>, want an object
+        tools_duet_test.go:156: structured content = <nil> <nil>, want an object
+        tools_lists_test.go:73: structured content = <nil> <nil>, want an object
+        tools_lists_test.go:112: structured content = <nil> <nil>, want an object
+----
+MUTANT: an internal error's what carries the cause
+FILE: internal/hosted/web/results.go
+CHANGE: 'What: "the bus", Valid: "a retry", Fix: "try again; if it keeps failing, tell the owner"} \n }' -> 'What: err.Error(), Valid: "a retry", Fix: "try again; if it keeps failing, tell the owner"} \n }'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestInternalErrorCarriesNoCause
+TAIL:
+        failures_test.go:61: answers error body carries the cause = true, want false
+        failures_test.go:62: answers what = web: a tool panicked: store panic SQLITE-CAUSE-FAKE-7, want the bus
+        failures_test.go:61: item error body carries the cause = true, want false
+        failures_test.go:62: item what = web: a tool panicked: store panic SQLITE-CAUSE-FAKE-7, want the bus
+----
+MUTANT: a failing credential lookup answered 401
+FILE: internal/hosted/web/middleware.go
+CHANGE: 'return nil, errors.New("token verification failed")' -> 'return nil, mcpauth.ErrInvalidToken'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestVerifierFailureIsA500ThatNamesNothing
+TAIL:
+        failures_test.go:76: status = 401, want 500
+        failures_test.go:76: status = 401, want 500
+----
+MUTANT: node tokens refused for having no expiry
+FILE: internal/hosted/web/middleware.go
+CHANGE: 'AllowMissingExpiration: true,' -> 'AllowMissingExpiration: false,'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestInternalErrorCarriesNoCause; TestDeskStarterGets403OnMCP; TestBadOriginGets403; TestToolInputsTheSchemaCannotCheck; TestStatusPushAcceptsNullLists; TestThreadsAndMessagesOnTheWire
+TAIL:
+        failures_test.go:57: connect: calling "initialize": sending "initialize": Unauthorized
+        middleware_test.go:34: a desk starter: 401, want 403
+        middleware_test.go:38: a node: 401, want 200
+        middleware_test.go:63: Origin "https://claude.ai", token true: 401, want 200
+----
+MUTANT: record_approval reports resolved: true
+FILE: internal/hosted/web/tools_duet.go
+CHANGE: 'approvalOut{v1(), false,' -> 'approvalOut{v1(), true,'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestDuetRecordApprovalReturnsLinkNeverResolves
+TAIL:
+        tools_duet_test.go:18: result = map[approval_url:https://approve.example.com/approve/itm_yv5k2gzdlo3xuc5t3spblddmme?rev=1 resolved:true v:1], want map[approval_url:https://approve.example.com/appr
+----
+MUTANT: answers' own wait not added to the deadline
+FILE: internal/hosted/web/results.go
+CHANGE: 's.cfg.ToolDeadline+wait' -> 's.cfg.ToolDeadline'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestAnswersWaitIsNotCutByToolDeadline
+TAIL:
+        tools_agent_test.go:104: answers: isError=true result=map[error:map[code:internal fix:try again; a write may have committed, so read before repeating a post that has no handle valid:a retry what:t
+----
+MUTANT: answers' wait_seconds ceiling dropped
+FILE: internal/hosted/web/tools_agent.go
+CHANGE: 'if in.WaitSeconds < 0 || in.WaitSeconds > int(bus.MaxWait/time.Second) {' -> 'if in.WaitSeconds < 0 {'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestAnswersWaitSecondsRange
+TAIL:
+        tools_agent_test.go:58: answers: isError=false result=map[events:[] next:0 v:1], want a v 1 error with code invalid
+----
+MUTANT: a node's omitted to not defaulted to human
+FILE: internal/hosted/web/tools_agent.go
+CHANGE: 'in.To = "human"' -> 'in.To = in.To'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestNodeWriteTools
+TAIL:
+        tools_agent_test.go:17: post: isError=true result=map[error:map[code:invalid fix:correct to and post again valid:"human" or a swarm name what:to] v:1], want a v 1 success
+----
+MUTANT: a reply may carry item fields
+FILE: internal/hosted/web/tools_duet.go
+CHANGE: 'if f := in.itemOnly(); f != "" {' -> 'if f := in.itemOnly(); false && f != "" {'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestDuetWriteTools; TestNoFileHandOff
+TAIL:
+        tools_duet_test.go:120: post: isError=false result=map[message:map[body:x created:2026-10-28T09:30:05Z from:duet from_kind:duet id:msg_ghlubdoj55z45njtcf77lzwpey severity:low thread_id:itm_ibrh6fx
+        tools_lists_test.go:112: post: isError=false result=map[message:map[body:done created:2026-10-28T09:30:02Z from:duet from_kind:duet id:msg_fuyboytfreydsz4kp63t6psfvs severity:normal thread_id:itm_
+----
+MUTANT: a body without thread_id accepted
+FILE: internal/hosted/web/tools_duet.go
+CHANGE: 'if in.Body != "" { \n 			return nil, invalid("body"' -> 'if false && in.Body != "" { \n 			return nil, invalid("body"'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestToolInputsTheSchemaCannotCheck
+TAIL:
+        more_tools_test.go:18: post: isError=false result=map[item:map[action:none base_ref: created:2026-10-28T09:30:02Z detail: from:duet from_kind:duet handle:b1 id:itm_vr522ymzne2xw5y6hf5tjwbmgj kind:
+----
+MUTANT: ack ignores the seq it was given
+FILE: internal/hosted/web/tools_duet.go
+CHANGE: 'b.Ack(ctx, p, in.ItemID, in.SeenSeq)' -> 'b.Ack(ctx, p, in.ItemID, 0)'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestDuetReadTools
+TAIL:
+        tools_duet_test.go:92: question group after ack = [map[created:2026-10-28T09:30:01Z from:ci-1 handle:q1 id:itm_rhbypjtnby73fbdmz2g2gize4d kind:question last_seq:1 link: revision:1 severity:normal 
+----
+MUTANT: a read tool not marked read-only (inbox_for_claude)
+FILE: internal/hosted/web/tools_duet.go
+CHANGE: '"Read what needs the owner: items grouped by kind (approval, question, blocker, finished, failed), the interrupt group Duet chooses when to raise, and' -> '"Read what needs the owner: items grouped by kind (approval, question, blocker, finished, failed), the interrupt group Duet chooses when to raise, and'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestInstructionsAndHints
+TAIL:
+        tools_lists_test.go:160: Duet inbox_for_claude readOnlyHint = false, want true
+----
+MUTANT: a write tool marked read-only (record_answer)
+FILE: internal/hosted/web/tools_duet.go
+CHANGE: 'false, nil, func(ctx context.Context, p bus.Principal, in answerIn)' -> 'true, nil, func(ctx context.Context, p bus.Principal, in answerIn)'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestInstructionsAndHints
+TAIL:
+        tools_lists_test.go:160: Duet record_answer readOnlyHint = true, want false
+----
+MUTANT: the data note left out of descriptions
+FILE: internal/hosted/web/mcp.go
+CHANGE: 'Description: desc + " " + dataNote,' -> 'Description: desc,'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestInstructionsAndHints
+TAIL:
+        tools_lists_test.go:159: Duet ack description carries the data sentence = false, want true
+        tools_lists_test.go:159: Duet inbox_for_claude description carries the data sentence = false, want true
+        tools_lists_test.go:159: Duet item description carries the data sentence = false, want true
+        tools_lists_test.go:159: Duet post description carries the data sentence = false, want true
+----
+MUTANT: the data note left out of the Duet instructions
+FILE: internal/hosted/web/mcp.go
+CHANGE: 'post to the crews. " + dataNote)' -> 'post to the crews.")'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestInstructionsAndHints
+TAIL:
+        tools_lists_test.go:156: Duet instructions carry the data sentence = false, want true
+----
+MUTANT: the result version is 2
+FILE: internal/hosted/web/results.go
+CHANGE: 'func v1() envelope { return envelope{V: 1} }' -> 'func v1() envelope { return envelope{V: 2} }'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestInternalErrorCarriesNoCause; TestToolInputsTheSchemaCannotCheck; TestStatusPushAcceptsNullLists; TestThreadsAndMessagesOnTheWire; TestNodeWriteTools; TestNodeReadTools
+TAIL:
+        failures_test.go:59: record_approval: isError=true result=map[error:map[code:internal fix:try again; if it keeps failing, tell the owner valid:a retry what:the bus] v:2], want a v 1 error with cod
+        more_tools_test.go:12: ack: isError=true result=map[error:map[code:not_found fix:check the id and read your swarm's items again valid:the id of an item in your swarm what:item] v:2], want a v 1 er
+        more_tools_test.go:25: status_push: isError=false result=map[v:2], want a v 1 success
+        more_tools_test.go:35: post: isError=false result=map[item:map[action:none base_ref: created:2026-10-28T09:30:01Z detail: from:duet from_kind:duet handle:d1 id:itm_k75gnddovxn5rspppgnsfzcmr2 kind:
+----
+MUTANT: the SDK's localhost protection left on
+FILE: internal/hosted/web/middleware.go
+CHANGE: 'DisableLocalhostProtection: true,' -> 'DisableLocalhostProtection: false,'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestInternalErrorCarriesNoCause; TestDeskStarterGets403OnMCP; TestBadOriginGets403; TestToolInputsTheSchemaCannotCheck; TestStatusPushAcceptsNullLists; TestThreadsAndMessagesOnTheWire
+TAIL:
+        failures_test.go:57: connect: calling "initialize": sending "initialize": Forbidden
+        middleware_test.go:38: a node: 403, want 200
+        middleware_test.go:38: Duet: 403, want 200
+        middleware_test.go:63: Origin "https://claude.ai", token true: 403, want 200
+----
+MUTANT: human_ts not checked (a bad time is the zero time)
+FILE: internal/hosted/web/tools_args.go
+CHANGE: 'if err != nil { \n 		return time.Time{}, &bus.Error' -> 'if err != nil && false { \n 		return time.Time{}, &bus.Error'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestToolInputsTheSchemaCannotCheck; TestToolErrorShape
+TAIL:
+        more_tools_test.go:13: record_approval: isError=true result=map[error:map[code:not_approvable fix:check the item's kind before deciding it valid:an item of kind approval what:item] v:1], want a v 
+        tools_duet_test.go:61: record_answer: isError=false result=map[record:map[actor_kind:agent by:duet decision: human_ts:0001-01-01T00:00:00Z item_id:itm_kvabax63j6763m7h6sqzsguc6m kind:answer record
+----
+MUTANT: a null status list not made empty
+FILE: internal/hosted/web/tools_agent.go
+CHANGE: 'if in.Sessions == nil { \n 		in.Sessions = []sessionIn{} \n 	}' -> ''
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestStatusPushAcceptsNullLists
+TAIL:
+        more_tools_test.go:25: status_push: isError=true result=map[error:map[code:invalid fix:correct status and post again valid:one JSON object of at most 16 KiB with exactly the fields swarm, sessions
+----
+MUTANT: the approval URL points at the MCP origin
+FILE: internal/hosted/web/tools_duet.go
+CHANGE: 's.cfg.ApproveOrigin + "/approve/"' -> 's.cfg.PublicURL + "/approve/"'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestDuetRecordApprovalReturnsLinkNeverResolves
+TAIL:
+        tools_duet_test.go:18: result = map[approval_url:https://bus.example.com/approve/itm_bqqkwago5smb2nzh5ahphmwdts?rev=1 resolved:false v:1], want map[approval_url:https://approve.example.com/approve
+----
+MUTANT: only the first Origin header checked
+FILE: internal/hosted/web/middleware.go
+CHANGE: 'for _, o := range r.Header.Values("Origin") {' -> 'for _, o := range r.Header.Values("Origin")[:min(1, len(r.Header.Values("Origin")))] {'
+PACKAGE: ./internal/hosted/web
+exit=1
+CAUGHT BY: TestEveryOriginHeaderIsChecked
+TAIL:
+        middleware_test.go:105: Origin headers [https://claude.ai https://evil.example]: 200, want 403
+----
+MUTANT: RelayApproval: any credential may relay (the Duet-only check dropped)
+FILE: internal/hosted/bus/relay_approval.go
+CHANGE: 'if p.Kind != PrincipalDuet {' -> 'if false {'
+PACKAGE: ./internal/hosted/bus
+exit=1
+CAUGHT BY: TestRelayApprovalRefusals
+TAIL:
+        relay_approval_test.go:65: err = <nil> (<nil>), want a *bus.Error with code forbidden
+----
+MUTANT: RelayApproval: the decision and walled go/hold check skipped
+FILE: internal/hosted/bus/relay_approval.go
+CHANGE: 'if err := b.checkApprovalText(it.Swarm, rq); err != nil {' -> 'if false {'
+PACKAGE: ./internal/hosted/bus
+exit=1
+CAUGHT BY: TestRelayApprovalRefusals; TestRelayApprovalWalledSwarmIsGoOrHold
+TAIL:
+        relay_approval_test.go:65: err = <nil> (<nil>), want a *bus.Error with code invalid
+        relay_approval_test.go:146: err = <nil> (<nil>), want a *bus.Error with code invalid
+----
+MUTANT: RelayApproval: the revision not checked
+FILE: internal/hosted/bus/relay_approval.go
+CHANGE: 'rq := decideReq{itemID: in.ItemID, rev: in.Revision,' -> 'rq := decideReq{itemID: in.ItemID, rev: 1,'
+PACKAGE: ./internal/hosted/bus
+exit=1
+CAUGHT BY: TestRelayApprovalRefusals
+TAIL:
+        relay_approval_test.go:65: err = <nil> (<nil>), want a *bus.Error with code stale_revision
+----
+MUTANT: RelayApproval: stores no event
+FILE: internal/hosted/bus/relay_approval.go
+CHANGE: 'return r, b.appendEvents(x, it, now, []EventType{EventWordsRelayed})' -> 'return r, nil'
+PACKAGE: ./internal/hosted/bus
+exit=1
+CAUGHT BY: TestDecideStoreFailureIsInternalAndRollsBack; TestRecordedEventsMatchRowRecordedTime; TestRelayNeverResolves; TestRelayApprovalStoresWordsNeverResolves
+TAIL:
+        decide_fault_test.go:70: err = <nil> (<nil>), want a *bus.Error with code internal
+        decide_review_test.go:158: events missing: map[words_relayed:2026-10-28 09:30:05 +0000 UTC]
+        decide_state_test.go:216: state, decided, decisions, relays, words_relayed events = [open false 0 1 0], want [open false 0 1 1]
+        relay_approval_test.go:26: events = [], want [words_relayed]
+----
+MUTANT: RelayApproval: relayed as a node's words
+FILE: internal/hosted/bus/decide.go
+CHANGE: 'return "duet" \n }' -> 'return "node:" + p.Name \n }'
+PACKAGE: ./internal/hosted/bus
+exit=1
+CAUGHT BY: TestSourceComesFromCredential
+TAIL:
+        decide_test.go:319: duet answer = [<nil> node:duet msg-9 2026-10-28 09:30:00 +0000 UTC], want [<nil> duet msg-9 2026-10-28 09:30:00 +0000 UTC]
+----
+MUTANT: decide does not wake a waiting Answers call
+FILE: internal/hosted/bus/decide.go
+CHANGE: 'b.committed(swarm) // after the commit, so a woken Answers call reads the new events' -> '_ = swarm'
+PACKAGE: ./internal/hosted/bus
+exit=1
+CAUGHT BY: TestAnswersLongPollWakesOnAnswerAndApproval; TestAnswersLongPollWakesOnHumanSupersede
+TAIL:
+        answers_wake_decide_test.go:34: an answer: no return within 5s
+        answers_wake_decide_test.go:56: supersede: no return within 5s
+----
+MUTANT: decide wakes the wrong swarm
+FILE: internal/hosted/bus/decide.go
+CHANGE: 'b.committed(swarm) // after' -> '_ = swarm \n 	b.committed("duet") // after'
+PACKAGE: ./internal/hosted/bus
+exit=1
+CAUGHT BY: TestAnswersLongPollWakesOnAnswerAndApproval; TestAnswersLongPollWakesOnHumanSupersede
+TAIL:
+        answers_wake_decide_test.go:34: an answer: no return within 5s
+        answers_wake_decide_test.go:56: supersede: no return within 5s
+----
+MUTANT: config: a :443 origin accepted
+FILE: internal/hosted/app/config.go
+CHANGE: 'n == 0 || n == 443 ||' -> 'n == 0 ||'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigOriginAndLinkAllowListShapes
+TAIL:
+        config_shapes_test.go:56: YH_ORIGIN_ALLOW="https://claude.ai:443" accepted, want it refused
+----
+MUTANT: config: an upper-case origin accepted
+FILE: internal/hosted/app/config.go
+CHANGE: 'if !found || rest != strings.ToLower(rest) {' -> 'if !found {'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigOriginAndLinkAllowListShapes
+TAIL:
+        config_shapes_test.go:56: YH_ORIGIN_ALLOW="https://Claude.ai" accepted, want it refused
+----
+MUTANT: config: a scheme-less origin accepted
+FILE: internal/hosted/app/config.go
+CHANGE: 'if !found || rest != strings.ToLower(rest) {' -> 'if _ = found; rest != strings.ToLower(rest) {'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigOriginAndLinkAllowListShapes
+TAIL:
+        config_shapes_test.go:56: YH_ORIGIN_ALLOW="claude.ai" accepted, want it refused
+----
+MUTANT: config: YH_LINK_HOSTS not checked
+FILE: internal/hosted/app/config.go
+CHANGE: 'l.shaped("YH_LINK_HOSTS", l.list("YH_LINK_HOSTS", "github.com"), bareHost,' -> 'l.shaped("YH_LINK_HOSTS", l.list("YH_LINK_HOSTS", "github.com"), func(string) bool { return true },'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigOriginAndLinkAllowListShapes
+TAIL:
+        config_shapes_test.go:56: YH_LINK_HOSTS="https://github.com" accepted, want it refused
+        config_shapes_test.go:56: YH_LINK_HOSTS="github.com:443" accepted, want it refused
+        config_shapes_test.go:56: YH_LINK_HOSTS="github.com:8443" accepted, want it refused
+        config_shapes_test.go:56: YH_LINK_HOSTS="*.github.com" accepted, want it refused
+----
+MUTANT: config: YH_ORIGIN_ALLOW not checked
+FILE: internal/hosted/app/config.go
+CHANGE: 'browserOrigin, "an https origin' -> 'func(string) bool { return true }, "an https origin'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigOriginAndLinkAllowListShapes
+TAIL:
+        config_shapes_test.go:56: YH_ORIGIN_ALLOW="https://claude.ai/" accepted, want it refused
+        config_shapes_test.go:56: YH_ORIGIN_ALLOW="https://claude.ai/path" accepted, want it refused
+        config_shapes_test.go:56: YH_ORIGIN_ALLOW="https://claude.ai?" accepted, want it refused
+        config_shapes_test.go:56: YH_ORIGIN_ALLOW="https://claude.ai?q=1" accepted, want it refused
+----
+MUTANT: config: a link host with a wildcard accepted
+FILE: internal/hosted/app/config.go
+CHANGE: '^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.' -> '^[A-Za-z0-9*]([A-Za-z0-9*-]*[A-Za-z0-9])?(\.'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigOriginAndLinkAllowListShapes
+TAIL:
+        config_shapes_test.go:56: YH_ORIGIN_ALLOW="https://*.claude.ai" accepted, want it refused
+        config_shapes_test.go:56: YH_LINK_HOSTS="*.github.com" accepted, want it refused
+        config_shapes_test.go:56: YH_LINK_HOSTS="*" accepted, want it refused
+        config_shapes_test.go:56: YH_LINK_HOSTS="github.com,*.example.org" accepted, want it refused
+----
+MUTANT: config: a numeric port above 65535 accepted
+FILE: internal/hosted/app/config.go
+CHANGE: 'strconv.ParseUint(port, 10, 16)' -> 'strconv.ParseUint(port, 10, 32)'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigOriginAndLinkAllowListShapes
+TAIL:
+        config_shapes_test.go:56: YH_ORIGIN_ALLOW="https://claude.ai:99999" accepted, want it refused
+----
+MUTANT: lint: the web rule allows every package of the MCP SDK
+FILE: .golangci.yml
+CHANGE: the allow list's mcp$ and auth$ entries -> `github.com/modelcontextprotocol/go-sdk/`
+PACKAGE: scripts/lint_rules_test.sh (LINT_RULES_CONFIG)
+exit=1
+CAUGHT BY: casejsonrpc; caseoauthex
+TAIL:
+    FAIL internal/hosted/web/casejsonrpc/x.go: hosted web imports an SDK package that is not named (jsonrpc): want hosted-web-imports, got clean
+    FAIL internal/hosted/web/caseoauthex/x.go: hosted web imports an SDK package that is not named (oauthex): want hosted-web-imports, got clean
+----
+MUTANT: lint: web is not excluded from hosted-imports
+FILE: .golangci.yml
+CHANGE: the `!**/internal/hosted/web/**` line dropped from hosted-imports
+PACKAGE: scripts/lint_rules_test.sh (LINT_RULES_CONFIG)
+exit=1
+CAUGHT BY: casesqlite; casemcp; casejsonrpc; caseoauthex; caseevil; casestore
+TAIL:
+    FAIL internal/hosted/web/casesqlite/x.go: hosted web imports the SQLite driver: want hosted-web-imports, got hosted-imports hosted-web-imports
+    FAIL internal/hosted/web/casemcp/x.go: hosted web imports the MCP SDK mcp and auth packages, bus, auth, hostname and version: want clean, got hosted-imports
+    FAIL internal/hosted/web/casejsonrpc/x.go: hosted web imports an SDK package that is not named (jsonrpc): want hosted-web-imports, got hosted-imports hosted-web-imports
+----
+MUTANT: lint: the web rule drops the SDK's auth package
+FILE: .golangci.yml
+CHANGE: the `go-sdk/auth$` allow entry dropped
+PACKAGE: scripts/lint_rules_test.sh (LINT_RULES_CONFIG)
+exit=1
+CAUGHT BY: casemcp
+TAIL:
+    FAIL internal/hosted/web/casemcp/x.go: hosted web imports the MCP SDK mcp and auth packages, bus, auth, hostname and version: want clean, got hosted-web-imports
+----
+MUTANT: lint: hosted-imports allows the SDK's mcp package for every hosted package
+FILE: .golangci.yml
+CHANGE: `go-sdk/mcp$` added to hosted-imports' allow list
+PACKAGE: scripts/lint_rules_test.sh (LINT_RULES_CONFIG)
+exit=1
+CAUGHT BY: bus/casemcp; oauth/casemcp
+TAIL:
+    FAIL internal/hosted/bus/casemcp/x.go: hosted bus imports the MCP SDK (web only): want hosted-imports, got clean
+    FAIL internal/hosted/oauth/casemcp/x.go: hosted oauth imports the MCP SDK (web only): want hosted-imports, got clean
+----
