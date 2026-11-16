@@ -206,3 +206,14 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	0.953s
 FAIL
 exit=1
+
+## 6. bus: a waiting Answers call is woken by an answer or an approval (found by the MCP long-poll test: decide never calls committed; the 5 s is the test's own wait)
+$ go test ./internal/hosted/bus -run TestAnswersLongPollWakesOn -count=1
+--- FAIL: TestAnswersLongPollWakesOnAnswerAndApproval (5.01s)
+    answers_wake_decide_test.go:34: an answer: no return within 5s
+--- FAIL: TestAnswersLongPollWakesOnHumanSupersede (5.01s)
+    answers_wake_decide_test.go:56: supersede: no return within 5s
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	10.264s
+FAIL
+exit=1
