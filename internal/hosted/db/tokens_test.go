@@ -2,7 +2,9 @@ package db_test
 
 import (
 	"errors"
+	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -267,5 +269,48 @@ func TestTokenTablesRefuseBadRows(t *testing.T) {
 	// The schema's own refusals, behind the code's: an empty swarm on a node, a swarm on a starter.
 	if err := d.InsertNode("ci-1", "", "yhn_abcd", "h", t0); err == nil {
 		t.Fatal("a node with no swarm was stored")
+	}
+}
+
+// Separate handles on one file are separate pools, as separate processes are: the cap must hold
+// across them, because the count and the insert share one write transaction.
+func TestStarterCapHoldsUnderConcurrency(t *testing.T) {
+	first, path := openTemp(t)
+	handles := []*db.DB{first}
+	for i := 1; i < 8; i++ {
+		h, err := db.Open(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = h.Close() })
+		handles = append(handles, h)
+	}
+	start := make(chan struct{})
+	errs := make([]error, len(handles))
+	var wg sync.WaitGroup
+	for i, h := range handles {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			errs[i] = h.InsertStarter(fmt.Sprintf("starter-%d", i), "yhd_abcd", fmt.Sprintf("hash-%d", i), t0, 2)
+		}()
+	}
+	close(start)
+	wg.Wait()
+	ok, capped := 0, 0
+	for _, err := range errs {
+		switch {
+		case err == nil:
+			ok++
+		case errors.Is(err, db.ErrStarterCap):
+			capped++
+		default:
+			t.Fatalf("an insert failed for another reason: %v", err)
+		}
+	}
+	rows, _ := first.ListTokens()
+	if ok != 2 || capped != len(handles)-2 || len(rows) != 2 {
+		t.Fatalf("%d succeeded, %d capped, %d rows stored; want 2, %d and 2", ok, capped, len(rows), len(handles)-2)
 	}
 }

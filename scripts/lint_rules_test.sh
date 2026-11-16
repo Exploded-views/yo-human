@@ -145,7 +145,13 @@ internal/hosted/bus/casesqlite|hosted-imports|x.go|modernc.org/sqlite|hosted bus
 internal/hosted/auth/casehttp|internal-no-network|x.go|net/http|hosted auth imports net/http
 internal/hosted/auth/casestore|hosted-imports|x.go|M/internal/store|hosted auth imports the CLI store
 internal/hosted/auth/casesqlite|hosted-imports|x.go|modernc.org/sqlite|hosted auth imports the SQLite driver
-internal/hosted/auth/caseok|clean|x.go|crypto/rand crypto/sha256 M/internal/hosted/bus M/internal/hosted/db|hosted auth imports crypto, bus and db
+internal/hosted/auth/caseok|clean|x.go|crypto/rand crypto/sha256 M/internal/hosted/bus|hosted auth imports crypto and bus
+internal/hosted/auth/casedb|hosted-auth-imports|x.go|M/internal/hosted/db|hosted auth imports db
+internal/hosted/hostname/caseok|clean|x.go|strings|hosted hostname imports the standard library
+internal/hosted/hostname/casebus|hosted-hostname-leaf|x.go|M/internal/hosted/bus|hosted hostname imports bus
+internal/hosted/hostname/casehttp|internal-no-network|x.go|net/http|hosted hostname imports net/http
+internal/hosted/app/casehostname|clean|x.go|M/internal/hosted/hostname|hosted app imports hostname
+internal/hosted/bus/casehostname|hosted-bus-imports|x.go|M/internal/hosted/hostname|hosted bus imports hostname
 internal/hosted/web/casesqlite|hosted-imports|x.go|modernc.org/sqlite|hosted web imports the SQLite driver
 internal/core/casesqlite|core-imports|x.go|modernc.org/sqlite|core imports the SQLite driver
 internal/hosted/notify/casehttp|internal-no-network|x.go|net/http|hosted notify imports net/http
@@ -200,7 +206,7 @@ for s in internal/cli internal/version internal/core internal/store internal/con
   internal/problem internal/channel internal/channel/ntfy internal/channel/bark \
   internal/channel/channeltest internal/channel/registry internal/channel/transport \
   internal/hosted/app internal/hosted/bus internal/hosted/db internal/hosted/web internal/hosted/oauth \
-  internal/hosted/notify internal/hosted/egress/bark internal/hosted/policy; do
+  internal/hosted/notify internal/hosted/egress/bark internal/hosted/policy internal/hosted/hostname internal/hosted/auth; do
   mkdir -p "$d/$s" && echo "package $(basename "$s")" > "$d/$s/stub.go" || exit 2
 done
 echo "$cases" | while IFS='|' read -r dir want file imps what code tag pass only; do

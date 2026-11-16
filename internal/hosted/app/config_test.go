@@ -1,7 +1,10 @@
 package app
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strings"
 	"testing"
@@ -209,29 +212,63 @@ func TestConfigRefusesSameHost(t *testing.T) {
 	}
 }
 
-func TestNormaliseHost(t *testing.T) {
-	for in, want := range map[string]string{
-		"bus.example.org": "bus.example.org", "BUS.Example.ORG": "bus.example.org", "bus.example.org.": "bus.example.org",
-		"bus.example.org:443": "bus.example.org", "Bus.Example.Org.:443": "bus.example.org",
-		"bus.example.org:8443": "bus.example.org:8443", "[::1]:443": "[::1]", "[::1]:8443": "[::1]:8443",
-	} {
-		if got := NormaliseHost(in); got != want {
-			t.Fatalf("NormaliseHost(%q) = %q, want %q", in, got, want)
-		}
-	}
-}
-
 func TestConfigNeverPrintsSecrets(t *testing.T) {
 	c, err := LoadConfig(envOf(with("YH_BARK_PASSWORD", "BARK-PASSWORD-FAKE", "YH_BARK_DEVICE_KEY", "DEVICE-KEY-FAKE")))
 	if err != nil {
 		t.Fatal(err)
 	}
 	str := func(verb string, v any) string { return fmt.Sprintf(verb, v) }
-	for _, s := range []string{str("%v", c), str("%+v", c), str("%#v", c), str("%v", c.GitHubClientSecret), str("%q", c.BarkPassword), str("%s", c.BarkDeviceKey), str("%x", c.BarkDeviceKey)} {
+	var js, sl, tx bytes.Buffer
+	enc, err := json.Marshal(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	js.Write(enc)
+	enc, _ = json.Marshal(c.BarkPassword)
+	js.Write(enc)
+	slog.New(slog.NewJSONHandler(&sl, nil)).Info("config", "cfg", c, "secret", c.GitHubClientSecret)
+	slog.New(slog.NewTextHandler(&tx, nil)).Info("config", "cfg", c, "secret", c.GitHubClientSecret)
+	for _, s := range []string{js.String(), sl.String(), tx.String(), str("%v", c), str("%+v", c), str("%#v", c), str("%v", c.GitHubClientSecret), str("%q", c.BarkPassword), str("%s", c.BarkDeviceKey), str("%x", c.BarkDeviceKey)} {
 		for _, secret := range []string{"GITHUB-SECRET-FAKE", "BARK-PASSWORD-FAKE", "DEVICE-KEY-FAKE"} {
 			if strings.Contains(s, secret) {
 				t.Fatalf("formatting a Config or a Secret prints %s", secret)
 			}
 		}
+	}
+}
+
+func TestConfigApproveOriginIsHTTPSAndMatchesRPID(t *testing.T) {
+	for _, c := range []struct{ name, origin, rp string }{
+		{"a plaintext approve origin", "http://approve.example.org", "approve.example.org"},
+		{"the parent domain as RP ID", "https://approve.example.org", "example.org"},
+		{"a sibling host as RP ID", "https://approve.example.org", "other.example.org"},
+		{"an RP ID with a trailing dot and a port", "https://approve.example.org", "approve.example.org.:443"},
+		{"an RP ID with a port", "https://approve.example.org", "approve.example.org:443"},
+		{"a URL as RP ID", "https://approve.example.org", "https://approve.example.org/"},
+		{"an upper-case RP ID", "https://approve.example.org", "Approve.Example.org"},
+	} {
+		_, err := LoadConfig(envOf(with("YH_APPROVE_ORIGIN", c.origin, "YH_WEBAUTHN_RP_ID", c.rp)))
+		want := "YH_WEBAUTHN_RP_ID"
+		if strings.HasPrefix(c.origin, "http:") {
+			want = "YH_APPROVE_ORIGIN"
+		}
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Fatalf("%s: err=%v, want %s named", c.name, err, want)
+		}
+	}
+	for _, ok := range []struct{ origin, rp string }{
+		{"https://approve.example.org", "approve.example.org"},
+		{"https://approve.example.org:8443", "approve.example.org"},
+		{"https://Approve.Example.org.", "approve.example.org"},
+	} {
+		if _, err := LoadConfig(envOf(with("YH_APPROVE_ORIGIN", ok.origin, "YH_WEBAUTHN_RP_ID", ok.rp))); err != nil {
+			t.Fatalf("%+v: %v", ok, err)
+		}
+	}
+}
+
+func TestConfigRefusesSameHostOnDefaultHTTPPort(t *testing.T) {
+	if _, err := LoadConfig(envOf(with("YH_PUBLIC_URL", "http://bus.example.org:80", "YH_APPROVE_ORIGIN", "https://bus.example.org", "YH_WEBAUTHN_RP_ID", "bus.example.org"))); err == nil {
+		t.Fatal("http://bus.example.org:80 and https://bus.example.org are one host")
 	}
 }

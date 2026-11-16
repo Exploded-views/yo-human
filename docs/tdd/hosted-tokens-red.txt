@@ -108,3 +108,31 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.173s
 FAIL
 exit=1
+
+# Review round 1 (Opus on c55709a): M1, S1, S2, S4 and the lint probes (N7, hostname leaf) against the old code and a stub hostname.Normalise
+$ go test -race ./internal/hosted/hostname ./internal/hosted/app ./internal/hosted/db
+--- FAIL: TestNormalise (0.00s)
+    hostname_test.go:18: Normalise("[::1]:443") = "[::1]:443", want "[::1]"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/hostname	0.085s
+--- FAIL: TestCheckFailsOnIntegrityProblems (1.52s)
+    check_cmd_test.go:99: page 27: code=0 with verdict "integrity: 2 problems reported", want 74
+--- FAIL: TestConfigNeverPrintsSecrets (0.00s)
+    config_test.go:234: formatting a Config or a Secret prints GITHUB-SECRET-FAKE
+--- FAIL: TestConfigApproveOriginIsHTTPSAndMatchesRPID (0.00s)
+    config_test.go:256: a plaintext approve origin: err=<nil>, want YH_APPROVE_ORIGIN named
+--- FAIL: TestConfigRefusesSameHostOnDefaultHTTPPort (0.00s)
+    config_test.go:272: http://bus.example.org:80 and https://bus.example.org are one host
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	3.925s
+ok  	github.com/Exploded-views/yo-human/internal/hosted/db	(cached)
+FAIL
+exit=1
+$ make lint-rules-test
+sh scripts/lint_rules_test.sh
+FAIL internal/hosted/auth/casedb/x.go: hosted auth imports db: want hosted-auth-imports, got clean
+FAIL internal/hosted/hostname/casebus/x.go: hosted hostname imports bus: want hosted-hostname-leaf, got clean
+lint_rules_test: a case failed
+make: *** [lint-rules-test] Error 1
+exit=2
+# S3 TestStarterCapHoldsUnderConcurrency is a guard test, not a RED: it passes at once against the current code (db: ok above). Its mutants are in hosted-tokens-mutants.txt.

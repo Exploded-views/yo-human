@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -58,5 +59,47 @@ func TestCheckReportsDamage(t *testing.T) {
 	}
 	if code, out, errs := a.run("check"); code != ExitStore || out != "" || errs == "" {
 		t.Fatalf("code=%d out=%q err=%q", code, out, errs)
+	}
+}
+
+// corruptPage overwrites the middle of one page after the first, so the file may still open but
+// PRAGMA integrity_check reports problems.
+func corruptPage(t *testing.T, path string, orig []byte, page int) {
+	t.Helper()
+	b := append([]byte(nil), orig...)
+	off := page * 4096
+	for i := off + 64; i < off+4096-64; i++ {
+		b[i] = 0xA5
+	}
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Which page holds what is SQLite's business, so damage each page in turn: whenever the verdict
+// is printed and is not ok, the exit must be 74. At least one page must give such a verdict.
+func TestCheckFailsOnIntegrityProblems(t *testing.T) {
+	a := newAdmin(t)
+	for i := 0; i < 60; i++ {
+		a.create("token", "create", "--name", fmt.Sprintf("node-%d", i), "--swarm", "crew")
+	}
+	orig, err := os.ReadFile(a.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	damaged := 0
+	for page := 1; page < len(orig)/4096; page++ {
+		corruptPage(t, a.path, orig, page)
+		code, out, _ := a.run("check")
+		if !strings.HasPrefix(out, "integrity: ") || strings.HasPrefix(out, "integrity: ok") {
+			continue
+		}
+		damaged++
+		if code != ExitStore {
+			t.Fatalf("page %d: code=%d with verdict %q, want 74", page+1, code, strings.SplitN(out, "\n", 2)[0])
+		}
+	}
+	if damaged == 0 {
+		t.Fatal("no damaged page gave a verdict: the test no longer reaches integrity_check")
 	}
 }
