@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -97,37 +98,46 @@ func (b *Bus) SwarmStatus(ctx context.Context, p Principal, swarm string) ([]Sta
 	return out, nil
 }
 
-// parseStatus reads doc strictly: one JSON object, within the size limit, with every one of the
-// document's fields (a missing one is refused here, an extra one by the decoder) and the right types.
-func parseStatus(doc json.RawMessage) (statusDoc, *Error) {
-	bad := func() (statusDoc, *Error) {
-		return statusDoc{}, invalid("status", "one JSON object of at most 16 KiB with exactly the fields swarm, sessions, waiting_on_human, main_health, spend and ts")
-	}
+// statusKeysOf returns the document's top-level keys when it is one JSON object of valid UTF-8
+// within the size limit with exactly the six keys, each spelled byte for byte: encoding/json
+// matches struct fields without regard to case, so a second spelling of a key would otherwise
+// reach the struct while the checks read the first.
+func statusKeysOf(doc json.RawMessage) (map[string]json.RawMessage, bool) {
 	if len(doc) > MaxStatus || !utf8.Valid(doc) { // the decoder would swap U+FFFD in for bad bytes
-		return bad()
+		return nil, false
 	}
 	var keys map[string]json.RawMessage
-	if err := json.Unmarshal(doc, &keys); err != nil || keys == nil {
-		return bad()
-	}
-	// Exactly the six keys, spelled so: encoding/json matches struct fields case-insensitively, so a
-	// second spelling would reach the struct while spendText read the first.
-	if len(keys) != len(statusKeys) {
-		return bad()
+	if err := json.Unmarshal(doc, &keys); err != nil || len(keys) != len(statusKeys) {
+		return nil, false
 	}
 	for _, k := range statusKeys {
 		if _, ok := keys[k]; !ok {
-			return bad()
+			return nil, false
 		}
 	}
+	return keys, true
+}
+
+// parseStatus reads doc strictly: the exact keys (statusKeysOf) and the right types.
+func parseStatus(doc json.RawMessage) (statusDoc, *Error) {
+	keys, ok := statusKeysOf(doc)
 	var d statusDoc
-	dec := json.NewDecoder(bytes.NewReader(doc))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&d); err != nil || d.Sessions == nil || d.WaitingOnHuman == nil {
-		return bad()
+	if ok {
+		dec := json.NewDecoder(bytes.NewReader(doc))
+		dec.DisallowUnknownFields()
+		ok = dec.Decode(&d) == nil && d.Sessions != nil && d.WaitingOnHuman != nil
+	}
+	if !ok {
+		return statusDoc{}, invalid("status", "one JSON object of at most 16 KiB with exactly the fields swarm, sessions, waiting_on_human, main_health, spend and ts")
 	}
 	d.spendText = string(keys["spend"])
 	return d, nil
+}
+
+// walledSpendOK: the spend as the sender wrote it and as it is stored (the decoded number printed
+// back) both have at most 7 integer digits and 2 decimals. The written form also refuses exponents.
+func (d statusDoc) walledSpendOK() bool {
+	return spendRE.MatchString(d.spendText) && spendRE.MatchString(strconv.FormatFloat(d.Spend, 'f', -1, 64))
 }
 
 func (d statusDoc) check(walled bool) *Error {
@@ -137,7 +147,7 @@ func (d statusDoc) check(walled bool) *Error {
 	switch {
 	case !slices.Contains(mainHealth, d.MainHealth):
 		return invalid("main_health", "ok, degraded, failing or unknown")
-	case d.Spend < 0 || walled && !spendRE.MatchString(d.spendText):
+	case d.Spend < 0 || walled && !d.walledSpendOK():
 		return invalid("spend", "a number of zero or more"+walledNote(walled, ", at most 7 integer digits and 2 decimals"))
 	case d.TS < 0 || walled && d.TS > maxWalledTS:
 		return invalid("ts", "a number of seconds since the epoch, zero or more"+walledNote(walled, ", at most 8589934592"))
