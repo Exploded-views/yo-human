@@ -244,6 +244,7 @@ func TestInboxShowsReplyOnDecidedItem(t *testing.T) {
 func TestAckDoesNotHideActivityAfterTheRead(t *testing.T) {
 	e := newEnv(t)
 	n := node("ci-1", "crew")
+	e.post(t, n, draft(bus.KindFinished, "pad", bus.UrgencyDigest)) // so the question's seqs are above 1
 	it := e.post(t, n, draft(bus.KindQuestion, "q", bus.UrgencyDigest)).Item
 	seen := e.inbox(t, 0).Groups[bus.KindQuestion][0]
 	if seen.LastSeq != it.LastSeq || seen.LastSeq == 0 {
