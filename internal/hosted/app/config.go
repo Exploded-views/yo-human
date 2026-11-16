@@ -213,8 +213,8 @@ func (l *loader) shaped(name string, entries []string, ok func(string) bool, rul
 var hostRE = regexp.MustCompile(`^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*$`)
 
 // bareHost is a DNS name: no scheme, port, path, userinfo or wildcard, at most 253 bytes with
-// labels of at most 63, and a last label that is not all digits, which keeps out IP literals in
-// any spelling.
+// labels of at most 63, and a last label that is neither all digits nor 0x-prefixed hex, which
+// keeps out the IP literal spellings a browser accepts (dotted, decimal, octal and hex).
 func bareHost(s string) bool {
 	if len(s) > 253 || !hostRE.MatchString(s) {
 		return false
@@ -225,8 +225,11 @@ func bareHost(s string) bool {
 			return false
 		}
 	}
-	return strings.Trim(labels[len(labels)-1], "0123456789") != ""
+	last := labels[len(labels)-1]
+	return strings.Trim(last, "0123456789") != "" && !hexLabelRE.MatchString(last)
 }
+
+var hexLabelRE = regexp.MustCompile(`^0[xX][0-9A-Fa-f]*$`)
 
 // browserOrigin is an https origin exactly as a browser sends it in an Origin header: the scheme
 // and host in lower case, the port only when it is not 443, and nothing after the host (so no
