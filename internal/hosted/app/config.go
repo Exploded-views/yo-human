@@ -56,6 +56,9 @@ const (
 	maxChallengeTTL = 10 * time.Minute
 	maxDeskTTL      = 60 * time.Minute
 	maxEscalate     = 60 * time.Minute
+	// maxToolDeadline is the server's 35 s write timeout less the 25 s an answers call may wait:
+	// a longer deadline would let the connection be cut under a call that may have committed.
+	maxToolDeadline = 10 * time.Second
 )
 
 var severities = []string{"low", "normal", "high", "critical"}
@@ -85,7 +88,7 @@ func LoadConfig(env func(string) string) (Config, error) {
 		EscalateCritical:   l.oneOf("YH_ESCALATE_CRITICAL", "off", "off", "on") == "on",
 		AccessTTL:          l.dur("YH_ACCESS_TTL", "1h", 0),
 		RefreshTTL:         l.dur("YH_REFRESH_TTL", "720h", 0),
-		ToolDeadline:       l.dur("YH_TOOL_DEADLINE", "5s", 0),
+		ToolDeadline:       l.dur("YH_TOOL_DEADLINE", "5s", maxToolDeadline),
 		WebAuthnRPID:       l.required("YH_WEBAUTHN_RP_ID"),
 		ApproveOrigin:      l.approveOrigin(l.required("YH_APPROVE_ORIGIN")),
 		ChallengeTTL:       l.dur("YH_CHALLENGE_TTL", "5m", maxChallengeTTL),
@@ -209,8 +212,21 @@ func (l *loader) shaped(name string, entries []string, ok func(string) bool, rul
 
 var hostRE = regexp.MustCompile(`^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*$`)
 
-// bareHost is a DNS name: no scheme, port, path, userinfo or wildcard.
-func bareHost(s string) bool { return hostRE.MatchString(s) }
+// bareHost is a DNS name: no scheme, port, path, userinfo or wildcard, at most 253 bytes with
+// labels of at most 63, and a last label that is not all digits, which keeps out IP literals in
+// any spelling.
+func bareHost(s string) bool {
+	if len(s) > 253 || !hostRE.MatchString(s) {
+		return false
+	}
+	labels := strings.Split(s, ".")
+	for _, l := range labels {
+		if len(l) > 63 {
+			return false
+		}
+	}
+	return strings.Trim(labels[len(labels)-1], "0123456789") != ""
+}
 
 // browserOrigin is an https origin exactly as a browser sends it in an Origin header: the scheme
 // and host in lower case, the port only when it is not 443, and nothing after the host (so no

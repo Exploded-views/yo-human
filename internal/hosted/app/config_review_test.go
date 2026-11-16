@@ -13,7 +13,7 @@ func TestConfigToolDeadlineCeiling(t *testing.T) {
 	if c := load(t, with("YH_TOOL_DEADLINE", "10s")); c.ToolDeadline != 10*time.Second {
 		t.Errorf("ToolDeadline = %v, want 10s accepted", c.ToolDeadline)
 	}
-	for _, v := range []string{"10001ms", "11s", "35s", "1m", "0s", "-1s", "soon"} {
+	for _, v := range []string{"10001ms", "11s", "35s", "1m", "0ms", "-1s", "soon"} {
 		_, err := LoadConfig(envOf(with("YH_TOOL_DEADLINE", v)))
 		if err == nil || !strings.Contains(err.Error(), "YH_TOOL_DEADLINE") || strings.Contains(err.Error(), v) {
 			t.Errorf("YH_TOOL_DEADLINE=%q: err = %v, want it refused, naming the variable only", v, err)
