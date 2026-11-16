@@ -1,0 +1,34 @@
+# H1 Task 9 (MCP server), RED records, one section per RED commit. Each section is the command, a note, the output and exit=N.
+
+## 1. config: the origin and link allow-list shapes (against the unchanged LoadConfig)
+$ go test ./internal/hosted/app -run TestConfigOriginAndLinkAllowListShapes -count=1
+--- FAIL: TestConfigOriginAndLinkAllowListShapes (0.00s)
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai/" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai/path" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai?" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai?q=1" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai#frag" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://userinfo-MARK@claude.ai" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai:443" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai:" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="http://claude.ai" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="claude.ai" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://Claude.ai" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="HTTPS://claude.ai" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://*.claude.ai" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai,https://claude.com/" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="https://github.com" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="github.com:443" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="github.com:8443" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="*.github.com" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="*" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="github.com/" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="github.com/path" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="user-MARK@github.com" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS=".github.com" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="github..com" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="github.com,*.example.org" accepted, want it refused
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.235s
+FAIL
+exit=1
