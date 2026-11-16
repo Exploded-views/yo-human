@@ -106,7 +106,7 @@ func TestInboxForbiddenForNode(t *testing.T) {
 		{Kind: bus.PrincipalExecutor}, {}} {
 		_, err := e.b.Inbox(context.Background(), p, 0)
 		wantCode(t, err, bus.CodeForbidden)
-		wantCode(t, e.b.Ack(context.Background(), p, "itm_x"), bus.CodeForbidden)
+		wantCode(t, e.b.Ack(context.Background(), p, "itm_x", 1<<40), bus.CodeForbidden)
 	}
 }
 
@@ -114,7 +114,7 @@ func TestAckHidesUntilNewActivity(t *testing.T) {
 	e := newEnv(t)
 	n := node("ci-1", "crew")
 	it := e.post(t, n, draft(bus.KindQuestion, "q", bus.UrgencyDigest)).Item
-	if err := e.b.Ack(context.Background(), duet, it.ID); err != nil {
+	if err := e.b.Ack(context.Background(), duet, it.ID, 1<<40); err != nil {
 		t.Fatal(err)
 	}
 	same(t, "after ack", ids(e.inbox(t, 0).Groups[bus.KindQuestion]), []string{})
@@ -130,7 +130,7 @@ func TestAckHidesUntilNewActivity(t *testing.T) {
 
 func TestAckUnknownItemIsNotFound(t *testing.T) {
 	e := newEnv(t)
-	wantCode(t, e.b.Ack(context.Background(), duet, "itm_nope"), bus.CodeNotFound)
+	wantCode(t, e.b.Ack(context.Background(), duet, "itm_nope", 1<<40), bus.CodeNotFound)
 }
 
 func TestInboxThreadsListDuetItemsWithNewMessagesFromOthers(t *testing.T) {
@@ -149,7 +149,7 @@ func TestInboxThreadsListDuetItemsWithNewMessagesFromOthers(t *testing.T) {
 	same(t, "threads", ids(in.Threads), []string{talk.ID})
 	_ = quiet
 	same(t, "duet's items are not in a group", ids(in.Groups[bus.KindQuestion]), []string{})
-	if err := e.b.Ack(ctx, duet, talk.ID); err != nil {
+	if err := e.b.Ack(ctx, duet, talk.ID, 1<<40); err != nil {
 		t.Fatal(err)
 	}
 	same(t, "acked", ids(e.inbox(t, 0).Threads), []string{})
@@ -216,5 +216,55 @@ func TestItemCrossSwarmIsIndistinguishableFromMissing(t *testing.T) {
 	same(t, "error", *a, *b)
 	if _, err := e.b.Item(context.Background(), bus.Principal{}, it.ID); err == nil {
 		t.Error("a zero principal read an item")
+	}
+}
+
+// A node's reply on an item the owner already answered is news: the inbox has no state filter.
+func TestInboxShowsReplyOnDecidedItem(t *testing.T) {
+	e := newEnv(t)
+	n := node("ci-1", "crew")
+	it := e.post(t, n, draft(bus.KindQuestion, "q", bus.UrgencyDigest)).Item
+	cur, _ := e.stored(t, it.ID)
+	e.putAnswer(t, cur, "yes")
+	decided, _ := e.stored(t, it.ID)
+	if decided.State != bus.StateDecided {
+		t.Fatalf("state = %s, want decided", decided.State)
+	}
+	if err := e.b.Ack(context.Background(), duet, it.ID, decided.LastSeq); err != nil {
+		t.Fatal(err)
+	}
+	same(t, "after the ack", ids(e.inbox(t, 0).Groups[bus.KindQuestion]), []string{})
+	if _, err := e.b.Reply(context.Background(), n, it.ID, "that broke prod, need another answer", bus.SeverityHigh, bus.UrgencyPage); err != nil {
+		t.Fatal(err)
+	}
+	same(t, "after the reply", ids(e.inbox(t, 0).Groups[bus.KindQuestion]), []string{it.ID})
+}
+
+// Duet acks what it read: activity that came after the read is not hidden by the ack.
+func TestAckDoesNotHideActivityAfterTheRead(t *testing.T) {
+	e := newEnv(t)
+	n := node("ci-1", "crew")
+	it := e.post(t, n, draft(bus.KindQuestion, "q", bus.UrgencyDigest)).Item
+	seen := e.inbox(t, 0).Groups[bus.KindQuestion][0]
+	if seen.LastSeq != it.LastSeq || seen.LastSeq == 0 {
+		t.Fatalf("summary LastSeq = %d, want the item's %d", seen.LastSeq, it.LastSeq)
+	}
+	if _, err := e.b.Reply(context.Background(), n, it.ID, "after you looked", bus.SeverityNormal, bus.UrgencyDigest); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.b.Ack(context.Background(), duet, it.ID, seen.LastSeq); err != nil {
+		t.Fatal(err)
+	}
+	same(t, "after acking what was seen", ids(e.inbox(t, 0).Groups[bus.KindQuestion]), []string{it.ID})
+	got, _ := e.stored(t, it.ID)
+	if got.AckedSeq != seen.LastSeq {
+		t.Errorf("AckedSeq = %d, want %d", got.AckedSeq, seen.LastSeq)
+	}
+	// An older ack never lowers a newer one.
+	if err := e.b.Ack(context.Background(), duet, it.ID, 1); err != nil {
+		t.Fatal(err)
+	}
+	if again, _ := e.stored(t, it.ID); again.AckedSeq != seen.LastSeq {
+		t.Errorf("a stale ack moved AckedSeq to %d", again.AckedSeq)
 	}
 }

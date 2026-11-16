@@ -11,7 +11,7 @@ import (
 
 func validStatus(swarm string) json.RawMessage {
 	return json.RawMessage(`{"swarm":"` + swarm + `","sessions":[{"name":"build-1","state":"working"},{"name":"review-2","state":"idle"}],` +
-		`"waiting_on_human":["ob-12"],"main_health":"green","spend":12.5,"ts":1793000000}`)
+		`"waiting_on_human":["ob-12"],"main_health":"ok","spend":12.5,"ts":1793000000}`)
 }
 
 func TestStatusPushAndSwarmStatus(t *testing.T) {
@@ -40,7 +40,7 @@ func TestStatusDocRoundTrips(t *testing.T) {
 		t.Fatalf("one = %+v, %v", one, err)
 	}
 	var doc map[string]any
-	if err := json.Unmarshal(one[0].Doc, &doc); err != nil || doc["swarm"] != "crew" || doc["main_health"] != "green" {
+	if err := json.Unmarshal(one[0].Doc, &doc); err != nil || doc["swarm"] != "crew" || doc["main_health"] != "ok" {
 		t.Errorf("doc = %s, %v", one[0].Doc, err)
 	}
 }
@@ -48,14 +48,14 @@ func TestStatusDocRoundTrips(t *testing.T) {
 func TestStatusPushReplacesAndAppendsAnEvent(t *testing.T) {
 	e := newEnv(t)
 	ctx := context.Background()
-	for _, health := range []string{"green", "red"} {
-		doc := json.RawMessage(strings.Replace(string(validStatus("crew")), "green", health, 1))
+	for _, health := range []string{"ok", "degraded"} {
+		doc := json.RawMessage(strings.Replace(string(validStatus("crew")), "ok", health, 1))
 		if err := e.b.PushStatus(ctx, cinode, doc); err != nil {
 			t.Fatal(err)
 		}
 	}
 	one, _ := e.b.SwarmStatus(ctx, duet, "crew")
-	if len(one) != 1 || !strings.Contains(string(one[0].Doc), "red") {
+	if len(one) != 1 || !strings.Contains(string(one[0].Doc), "degraded") {
 		t.Errorf("a second push did not replace the first: %+v", one)
 	}
 	if got := types(e.events(t)); len(got) != 2 || got[0] != bus.EventStatusPushed {
@@ -100,8 +100,8 @@ func TestStatusPushRejectsBadShape(t *testing.T) {
 		"trailing data":     {good + `{}`, "status"},
 		"too big":           {`{"swarm":"crew","pad":"` + strings.Repeat("x", 16<<10) + `"}`, "status"},
 		"unknown field":     {strings.Replace(good, `"spend"`, `"extra":1,"spend"`, 1), "status"},
-		"missing sessions":  {`{"swarm":"crew","waiting_on_human":[],"main_health":"green","spend":0,"ts":1}`, "status"},
-		"missing ts":        {`{"swarm":"crew","sessions":[],"waiting_on_human":[],"main_health":"green","spend":0}`, "status"},
+		"missing sessions":  {`{"swarm":"crew","waiting_on_human":[],"main_health":"ok","spend":0,"ts":1}`, "status"},
+		"missing ts":        {`{"swarm":"crew","sessions":[],"waiting_on_human":[],"main_health":"ok","spend":0}`, "status"},
 		"bad state":         {strings.Replace(good, `"working"`, `"asleep"`, 1), "sessions.state"},
 		"empty name":        {strings.Replace(good, `"build-1"`, `""`, 1), "sessions.name"},
 		"sessions not list": {strings.Replace(good, `"sessions":[{"name":"build-1","state":"working"},{"name":"review-2","state":"idle"}]`, `"sessions":{}`, 1), "status"},
@@ -109,10 +109,10 @@ func TestStatusPushRejectsBadShape(t *testing.T) {
 		"string spend":      {strings.Replace(good, `12.5`, `"12.5"`, 1), "status"},
 		"fractional ts":     {strings.Replace(good, `1793000000`, `1.5`, 1), "status"},
 		"negative ts":       {strings.Replace(good, `1793000000`, `-1`, 1), "ts"},
-		"bad health":        {strings.Replace(good, `"green"`, `"all fine, really"`, 1), "main_health"},
+		"bad health":        {strings.Replace(good, `"ok"`, `"all fine, really"`, 1), "main_health"},
 		"control in name":   {strings.Replace(good, `build-1`, `build\u0007`, 1), "sessions.name"},
 		"long entry":        {strings.Replace(good, `"ob-12"`, `"`+strings.Repeat("x", 81)+`"`, 1), "waiting_on_human"},
-		"too many sessions": {`{"swarm":"crew","sessions":[` + strings.Repeat(`{"name":"a","state":"idle"},`, 64) + `{"name":"a","state":"idle"}],"waiting_on_human":[],"main_health":"green","spend":0,"ts":1}`, "sessions"},
+		"too many sessions": {`{"swarm":"crew","sessions":[` + strings.Repeat(`{"name":"a","state":"idle"},`, 64) + `{"name":"a","state":"idle"}],"waiting_on_human":[],"main_health":"ok","spend":0,"ts":1}`, "sessions"},
 	}
 	for name, c := range cases {
 		e := newEnv(t)
@@ -130,12 +130,12 @@ func TestStatusIsStoredCanonical(t *testing.T) {
 	// What is read back is what was validated, re-encoded from the parsed fields: no whitespace
 	// or key order of the sender's survives.
 	e := newEnv(t)
-	doc := ` { "ts" : 5, "spend":0, "main_health":"green", "waiting_on_human":[], "sessions":[], "swarm":"crew" } `
+	doc := ` { "ts" : 5, "spend":0, "main_health":"ok", "waiting_on_human":[], "sessions":[], "swarm":"crew" } `
 	if err := e.b.PushStatus(context.Background(), cinode, json.RawMessage(doc)); err != nil {
 		t.Fatal(err)
 	}
 	st, _ := e.b.SwarmStatus(context.Background(), duet, "crew")
-	want := `{"swarm":"crew","sessions":[],"waiting_on_human":[],"main_health":"green","spend":0,"ts":5}`
+	want := `{"swarm":"crew","sessions":[],"waiting_on_human":[],"main_health":"ok","spend":0,"ts":5}`
 	if string(st[0].Doc) != want {
 		t.Errorf("doc = %s, want %s", st[0].Doc, want)
 	}
@@ -144,7 +144,7 @@ func TestStatusIsStoredCanonical(t *testing.T) {
 func TestWalledStatusDocIdsOnly(t *testing.T) {
 	e := newEnvWalled(t, "client")
 	n := node("ci-9", "client")
-	ok := `{"swarm":"client","sessions":[{"name":"build-1","state":"working"}],"waiting_on_human":["ob-12"],"main_health":"green","spend":3,"ts":9}`
+	ok := `{"swarm":"client","sessions":[{"name":"build-1","state":"working"}],"waiting_on_human":["ob-12"],"main_health":"ok","spend":3,"ts":9}`
 	if err := e.b.PushStatus(context.Background(), n, json.RawMessage(ok)); err != nil {
 		t.Fatalf("a typed document: %v", err)
 	}

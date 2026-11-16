@@ -167,3 +167,6 @@ func (x *txn) ListThreadItems(since int64) ([]bus.Item, error) {
 	}
 	return out, rows.Err()
 }
+
+// ListInboxItems is not implemented yet.
+func (x *txn) ListInboxItems(since int64) ([]bus.Item, error) { return nil, nil }

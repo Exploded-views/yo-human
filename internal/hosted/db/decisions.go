@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Exploded-views/yo-human/internal/hosted/bus"
 )
@@ -108,4 +109,9 @@ func (x *txn) Relays(itemID string) ([]bus.Relay, error) {
 		out = append(out, r)
 	}
 	return out, rows.Err()
+}
+
+// DecisionRecorded is not implemented yet.
+func (x *txn) DecisionRecorded(itemID string, kind bus.RecordKind, recorded time.Time) (bus.Record, bool, error) {
+	return bus.Record{}, false, nil
 }

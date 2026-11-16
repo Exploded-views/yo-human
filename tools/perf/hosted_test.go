@@ -91,7 +91,8 @@ func TestWakeBudgetIsUnderTheCeiling(t *testing.T) {
 	if !ok {
 		t.Fatal("no budget for hosted-answers-wake")
 	}
-	if bud.P95Ms < 1 || bud.P95Ms > 200 {
-		t.Errorf("hosted-answers-wake budget %dms: must be 1 to 200ms (the plan's ceiling)", bud.P95Ms)
+	// CI judges against the budget times the headroom, so that product is what the ceiling bounds.
+	if limit := float64(bud.P95Ms) * b.CIHeadroom; bud.P95Ms < 1 || limit > 200 {
+		t.Errorf("hosted-answers-wake budget %dms (%.0fms in CI): must be at least 1ms and at most 200ms in CI (the plan's ceiling)", bud.P95Ms, limit)
 	}
 }

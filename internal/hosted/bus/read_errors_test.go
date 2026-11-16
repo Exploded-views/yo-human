@@ -52,14 +52,14 @@ func TestReadStoreFailureIsInternal(t *testing.T) {
 		{"item: read", "ItemByID", 1, func(b *bus.Bus, id string) error { _, err := b.Item(ctx, duet, id); return err }},
 		{"item: messages", "Messages", 1, func(b *bus.Bus, id string) error { _, err := b.Item(ctx, duet, id); return err }},
 		{"item: decision", "Decision", 1, func(b *bus.Bus, id string) error { _, err := b.Item(ctx, duet, id); return err }},
-		{"ack: read", "ItemByID", 1, func(b *bus.Bus, id string) error { return b.Ack(ctx, duet, id) }},
-		{"ack: update", "UpdateItem", 1, func(b *bus.Bus, id string) error { return b.Ack(ctx, duet, id) }},
+		{"ack: read", "ItemByID", 1, func(b *bus.Bus, id string) error { return b.Ack(ctx, duet, id, 1<<40) }},
+		{"ack: update", "UpdateItem", 1, func(b *bus.Bus, id string) error { return b.Ack(ctx, duet, id, 1<<40) }},
 		{"answers: events", "EventsSince", 1, answers(0)},
 		{"answers: item of a post", "ItemByID", 1, answers(0)},
 		{"answers: item of a message", "ItemByID", 1, answers(1)},
 		{"answers: messages", "Messages", 1, answers(1)},
 		{"answers: item of a record", "ItemByID", 1, answers(2)},
-		{"answers: decision", "Decision", 1, answers(2)},
+		{"answers: decision", "DecisionRecorded", 1, answers(2)},
 		{"status push: store", "PutStatus", 1, func(b *bus.Bus, _ string) error { return b.PushStatus(ctx, cinode, validStatus("crew")) }},
 		{"status push: event", "AppendEvent", 1, func(b *bus.Bus, _ string) error { return b.PushStatus(ctx, cinode, validStatus("crew")) }},
 		{"status read", "Statuses", 1, func(b *bus.Bus, _ string) error { _, err := b.SwarmStatus(ctx, duet, ""); return err }},
@@ -226,7 +226,7 @@ func TestAnswersCancelledDuringTheRead(t *testing.T) {
 func TestStatusPushRejectsTooManyWaiting(t *testing.T) {
 	e := newEnv(t)
 	entries := strings.TrimSuffix(strings.Repeat(`"ob-1",`, 65), ",")
-	doc := `{"swarm":"crew","sessions":[],"waiting_on_human":[` + entries + `],"main_health":"green","spend":0,"ts":1}`
+	doc := `{"swarm":"crew","sessions":[],"waiting_on_human":[` + entries + `],"main_health":"ok","spend":0,"ts":1}`
 	err := e.b.PushStatus(context.Background(), cinode, json.RawMessage(doc))
 	if be := errWithCode(t, err, bus.CodeInvalid); be.What != "waiting_on_human" {
 		t.Errorf("What = %q", be.What)

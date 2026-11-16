@@ -17,6 +17,7 @@ type Summary struct {
 	Untrusted               bool
 	Kind                    Kind
 	Urgency                 Urgency
+	LastSeq                 int64
 }
 
 // Inbox is what Duet reads.
@@ -145,7 +146,7 @@ func (b *Bus) Item(ctx context.Context, p Principal, id string) (ItemView, error
 
 // Ack hides an item from the inbox until it has new activity: it sets AckedSeq to LastSeq.
 // Duet only.
-func (b *Bus) Ack(ctx context.Context, p Principal, id string) error {
+func (b *Bus) Ack(ctx context.Context, p Principal, id string, seenSeq int64) error {
 	if e := forbiddenUnlessDuet(p); e != nil {
 		return e
 	}

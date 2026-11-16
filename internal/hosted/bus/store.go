@@ -22,8 +22,19 @@ type Tx interface {
 	// ListThreadItems returns the open items Duet started (from_kind duet, addressed to a swarm)
 	// whose last_seq is above both since and acked_seq, in last_seq order. It reads only open items.
 	ListThreadItems(since int64) ([]Item, error)
+	// ListInboxItems returns the items addressed to the human, open or decided, whose last_seq is
+	// above both since and acked_seq, oldest first. (Task 7: a reply on a decided item is news.)
+	ListInboxItems(since int64) ([]Item, error)
 
 	Decision(itemID string, rev int) (Record, bool, error)
+	// DecisionRecorded returns the record of the given kind whose Recorded time equals recorded,
+	// for the item (the human's before an agent's, if both match).
+	//
+	// THE EVENT CONVENTION (binds every write path, Task 6 included): a write that stores an answer
+	// or approval appends its answer_recorded, approval_recorded or answer_superseded event in the
+	// same transaction with Event.Created equal to the record's Recorded. Answers finds the record an
+	// event wrote by that equality, because an event names no revision.
+	DecisionRecorded(itemID string, kind RecordKind, recorded time.Time) (Record, bool, error)
 	InsertDecision(Record) error
 
 	InsertRelay(Relay) error

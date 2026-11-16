@@ -337,3 +337,37 @@ func TestItemWithDecisionsCannotBeDeleted(t *testing.T) {
 		t.Fatal("an item with a decision was deleted")
 	}
 }
+
+func TestDecisionRecordedMatchesTheRecordByKindAndTime(t *testing.T) {
+	d, _ := openTemp(t)
+	insertItem(t, d, item("itm_1", "crew", "first"))
+	a := record(bus.RecordApproval, bus.ActorHuman, 1)
+	a.Recorded = t0.Add(time.Minute)
+	if err := insertRecord(d, a); err != nil {
+		t.Fatal(err)
+	}
+	it := item("itm_1", "crew", "first")
+	it.Revision = 2
+	tx(t, d, func(x bus.Tx) error { return x.UpdateItem(it) })
+	b := record(bus.RecordApproval, bus.ActorHuman, 2)
+	b.Recorded = t0.Add(2 * time.Minute)
+	if err := insertRecord(d, b); err != nil {
+		t.Fatal(err)
+	}
+	get := func(kind bus.RecordKind, at time.Time) (r bus.Record, ok bool) {
+		tx(t, d, func(x bus.Tx) (err error) { r, ok, err = x.DecisionRecorded("itm_1", kind, at); return })
+		return r, ok
+	}
+	if r, ok := get(bus.RecordApproval, a.Recorded); !ok || r.Revision != 1 {
+		t.Errorf("first approval: %+v, %v", r, ok)
+	}
+	if r, ok := get(bus.RecordApproval, b.Recorded); !ok || r.Revision != 2 {
+		t.Errorf("second approval: %+v, %v", r, ok)
+	}
+	if _, ok := get(bus.RecordAnswer, a.Recorded); ok {
+		t.Error("an answer was found for an approval's time")
+	}
+	if _, ok := get(bus.RecordApproval, a.Recorded.Add(time.Nanosecond)); ok {
+		t.Error("a record was found for another time")
+	}
+}

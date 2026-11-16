@@ -292,3 +292,37 @@ func TestAnswersLongPollSeesACommitBetweenReadAndWait(t *testing.T) {
 		t.Errorf("saw %d of 30 posts", got)
 	}
 }
+
+// afterFirstTx runs a hook once, right after the first transaction it runs has ended.
+type afterFirstTx struct {
+	bus.Store
+	first bool
+	hook  func()
+}
+
+func (a *afterFirstTx) Tx(ctx context.Context, fn func(bus.Tx) error) error {
+	err := a.Store.Tx(ctx, fn)
+	if a.first {
+		a.first = false
+		a.hook()
+	}
+	return err
+}
+
+// A commit that lands after the waiter's read and before it waits must still wake it: it
+// subscribes before it reads. The post here runs synchronously between the two.
+func TestAnswersLongPollCommitAfterReadBeforeWait(t *testing.T) {
+	e := newEnv(t)
+	w := &afterFirstTx{Store: e.d, first: true}
+	b := bus.New(w, e.now, e.l)
+	w.hook = func() {
+		if _, err := b.Post(context.Background(), duet, toCrew("late")); err != nil {
+			t.Error(err)
+		}
+	}
+	newFakeTimer(t, b)
+	r := within(t, poll(b, context.Background(), cinode, 0, 20*time.Second), 5*time.Second, "waiter")
+	if r.err != nil || len(r.u.Events) != 1 || r.u.Events[0].Handle != "late" {
+		t.Errorf("result = %+v, want the post that landed between the read and the wait", r)
+	}
+}

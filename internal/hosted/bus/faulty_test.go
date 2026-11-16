@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Exploded-views/yo-human/internal/hosted/bus"
 )
@@ -179,4 +180,18 @@ func (t *faultyTx) Statuses(swarm string) ([]bus.StatusDoc, error) {
 		return nil, err
 	}
 	return t.Tx.Statuses(swarm)
+}
+
+func (t *faultyTx) DecisionRecorded(id string, kind bus.RecordKind, at time.Time) (bus.Record, bool, error) {
+	if err := t.hit("DecisionRecorded"); err != nil {
+		return bus.Record{}, false, err
+	}
+	return t.Tx.DecisionRecorded(id, kind, at)
+}
+
+func (t *faultyTx) ListInboxItems(since int64) ([]bus.Item, error) {
+	if err := t.hit("ListInboxItems"); err != nil {
+		return nil, err
+	}
+	return t.Tx.ListInboxItems(since)
 }

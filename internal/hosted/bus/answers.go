@@ -9,6 +9,7 @@ import (
 const (
 	MaxWait    = 25 * time.Second
 	MaxUpdates = 100
+	MaxScan    = 1000 // events scanned per call, skipped ones included
 )
 
 // Update is one event as a node sees it. Revision is the item's current revision: an event
