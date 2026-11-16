@@ -110,6 +110,11 @@ func parseStatus(doc json.RawMessage) (statusDoc, *Error) {
 	if err := json.Unmarshal(doc, &keys); err != nil || keys == nil {
 		return bad()
 	}
+	// Exactly the six keys, spelled so: encoding/json matches struct fields case-insensitively, so a
+	// second spelling would reach the struct while spendText read the first.
+	if len(keys) != len(statusKeys) {
+		return bad()
+	}
 	for _, k := range statusKeys {
 		if _, ok := keys[k]; !ok {
 			return bad()
