@@ -15,6 +15,7 @@ func (b *Bus) Reply(ctx context.Context, p Principal, threadID, body string, sev
 		return Message{}, e
 	}
 	var m Message
+	var swarm string
 	err := b.s.Tx(ctx, func(x Tx) error {
 		it, found, err := x.ItemByID(threadID)
 		if err != nil {
@@ -26,12 +27,14 @@ func (b *Bus) Reply(ctx context.Context, p Principal, threadID, body string, sev
 		if err := b.checkSwarmMessage(p, it.Swarm, body); err != nil {
 			return err
 		}
+		swarm = it.Swarm
 		m, err = b.appendMessage(x, it, p, body, sev, urg)
 		return err
 	})
 	if err != nil {
 		return Message{}, mapStoreErr(err)
 	}
+	b.committed(swarm)
 	return m, nil
 }
 

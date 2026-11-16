@@ -9,7 +9,8 @@
     "notify-held-local": { "p95_ms": 30 },
     "notify-suppressed": { "p95_ms": 30 },
     "hosted-post": { "p95_ms": 10 },
-    "hosted-revise": { "p95_ms": 10 }
+    "hosted-revise": { "p95_ms": 10 },
+    "hosted-answers-wake": { "p95_ms": 10 }
   },
   "binary_bytes": 10000000
 }

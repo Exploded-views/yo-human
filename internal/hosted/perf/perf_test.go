@@ -187,3 +187,43 @@ func TestUsageNamesWake(t *testing.T) {
 		t.Errorf("code %d, stderr %q: the usage line must name wake", code, errOut.String())
 	}
 }
+
+// A waiter that returns something other than the one post it was waiting for measures the wrong
+// operation, and a post that fails is an error, not a sample.
+func TestWakeOnceRefusesTheWrongOperation(t *testing.T) {
+	b, closeDB, err := seeded(filepath.Join(t.TempDir(), "data"), 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeDB()
+	// From cursor 0 the waiter reads the seed's events as well, so it returns more than the post.
+	if _, _, err := wakeOnce(context.Background(), b, 0, "wake-x"); err == nil || !strings.Contains(err.Error(), "wrong operation") {
+		t.Errorf("err = %v, want the wrong-operation refusal", err)
+	}
+	cursor, err := drain(context.Background(), b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := wakeOnce(context.Background(), b, cursor, strings.Repeat("h", bus.MaxHandle+1)); err == nil {
+		t.Error("a post the bus refuses was timed")
+	}
+}
+
+func TestDrainReturnsTheEndOfTheSwarm(t *testing.T) {
+	b, closeDB, err := seeded(filepath.Join(t.TempDir(), "data"), 250)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeDB()
+	cursor, err := drain(context.Background(), b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err := b.Answers(context.Background(), perfNode, cursor, 0)
+	if err != nil || len(u.Events) != 0 {
+		t.Errorf("after drain: %+v, %v", u, err)
+	}
+	if cursor == 0 {
+		t.Error("drain stayed at 0 over a seeded swarm")
+	}
+}

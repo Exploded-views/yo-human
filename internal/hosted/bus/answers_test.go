@@ -222,6 +222,42 @@ func TestAnswersLongPollWakesOnCommit(t *testing.T) {
 	}
 }
 
+// A page holds at most 100 updates even when events the node caused sit between them: the cap
+// counts what is returned, and Next stops at the 100th update, not at the end of what was read.
+func TestAnswersPageCapCountsUpdatesNotEvents(t *testing.T) {
+	e := newEnv(t)
+	for i := range 50 {
+		e.post(t, cinode, draft(bus.KindQuestion, "own"+string(rune('a'+i%26))+string(rune('a'+i/26)), bus.UrgencyDigest))
+	}
+	for i := range 150 {
+		e.post(t, duet, toCrew("h"+string(rune('a'+i/26))+string(rune('a'+i%26))))
+	}
+	first := e.answers(t, cinode, 0, 0)
+	if len(first.Events) != 100 {
+		t.Fatalf("first page has %d updates, want 100", len(first.Events))
+	}
+	second := e.answers(t, cinode, first.Next, 0)
+	if len(second.Events) != 50 || second.Events[0].Seq <= first.Events[99].Seq {
+		t.Errorf("second page has %d updates starting at %d, want the 50 after %d", len(second.Events), second.Events[0].Seq, first.Events[99].Seq)
+	}
+}
+
+func TestAnswersLongPollWakesOnReply(t *testing.T) {
+	e := newEnv(t)
+	other := e.post(t, node("ci-2", "crew"), draft(bus.KindQuestion, "q", bus.UrgencyDigest)).Item
+	next := e.answers(t, cinode, 0, 0).Next
+	ft := newFakeTimer(t, e.b)
+	res := poll(e.b, context.Background(), cinode, next, 20*time.Second)
+	ft.waitStarted(t)
+	if _, err := e.b.Reply(context.Background(), duet, other.ID, "an answer", bus.SeverityNormal, bus.UrgencyDigest); err != nil {
+		t.Fatal(err)
+	}
+	r := within(t, res, 5*time.Second, "waiter")
+	if r.err != nil || len(r.u.Events) != 1 || r.u.Events[0].Message == nil || r.u.Events[0].Message.Body != "an answer" {
+		t.Errorf("result = %+v", r)
+	}
+}
+
 // countingStore counts EventsSince calls, one per read a waiter makes.
 type countingStore struct {
 	bus.Store

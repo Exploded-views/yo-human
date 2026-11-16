@@ -53,6 +53,7 @@ var scenarios = []Scenario{
 	{Name: "notify-suppressed", Argv: notifyArgv("--level", "note", "--title", "perf", "--dedup-key", perfKey), Setup: suppressedFixture, Env: fixtureEnv},
 	{Name: "hosted-post", Sample: hostedSample("post")},
 	{Name: "hosted-revise", Sample: hostedSample("revise")},
+	{Name: "hosted-answers-wake", Sample: hostedSample("wake")},
 }
 
 // remeasurePause is how long a run waits, once, before it re-measures the scenarios that missed.

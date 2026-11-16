@@ -149,5 +149,21 @@ func (x *txn) ListOpenForHuman() ([]bus.Item, error) {
 }
 
 // ListThreadItems returns the open items Duet started, addressed to a swarm, with activity after
-// both since and the ack mark, in last_seq order. (not implemented)
-func (x *txn) ListThreadItems(since int64) ([]bus.Item, error) { return nil, nil }
+// both since and the ack mark, in last_seq order. It reads the open-item index, not the whole table.
+func (x *txn) ListThreadItems(since int64) ([]bus.Item, error) {
+	rows, err := x.tx.QueryContext(x.ctx, "SELECT "+itemCols+` FROM items WHERE state = 'open' AND to_target <> 'human'
+		AND from_kind = 'duet' AND last_seq > ? AND last_seq > acked_seq ORDER BY last_seq, id`, since)
+	if err != nil {
+		return nil, fmt.Errorf("db: list thread items: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	var out []bus.Item
+	for rows.Next() {
+		it, err := scanItem(rows)
+		if err != nil {
+			return nil, fmt.Errorf("db: list thread items: %w", err)
+		}
+		out = append(out, it)
+	}
+	return out, rows.Err()
+}

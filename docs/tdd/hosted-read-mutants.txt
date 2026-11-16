@@ -1,0 +1,229 @@
+# H1 Task 7 mutants, 2026-11-16T02:23:54Z: each applied by hand to a scratch copy of the tree, one at a time, then reverted; the package's tests run after each (baseline passes). Never committed.
+# The plan's three: 1 (Next off by one), 2 (ack sets AckedSeq to now), 3 (Duet-post filter removed). The rest cover the wake, the long-poll, the interrupt lane, visibility, the status document and the thread query.
+# Not killable: PushStatus without its committed call (no observable difference: status_pushed events are never returned, so a woken waiter only loops back to waiting).
+# Not covered by a mutant: subscribing after the read instead of before (a race window, exercised only by TestAnswersLongPollSeesACommitBetweenReadAndWait under -race -count=20).
+
+mutant 1: Next off by one
+  KILLED by TestAnswersSinceCursorNoLoss, TestAnswersReturnsWhatOthersDid, TestAnswersPageCapCountsUpdatesNotEvents, TestAnswersLongPollWakesOnReply
+      answers_test.go:255: waiter: no return within 5s
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	6.036s
+  FAIL
+
+mutant 2: ack sets AckedSeq to now
+  KILLED by TestAckHidesUntilNewActivity, TestInboxThreadsListDuetItemsWithNewMessagesFromOthers
+      read_test.go:159: back = [], want [itm_du37sjo7h6hzv37o2riwxklmo4]
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.061s
+  FAIL
+
+mutant 3: Duet-post filter removed
+  KILLED by TestInboxGroupsAndExcludesDuetPosts
+      read_test.go:41: question group = [itm_6glntuw53fp5n47nq2nrmjbh6x itm_655xm6s6getopyyqpl5e26cuef itm_vuxiza7rwkeodn77hxapdi2xzp], want [itm_6glntuw53fp5n47nq2nrmjbh6x itm_vuxiza7rwkeodn77hxapdi2xzp]
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.063s
+  FAIL
+
+mutant 4: wake fires every swarm
+  KILLED by TestAnswersLongPollIgnoresOtherSwarms
+      answers_test.go:300: reads after another swarm's commit = 2, want 1: the waiter must not wake
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.124s
+  FAIL
+
+mutant 5: Post does not wake
+  KILLED by TestAnswersLongPollWakesOnCommit, TestAnswersLongPollKeepsWaitingThroughOwnEvents
+      answers_test.go:339: waiter: no return within 5s
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	13.062s
+  FAIL
+
+mutant 6: Reply does not wake
+  KILLED by TestAnswersLongPollWakesOnReply
+      answers_test.go:255: waiter: no return within 5s
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	6.048s
+  FAIL
+
+mutant 7: wait cap removed
+  KILLED by TestAnswersWaitIsCappedAt25s
+      answers_test.go:350: timer = 1h0m0s, want 25s
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.185s
+  FAIL
+
+mutant 8: own item events not excluded
+  KILLED by TestAnswersExcludesWhatTheNodeCaused, TestAnswersPageCapCountsUpdatesNotEvents, TestAnswersLongPollTimesOutEmpty, TestAnswersLongPollKeepsWaitingThroughOwnEvents
+      answers_test.go:335: returned on the node's own event: {u:{Events:[{Seq:1 Type:item_posted ItemID:itm_pkl7na6ayvtdycbhsprwymbgak Handle:mine Revision:1 Record:<nil> Message:<nil>}] Next:1} err:<nil>}
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	6.255s
+  FAIL
+
+mutant 9: own messages not excluded
+  KILLED by TestAnswersExcludesWhatTheNodeCaused
+      answers_test.go:83: the node's own events came back: [{Seq:2 Type:message_added ItemID:itm_fvnl3uh2cs3xdut5r56hbxmmxs Handle:q Revision:2 Record:<nil> Message:0x5e6eb8930d80}]
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.362s
+  FAIL
+
+mutant 10: answers read every swarm
+  KILLED by TestAnswersScopedToSwarm
+      answers_test.go:135: crew sees [{Seq:1 Type:item_posted ItemID:itm_rsajw3lzkzi4pgrr4frfkgcsue Handle:for-crew Revision:1 Record:<nil> Message:<nil>} {Seq:2 Type:item_posted ItemID:itm_nwpg7uro2pmuck2lsah72ugkab Handle:for-client Revision:1 Record:<nil> Message:<nil>}]
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.223s
+  FAIL
+
+mutant 11: Next not moved past skipped events
+  KILLED by TestAnswersExcludesWhatTheNodeCaused, TestAnswersLongPollTimesOutEmpty
+      answers_test.go:323: Next = 0: it must pass the node's own event
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.343s
+  FAIL
+
+mutant 12: timeout returns since instead of the cursor
+  KILLED by TestAnswersLongPollTimesOutEmpty
+      answers_test.go:323: Next = 0: it must pass the node's own event
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.423s
+  FAIL
+
+mutant 13: page cap not enforced across db pages
+  KILLED by TestAnswersPageCapCountsUpdatesNotEvents
+      answers_test.go:237: first page has 150 updates, want 100
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.100s
+  FAIL
+
+mutant 14: interrupt item also in its kind group
+  KILLED by TestInboxInterruptLaneIsItsOwnGroup
+      read_test.go:70: questions = [itm_x4m3wgw73qbzxcue4vfwjso5d5], want []
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.235s
+  FAIL
+
+mutant 15: acked items still in the inbox
+  KILLED by TestAckHidesUntilNewActivity
+      read_test.go:120: after ack = [itm_fcxyiueof447yxw7tyjxwsnrkc], want []
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.118s
+  FAIL
+
+mutant 16: since ignored by the inbox
+  KILLED by TestInboxSinceAndNext
+      read_test.go:97: only the new one = [itm_lspuvzfohbt4b3eoel26nnvdwa itm_jywyd25bxpfbitf7fhhp3fjres], want [itm_jywyd25bxpfbitf7fhhp3fjres]
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.683s
+  FAIL
+
+mutant 17: Item skips the visibility check
+  KILLED by TestItemCrossSwarmIsIndistinguishableFromMissing
+      read_test.go:215: err = <nil> (<nil>), want a *bus.Error with code not_found
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.074s
+  FAIL
+
+mutant 18: Item shows revision 1 decision
+  KILLED by TestItemShowsOnlyTheCurrentRevisionsDecision
+      read_test.go:206: after a revision the answer to revision 1 must not show: &{ItemID:itm_ogyupkqpiduvdlr5zm7lmq5of6 Revision:1 Kind:answer Decision: ActorKind:agent Text:yes Source:duet By:owner SourceMessage: HumanTS:2026-10-28 09:30:02 +0000 UTC Recorded:2026-10-28 09:30:02 +0000 UTC}, revision 2
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.036s
+  FAIL
+
+mutant 19: status push accepts another swarm
+  KILLED by TestStatusPushRejectsOtherSwarm
+      status_test.go:86: err = <nil> (<nil>), want a *bus.Error with code invalid
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.036s
+  FAIL
+
+mutant 20: status wall check off
+  KILLED by TestWalledStatusDocIdsOnly
+      status_test.go:163: err = <nil> (<nil>), want a *bus.Error with code invalid
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.051s
+  FAIL
+
+mutant 21: status accepts unknown fields
+  KILLED by TestStatusPushRejectsBadShape
+      status_test.go:120: err = <nil> (<nil>), want a *bus.Error with code invalid
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.002s
+  FAIL
+
+mutant 22: threads include Duet-last threads
+  KILLED by TestInboxThreadsListDuetItemsWithNewMessagesFromOthers
+      read_test.go:159: back = [itm_kgld6q7iglu7xoinmpnatpqohz itm_rmbtbz5yvcwe3smy2qeiu7kzbp], want [itm_rmbtbz5yvcwe3smy2qeiu7kzbp]
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.022s
+  FAIL
+
+mutant 23: Inbox open to nodes
+  KILLED by TestInboxForbiddenForNode, TestStatusReadsAreDuetOnly
+      status_test.go:70: err = <nil> (<nil>), want a *bus.Error with code forbidden
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.014s
+  FAIL
+
+mutant 24: answers open to Duet
+  KILLED by TestAnswersOnlyForNodes, TestStatusPushOnlyForNodes
+      status_test.go:79: code = invalid (swarm), want forbidden
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.029s
+  FAIL
+
+mutant 25: timer not stopped
+  KILLED by TestAnswersLongPollWakesOnCommit, TestAnswersLongPollCancelReturnsAtOnce
+      answers_test.go:391: 0 timers stopped, want 20
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.035s
+  FAIL
+
+mutant 26: cancel not honoured while waiting
+  KILLED by TestAnswersLongPollCancelReturnsAtOnce
+      answers_test.go:385: cancelled waiter: no return within 5s
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	6.013s
+  FAIL
+
+mutant 27: zero wait blocks
+  KILLED by TestAnswersZeroOrNegativeWaitDoesNotBlock
+      answers_test.go:360: no-wait read: no return within 5s
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	6.034s
+  FAIL
+
+mutant 28: thread ack mark ignored (db)
+  KILLED by TestListThreadItems
+          detail. RequiredAction:Say yes. Repo:owner/repo Ref:42 BaseRef:main Target:repo PinnedCommit:abc123 PinnedTree:def456 Action:none Link:https://example.org/pr/42 RiskFlags:[touches-auth large-diff] Untrusted:true Urgency:page} ID:itm_b Swarm:crew From:ci-1 FromKind:duet Revision:1 State:open ContentHash:hash-1 LastSeq:9 AckedSeq:2 Created:2026-10-28 09:30:15.123456 +0000 UTC Updated:2026-10-28 09:31:15.123456 +0000 UTC}]
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.373s
+  FAIL
+
+mutant 29: thread since ignored (db)
+  KILLED by TestListThreadItems
+          detail. RequiredAction:Say yes. Repo:owner/repo Ref:42 BaseRef:main Target:repo PinnedCommit:abc123 PinnedTree:def456 Action:none Link:https://example.org/pr/42 RiskFlags:[touches-auth large-diff] Untrusted:true Urgency:page} ID:itm_b Swarm:crew From:ci-1 FromKind:duet Revision:1 State:open ContentHash:hash-1 LastSeq:9 AckedSeq:2 Created:2026-10-28 09:30:15.123456 +0000 UTC Updated:2026-10-28 09:31:15.123456 +0000 UTC}]
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.372s
+  FAIL
+
+mutant 30: thread query takes decided items (db)
+  KILLED by TestListThreadItemsSkipsDecidedItems
+          detail. RequiredAction:Say yes. Repo:owner/repo Ref:42 BaseRef:main Target:repo PinnedCommit:abc123 PinnedTree:def456 Action:none Link:https://example.org/pr/42 RiskFlags:[touches-auth large-diff] Untrusted:true Urgency:page} ID:itm_a Swarm:crew From:ci-1 FromKind:duet Revision:1 State:decided ContentHash:hash-1 LastSeq:5 AckedSeq:0 Created:2026-10-28 09:30:15.123456 +0000 UTC Updated:2026-10-28 09:31:15.123456 +0000 UTC}]
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.378s
+  FAIL
+
+mutant 31: status missing field accepted
+  KILLED by TestStatusPushRejectsBadShape
+      status_test.go:120: err = <nil> (<nil>), want a *bus.Error with code invalid
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.007s
+  FAIL
+
+mutant 32: credential check accepts a reserved swarm
+  KILLED by TestAnswersOnlyForNodes, TestStatusPushOnlyForNodes
+      status_test.go:79: code = invalid (swarm), want forbidden
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.026s
+  FAIL
+
