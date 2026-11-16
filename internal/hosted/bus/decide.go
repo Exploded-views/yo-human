@@ -23,12 +23,13 @@ type AnswerInput struct {
 
 // ApprovalInput is an approval's decision as a caller submits it. Source is accepted and ignored.
 type ApprovalInput struct {
-	ItemID   string
-	Revision int
-	Decision Decision
-	Text     string
-	HumanTS  time.Time
-	Source   string
+	ItemID        string
+	Revision      int
+	Decision      Decision
+	Text          string
+	HumanTS       time.Time
+	Source        string
+	SourceMessage string
 }
 
 // RelayInput is the owner's words as a node or Duet passes them on. Source is accepted and ignored.
@@ -69,7 +70,7 @@ func (b *Bus) RecordApproval(ctx context.Context, p Principal, in ApprovalInput)
 			"approvals resolve only through the approval page with your passkey; Duet sends you the link")
 	}
 	return b.decide(ctx, p, decideReq{itemID: in.ItemID, rev: in.Revision, kind: RecordApproval, decision: in.Decision,
-		text: in.Text, humanTS: in.HumanTS})
+		text: in.Text, sourceMessage: in.SourceMessage, humanTS: in.HumanTS})
 }
 
 func forbidden(valid, fix string) *Error {
