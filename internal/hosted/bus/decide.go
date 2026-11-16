@@ -83,11 +83,12 @@ func forbidden(valid, fix string) *Error {
 // once more, so rule 6 settles it from what that writer stored.
 func (b *Bus) decide(ctx context.Context, p Principal, rq decideReq) (Record, error) {
 	var rec Record
+	var swarm string
 	var err error
 	for range 2 {
 		err = b.s.Tx(ctx, func(x Tx) error {
 			var err error
-			rec, err = b.decideTx(x, p, rq)
+			rec, swarm, err = b.decideTx(x, p, rq)
 			return err
 		})
 		if !errors.Is(err, ErrConflict) {
@@ -97,21 +98,25 @@ func (b *Bus) decide(ctx context.Context, p Principal, rq decideReq) (Record, er
 	if err != nil {
 		return Record{}, mapStoreErr(err)
 	}
+	b.committed(swarm) // after the commit, so a woken Answers call reads the new events
 	return rec, nil
 }
 
-func (b *Bus) decideTx(x Tx, p Principal, rq decideReq) (Record, error) {
+// decideTx runs the rules and stores the record; it also returns the item's swarm, which the
+// caller wakes once the transaction has committed.
+func (b *Bus) decideTx(x Tx, p Principal, rq decideReq) (Record, string, error) {
 	it, err := b.decidable(x, p, rq)
 	if err != nil {
-		return Record{}, err
+		return Record{}, "", err
 	}
 	if err := b.checkDecisionInput(it, rq); err != nil {
-		return Record{}, err
+		return Record{}, "", err
 	}
 	rec := Record{ItemID: it.ID, Revision: it.Revision, Kind: rq.kind, Decision: rq.decision, ActorKind: p.ActorKind(),
 		Text: rq.text, Source: recordSource(p), By: p.Name, SourceMessage: rq.sourceMessage,
 		HumanTS: rq.humanTS.UTC(), Recorded: b.now().UTC()}
-	return b.settle(x, it, rec)
+	rec, err = b.settle(x, it, rec)
+	return rec, it.Swarm, err
 }
 
 // recordSource is the credential's own name for itself, never the caller's.

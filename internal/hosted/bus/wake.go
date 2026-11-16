@@ -40,8 +40,9 @@ func (w *wakes) fire(swarm string) {
 
 // committed is the one call every write path makes after a transaction that appended an event
 // to swarm's log has committed (not before: a waiter would then read the old state). Post,
-// Reply and PushStatus call it; so must any new write that appends an event, such as an
-// answer, an approval or a relay. A write that appends no event does not call it.
+// Reply, PushStatus, RecordAnswer and RecordApproval call it; so must any new write that appends
+// an event Answers returns. A relay appends words_relayed, which Answers never returns, and a
+// write that appends no event does not call it either.
 func (b *Bus) committed(swarm string) { b.wakes.fire(swarm) }
 
 // timerFunc starts a timer: the channel fires once after d, and stop releases it early.
