@@ -51,3 +51,98 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.215s
 FAIL
 exit=1
+
+## 3. web: the two listeners, host routing and the middleware (against stubs: every route answers 500, New and NewHTTPServer are placeholders)
+$ go test ./internal/hosted/web -count=1
+--- FAIL: TestApproveListenerServesOnlyApprovalHost (0.01s)
+    listeners_test.go:69: the MCP host, POST /mcp: 500, want 404
+    listeners_test.go:69: the MCP host, oauth callback: 500, want 404
+    listeners_test.go:69: the MCP host, resource metadata: 500, want 404
+    listeners_test.go:69: the MCP host, an approval path: 500, want 404
+    listeners_test.go:69: the approval host, POST /mcp: 500, want 404
+    listeners_test.go:69: the approval host, oauth callback: 500, want 404
+    listeners_test.go:69: an unknown host, /approve/x: 500, want 404
+    listeners_test.go:69: the approval host, an unrouted path: 500, want 404
+    listeners_test.go:69: the approval host, /approve/x: 500, want 200
+    listeners_test.go:69: the approval host, /passkey/enrol: 500, want 200
+    listeners_test.go:69: the approval host, /healthz: 500, want 200
+    listeners_test.go:69: any host, /healthz: 500, want 200
+--- FAIL: TestMCPListenerRefusesApprovalRoutes (0.01s)
+    listeners_test.go:82: host bus.example.com, /approve/x: 500, want 404
+    listeners_test.go:82: host bus.example.com, /approve: 500, want 404
+    listeners_test.go:82: host bus.example.com, /approve/static/app.js: 500, want 404
+    listeners_test.go:82: host bus.example.com, /approvexyz: 500, want 404
+    listeners_test.go:82: host bus.example.com, /passkey/enrol: 500, want 404
+    listeners_test.go:82: host bus.example.com, /passkey/: 500, want 404
+    listeners_test.go:82: host bus.example.com, /passkey/static/app.js: 500, want 404
+    listeners_test.go:82: host approve.example.com, /approve/x: 500, want 404
+    listeners_test.go:82: host approve.example.com, /approve: 500, want 404
+    listeners_test.go:82: host approve.example.com, /approve/static/app.js: 500, want 404
+    listeners_test.go:82: host approve.example.com, /approvexyz: 500, want 404
+    listeners_test.go:82: host approve.example.com, /passkey/enrol: 500, want 404
+    listeners_test.go:82: host approve.example.com, /passkey/: 500, want 404
+    listeners_test.go:82: host approve.example.com, /passkey/static/app.js: 500, want 404
+    listeners_test.go:82: host other.example.net, /approve/x: 500, want 404
+    listeners_test.go:82: host other.example.net, /approve: 500, want 404
+    listeners_test.go:82: host other.example.net, /approve/static/app.js: 500, want 404
+    listeners_test.go:82: host other.example.net, /approvexyz: 500, want 404
+    listeners_test.go:82: host other.example.net, /passkey/enrol: 500, want 404
+    listeners_test.go:82: host other.example.net, /passkey/: 500, want 404
+    listeners_test.go:82: host other.example.net, /passkey/static/app.js: 500, want 404
+    listeners_test.go:87: POST /mcp under the approval host: 500, want 404
+    listeners_test.go:90: POST /mcp under the MCP host: 500, want 401 from the bearer check
+    listeners_test.go:97: /oauth/github/callback under the MCP host: 500 "stub\n", want the extra handler
+    listeners_test.go:97: /.well-known/oauth-protected-resource/mcp under the MCP host: 500 "stub\n", want the extra handler
+--- FAIL: TestHostNormalisation (0.01s)
+    listeners_test.go:105: the plain host: 500, want 401
+--- FAIL: TestHostNormalisationIgnoresForwardedHeaders (0.01s)
+    listeners_test.go:135: MCP, Host approve.example.com with X-Forwarded-Host naming the MCP host: 500, want 404
+    listeners_test.go:139: Approve, Host bus.example.com with X-Forwarded-Host naming the approval host: 500, want 404
+    listeners_test.go:135: MCP, Host approve.example.com with Forwarded naming the MCP host: 500, want 404
+    listeners_test.go:139: Approve, Host bus.example.com with Forwarded naming the approval host: 500, want 404
+    listeners_test.go:135: MCP, Host approve.example.com with Fly-Forwarded-Host naming the MCP host: 500, want 404
+    listeners_test.go:139: Approve, Host bus.example.com with Fly-Forwarded-Host naming the approval host: 500, want 404
+    listeners_test.go:146: MCP, Host "bus.example.com:8443": 500, want 404
+    listeners_test.go:146: MCP, Host "bus.example.com:81": 500, want 404
+    listeners_test.go:150: Approve, the right host on another port: 500, want 404
+--- FAIL: TestHostNormalisationRawRequests (0.01s)
+    listeners_test.go:169: MCP, HTTP/1.0 with no Host: 500, want 404
+    listeners_test.go:169: Approve, HTTP/1.0 with no Host: 500, want 404
+    listeners_test.go:169: MCP, an absolute-form URI naming the approval host: 500, want 404
+    listeners_test.go:169: Approve, an absolute-form URI naming the MCP host: 500, want 404
+--- FAIL: TestHostNormalisationHTTP2 (0.02s)
+    listeners_test.go:208: MCP, :authority = the approval host: HTTP/2 status 500, want HTTP/2 status 404
+    listeners_test.go:208: MCP, :authority = the MCP host: HTTP/2 status 500, want HTTP/2 status 401
+    listeners_test.go:208: Approve, :authority = the MCP host: HTTP/2 status 500, want HTTP/2 status 404
+    listeners_test.go:208: Approve, :authority = the approval host: HTTP/2 status 500, want HTTP/2 status 200
+--- FAIL: TestNotFoundIdentical (0.01s)
+    listeners_test.go:241: /mcp: 500, want 404
+--- FAIL: TestNoTokenGets401WithResourceMetadata (0.01s)
+    middleware_test.go:19: a malformed token: 500, WWW-Authenticate "", want 401 and "Bearer resource_metadata=\"https://bus.example.com/.well-known/oauth-protected-resource/mcp\""
+    middleware_test.go:19: an unknown token: 500, WWW-Authenticate "", want 401 and "Bearer resource_metadata=\"https://bus.example.com/.well-known/oauth-protected-resource/mcp\""
+    middleware_test.go:19: no token: 500, WWW-Authenticate "", want 401 and "Bearer resource_metadata=\"https://bus.example.com/.well-known/oauth-protected-resource/mcp\""
+--- FAIL: TestDeskStarterGets403OnMCP (0.01s)
+    middleware_test.go:33: a desk starter: 500, want 403
+    middleware_test.go:37: Duet: 500, want 200
+    middleware_test.go:37: a node: 500, want 200
+--- FAIL: TestBadOriginGets403 (0.01s)
+    middleware_test.go:62: Origin "https://evil.example", token true: 500, want 403
+    middleware_test.go:62: Origin "https://evil.example", token false: 500, want 403
+    middleware_test.go:62: Origin "https://claude.ai/", token true: 500, want 403
+    middleware_test.go:62: Origin "http://claude.ai", token true: 500, want 403
+    middleware_test.go:62: Origin "https://CLAUDE.ai", token true: 500, want 403
+    middleware_test.go:62: Origin "https://claude.ai", token true: 500, want 200
+    middleware_test.go:62: Origin "", token true: 500, want 200
+    middleware_test.go:62: Origin "https://claude.ai", token false: 500, want 401
+--- FAIL: TestBodyOver64KiBRejected (0.01s)
+    middleware_test.go:72: a body over 64 KiB: 500, want 413
+--- FAIL: TestHTTPServerTimeouts (0.00s)
+    middleware_test.go:89: server setting 1 = 1s, want 5s
+    middleware_test.go:89: server setting 2 = 0s, want 10s
+    middleware_test.go:89: server setting 3 = 0s, want 35s
+    middleware_test.go:89: server setting 4 = 0s, want 1m0s
+    middleware_test.go:89: server setting 5 = 0, want 16384
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	0.312s
+FAIL
+exit=1
