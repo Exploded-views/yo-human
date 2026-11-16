@@ -86,7 +86,7 @@ Solid lines are M1; dashed lines come later. Re-paging until someone acknowledge
 
 ## Build from source
 
-You need Go 1.27 (CI pins 1.27.3), `make` and `git`, on Linux or macOS.
+You need Go 1.27 (CI pins 1.27.4), `make` and `git`, on Linux or macOS.
 
 ```sh
 git clone https://github.com/Exploded-views/yo-human.git
