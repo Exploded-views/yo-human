@@ -217,3 +217,14 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	10.264s
 FAIL
 exit=1
+
+## 7. review round 1, bus: RelayApproval on an already-decided revision, and its wake (against the code of f9d14d7)
+$ go test ./internal/hosted/bus -run "TestRelayApprovalAfter|TestRelayApprovalWakes" -count=1
+--- FAIL: TestRelayApprovalAfterPasskeyDecisionIsAlreadyDecided (0.01s)
+    relay_approval_decided_test.go:25: err = <nil> (<nil>), want a *bus.Error with code already_decided
+--- FAIL: TestRelayApprovalWakesWaiters (0.21s)
+    relay_approval_decided_test.go:54: RelayApproval did not wake the waiter: it never read again
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.461s
+FAIL
+exit=1
