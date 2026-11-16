@@ -1,8 +1,8 @@
 # Hosted mode: the MCP contract (result version `v: 1`)
 
-Status: draft for Task 9 of the H1 plan (`docs/plans/2026-10-27-hosted-h1.md`). Under constitution Principle VI, the MCP server is the contract in hosted mode: tool names, input and output schemas and error codes are versioned by `"v"` in every result. A breaking change needs a new `v`, a CHANGELOG entry and the skill update in the same PR.
+Status: draft for Task 9 of the H1 plan (`docs/plans/2026-10-27-hosted-h1.md`). Under constitution (v1.2.0) Principle VI, the MCP server is the contract in hosted mode: tool names, input and output schemas and error codes are versioned by `"v"` in every result. A breaking change needs a new `v`, a CHANGELOG entry and the skill update in the same PR.
 
-Sources, in order of authority: the constitution; `docs/specs/2026-10-27-hosted-mode-design.md`; the H1 plan (Task 9, with Tasks 5 to 8, 10, 10e, 10f and 11b where they define a tool, an argument or an error code); the bus code (`internal/hosted/bus`). Where the spec and the code disagree, this document follows the code. A section marked "(lands with Task N)" is what the plan pins; the code for it is not merged yet. Anything no source pins is under "Open questions". Wire names keep the old `swarm` spelling until a rename PR (spec, "Words used here").
+Sources, in order of authority: the constitution (v1.2.0); `docs/specs/2026-10-27-hosted-mode-design.md`; the H1 plan (Task 9, with Tasks 5 to 8, 10, 10e, 10f and 11b where they define a tool, an argument or an error code); the bus code (`internal/hosted/bus`). Where the spec and the code disagree, this document follows the code, and the spec is aligned in a later follow-up. A section marked "(lands with Task N)" is what the plan pins; the code for it is not merged yet. Anything no source pins is under "Open questions". Wire names keep the old `swarm` spelling until a rename PR (spec, "Words used here").
 
 ## Two listeners
 
@@ -63,8 +63,8 @@ The transport is Streamable HTTP, stateless, with JSON responses. Middleware, ou
 | - | - | - | - |
 | Duet | OAuth access token (`yha_`), always `actor_kind: agent` | `inbox_for_claude`, `item`, `swarm_status`, `record_answer`, `record_approval`, `post`, `ack` | 7 |
 | Node | node token (`yhn_`), scoped to its swarm | `post`, `answers`, `item`, `reply`, `status_push`, `escalate`, `relay` | 7 |
-| Executor | `yhx_`, not swarm-scoped | `approval_status`, `report_executed` | 2 (a third, `request_change`, lands with Task 10f) |
-| Desk, only under desk Option A | desk token (`yhh_`) | `item`, `record_answer` | 2 |
+| Executor | `yhx_`, not swarm-scoped | `approval_status`, `report_executed` | 2 in H1 (owner's call; `request_change` lands with Task 10f if approved) |
+| Desk, only under desk Option A (owner's call; default not shipped under Option B) | desk token (`yhh_`) | `item`, `record_answer` | 2 |
 
 No tool resolves an approval. An approval resolves only on the owner's own passkey assertion at the approval page, on the Approve listener. A desk credential never resolves one either. `actor_kind` comes from the credential alone and has no input field anywhere.
 
@@ -74,16 +74,16 @@ Seven tools. Duet sees every swarm. An approval or answer from Duet is recorded 
 
 | Tool | Inputs | Output | Errors |
 | - | - | - | - |
-| `inbox_for_claude` (read) | `since?` (a cursor) | items needing the owner, grouped by kind (`approval`, `question`, `blocker`, `finished`, `failed`), an `Interrupt` group (items posted `interrupt-when-good`, which the bus never pushes), threads with new replies, and `next`. Each summary has id, handle, from, swarm, severity, title, summary, revision, created, link, `untrusted`, kind, urgency. Items Duet posted are left out. A `notice` has no group | `internal` |
+| `inbox_for_claude` (read; the Interrupt group and the extra summary fields land with Task 7) | `since?` (a cursor) | items needing the owner, grouped by kind (`approval`, `question`, `blocker`, `finished`, `failed`), an `Interrupt` group (items posted `interrupt-when-good`, which the bus never pushes), threads with new replies, and `next`. Each summary has id, handle, from, swarm, severity, title, summary, revision, created, link, `untrusted`, kind, urgency. Items Duet posted are left out. A `notice` has no group | `internal` |
 | `item` (read) | `id` | the item in full, its thread, and the decision for its current revision (if any) | `not_found`, `internal` |
 | `swarm_status` (read) | `swarm?` (empty means every swarm) | the latest status document per swarm | `invalid` (bad swarm name), `internal` |
 | `record_answer` | `item_id`, `revision`, `text`, `human_ts`, `source_message?` | the stored answer record | `forbidden`, `not_found`, `not_approvable`, `excluded_action`, `stale_revision`, `invalid`, `already_decided` (with `winner`), `internal` |
 | `record_approval` | see below | `{"v": 1, "resolved": false, "approval_url": "<YH_APPROVE_ORIGIN>/approve/<item>?rev=<n>"}` | `forbidden`, `not_found`, `stale_revision`, `excluded_action`, `standing`, `invalid`, `internal` |
 | `post` | the item fields below; with `thread_id`, a reply | `{item, outcome}` with `outcome` one of `created`, `revised`, `unchanged`; with `thread_id`, the stored message | `invalid`, `forbidden`, `excluded_action`, `standing`, `not_approvable`, `not_found` (reply), `internal` |
-| `ack` | `item_id`, plus the last seq Duet saw (name open) | nothing | `forbidden`, `not_found`, `internal` |
+| `ack` | `item_id`, plus the last seq Duet saw (the code's `seenSeq`; the wire name is set in Task 9) | nothing | `forbidden`, `not_found`, `internal` |
 
 - **`record_answer`** is for questions and blockers only. The first answer for an item's revision wins; an identical retry returns the stored record, and anything else gets `already_decided` with the winner. On an item in a walled swarm, `text` must be exactly `go sl:<n>` or `hold sl:<n>`. `source_message` is an id token of 1 to 64 characters (`A-Z a-z 0-9 . _ : -`). There is no `source` or `actor_kind` argument; the source is `duet`, taken from the credential.
-- **`record_approval` never resolves.** It stores the owner's quoted words as an `agent` relay (a `words_relayed` event, nothing else), then returns `resolved: false` and `approval_url`. The tool's description tells Duet to send that link to the owner, who signs on the page. Nothing Duet sends changes the item's state: the item stays open, and a later passkey approval still succeeds. An action the policy excludes gets `excluded_action` (checked, as the plan's `TestToolErrorShape` requires); one on a `standing` target gets `standing`.
+- **`record_approval` never resolves.** It stores the owner's quoted words as an `agent` relay (a `words_relayed` event, nothing else), then returns `resolved: false` and `approval_url`. The tool's description tells Duet to send that link to the owner, who signs on the page. Nothing Duet sends changes the item's state: the item stays open, and a later passkey approval still succeeds. Like `record_answer`, it takes the `revision` the owner saw (`stale_revision` otherwise). Task 9's code adds what it needs for the item-kind check (`not_approvable`), the excluded-action check (`excluded_action`, as `TestToolErrorShape` requires) and the `decision` argument, since the bus's `RelayWords` does none of these today (lands with Task 9; no field names are fixed here). A `standing` target gets `standing`.
 - **`post`** takes the item fields (the bus `Draft`): `kind`, `severity`, `to`, `handle`, `title`, `summary`, `detail`, `required_action`, `repo`, `ref`, `base_ref`, `target`, `pinned_commit`, `pinned_tree`, `action`, `link`, `risk_flags`, `untrusted` and `urgency`. `urgency` is required and never defaulted; Duet may use `page` or `digest`, and `interrupt-when-good` is `invalid` from Duet. `to` is `human` (stored in the reserved swarm `duet`) or a crew's swarm name, never `duet` or `human` as a swarm. `from` and the swarm come from the credential. With `thread_id`, the call replies in that thread (`body`, `severity`, `urgency`; exact argument set open). Into a walled swarm, only `go sl:<n>` or `hold sl:<n>` is accepted.
 - **Excluded on purpose:** merge, deploy, delete, spend, secrets access, and any tool that runs something on a machine. A `secrets` or `money` action is `excluded_action` on every post, whoever posts.
 
@@ -130,13 +130,15 @@ For completeness, the Approve listener serves the approval page and the passkey 
 
 ## Open questions
 
-1. **Names the plan leaves open.** The exact JSON spelling of every result field and of the argument names for `post` (which `Draft` fields each principal's schema exposes, and whether a node may omit `to`), `reply`, `escalate`, `approval_status` and `report_executed`. The tables above use the bus type's field names; Task 9's `results.go` and `tools_*.go` fix them, and this document is updated in the same PR.
-2. **Schema and unknown-tool errors.** The plan says a bad input is "rejected by the input schema" and an unlisted tool is "unknown tool". Whether those arrive as JSON-RPC errors or as `isError` results in the `v: 1` error shape is not pinned.
-3. **`record_approval`'s arguments.** The spec gives `item_id`, `decision`, `text`, `human_ts`; the code's `RelayInput` has `revision` and no `decision`. Does the tool keep `decision` (and where is it stored), and where does the `rev` in `approval_url` come from: the caller's `revision` or the item's current one? Which function refuses an item that is not an approval, or an excluded action, before the relay is stored (`RelayWords` does not check them)?
-4. **`ack`'s second argument.** The code's `Ack` needs the last seq Duet saw (`seenSeq`); the spec and plan show `ack(item_id)` only.
-5. **Reader cursors.** The spec (amending Task 7) gives `answers(since?, ack?)` with a per-reader cursor kept on the bus, keyed to the node or Duet's identity plus a reader name. The code has `since` and `wait` only. Whether H1 ships the position `ack` and a reader name, and their argument names, is open. Until then the cursor is the caller's `next`, and `answers` is `readOnlyHint: true`.
-6. **The `done` evidence and the verbs.** The spec has `post` verbs (notify, ask, done, escalate) and an evidence rule on `finished` (a URL with a three-digit status code, or a merge sha, else a named error code). The plan's `Draft` has neither, and no error code for it exists.
-7. **The status feed's shape.** The spec grows `PushStatus` to hand entries with five states (adding `waiting-on-prompt`), `last_checkin`, `stale`, `closure` and `eta`. The code and plan keep four states and `sessions[]{name, state}`. Which ships in H1 is open.
-8. **`request_change`.** Its arguments and errors come with Task 10f.
+Each gap has a proposed default, which stands unless the owner rules otherwise.
+
+1. **Per-reader answers cursor.** The spec has `answers(since?, ack?)` with a cursor kept on the bus per reader name. Default: not in H1, since `since` plus the caller passing back `next` cover it; `answers` stays `readOnlyHint: true`.
+2. **The richer status feed.** The spec has hands with 5 states, `last_checkin`, `stale`, `closure` and `eta`. Default: H1 ships the 4-state `sessions[]{name, state}` document as built; the richer feed comes later.
+3. **Evidence on `finished`.** The spec requires a URL with a status code, or a sha, and the `done` verb. Default: no evidence field in H1; `report_executed`'s `result_ref` covers executions.
+4. **Inbox Interrupt group and extra summary fields** (kind, urgency, last seq). Default: documented as built, landing with Task 7.
+5. **Executor tools, 2 or 3.** Owner's call. Default: 2 in H1; `request_change` (arguments and errors) lands with Task 10f if approved.
+6. **Desk tools.** Owner's call. Default: not shipped under Option B, which the owner chose.
+7. **Names the plan leaves open.** The JSON spelling of result fields and of argument names for `post` (which `Draft` fields each principal exposes, and whether a node may omit `to`), `reply`, `escalate`, `approval_status`, `report_executed`, `ack`'s seq and `record_approval`'s `decision`. Task 9's code fixes them, and this document is updated in the same PR.
+8. **Schema and unknown-tool errors.** Whether they arrive as JSON-RPC errors or as `isError` results in the `v: 1` shape is not pinned.
 9. **`human_ts` and times.** The wire format is not pinned (RFC 3339 is assumed, as the asks delta says for `deadline`).
-10. **Paging.** `inbox_for_claude` has no stated size cap or page size, and `swarm_status` none either.
+10. **Paging.** `inbox_for_claude` and `swarm_status` have no stated size cap or page size.
