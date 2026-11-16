@@ -25,6 +25,14 @@ func TestNodeRoundTrip(t *testing.T) {
 	}
 }
 
+func TestStarterHashIsNoNode(t *testing.T) {
+	d, _ := openTemp(t)
+	must(t, d.InsertStarter("mac", "yhd_abcd", "hash-s", t0, 2))
+	if _, ok, _ := d.NodeByHash("hash-s"); ok {
+		t.Fatal("a starter hash found as a node")
+	}
+}
+
 func TestNodeHashIsNoOtherKind(t *testing.T) {
 	d, _ := openTemp(t)
 	if err := d.InsertNode("ci-1", "crew", "yhn_abcd", "hash-n", t0); err != nil {

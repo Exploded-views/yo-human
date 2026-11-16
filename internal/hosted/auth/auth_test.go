@@ -276,3 +276,19 @@ func TestVerifyStoreErrorIsNotInvalidAndLeaksNothing(t *testing.T) {
 		}
 	}
 }
+
+// A refresh or executor token is no bearer credential for Verify, even if a live row exists
+// under its hash: the store is chosen by the prefix, and these two have none.
+func TestRefreshAndExecutorTokensNeverVerify(t *testing.T) {
+	for _, p := range []string{"yhr_", "yhx_"} {
+		s, now := newStore(), t0
+		token, h := mint(t, p)
+		s.nodes[h] = bus.Node{Name: "ci-1", Swarm: "crew"}
+		s.starters[h] = bus.Starter{Name: "mac"}
+		s.desks[h] = bus.Desk{Created: t0}
+		s.access[h] = bus.Access{Expires: t0.Add(time.Hour)}
+		if _, _, err := verifier(s, &now).Verify(context.Background(), token); !errors.Is(err, auth.ErrInvalid) {
+			t.Fatalf("%s: err=%v, want ErrInvalid", p, err)
+		}
+	}
+}
