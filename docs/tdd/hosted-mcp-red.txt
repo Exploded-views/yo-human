@@ -228,3 +228,25 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.461s
 FAIL
 exit=1
+
+## 8. review round 1, app: the tool deadline ceiling and DNS-name link hosts (against the code of f9d14d7)
+$ go test ./internal/hosted/app -run "TestConfigToolDeadline|TestConfigLinkHostsAre" -count=1
+--- FAIL: TestConfigToolDeadlineCeiling (0.00s)
+    config_review_test.go:19: YH_TOOL_DEADLINE="10001ms": err = <nil>, want it refused, naming the variable only
+    config_review_test.go:19: YH_TOOL_DEADLINE="11s": err = <nil>, want it refused, naming the variable only
+    config_review_test.go:19: YH_TOOL_DEADLINE="35s": err = <nil>, want it refused, naming the variable only
+    config_review_test.go:19: YH_TOOL_DEADLINE="1m": err = <nil>, want it refused, naming the variable only
+--- FAIL: TestConfigLinkHostsAreDNSNames (0.00s)
+    config_review_test.go:36: YH_LINK_HOSTS="10.0.0.1" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="127.0.0.1" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="1.2.3.4" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="999.999.999.999" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="0x7f.1" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="1234" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="aaaaaaaaaaaaaaaaaaaa" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="aaaaaaaaaaaaaaaaaaaa" accepted, want it refused
+    config_review_test.go:40: an IP literal origin was accepted
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.182s
+FAIL
+exit=1
