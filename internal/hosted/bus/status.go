@@ -23,6 +23,7 @@ var (
 	tokenRE      = regexp.MustCompile(`^[a-z0-9-]{1,40}$`)
 	mainHealth   = []string{"ok", "degraded", "failing", "unknown"}
 	spendRE      = regexp.MustCompile(`^(0|[1-9][0-9]{0,6})(\.[0-9]{1,2})?$`)
+	sessionIDRE  = regexp.MustCompile(`^s[1-9][0-9]{0,5}$`)
 	handleIDRE   = regexp.MustCompile(`^ob-[1-9][0-9]{0,5}$`)
 )
 
@@ -151,8 +152,8 @@ func (d statusDoc) checkLists(walled bool) *Error {
 		if !slices.Contains(sessionState, s.State) {
 			return invalid("sessions.state", "working, blocked, idle or done")
 		}
-		if !statusText(s.Name, walled, tokenRE) {
-			return invalid("sessions.name", statusTextRule(walled, "a name of 1 to 40 characters from a-z, 0-9 and -"))
+		if !statusText(s.Name, walled, sessionIDRE) {
+			return invalid("sessions.name", statusTextRule(walled, "an id of the form s<n>, n from 1 to 999999"))
 		}
 	}
 	for _, w := range d.WaitingOnHuman {
