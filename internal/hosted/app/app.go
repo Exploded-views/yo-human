@@ -14,6 +14,11 @@ import (
 const (
 	ExitOK    = 0
 	ExitUsage = 64
+	// ExitFailed is a refusal: the command was understood and would not run (a name in use, the
+	// starter cap, no such token, no database).
+	ExitFailed = 69
+	// ExitStore is a database that would not open or answer.
+	ExitStore = 74
 )
 
 const usage = "usage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"

@@ -1,0 +1,110 @@
+$ go test ./internal/hosted/auth ./internal/hosted/db ./internal/hosted/app
+# against stubs: Mint, Hash and Verify return errors or empty values, the db token methods return an error, there is no migration 0003, LoadConfig and NormaliseHost are stubs, token and check fall to the unknown-command usage
+--- FAIL: TestMintShapeAndHash (0.00s)
+    auth_test.go:80: Mint("yhn_"): stub
+--- FAIL: TestMintAllPrefixes (0.00s)
+    auth_test.go:97: Mint("yhn_"): stub
+--- FAIL: TestHashKnownVector (0.00s)
+    auth_test.go:115: Hash(abc) = 
+--- FAIL: TestVerifyNode (0.00s)
+    auth_test.go:121: Mint("yhn_"): stub
+--- FAIL: TestVerifyTouchesNodeAtMostOncePerMinute (0.00s)
+    auth_test.go:131: Mint("yhn_"): stub
+--- FAIL: TestVerifyTouchFailureDoesNotFailAuth (0.00s)
+    auth_test.go:156: Mint("yhn_"): stub
+--- FAIL: TestDeskTokenTTLAndScope (0.00s)
+    auth_test.go:170: Mint("yhh_"): stub
+--- FAIL: TestDeskStarterVerifiesToDeskStartOnly (0.00s)
+    auth_test.go:206: Mint("yhd_"): stub
+--- FAIL: TestVerifyAccess (0.00s)
+    auth_test.go:221: Mint("yha_"): stub
+--- FAIL: TestVerifyRevokedAndUnknownLookAlike (0.00s)
+    auth_test.go:241: Mint("yhn_"): stub
+--- FAIL: TestVerifyStoreErrorIsNotInvalidAndLeaksNothing (0.00s)
+    auth_test.go:270: Mint("yhn_"): stub
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/auth	0.141s
+--- FAIL: TestOpenMigratesAndReopens (0.01s)
+    db_test.go:40: user_version = 2, want 3
+--- FAIL: TestCheckReportsIntegrity (0.00s)
+    db_test.go:164: db: count tokens: SQL logic error: no such table: tokens (1)
+--- FAIL: TestNodeRoundTrip (0.00s)
+    tokens_test.go:16: stub
+--- FAIL: TestNodeHashIsNoOtherKind (0.00s)
+    tokens_test.go:31: stub
+--- FAIL: TestTouchNode (0.00s)
+    tokens_test.go:47: stub
+--- FAIL: TestLiveNamesAreUnique (0.00s)
+    tokens_test.go:61: stub
+--- FAIL: TestRevoke (0.00s)
+    tokens_test.go:87: unknown name: ok=false err=stub
+--- FAIL: TestStarterCapAndDeskAll (0.00s)
+    tokens_test.go:113: starter 0: stub
+--- FAIL: TestStarterCapIgnoresNodesAndRevoked (0.00s)
+    tokens_test.go:128: stub
+--- FAIL: TestRevokeDeskRevokesStartersAndDeskTokens (0.00s)
+    tokens_test.go:183: stub
+--- FAIL: TestRevokeDuetWithNoAccessStore (0.00s)
+    tokens_test.go:210: RevokeDuet = 0, stub
+--- FAIL: TestListTokensHoldsNoHash (0.00s)
+    tokens_test.go:222: rows=[] err=stub
+--- FAIL: TestDeskRoundTrip (0.00s)
+    tokens_test.go:243: stub
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.382s
+--- FAIL: TestCheckReportsIntegrityAndCounts (0.00s)
+    check_cmd_test.go:11: [token create --name ci-1 --swarm crew]: code=64 err="yo-human-hosted: unknown command \"token\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestCheckRefusesAMissingDatabaseAndCreatesNothing (0.00s)
+    check_cmd_test.go:29: [check]: code=64 out="" err="yo-human-hosted: unknown command \"check\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestCheckReportsDamage (0.00s)
+    check_cmd_test.go:48: [token create --name ci-1 --swarm crew]: code=64 err="yo-human-hosted: unknown command \"token\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestConfigMissingRequired (0.00s)
+    config_test.go:41: without YH_OWNER_GITHUB_ID: err=stub, want it named
+--- FAIL: TestConfigDefaults (0.00s)
+    config_test.go:78: stub
+--- FAIL: TestConfigBarkHasNoDefault (0.00s)
+    config_test.go:99: stub
+--- FAIL: TestConfigOverrides (0.00s)
+    config_test.go:107: stub
+--- FAIL: TestConfigRefusesBadValues (0.00s)
+    config_test.go:160: a non-duration: err=stub, want YH_NUDGE_WINDOW named
+--- FAIL: TestConfigRefusesPublicMCPListen (0.00s)
+    config_test.go:173: YH_LISTEN_MCP=":8081": err=stub, want it refused and named
+--- FAIL: TestConfigRefusesSamePort (0.00s)
+    config_test.go:187: [127.0.0.1:8080 :8080]: err=stub, want both variables named
+--- FAIL: TestConfigRefusesSameHost (0.00s)
+    config_test.go:203: {public:https://bus.example.org approve:https://bus.example.org}: err=stub, want both variables named
+--- FAIL: TestNormaliseHost (0.00s)
+    config_test.go:218: NormaliseHost("[::1]:443") = "[::1]:443", want "[::1]"
+--- FAIL: TestConfigNeverPrintsSecrets (0.00s)
+    config_test.go:226: stub
+--- FAIL: TestTokenCreatePrintsOnlyToken (0.00s)
+    token_cmd_test.go:71: code=64 err="yo-human-hosted: unknown command \"token\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestTokenIsNeverStored (0.00s)
+    token_cmd_test.go:87: [token create --name ci-1 --swarm crew]: code=64 err="yo-human-hosted: unknown command \"token\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestTokenListShowsOnlyThePrefix (0.00s)
+    token_cmd_test.go:97: [token create --name ci-1 --swarm crew]: code=64 err="yo-human-hosted: unknown command \"token\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestTokenListShape (0.00s)
+    token_cmd_test.go:113: [token create --name ci-1 --swarm crew]: code=64 err="yo-human-hosted: unknown command \"token\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestTokenHelpExitsZero (0.00s)
+    token_cmd_test.go:175: code=64 out=""
+--- FAIL: TestTokenCreateRefusesDuplicateName (0.00s)
+    token_cmd_test.go:181: [token create --name ci-1 --swarm crew]: code=64 err="yo-human-hosted: unknown command \"token\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestDeskStarterScopeAndCap (0.00s)
+    token_cmd_test.go:190: [token create-desk-starter --name mac]: code=64 err="yo-human-hosted: unknown command \"token\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestDeskAllRevokesStarters (0.00s)
+    token_cmd_test.go:209: [token create-desk-starter --name mac]: code=64 err="yo-human-hosted: unknown command \"token\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestNodeTokenNeverStartsDesk (0.00s)
+    token_cmd_test.go:224: [token create --name ci-1 --swarm crew]: code=64 err="yo-human-hosted: unknown command \"token\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestRevokedDeskTokenInvalid (0.00s)
+    token_cmd_test.go:232: [token create --name ci-1 --swarm crew]: code=64 err="yo-human-hosted: unknown command \"token\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestTokenRevoke (0.00s)
+    token_cmd_test.go:258: [token create --name ci-1 --swarm crew]: code=64 err="yo-human-hosted: unknown command \"token\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+--- FAIL: TestAdminDatabasePath (0.00s)
+    token_cmd_test.go:286: code=64
+--- FAIL: TestAdminStoreFailureExitsStore (0.00s)
+    token_cmd_test.go:317: code=64 out="" err="yo-human-hosted: unknown command \"token\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.173s
+FAIL
+exit=1
