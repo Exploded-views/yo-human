@@ -142,6 +142,10 @@ internal/hosted/db/casenotify|hosted-db-imports|x.go|M/internal/hosted/notify|ho
 internal/hosted/db/caseweb|hosted-db-imports|x.go|M/internal/hosted/web|hosted db imports web
 internal/hosted/db/casestore|hosted-db-imports|x.go|M/internal/store|hosted db imports the CLI store
 internal/hosted/bus/casesqlite|hosted-imports|x.go|modernc.org/sqlite|hosted bus imports the SQLite driver
+internal/hosted/auth/casehttp|internal-no-network|x.go|net/http|hosted auth imports net/http
+internal/hosted/auth/casestore|hosted-imports|x.go|M/internal/store|hosted auth imports the CLI store
+internal/hosted/auth/casesqlite|hosted-imports|x.go|modernc.org/sqlite|hosted auth imports the SQLite driver
+internal/hosted/auth/caseok|clean|x.go|crypto/rand crypto/sha256 M/internal/hosted/bus M/internal/hosted/db|hosted auth imports crypto, bus and db
 internal/hosted/web/casesqlite|hosted-imports|x.go|modernc.org/sqlite|hosted web imports the SQLite driver
 internal/core/casesqlite|core-imports|x.go|modernc.org/sqlite|core imports the SQLite driver
 internal/hosted/notify/casehttp|internal-no-network|x.go|net/http|hosted notify imports net/http

@@ -148,6 +148,7 @@ func TestConfigRefusesBadValues(t *testing.T) {
 		{"an owner id of zero", "YH_OWNER_GITHUB_ID", "0"},
 		{"a relative public url", "YH_PUBLIC_URL", "bus.example.org"},
 		{"a public url with a path", "YH_PUBLIC_URL", "https://bus.example.org/x"},
+		{"an unparsable public url", "YH_PUBLIC_URL", "https://bus%zz.example.org"},
 		{"a non-http public url", "YH_PUBLIC_URL", "ftp://bus.example.org"},
 		{"an approve origin with a path", "YH_APPROVE_ORIGIN", "https://approve.example.org/x"},
 		{"a bare approve origin", "YH_APPROVE_ORIGIN", "approve.example.org"},
