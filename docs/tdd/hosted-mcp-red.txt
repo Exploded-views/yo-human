@@ -166,3 +166,43 @@ internal/hosted/web/casestore/x.go:4:2: import 'github.com/Exploded-views/yo-hum
 lint_rules_test: a case failed
 make: *** [lint-rules-test] Error 1
 exit=1
+
+## 5. web: the Duet and node tool sets, with no tools registered (the servers are empty, so every call is an unknown tool and every list is empty)
+$ go test ./internal/hosted/web -count=1
+--- FAIL: TestNodeWriteTools (0.01s)
+    tools_agent_test.go:17: post: calling "tools/call": sending "tools/call": unknown tool "post": rejected by transport: Bad Request
+--- FAIL: TestNodeReadTools (0.01s)
+    tools_agent_test.go:43: record_answer: calling "tools/call": sending "tools/call": unknown tool "record_answer": rejected by transport: Bad Request
+--- FAIL: TestAnswersWaitSecondsRange (0.01s)
+    tools_agent_test.go:58: answers: protocol error calling "tools/call": sending "tools/call": unknown tool "answers": rejected by transport: Bad Request, want a tool error invalid
+--- FAIL: TestAnswersLongPollWakes (0.31s)
+    tools_agent_test.go:86: record_answer: calling "tools/call": sending "tools/call": unknown tool "record_answer": rejected by transport: Bad Request
+--- FAIL: TestAnswersWaitIsNotCutByToolDeadline (0.01s)
+    tools_agent_test.go:104: answers: calling "tools/call": sending "tools/call": unknown tool "answers": rejected by transport: Bad Request
+--- FAIL: TestDeadlineBoundsToolCall (0.01s)
+    tools_agent_test.go:134: the call did not return a result: calling "tools/call": sending "tools/call": unknown tool "item": rejected by transport: Bad Request (after 622.541µs)
+--- FAIL: TestDuetRecordApprovalReturnsLinkNeverResolves (0.01s)
+    tools_duet_test.go:16: record_approval: calling "tools/call": sending "tools/call": unknown tool "record_approval": rejected by transport: Bad Request
+--- FAIL: TestToolErrorShape (0.01s)
+    tools_duet_test.go:61: record_approval: protocol error calling "tools/call": sending "tools/call": unknown tool "record_approval": rejected by transport: Bad Request, want a tool error excluded_action
+--- FAIL: TestDuetReadTools (0.01s)
+    tools_duet_test.go:75: status_push: calling "tools/call": sending "tools/call": unknown tool "status_push": rejected by transport: Bad Request
+--- FAIL: TestDuetWriteTools (0.01s)
+    tools_duet_test.go:106: record_answer: calling "tools/call": sending "tools/call": unknown tool "record_answer": rejected by transport: Bad Request
+--- FAIL: TestToolsRefuseMissingRequiredArguments (0.01s)
+    tools_duet_test.go:156: item: protocol error calling "tools/call": sending "tools/call": unknown tool "item": rejected by transport: Bad Request, want a tool error invalid
+--- FAIL: TestToolListsPerPrincipal (0.03s)
+    --- FAIL: TestToolListsPerPrincipal/Duet_sees_exactly_the_seven_Duet_tools (0.00s)
+        tools_lists_test.go:22: Duet tools = [], want [ack inbox_for_claude item post record_answer record_approval swarm_status]
+    --- FAIL: TestToolListsPerPrincipal/a_node_sees_exactly_its_six_tools_(escalate_lands_with_Task_11b) (0.00s)
+        tools_lists_test.go:26: node tools = [], want [answers item post relay reply status_push]
+--- FAIL: TestForgedActorKindRejected (0.01s)
+    tools_lists_test.go:73: relay: protocol error calling "tools/call": sending "tools/call": unknown tool "relay": rejected by transport: Bad Request, want a tool error invalid
+--- FAIL: TestNoFileHandOff (0.01s)
+    tools_lists_test.go:112: post: protocol error calling "tools/call": sending "tools/call": unknown tool "post": rejected by transport: Bad Request, want a tool error invalid
+--- FAIL: TestToolSchemasHaveNoFileFields (0.01s)
+    tools_lists_test.go:144: tools checked = 0, want 13
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	0.953s
+FAIL
+exit=1

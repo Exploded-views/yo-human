@@ -29,6 +29,7 @@ type tokenStore struct {
 	nodes    map[string]bus.Node
 	access   map[string]bus.Access
 	starters map[string]bus.Starter
+	desks    map[string]bus.Desk
 }
 
 func (s *tokenStore) NodeByHash(h string) (bus.Node, bool, error) {
@@ -39,7 +40,10 @@ func (s *tokenStore) AccessByHash(h string) (bus.Access, bool, error) {
 	a, ok := s.access[h]
 	return a, ok, nil
 }
-func (s *tokenStore) DeskByHash(string) (bus.Desk, bool, error) { return bus.Desk{}, false, nil }
+func (s *tokenStore) DeskByHash(h string) (bus.Desk, bool, error) {
+	d, ok := s.desks[h]
+	return d, ok, nil
+}
 func (s *tokenStore) StarterByHash(h string) (bus.Starter, bool, error) {
 	st, ok := s.starters[h]
 	return st, ok, nil
@@ -48,13 +52,13 @@ func (s *tokenStore) TouchNode(string, time.Time) error { return nil }
 
 // harness is a bus over a real database, its verifier, the handlers and fake credentials.
 type harness struct {
-	t                          *testing.T
-	d                          *db.DB
-	b                          *bus.Bus
-	h                          web.Handlers
-	cfg                        web.Config
-	node, other, duet, starter string // tokens: a node of swarm crew, a node of swarm other, Duet, a desk starter
-	extraHits                  int
+	t                                *testing.T
+	d                                *db.DB
+	b                                *bus.Bus
+	h                                web.Handlers
+	cfg                              web.Config
+	node, other, duet, starter, desk string // tokens: a node of swarm crew, a node of swarm other, Duet, a desk starter, a desk token
+	extraHits                        int
 }
 
 func mint(t *testing.T, prefix string) (token, hash string) {
@@ -68,6 +72,13 @@ func mint(t *testing.T, prefix string) (token, hash string) {
 
 func newHarness(t *testing.T, edit ...func(*web.Config)) *harness {
 	t.Helper()
+	return newHarnessOver(t, func(d *db.DB) bus.Store { return d }, edit...)
+}
+
+// newHarnessOver is newHarness with the bus reaching the database through wrap, so a test can put
+// a store that fails or blocks between them.
+func newHarnessOver(t *testing.T, wrap func(*db.DB) bus.Store, edit ...func(*web.Config)) *harness {
+	t.Helper()
 	dir := filepath.Join(t.TempDir(), "data")
 	if err := os.Mkdir(dir, 0o700); err != nil {
 		t.Fatal(err)
@@ -80,11 +91,11 @@ func newHarness(t *testing.T, edit ...func(*web.Config)) *harness {
 	clock := time.Date(2026, 10, 28, 9, 30, 0, 0, time.UTC)
 	n := 0
 	now := func() time.Time { n++; return clock.Add(time.Duration(n) * time.Second) }
-	b := bus.New(d, now, bus.Limits{LinkHosts: []string{"github.com"}, Policy: policy.Policy{V: 1, Rules: []policy.Rule{
+	b := bus.New(wrap(d), now, bus.Limits{LinkHosts: []string{"github.com"}, Policy: policy.Policy{V: 1, Rules: []policy.Rule{
 		{Action: "merge", Repo: "o/r", Ref: "main", Mode: policy.Passkey},
 	}}})
 	h := &harness{t: t, d: d, b: b}
-	ts := &tokenStore{nodes: map[string]bus.Node{}, access: map[string]bus.Access{}, starters: map[string]bus.Starter{}}
+	ts := &tokenStore{nodes: map[string]bus.Node{}, access: map[string]bus.Access{}, starters: map[string]bus.Starter{}, desks: map[string]bus.Desk{}}
 	var hash string
 	h.node, hash = mint(t, auth.PrefixNode)
 	ts.nodes[hash] = bus.Node{Name: "ci-1", Swarm: "crew"}
@@ -94,6 +105,8 @@ func newHarness(t *testing.T, edit ...func(*web.Config)) *harness {
 	ts.access[hash] = bus.Access{Expires: time.Now().Add(time.Hour)}
 	h.starter, hash = mint(t, auth.PrefixStarter)
 	ts.starters[hash] = bus.Starter{Name: "laptop"}
+	h.desk, hash = mint(t, auth.PrefixDesk)
+	ts.desks[hash] = bus.Desk{Created: time.Now()}
 	h.cfg = web.Config{PublicURL: "https://" + mcpHost, ApproveOrigin: "https://" + approveHost,
 		OriginAllow: []string{"https://claude.ai"}, ToolDeadline: 5 * time.Second,
 		Approve: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "approve-page") })}
