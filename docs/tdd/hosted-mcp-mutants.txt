@@ -747,3 +747,12 @@ TAIL:
     FAIL internal/hosted/bus/casemcp/x.go: hosted bus imports the MCP SDK (web only): want hosted-imports, got clean
     FAIL internal/hosted/oauth/casemcp/x.go: hosted oauth imports the MCP SDK (web only): want hosted-imports, got clean
 ----
+MUTANT: review round 2 D1: bareHost accepts a 0x-prefixed hex last label
+FILE: internal/hosted/app/config.go
+CHANGE: 'strings.Trim(last, "0123456789") != "" && !hexLabelRE.MatchString(last)' -> 'strings.Trim(last, "0123456789") != ""'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigLinkHostsAreDNSNames
+TAIL:
+    config_review_test.go:36: YH_LINK_HOSTS="0x7f000001" accepted, want it refused (and 0X7F, 0x, a.0x7f, a.0XaBc)
+----
