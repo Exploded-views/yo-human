@@ -146,3 +146,23 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	0.312s
 FAIL
 exit=1
+
+## 4. lint rules: the web package may import the MCP SDK (mcp and auth) and nothing else of it (probes against the unchanged .golangci.yml; repeated depguard lines dropped)
+$ make lint-rules-test
+sh scripts/lint_rules_test.sh
+FAIL internal/hosted/web/casesqlite/x.go: hosted web imports the SQLite driver: want hosted-web-imports, got hosted-imports
+internal/hosted/web/casesqlite/x.go:4:2: import 'modernc.org/sqlite' is not allowed from list 'hosted-imports' (depguard)
+FAIL internal/hosted/web/casemcp/x.go: hosted web imports the MCP SDK mcp and auth packages, bus, auth, hostname and version: want clean, got hosted-imports
+internal/hosted/web/casemcp/x.go:4:2: import 'github.com/modelcontextprotocol/go-sdk/mcp' is not allowed from list 'hosted-imports' (depguard)
+internal/hosted/web/casemcp/x.go:5:2: import 'github.com/modelcontextprotocol/go-sdk/auth' is not allowed from list 'hosted-imports' (depguard)
+FAIL internal/hosted/web/casejsonrpc/x.go: hosted web imports an SDK package that is not named (jsonrpc): want hosted-web-imports, got hosted-imports
+internal/hosted/web/casejsonrpc/x.go:4:2: import 'github.com/modelcontextprotocol/go-sdk/jsonrpc' is not allowed from list 'hosted-imports' (depguard)
+FAIL internal/hosted/web/caseoauthex/x.go: hosted web imports an SDK package that is not named (oauthex): want hosted-web-imports, got hosted-imports
+internal/hosted/web/caseoauthex/x.go:4:2: import 'github.com/modelcontextprotocol/go-sdk/oauthex' is not allowed from list 'hosted-imports' (depguard)
+FAIL internal/hosted/web/caseevil/x.go: hosted web imports an unreviewed module: want hosted-web-imports, got hosted-imports
+internal/hosted/web/caseevil/x.go:4:2: import 'example.com/evil' is not allowed from list 'hosted-imports' (depguard)
+FAIL internal/hosted/web/casestore/x.go: hosted web imports the CLI store: want hosted-web-imports, got hosted-imports
+internal/hosted/web/casestore/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/store' is not allowed from list 'hosted-imports' (depguard)
+lint_rules_test: a case failed
+make: *** [lint-rules-test] Error 1
+exit=1
