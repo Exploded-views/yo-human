@@ -30,6 +30,10 @@ var (
 	ErrNotFound      = errors.New("bus: not found")
 	ErrStaleRevision = errors.New("bus: revision is not the item's current revision")
 	ErrKindMismatch  = errors.New("bus: kind does not match the item's kind")
+	// ErrConflict is a write the database refused because a row already holds that key (a second
+	// decision for one item, revision and actor kind). A Store wraps it around its own error; the
+	// bus re-reads and settles the race by rule 6.
+	ErrConflict = errors.New("bus: a record for this key already exists")
 )
 
 // Outcome says what a Post did.

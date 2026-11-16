@@ -135,7 +135,7 @@ func TestExcludedActionNeverDecidable(t *testing.T) {
 		action bus.Action
 	}{{bus.KindQuestion, bus.ActionMoney}, {bus.KindApproval, bus.ActionSecrets}} {
 		d := askQuestion("raw")
-		d.Kind, d.Action = c.kind, c.action
+		d.Kind, d.Action, d.Handle = c.kind, c.action, "raw"+string(rune('a'+i))
 		it := bus.Item{Draft: d, ID: "itm_raw" + string(rune('a'+i)), Swarm: "crew", From: "ci-1", FromKind: bus.PrincipalNode, Revision: 1,
 			State: bus.StateOpen, ContentHash: "v1:x", Created: t0, Updated: t0}
 		if err := e.d.Tx(ctx, func(x bus.Tx) error { return x.InsertItem(it) }); err != nil {
@@ -360,3 +360,20 @@ func TestDecisionInputRules(t *testing.T) {
 }
 
 func reflectEqual(a, b any) bool { return reflect.DeepEqual(a, b) }
+
+// A question that carries a passkey-able action (the bus never posts one, so it is stored
+// directly) is still not an approval: the kind check, not the policy, refuses it.
+func TestApprovalOnQuestionWithActionIsNotApprovable(t *testing.T) {
+	e := newEnv(t)
+	d := askQuestion("qm")
+	d.Action, d.Repo, d.Ref, d.BaseRef, d.Target = bus.ActionMerge, "o/r", "7", "main", "o/r#7"
+	it := bus.Item{Draft: d, ID: "itm_rawq", Swarm: "crew", From: "ci-1", FromKind: bus.PrincipalNode, Revision: 1,
+		State: bus.StateOpen, ContentHash: "v1:x", Created: t0, Updated: t0}
+	if err := e.d.Tx(ctx, func(x bus.Tx) error { return x.InsertItem(it) }); err != nil {
+		t.Fatal(err)
+	}
+	s := e.snap(t, it.ID)
+	_, err := e.b.RecordApproval(ctx, passkey, approveIn(it))
+	wantCode(t, err, bus.CodeNotApprovable)
+	e.unchanged(t, "approval on a question", s)
+}

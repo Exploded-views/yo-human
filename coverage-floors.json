@@ -43,7 +43,7 @@
     "statements": 100.0
   },
   "github.com/Exploded-views/yo-human/internal/hosted/db": {
-    "statements": 81.9
+    "statements": 82.3
   },
   "github.com/Exploded-views/yo-human/internal/hosted/policy": {
     "statements": 100.0
@@ -52,7 +52,7 @@
     "statements": 100.0
   },
   "github.com/Exploded-views/yo-human/internal/repolint": {
-    "statements": 95.8
+    "statements": 96.7
   },
   "github.com/Exploded-views/yo-human/internal/secrets": {
     "statements": 93.1
