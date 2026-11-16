@@ -20,7 +20,6 @@ const (
 var (
 	statusKeys   = []string{"main_health", "sessions", "spend", "swarm", "ts", "waiting_on_human"}
 	sessionState = []string{"working", "blocked", "idle", "done"}
-	tokenRE      = regexp.MustCompile(`^[a-z0-9-]{1,40}$`)
 	mainHealth   = []string{"ok", "degraded", "failing", "unknown"}
 	spendRE      = regexp.MustCompile(`^(0|[1-9][0-9]{0,6})(\.[0-9]{1,2})?$`)
 	sessionIDRE  = regexp.MustCompile(`^s[1-9][0-9]{0,5}$`)
