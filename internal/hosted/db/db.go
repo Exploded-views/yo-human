@@ -161,8 +161,8 @@ var _ bus.Tx = (*txn)(nil)
 
 // Counts is what Check reports: SQLite's integrity verdict ("ok" when sound) and row counts.
 type Counts struct {
-	Integrity                                  string
-	Items, Decisions, Relays, Events, Messages int
+	Integrity                                          string
+	Items, Decisions, Relays, Events, Messages, Tokens int
 }
 
 // Check runs PRAGMA integrity_check and counts rows.
@@ -188,7 +188,7 @@ func (d *DB) Check(ctx context.Context) (Counts, error) {
 	if len(problems) != 1 || problems[0] != "ok" {
 		c.Integrity = fmt.Sprintf("%d problems reported", len(problems))
 	}
-	for table, dst := range map[string]*int{"items": &c.Items, "decisions": &c.Decisions, "relays": &c.Relays, "events": &c.Events, "messages": &c.Messages} {
+	for table, dst := range map[string]*int{"items": &c.Items, "decisions": &c.Decisions, "relays": &c.Relays, "events": &c.Events, "messages": &c.Messages, "tokens": &c.Tokens} {
 		if err := d.sql.QueryRowContext(ctx, "SELECT count(*) FROM "+table).Scan(dst); err != nil { //nolint:gosec // table is a literal from the map above
 			return c, fmt.Errorf("db: count %s: %w", table, err)
 		}

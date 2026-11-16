@@ -14,14 +14,18 @@ import (
 const (
 	ExitOK    = 0
 	ExitUsage = 64
+	// ExitFailed is a refusal: the command was understood and would not run (a name in use, the
+	// starter cap, no such token, no database).
+	ExitFailed = 69
+	// ExitStore is a database that would not open or answer.
+	ExitStore = 74
 )
 
-const usage = "usage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n"
+const usage = "usage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n  token    create, list and revoke node tokens and desk starters\n  check    check the database's integrity and count its rows\n"
 
 // Run executes yo-human-hosted with args (without the program name), reading configuration
 // through env, and returns the exit code.
 func Run(args []string, env func(string) string, stdout, stderr io.Writer) int {
-	_ = env // no subcommand reads configuration yet
 	if len(args) == 0 {
 		_, _ = fmt.Fprint(stderr, usage)
 		return ExitUsage
@@ -30,6 +34,10 @@ func Run(args []string, env func(string) string, stdout, stderr io.Writer) int {
 	case "version":
 		_, _ = fmt.Fprintf(stdout, "yo-human-hosted %s %s\n", version.Version, version.Commit)
 		return ExitOK
+	case "token":
+		return runToken(args[1:], env, stdout, stderr)
+	case "check":
+		return admin{name: "check", env: env, stdout: stdout, stderr: stderr}.check(args[1:])
 	default:
 		_, _ = fmt.Fprintf(stderr, "yo-human-hosted: unknown command %q\n\n%s", args[0], usage)
 		return ExitUsage

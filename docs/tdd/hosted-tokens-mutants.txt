@@ -1,0 +1,486 @@
+H1 Task 8 mutants, applied by hand one at a time to the committed code (1e77642) and reverted;
+each run is `go test <package>` and must fail. Baseline: all three packages pass.
+The first three are the plan's; the rest cover the credential kinds, the TTL, the starter cap,
+the revoke paths, secrets in output and the config's listen and host rules.
+A mutant that does not compile is not a kill and is not recorded.
+
+MUTANT: plan: Verify accepts a revoked node token
+FILE: internal/hosted/auth/verify.go
+CHANGE: 'if !ok || !n.Revoked.IsZero() {' -> 'if !ok {'
+PACKAGE: ./internal/hosted/auth
+exit=1
+CAUGHT BY: TestVerifyRevokedAndUnknownLookAlike
+TAIL:
+    auth_test.go:257: revoked node: err=<nil>, want the ErrInvalid value itself
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/auth	0.141s
+FAIL
+----
+MUTANT: plan: list prints the full hash (db)
+FILE: internal/hosted/db/tokens.go
+CHANGE: 'SELECT kind, name, swarm, shown, created' -> 'SELECT kind, name, swarm, hash, created'
+PACKAGE: ./internal/hosted/db
+exit=1
+CAUGHT BY: TestListTokensHoldsNoHash
+TAIL:
+    tokens_test.go:230: row 0 = {Kind:node Name:ci-1 Swarm:crew Shown:SECRET-HASH-FAKE-1 Created:2026-10-28 09:30:15.123456 +0000 UTC LastUsed:2026-10-28 10:30:15.123456 +0000 UTC Revoked:0001-01-01 00:00:00 +0000 UTC}, want {Kind:node Name:ci-1 Swarm:crew Shown:yhn_abcd Created:2026-10-28 09:30:15.123456 +0000 UTC LastUsed:2026-10-28 10:30:15.123456 +0000 UTC Revoked:0001-01-01 00:00:00 +0000 UTC}
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.469s
+FAIL
+----
+MUTANT: plan: list prints the full hash (app)
+FILE: internal/hosted/db/tokens.go
+CHANGE: 'SELECT kind, name, swarm, shown, created' -> 'SELECT kind, name, swarm, hash, created'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestTokenListShowsOnlyThePrefix; TestTokenListShape
+TAIL:
+    token_cmd_test.go:128: node row = ["ci-1" "node" "crew" "<hash elided>" "-" "-"]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.344s
+FAIL
+----
+MUTANT: plan: a 16-byte token
+FILE: internal/hosted/auth/tokens.go
+CHANGE: 'tokenBytes = 32' -> 'tokenBytes = 16'
+PACKAGE: ./internal/hosted/auth
+exit=1
+CAUGHT BY: TestMintShapeAndHash; TestMintAllPrefixes; TestVerifyNode; TestVerifyTouchesNodeAtMostOncePerMinute; TestVerifyTouchFailureDoesNotFailAuth; TestDeskTokenTTLAndScope
+TAIL:
+created by testing.(*T).Run in goroutine 1
+	/opt/homebrew/Cellar/go/1.27.3/libexec/src/testing/testing.go:2260 +0x3b8
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/auth	0.143s
+FAIL
+----
+MUTANT: desk token valid at its expiry instant
+FILE: internal/hosted/auth/verify.go
+CHANGE: 'if !ok || !d.Revoked.IsZero() || !v.now().Before(exp) {' -> 'if !ok || !d.Revoked.IsZero() || v.now().After(exp) {'
+PACKAGE: ./internal/hosted/auth
+exit=1
+CAUGHT BY: TestDeskTokenTTLAndScope
+TAIL:
+    auth_test.go:183: at the TTL: err=<nil>, want ErrInvalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/auth	0.142s
+FAIL
+----
+MUTANT: desk TTL ignored
+FILE: internal/hosted/auth/verify.go
+CHANGE: 'if !ok || !d.Revoked.IsZero() || !v.now().Before(exp) {' -> 'if !ok || !d.Revoked.IsZero() {'
+PACKAGE: ./internal/hosted/auth
+exit=1
+CAUGHT BY: TestDeskTokenTTLAndScope
+TAIL:
+    auth_test.go:183: at the TTL: err=<nil>, want ErrInvalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/auth	0.143s
+FAIL
+----
+MUTANT: revoked desk token accepted (auth)
+FILE: internal/hosted/auth/verify.go
+CHANGE: 'if !ok || !d.Revoked.IsZero() || !v.now().Before(exp) {' -> 'if !ok || !v.now().Before(exp) {'
+PACKAGE: ./internal/hosted/auth
+exit=1
+CAUGHT BY: TestVerifyRevokedAndUnknownLookAlike
+TAIL:
+    auth_test.go:257: revoked desk: err=<nil>, want the ErrInvalid value itself
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/auth	0.141s
+FAIL
+----
+MUTANT: revoked desk starter accepted
+FILE: internal/hosted/auth/verify.go
+CHANGE: 'if !ok || !s.Revoked.IsZero() {' -> 'if !ok {'
+PACKAGE: ./internal/hosted/auth
+exit=1
+CAUGHT BY: TestDeskStarterVerifiesToDeskStartOnly
+TAIL:
+    auth_test.go:215: revoked starter: err=<nil>
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/auth	0.139s
+FAIL
+----
+MUTANT: a starter verifies as a node
+FILE: internal/hosted/auth/verify.go
+CHANGE: 'return bus.Principal{Kind: bus.PrincipalDeskStart, Name: s.Name}, nil' -> 'return bus.Principal{Kind: bus.PrincipalNode, Name: s.Name}, nil'
+PACKAGE: ./internal/hosted/auth
+exit=1
+CAUGHT BY: TestDeskStarterVerifiesToDeskStartOnly
+TAIL:
+    auth_test.go:211: p={Kind:node Name:mac Swarm:} exp=0001-01-01 00:00:00 +0000 UTC err=<nil>
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/auth	0.141s
+FAIL
+----
+MUTANT: a desk token verifies as duet
+FILE: internal/hosted/auth/verify.go
+CHANGE: 'return bus.Principal{Kind: bus.PrincipalDesk, Name: "desk"}, exp, nil' -> 'return bus.Principal{Kind: bus.PrincipalDuet, Name: "desk"}, exp, nil'
+PACKAGE: ./internal/hosted/auth
+exit=1
+CAUGHT BY: TestDeskTokenTTLAndScope
+TAIL:
+    auth_test.go:179: before the TTL: p={Kind:duet Name:desk Swarm:} exp=2026-11-01 09:15:00 +0000 UTC err=<nil>
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/auth	0.142s
+FAIL
+----
+MUTANT: touch on every request
+FILE: internal/hosted/auth/verify.go
+CHANGE: 'at.Sub(n.LastUsed) >= touchEvery' -> 'at.Sub(n.LastUsed) >= 0'
+PACKAGE: ./internal/hosted/auth
+exit=1
+CAUGHT BY: TestVerifyTouchesNodeAtMostOncePerMinute
+TAIL:
+    auth_test.go:141: touches within a minute = 2, want 1
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/auth	0.141s
+FAIL
+----
+MUTANT: StarterByHash ignores the kind
+FILE: internal/hosted/db/tokens.go
+CHANGE: "AND kind = 'desk-starter'`, h)" -> '`, h)'
+PACKAGE: ./internal/hosted/db
+exit=1
+CAUGHT BY: TestNodeHashIsNoOtherKind
+TAIL:
+    tokens_test.go:34: a node hash found as a starter
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.472s
+FAIL
+----
+MUTANT: starter cap off by one
+FILE: internal/hosted/db/tokens.go
+CHANGE: 'if live >= maxLive {' -> 'if live > maxLive {'
+PACKAGE: ./internal/hosted/db
+exit=1
+CAUGHT BY: TestStarterCapAndDeskAll
+TAIL:
+    tokens_test.go:117: a third live starter: err=<nil>, want ErrStarterCap
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.486s
+FAIL
+----
+MUTANT: cap counts nodes too
+FILE: internal/hosted/db/tokens.go
+CHANGE: "WHERE kind = 'desk-starter' AND revoked = ''`).Scan(&live)" -> "WHERE revoked = ''`).Scan(&live)"
+PACKAGE: ./internal/hosted/db
+exit=1
+CAUGHT BY: TestStarterCapIgnoresNodesAndRevoked
+TAIL:
+    tokens_test.go:136: after a revoke: db: the desk starter cap is reached
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.467s
+FAIL
+----
+MUTANT: revoke rewrites an earlier revocation
+FILE: internal/hosted/db/tokens.go
+CHANGE: "`UPDATE tokens SET revoked = ? WHERE name = ? AND revoked = ''`" -> '`UPDATE tokens SET revoked = ? WHERE name = ?`'
+PACKAGE: ./internal/hosted/db
+exit=1
+CAUGHT BY: TestRevoke
+TAIL:
+    tokens_test.go:101: a revoked token was revoked again
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.462s
+FAIL
+----
+MUTANT: --desk-all leaves starters
+FILE: internal/hosted/db/tokens.go
+CHANGE: "{`UPDATE tokens SET revoked = ? WHERE kind = 'desk-starter' AND revoked = ''`, &starters}," -> ''
+PACKAGE: ./internal/hosted/db
+exit=1
+CAUGHT BY: TestRevokeDeskRevokesStartersAndDeskTokens
+TAIL:
+    tokens_test.go:194: RevokeDesk = 0 starters, 2 desk tokens, err=<nil>; want 2 live starters and 2 desk tokens
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.484s
+FAIL
+----
+MUTANT: --desk-all leaves desk tokens (db)
+FILE: internal/hosted/db/tokens.go
+CHANGE: "{`UPDATE desk_tokens SET revoked = ? WHERE revoked = ''`, &desks}," -> ''
+PACKAGE: ./internal/hosted/db
+exit=1
+CAUGHT BY: TestRevokeDeskRevokesStartersAndDeskTokens
+TAIL:
+    tokens_test.go:194: RevokeDesk = 2 starters, 0 desk tokens, err=<nil>; want 2 live starters and 2 desk tokens
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.475s
+FAIL
+----
+MUTANT: --desk-all leaves desk tokens (app)
+FILE: internal/hosted/db/tokens.go
+CHANGE: "{`UPDATE desk_tokens SET revoked = ? WHERE revoked = ''`, &desks}," -> ''
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestAdminQueryFailureExitsStore; TestRevokedDeskTokenInvalid
+TAIL:
+    token_cmd_test.go:252: revoked=<nil> unknown=auth: invalid token, want the same ErrInvalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.300s
+FAIL
+----
+MUTANT: the token is stored, not its hash
+FILE: internal/hosted/app/token_cmd.go
+CHANGE: 'token, hash, _ := auth.Mint(auth.PrefixNode)' -> 'token, _, _ := auth.Mint(auth.PrefixNode); hash := token'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestTokenCreatePrintsOnlyToken; TestTokenIsNeverStored; TestNodeTokenNeverStartsDesk; TestTokenRevoke
+TAIL:
+    token_cmd_test.go:267: revoke --name ci-1 revoked ci-2: auth: invalid token
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.297s
+FAIL
+----
+MUTANT: swarm duet accepted
+FILE: internal/hosted/app/token_cmd.go
+CHANGE: '!bus.ValidName(*name) || !bus.ValidSwarm(*swarm)' -> '!bus.ValidName(*name) || !bus.ValidName(*swarm)'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestTokenNamesValidated
+TAIL:
+    token_cmd_test.go:164: [token create --name ci-1 --swarm duet]: code=0 out="yhn_<52 characters, elided>\n" err="", want 64 and no output
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.299s
+FAIL
+----
+MUTANT: create also prints the token on stderr
+FILE: internal/hosted/app/token_cmd.go
+CHANGE: '_, _ = fmt.Fprintln(a.stdout, token)\n\t\treturn nil\n\t})\n}\n\n// createStarter' -> '_, _ = fmt.Fprintln(a.stdout, token)\n\t\t_, _ = fmt.Fprintln(a.stderr, "created", token)\n\t\treturn nil\n\t})\n}\n\n// createStarter'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestAdminQueryFailureExitsStore; TestCheckReportsIntegrityAndCounts; TestCheckReportsDamage; TestTokenCreatePrintsOnlyToken; TestTokenIsNeverStored; TestTokenListShowsOnlyThePrefix
+TAIL:
+    token_cmd_test.go:258: [token create --name ci-1 --swarm crew]: code=0 err="created yhn_<52 characters, elided>\n"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.273s
+FAIL
+----
+MUTANT: Secret prints its value
+FILE: internal/hosted/app/config.go
+CHANGE: 'return "[redacted]"' -> 'return string(s)'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigNeverPrintsSecrets
+TAIL:
+    config_test.go:233: formatting a Config or a Secret prints GITHUB-SECRET-FAKE
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.304s
+FAIL
+----
+MUTANT: host normalisation keeps a trailing dot
+FILE: internal/hosted/app/config.go
+CHANGE: 'host = strings.TrimSuffix(host, ".")' -> 'host = host'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigRefusesSameHost; TestNormaliseHost
+TAIL:
+    config_test.go:219: NormaliseHost("bus.example.org.") = "bus.example.org.", want "bus.example.org"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.303s
+FAIL
+----
+MUTANT: host normalisation keeps :443
+FILE: internal/hosted/app/config.go
+CHANGE: 'port == "" || port == "443"' -> 'port == ""'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigRefusesSameHost; TestNormaliseHost
+TAIL:
+    config_test.go:219: NormaliseHost("Bus.Example.Org.:443") = "bus.example.org:443", want "bus.example.org"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.295s
+FAIL
+----
+MUTANT: host normalisation keeps case
+FILE: internal/hosted/app/config.go
+CHANGE: 'h := strings.ToLower(hostport)' -> 'h := hostport'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigRefusesSameHost; TestNormaliseHost
+TAIL:
+    config_test.go:219: NormaliseHost("BUS.Example.ORG") = "BUS.Example.ORG", want "bus.example.org"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.285s
+FAIL
+----
+MUTANT: v4-mapped loopback accepted for the MCP listener
+FILE: internal/hosted/app/config.go
+CHANGE: ' || a.Is4In6()' -> ''
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigRefusesPublicMCPListen
+TAIL:
+    config_test.go:174: YH_LISTEN_MCP="[::ffff:127.0.0.1]:8081": err=<nil>, want it refused and named
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.296s
+FAIL
+----
+MUTANT: a non-loopback IP accepted for the MCP listener
+FILE: internal/hosted/app/config.go
+CHANGE: ' || !a.IsLoopback()' -> ''
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigRefusesPublicMCPListen
+TAIL:
+    config_test.go:174: YH_LISTEN_MCP="0.0.0.0:8081": err=<nil>, want it refused and named
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.295s
+FAIL
+----
+MUTANT: desk TTL ceiling raised
+FILE: internal/hosted/app/config.go
+CHANGE: 'maxDeskTTL      = 60 * time.Minute' -> 'maxDeskTTL      = 600 * time.Minute'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigRefusesBadValues
+TAIL:
+    config_test.go:161: desk over 60m: err=<nil>, want YH_DESK_TTL named
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.295s
+FAIL
+----
+MUTANT: the same port accepted
+FILE: internal/hosted/app/config.go
+CHANGE: 'if ok && port == ap.Port() {' -> 'if ok && port == ap.Port() && false {'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigRefusesSamePort
+TAIL:
+    config_test.go:188: [127.0.0.1:8080 :8080]: err=<nil>, want both variables named
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.294s
+FAIL
+----
+
+Survivors of the first run: three mutants passed the suite, and each got a test (the old code stays).
+One of them, "the same port accepted", had been written so that it did not compile; it was redone
+as `&& false` and killed by TestConfigRefusesSamePort (recorded above). The other two survived for
+real and are killed by the tests added in the commit after this record (TestRefreshAndExecutorTokensNeverVerify,
+TestStarterHashIsNoNode):
+
+MUTANT: a refresh token looked up as a node
+FILE: internal/hosted/auth/verify.go
+CHANGE: 'default: // refresh and executor tokens are not bearer credentials for this verifier\n\t\terr = ErrInvalid' -> 'default:\n\t\tp, err = v.node(h)'
+PACKAGE: ./internal/hosted/auth
+exit=1
+CAUGHT BY: TestRefreshAndExecutorTokensNeverVerify
+TAIL:
+    auth_test.go:291: yhr_: err=<nil>, want ErrInvalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/auth	0.143s
+FAIL
+----
+MUTANT: NodeByHash ignores the kind
+FILE: internal/hosted/db/tokens.go
+CHANGE: "WHERE hash = ? AND kind = 'node'`" -> 'WHERE hash = ?`'
+PACKAGE: ./internal/hosted/db
+exit=1
+CAUGHT BY: TestStarterHashIsNoNode
+TAIL:
+    tokens_test.go:32: a starter hash found as a node
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.469s
+FAIL
+----
+
+Review round 1 (Opus on c55709a), mutants on 5285048. TestStarterCapHoldsUnderConcurrency is a guard
+test: it passed at once against the existing code, so it has no RED; the two S3 mutants show it bites.
+A mutant that did not compile was redone and is not recorded.
+
+MUTANT: M1: approve origin scheme check dropped
+FILE: internal/hosted/app/config.go
+CHANGE: 'if raw != "" && !strings.HasPrefix(raw, "https://") {' -> 'if false {'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigApproveOriginIsHTTPSAndMatchesRPID
+TAIL:
+    config_test.go:256: a plaintext approve origin: err=<nil>, want YH_APPROVE_ORIGIN named
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	2.887s
+FAIL
+----
+MUTANT: S1: check ignores the integrity verdict
+FILE: internal/hosted/app/check_cmd.go
+CHANGE: 'if c.Integrity != "ok" {' -> 'if false {'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestCheckFailsOnIntegrityProblems
+TAIL:
+    check_cmd_test.go:99: page 27: code=0 with verdict "integrity: 2 problems reported", want 74
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	2.073s
+FAIL
+----
+MUTANT: S2: MarshalText returns the value
+FILE: internal/hosted/app/config.go
+CHANGE: 'func (s Secret) MarshalText() ([]byte, error) { return []byte("[redacted]"), nil }' -> 'func (s Secret) MarshalText() ([]byte, error) { return []byte(s), nil }'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigNeverPrintsSecrets
+TAIL:
+    config_test.go:234: formatting a Config or a Secret prints GITHUB-SECRET-FAKE
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	3.248s
+FAIL
+----
+MUTANT: S2: MarshalText deleted
+FILE: internal/hosted/app/config.go
+CHANGE: '// MarshalText is what JSON and the text encoders, including slog\'s handlers, write.\nfunc (s Secret) MarshalText() ([]byte, error) { return []byte("[redacted]"), nil }' -> ''
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigNeverPrintsSecrets
+TAIL:
+    config_test.go:234: formatting a Config or a Secret prints GITHUB-SECRET-FAKE
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	3.664s
+FAIL
+----
+MUTANT: S3: the count runs before the transaction begins
+FILE: internal/hosted/db/tokens.go
+CHANGE: 'tx, err := d.sql.BeginTx(ctx, nil)\n\tif err != nil {\n\t\treturn fmt.Errorf("db: insert desk starter: %w", err)\n\t}\n\tvar live int\n\tif err := tx.QueryRowContext(ctx, `SELECT count(*) FROM tokens WHERE kind = \'desk-starter\' AND revoked = \'\'`).Scan(&live); err != nil {\n\t\t_ = tx.Rollback()\n\t\treturn fmt.Errorf("db: insert desk starter: %w", err)\n\t}\n\tif live >= maxLive {\n\t\t_ = tx.Rollback()\n\t\treturn ErrStarterCap\n\t}' -> 'var live int\n\tif err := d.sql.QueryRowContext(ctx, `SELECT count(*) FROM tokens WHERE kind = \'desk-starter\' AND revoked = \'\'`).Scan(&live); err != nil {\n\t\treturn fmt.Errorf("db: insert desk starter: %w", err)\n\t}\n\tif live >= maxLive {\n\t\treturn ErrStarterCap\n\t}\n\ttx, err := d.sql.BeginTx(ctx, nil)\n\tif err != nil {\n\t\treturn fmt.Errorf("db: insert desk starter: %w", err)\n\t}'
+PACKAGE: ./internal/hosted/db
+exit=1
+CAUGHT BY: TestStarterCapHoldsUnderConcurrency
+TAIL:
+    tokens_test.go:314: 8 succeeded, 0 capped, 8 rows stored; want 2, 6 and 2
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.682s
+FAIL
+----
+MUTANT: S3: _txlock=immediate dropped from the DSN
+FILE: internal/hosted/db/db.go
+CHANGE: '\tq.Set("_txlock", "immediate")\n' -> ''
+PACKAGE: ./internal/hosted/db
+exit=1
+CAUGHT BY: TestStarterCapHoldsUnderConcurrency
+TAIL:
+    tokens_test.go:309: an insert failed for another reason: db: insert desk starter: database is locked (5) (SQLITE_BUSY)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.573s
+FAIL
+----
+MUTANT: S4: the default :80 is not stripped
+FILE: internal/hosted/hostname/hostname.go
+CHANGE: 'port == "" || port == "443" || port == "80"' -> 'port == "" || port == "443"'
+PACKAGE: ./internal/hosted/hostname
+exit=1
+CAUGHT BY: TestNormalise
+TAIL:
+    hostname_test.go:18: Normalise("[::1]:80") = "[::1]:80", want "[::1]"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/hostname	0.145s
+FAIL
+----
+MUTANT: M1: RP ID equality dropped
+FILE: internal/hosted/app/config.go
+CHANGE: 'if rpID != strings.TrimSuffix(strings.ToLower(u.Hostname()), ".") {' -> 'if rpID != strings.TrimSuffix(strings.ToLower(u.Hostname()), ".") && false {'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigApproveOriginIsHTTPSAndMatchesRPID
+TAIL:
+    config_test.go:256: the parent domain as RP ID: err=<nil>, want YH_WEBAUTHN_RP_ID named
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.534s
+FAIL
+----
