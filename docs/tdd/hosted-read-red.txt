@@ -102,3 +102,11 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/tools/perf	7.739s
 FAIL
 exit=1
+
+# Round 2, 8993753: make test (via crew-heavy) finds the 400-line limit broken by internal/hosted/bus/answers_test.go (432 lines)
+$ make test   (only the failing package shown)
+--- FAIL: TestRepoWithinLimit (0.03s)
+    filesize_test.go:30: internal/hosted/bus/answers_test.go:432 exceeds 400 lines
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	3.128s
+exit=2
