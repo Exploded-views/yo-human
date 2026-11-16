@@ -35,7 +35,7 @@ PACKAGE: ./internal/hosted/app
 exit=1
 CAUGHT BY: TestTokenListShowsOnlyThePrefix; TestTokenListShape
 TAIL:
-    token_cmd_test.go:128: node row = ["ci-1" "node" "crew" "e2ed41f53aff0882c638c4d63c791ed43dc3d3939862f4d39e3141f77535c10b" "-" "-"]
+    token_cmd_test.go:128: node row = ["ci-1" "node" "crew" "<hash elided>" "-" "-"]
 FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.344s
 FAIL
@@ -381,5 +381,106 @@ TAIL:
     tokens_test.go:32: a starter hash found as a node
 FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.469s
+FAIL
+----
+
+Review round 1 (Opus on c55709a), mutants on 5285048. TestStarterCapHoldsUnderConcurrency is a guard
+test: it passed at once against the existing code, so it has no RED; the two S3 mutants show it bites.
+A mutant that did not compile was redone and is not recorded.
+
+MUTANT: M1: approve origin scheme check dropped
+FILE: internal/hosted/app/config.go
+CHANGE: 'if raw != "" && !strings.HasPrefix(raw, "https://") {' -> 'if false {'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigApproveOriginIsHTTPSAndMatchesRPID
+TAIL:
+    config_test.go:256: a plaintext approve origin: err=<nil>, want YH_APPROVE_ORIGIN named
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	2.887s
+FAIL
+----
+MUTANT: S1: check ignores the integrity verdict
+FILE: internal/hosted/app/check_cmd.go
+CHANGE: 'if c.Integrity != "ok" {' -> 'if false {'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestCheckFailsOnIntegrityProblems
+TAIL:
+    check_cmd_test.go:99: page 27: code=0 with verdict "integrity: 2 problems reported", want 74
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	2.073s
+FAIL
+----
+MUTANT: S2: MarshalText returns the value
+FILE: internal/hosted/app/config.go
+CHANGE: 'func (s Secret) MarshalText() ([]byte, error) { return []byte("[redacted]"), nil }' -> 'func (s Secret) MarshalText() ([]byte, error) { return []byte(s), nil }'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigNeverPrintsSecrets
+TAIL:
+    config_test.go:234: formatting a Config or a Secret prints GITHUB-SECRET-FAKE
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	3.248s
+FAIL
+----
+MUTANT: S2: MarshalText deleted
+FILE: internal/hosted/app/config.go
+CHANGE: '// MarshalText is what JSON and the text encoders, including slog\'s handlers, write.\nfunc (s Secret) MarshalText() ([]byte, error) { return []byte("[redacted]"), nil }' -> ''
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigNeverPrintsSecrets
+TAIL:
+    config_test.go:234: formatting a Config or a Secret prints GITHUB-SECRET-FAKE
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	3.664s
+FAIL
+----
+MUTANT: S3: the count runs before the transaction begins
+FILE: internal/hosted/db/tokens.go
+CHANGE: 'tx, err := d.sql.BeginTx(ctx, nil)\n\tif err != nil {\n\t\treturn fmt.Errorf("db: insert desk starter: %w", err)\n\t}\n\tvar live int\n\tif err := tx.QueryRowContext(ctx, `SELECT count(*) FROM tokens WHERE kind = \'desk-starter\' AND revoked = \'\'`).Scan(&live); err != nil {\n\t\t_ = tx.Rollback()\n\t\treturn fmt.Errorf("db: insert desk starter: %w", err)\n\t}\n\tif live >= maxLive {\n\t\t_ = tx.Rollback()\n\t\treturn ErrStarterCap\n\t}' -> 'var live int\n\tif err := d.sql.QueryRowContext(ctx, `SELECT count(*) FROM tokens WHERE kind = \'desk-starter\' AND revoked = \'\'`).Scan(&live); err != nil {\n\t\treturn fmt.Errorf("db: insert desk starter: %w", err)\n\t}\n\tif live >= maxLive {\n\t\treturn ErrStarterCap\n\t}\n\ttx, err := d.sql.BeginTx(ctx, nil)\n\tif err != nil {\n\t\treturn fmt.Errorf("db: insert desk starter: %w", err)\n\t}'
+PACKAGE: ./internal/hosted/db
+exit=1
+CAUGHT BY: TestStarterCapHoldsUnderConcurrency
+TAIL:
+    tokens_test.go:314: 8 succeeded, 0 capped, 8 rows stored; want 2, 6 and 2
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.682s
+FAIL
+----
+MUTANT: S3: _txlock=immediate dropped from the DSN
+FILE: internal/hosted/db/db.go
+CHANGE: '\tq.Set("_txlock", "immediate")\n' -> ''
+PACKAGE: ./internal/hosted/db
+exit=1
+CAUGHT BY: TestStarterCapHoldsUnderConcurrency
+TAIL:
+    tokens_test.go:309: an insert failed for another reason: db: insert desk starter: database is locked (5) (SQLITE_BUSY)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.573s
+FAIL
+----
+MUTANT: S4: the default :80 is not stripped
+FILE: internal/hosted/hostname/hostname.go
+CHANGE: 'port == "" || port == "443" || port == "80"' -> 'port == "" || port == "443"'
+PACKAGE: ./internal/hosted/hostname
+exit=1
+CAUGHT BY: TestNormalise
+TAIL:
+    hostname_test.go:18: Normalise("[::1]:80") = "[::1]:80", want "[::1]"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/hostname	0.145s
+FAIL
+----
+MUTANT: M1: RP ID equality dropped
+FILE: internal/hosted/app/config.go
+CHANGE: 'if rpID != strings.TrimSuffix(strings.ToLower(u.Hostname()), ".") {' -> 'if rpID != strings.TrimSuffix(strings.ToLower(u.Hostname()), ".") && false {'
+PACKAGE: ./internal/hosted/app
+exit=1
+CAUGHT BY: TestConfigApproveOriginIsHTTPSAndMatchesRPID
+TAIL:
+    config_test.go:256: the parent domain as RP ID: err=<nil>, want YH_WEBAUTHN_RP_ID named
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.534s
 FAIL
 ----
