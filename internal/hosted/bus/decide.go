@@ -98,12 +98,11 @@ func (b *Bus) decide(ctx context.Context, p Principal, rq decideReq) (Record, er
 	if err != nil {
 		return Record{}, mapStoreErr(err)
 	}
-	b.committed(swarm) // after the commit, so a woken Answers call reads the new events
+	b.committed(swarm) // after the commit, so a woken waiter reads the new event; an idempotent retry fires too, harmlessly
 	return rec, nil
 }
 
-// decideTx runs the rules and stores the record; it also returns the item's swarm, which the
-// caller wakes once the transaction has committed.
+// decideTx returns the record and the item's swarm, which decide wakes once the transaction commits.
 func (b *Bus) decideTx(x Tx, p Principal, rq decideReq) (Record, string, error) {
 	it, err := b.decidable(x, p, rq)
 	if err != nil {
@@ -307,17 +306,20 @@ func (b *Bus) RelayWords(ctx context.Context, p Principal, in RelayInput) (Relay
 		return Relay{}, forbidden("a node credential or Duet's", "only a node in the item's swarm or Duet relays the owner's words")
 	}
 	var r Relay
+	var swarm string
 	err := b.s.Tx(ctx, func(x Tx) error {
 		it, err := b.relayable(x, p, in)
 		if err != nil {
 			return err
 		}
+		swarm = it.Swarm
 		r, err = b.storeRelay(x, it, p, in.Text, in.HumanTS)
 		return err
 	})
 	if err != nil {
 		return Relay{}, mapStoreErr(err)
 	}
+	b.committed(swarm)
 	return r, nil
 }
 

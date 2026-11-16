@@ -391,3 +391,21 @@ mutant 53: status: byte-exact key spelling not checked (count only)
   FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.509s
   FAIL
 
+
+# Review fix round (merge 34d2aa3): MF1, decide and RelayWords call committed after the commit. 2 more mutants, both killed. Each mutant replaces the call with `_ = swarm` so the file still builds.
+
+mutant: decide does not call committed (RecordAnswer and RecordApproval)
+  KILLED by TestAnswersLongPollWakesOnAnswer, TestAnswersLongPollWakesOnApproval, TestAnswersLongPollWakesOnSupersede
+      answers_wake_test.go:35: waiter: no return within 5s
+      answers_wake_test.go:48: waiter: no return within 5s
+      answers_wake_test.go:64: waiter: no return within 5s
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	17.456s
+  FAIL
+
+mutant: RelayWords does not call committed
+  KILLED by TestAnswersLongPollWakesOnRelay
+      answers_wake_test.go:116: a relay did not wake the waiter: it never read again
+  FAIL
+  FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.684s
+  FAIL
