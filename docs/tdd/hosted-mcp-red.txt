@@ -32,3 +32,22 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.235s
 FAIL
 exit=1
+
+## 2. bus: Duet's record_approval relay (against a stub RelayApproval that returns an internal error)
+$ go test ./internal/hosted/bus -run TestRelayApproval -count=1
+--- FAIL: TestRelayApprovalStoresWordsNeverResolves (0.01s)
+    relay_approval_test.go:20: RelayApproval: internal: the bus (valid: a retry)
+--- FAIL: TestRelayApprovalRefusals (0.01s)
+    relay_approval_test.go:65: code = internal (the bus), want forbidden
+--- FAIL: TestRelayApprovalPolicy (0.00s)
+    relay_approval_test.go:94: code = internal (the bus), want standing
+--- FAIL: TestRelayApprovalExcludedAction (0.00s)
+    relay_approval_test.go:112: code = internal (the bus), want excluded_action
+--- FAIL: TestRelayApprovalWalledSwarmIsGoOrHold (0.00s)
+    relay_approval_test.go:143: approve "go sl:12": internal: the bus (valid: a retry), want it stored
+    relay_approval_test.go:143: reject "hold sl:12": internal: the bus (valid: a retry), want it stored
+    relay_approval_test.go:146: code = internal (the bus), want invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.215s
+FAIL
+exit=1
