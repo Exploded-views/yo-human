@@ -19,8 +19,8 @@ type Tx interface {
 	InsertItem(Item) error
 	UpdateItem(Item) error
 	ListOpenForHuman() ([]Item, error)
-	// ListThreadItems returns the open items Duet started (from_kind duet, addressed to a swarm)
-	// whose last_seq is above both since and acked_seq, in last_seq order. It reads only open items.
+	// ListThreadItems returns the items Duet started (from_kind duet, addressed to a swarm), open
+	// or decided, whose last_seq is above both since and acked_seq, in last_seq order.
 	ListThreadItems(since int64) ([]Item, error)
 	// ListInboxItems returns the items addressed to the human, open or decided, whose last_seq is
 	// above both since and acked_seq, oldest first. (Task 7: a reply on a decided item is news.)

@@ -48,11 +48,11 @@ func forbiddenUnlessDuet(p Principal) *Error {
 func summarize(it Item) Summary {
 	return Summary{ID: it.ID, Handle: it.Handle, From: it.From, Swarm: it.Swarm, Severity: it.Severity, Title: it.Title,
 		Summary: it.Summary, Revision: it.Revision, Created: it.Created, Link: it.Link, Untrusted: it.Untrusted,
-		Kind: it.Kind, Urgency: it.Urgency}
+		Kind: it.Kind, Urgency: it.Urgency, LastSeq: it.LastSeq}
 }
 
 // Inbox is what needs the owner's attention, for Duet only: the items addressed to the owner
-// that someone else posted, with activity after both the ack mark and since, grouped by kind.
+// that someone else posted, open or decided, with activity after both the ack mark and since, grouped by kind.
 // An interrupt-when-good item sits in Interrupt and in no kind group, read-only: reading
 // changes nothing, and the bus never pushes on that lane. Threads are Duet's own items whose
 // latest message came from someone else. Next is the highest seq of anything returned, or
@@ -66,12 +66,12 @@ func (b *Bus) Inbox(ctx context.Context, p Principal, since int64) (Inbox, error
 		in.Groups[k] = []Summary{}
 	}
 	err := b.s.Tx(ctx, func(x Tx) error {
-		open, err := x.ListOpenForHuman()
+		open, err := x.ListInboxItems(since)
 		if err != nil {
 			return err
 		}
 		for _, it := range open {
-			in.addOpen(it, since)
+			in.addOpen(it)
 		}
 		threads, err := x.ListThreadItems(since)
 		if err != nil {
@@ -90,9 +90,9 @@ func (b *Bus) Inbox(ctx context.Context, p Principal, since int64) (Inbox, error
 	return in, nil
 }
 
-func (in *Inbox) addOpen(it Item, since int64) {
+func (in *Inbox) addOpen(it Item) {
 	g, ok := in.Groups[it.Kind]
-	if !ok || it.FromKind == PrincipalDuet || it.LastSeq <= it.AckedSeq || it.LastSeq <= since {
+	if !ok || it.FromKind == PrincipalDuet {
 		return
 	}
 	if it.Urgency == UrgencyInterruptWhenGood {
@@ -144,8 +144,9 @@ func (b *Bus) Item(ctx context.Context, p Principal, id string) (ItemView, error
 	return v, nil
 }
 
-// Ack hides an item from the inbox until it has new activity: it sets AckedSeq to LastSeq.
-// Duet only.
+// Ack hides an item from the inbox until it has new activity after what Duet saw: it sets
+// AckedSeq to seenSeq (the LastSeq of the summary Duet read), at most the item's LastSeq, and never
+// lowers it. Duet only.
 func (b *Bus) Ack(ctx context.Context, p Principal, id string, seenSeq int64) error {
 	if e := forbiddenUnlessDuet(p); e != nil {
 		return e
@@ -158,7 +159,7 @@ func (b *Bus) Ack(ctx context.Context, p Principal, id string, seenSeq int64) er
 		if !found {
 			return notFoundErr()
 		}
-		it.AckedSeq = it.LastSeq
+		it.AckedSeq = max(it.AckedSeq, min(seenSeq, it.LastSeq))
 		return x.UpdateItem(it)
 	})
 	return mapStoreErr(err)

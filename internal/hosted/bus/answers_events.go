@@ -86,33 +86,25 @@ func (r *eventReader) messageEvent(e Event) (Update, bool, error) {
 	return u, true, nil
 }
 
-// maxRecordLookback bounds how many earlier revisions recordEvent searches for its record.
-const maxRecordLookback = 16
-
-// recordEvent attaches the answer or approval the event records. An event names no revision, so
-// the record is the newest one of the event's kind, from the item's current revision down.
+// recordEvent attaches the answer or approval the event wrote: the item's record of the event's
+// kind whose Recorded time is the event's Created time (the convention on Tx.DecisionRecorded).
+// An event names no revision, so Revision is the record's own when one is found.
 func (r *eventReader) recordEvent(e Event) (Update, bool, error) {
 	it, err := r.item(e.ItemID)
 	if err != nil {
 		return Update{}, false, err
 	}
 	u := base(e, it)
-	if it == nil {
-		return u, true, nil
-	}
 	want := RecordAnswer
 	if e.Type == EventApprovalRecorded {
 		want = RecordApproval
 	}
-	for rev := it.Revision; rev >= 1 && rev > it.Revision-maxRecordLookback; rev-- {
-		rec, found, err := r.x.Decision(it.ID, rev)
-		if err != nil {
-			return Update{}, false, err
-		}
-		if found && rec.Kind == want {
-			u.Record = &rec
-			break
-		}
+	rec, found, err := r.x.DecisionRecorded(e.ItemID, want, e.Created)
+	if err != nil {
+		return Update{}, false, err
+	}
+	if found {
+		u.Record, u.Revision = &rec, rec.Revision
 	}
 	return u, true, nil
 }

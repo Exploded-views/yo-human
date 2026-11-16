@@ -13,6 +13,7 @@ import (
 // The status document's limits. MaxStatus is the whole document in bytes.
 const (
 	MaxStatus        = 16 << 10
+	maxWalledTS      = 1 << 33 // seconds since the epoch: year 2242, and at most 10 digits
 	maxStatusEntries = 64
 )
 
@@ -20,6 +21,8 @@ var (
 	statusKeys   = []string{"main_health", "sessions", "spend", "swarm", "ts", "waiting_on_human"}
 	sessionState = []string{"working", "blocked", "idle", "done"}
 	tokenRE      = regexp.MustCompile(`^[a-z0-9-]{1,40}$`)
+	mainHealth   = []string{"ok", "degraded", "failing", "unknown"}
+	spendRE      = regexp.MustCompile(`^(0|[1-9][0-9]{0,6})(\.[0-9]{1,2})?$`)
 	handleIDRE   = regexp.MustCompile(`^ob-[1-9][0-9]{0,5}$`)
 )
 
@@ -32,6 +35,7 @@ type statusDoc struct {
 	MainHealth     string          `json:"main_health"`
 	Spend          float64         `json:"spend"`
 	TS             int64           `json:"ts"`
+	spendText      string          // the spend as the sender wrote it; the wall bounds its digits
 }
 
 type statusSession struct {
@@ -99,7 +103,7 @@ func parseStatus(doc json.RawMessage) (statusDoc, *Error) {
 	bad := func() (statusDoc, *Error) {
 		return statusDoc{}, invalid("status", "one JSON object of at most 16 KiB with exactly the fields swarm, sessions, waiting_on_human, main_health, spend and ts")
 	}
-	if len(doc) > MaxStatus {
+	if len(doc) > MaxStatus || !utf8.Valid(doc) { // the decoder would swap U+FFFD in for bad bytes
 		return bad()
 	}
 	var keys map[string]json.RawMessage
@@ -117,6 +121,7 @@ func parseStatus(doc json.RawMessage) (statusDoc, *Error) {
 	if err := dec.Decode(&d); err != nil || d.Sessions == nil || d.WaitingOnHuman == nil {
 		return bad()
 	}
+	d.spendText = string(keys["spend"])
 	return d, nil
 }
 
@@ -125,12 +130,12 @@ func (d statusDoc) check(walled bool) *Error {
 		return e
 	}
 	switch {
-	case !tokenRE.MatchString(d.MainHealth):
-		return invalid("main_health", "a token of 1 to 40 characters from a-z, 0-9 and -")
-	case d.Spend < 0:
-		return invalid("spend", "a number of zero or more")
-	case d.TS < 0:
-		return invalid("ts", "a number of seconds since the epoch, zero or more")
+	case !slices.Contains(mainHealth, d.MainHealth):
+		return invalid("main_health", "ok, degraded, failing or unknown")
+	case d.Spend < 0 || walled && !spendRE.MatchString(d.spendText):
+		return invalid("spend", "a number of zero or more"+walledNote(walled, ", at most 7 integer digits and 2 decimals"))
+	case d.TS < 0 || walled && d.TS > maxWalledTS:
+		return invalid("ts", "a number of seconds since the epoch, zero or more"+walledNote(walled, ", at most 8589934592"))
 	}
 	return nil
 }
@@ -165,7 +170,15 @@ func statusText(s string, walled bool, typed *regexp.Regexp) bool {
 		return typed.MatchString(s)
 	}
 	n := utf8.RuneCountInString(s)
-	return n >= 1 && n <= MaxHandle && utf8.ValidString(s) && !strings.ContainsFunc(s, isRefusedRune)
+	return n >= 1 && n <= MaxHandle && utf8.ValidString(s) && !strings.ContainsFunc(s, isRefusedRune) &&
+		!strings.ContainsRune(s, utf8.RuneError) // an escaped lone surrogate decodes to this
+}
+
+func walledNote(walled bool, note string) string {
+	if walled {
+		return note
+	}
+	return ""
 }
 
 func statusTextRule(walled bool, typed string) string {

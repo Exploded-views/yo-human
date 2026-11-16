@@ -46,7 +46,7 @@ func TestReadStoreFailureIsInternal(t *testing.T) {
 		nth          int
 		op           func(*bus.Bus, string) error
 	}{
-		{"inbox: open items", "ListOpenForHuman", 1, func(b *bus.Bus, _ string) error { _, err := b.Inbox(ctx, duet, 0); return err }},
+		{"inbox: inbox items", "ListInboxItems", 1, func(b *bus.Bus, _ string) error { _, err := b.Inbox(ctx, duet, 0); return err }},
 		{"inbox: thread items", "ListThreadItems", 1, func(b *bus.Bus, _ string) error { _, err := b.Inbox(ctx, duet, 0); return err }},
 		{"inbox: thread messages", "Messages", 1, func(b *bus.Bus, _ string) error { _, err := b.Inbox(ctx, duet, 0); return err }},
 		{"item: read", "ItemByID", 1, func(b *bus.Bus, id string) error { _, err := b.Item(ctx, duet, id); return err }},

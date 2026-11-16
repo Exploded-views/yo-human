@@ -148,25 +148,36 @@ func (x *txn) ListOpenForHuman() ([]bus.Item, error) {
 	return out, rows.Err()
 }
 
-// ListThreadItems returns the open items Duet started, addressed to a swarm, with activity after
-// both since and the ack mark, in last_seq order. It reads the open-item index, not the whole table.
+// ListThreadItems returns the items Duet started, addressed to a swarm, open or decided, with
+// activity after both since and the ack mark, in last_seq order. Naming both states keeps the
+// (state, to_target, created) index in play.
 func (x *txn) ListThreadItems(since int64) ([]bus.Item, error) {
-	rows, err := x.tx.QueryContext(x.ctx, "SELECT "+itemCols+` FROM items WHERE state = 'open' AND to_target <> 'human'
-		AND from_kind = 'duet' AND last_seq > ? AND last_seq > acked_seq ORDER BY last_seq, id`, since)
+	return x.queryItems(`state IN ('open', 'decided') AND to_target <> 'human' AND from_kind = 'duet'
+		AND last_seq > ? AND last_seq > acked_seq ORDER BY last_seq, id`, since)
+}
+
+// ListInboxItems returns the items addressed to the human, open or decided, with activity after
+// both since and the ack mark, oldest first. Naming both states lets the query use the
+// (state, to_target, created) index: a new reply on a decided item is news too.
+func (x *txn) ListInboxItems(since int64) ([]bus.Item, error) {
+	return x.queryItems(`state IN ('open', 'decided') AND to_target = 'human' AND last_seq > ? AND last_seq > acked_seq
+		ORDER BY created, id`, since)
+}
+
+// queryItems reads the items matching a WHERE clause (and its ORDER BY).
+func (x *txn) queryItems(where string, args ...any) ([]bus.Item, error) {
+	rows, err := x.tx.QueryContext(x.ctx, "SELECT "+itemCols+" FROM items WHERE "+where, args...) //nolint:gosec // where is a literal from this file
 	if err != nil {
-		return nil, fmt.Errorf("db: list thread items: %w", err)
+		return nil, fmt.Errorf("db: list items: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
 	var out []bus.Item
 	for rows.Next() {
 		it, err := scanItem(rows)
 		if err != nil {
-			return nil, fmt.Errorf("db: list thread items: %w", err)
+			return nil, fmt.Errorf("db: list items: %w", err)
 		}
 		out = append(out, it)
 	}
 	return out, rows.Err()
 }
-
-// ListInboxItems is not implemented yet.
-func (x *txn) ListInboxItems(since int64) ([]bus.Item, error) { return nil, nil }

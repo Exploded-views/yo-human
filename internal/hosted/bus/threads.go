@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -51,6 +52,9 @@ func checkReply(p Principal, body string, sev Severity, urg Urgency) *Error {
 
 func (b *Bus) appendMessage(x Tx, it Item, p Principal, body string, sev Severity, urg Urgency) (Message, error) {
 	now := b.now().UTC()
+	if !now.After(it.Updated) {
+		now = it.Updated.Add(time.Nanosecond) // a thread's message times strictly increase: an event finds its message by time
+	}
 	m := Message{ID: NewID("msg"), ThreadID: it.ID, From: p.Name, FromKind: p.Kind, Body: body, Severity: sev, Urgency: urg, Created: now}
 	if err := x.InsertMessage(m); err != nil {
 		return Message{}, err

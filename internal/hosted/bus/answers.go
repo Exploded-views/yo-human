@@ -12,8 +12,9 @@ const (
 	MaxScan    = 1000 // events scanned per call, skipped ones included
 )
 
-// Update is one event as a node sees it. Revision is the item's current revision: an event
-// records no revision of its own. Record and Message are data a sender wrote.
+// Update is one event as a node sees it. Revision is the item's current revision, except for an
+// answer or approval, where it is the revision of the record the event wrote (an event names no
+// revision of its own). Record and Message are data a sender wrote.
 type Update struct {
 	Seq            int64
 	Type           EventType
@@ -45,11 +46,11 @@ func (b *Bus) Answers(ctx context.Context, p Principal, since int64, wait time.D
 	stop := func() {}
 	defer func() { stop() }()
 	for {
-		ups, next, wake, err := b.readSubscribed(ctx, p, cursor)
+		ups, next, capped, wake, err := b.readSubscribed(ctx, p, cursor)
 		if err != nil {
 			return Updates{Events: []Update{}, Next: cursor}, err
 		}
-		if len(ups) > 0 || wait == 0 {
+		if returnNow(ups, wait, capped) {
 			return Updates{Events: ups, Next: next}, nil
 		}
 		cursor = next
@@ -66,6 +67,11 @@ func (b *Bus) Answers(ctx context.Context, p Principal, since int64, wait time.D
 	}
 }
 
+// returnNow: the read has news, the caller doesn't wait, or the scan cap ended the page early.
+func returnNow(ups []Update, wait time.Duration, capped bool) bool {
+	return len(ups) > 0 || wait == 0 || capped
+}
+
 // needNode refuses every credential but a node's, with a valid swarm.
 func needNode(p Principal, to string) *Error {
 	if p.Kind == PrincipalNode && ValidSwarm(p.Swarm) {
@@ -77,30 +83,34 @@ func needNode(p Principal, to string) *Error {
 // readSubscribed subscribes to the swarm's wake and then reads, so a commit that lands after the
 // read still wakes the caller. A caller that has gone away gets its context's error, any other
 // failure a bus error.
-func (b *Bus) readSubscribed(ctx context.Context, p Principal, cursor int64) ([]Update, int64, <-chan struct{}, error) {
+func (b *Bus) readSubscribed(ctx context.Context, p Principal, cursor int64) ([]Update, int64, bool, <-chan struct{}, error) {
 	if err := ctx.Err(); err != nil {
-		return nil, 0, nil, err
+		return nil, 0, false, nil, err
 	}
 	wake := b.wakes.subscribe(p.Swarm)
-	ups, next, err := b.readUpdates(ctx, p, cursor)
+	ups, next, capped, err := b.readUpdates(ctx, p, cursor)
 	if err != nil {
 		if cerr := ctx.Err(); cerr != nil {
-			return nil, 0, nil, cerr
+			return nil, 0, false, nil, cerr
 		}
-		return nil, 0, nil, mapStoreErr(err)
+		return nil, 0, false, nil, mapStoreErr(err)
 	}
-	return ups, next, wake, nil
+	return ups, next, capped, wake, nil
 }
 
-// readUpdates reads the swarm's events after cursor until it has MaxUpdates updates or runs out,
-// and returns them with the seq of the last event it looked at.
-func (b *Bus) readUpdates(ctx context.Context, p Principal, cursor int64) ([]Update, int64, error) {
+// readUpdates reads the swarm's events after cursor until it has MaxUpdates updates, runs out, or
+// has scanned MaxScan events (skipped ones count, so a call's work is bounded however many events
+// the node caused itself). It returns the updates, the seq of the last event it looked at, and
+// whether the scan cap ended it, in which case the page may be short.
+func (b *Bus) readUpdates(ctx context.Context, p Principal, cursor int64) ([]Update, int64, bool, error) {
 	ups := []Update{}
 	next := cursor
+	scanned := 0
 	err := b.s.Tx(ctx, func(x Tx) error {
 		r := &eventReader{x: x, p: p, items: map[string]*Item{}, msgs: map[string][]Message{}}
-		for len(ups) < MaxUpdates {
-			evs, err := x.EventsSince(p.Swarm, next, MaxUpdates)
+		for len(ups) < MaxUpdates && scanned < MaxScan {
+			limit := min(MaxUpdates, MaxScan-scanned)
+			evs, err := x.EventsSince(p.Swarm, next, limit)
 			if err != nil {
 				return err
 			}
@@ -109,6 +119,7 @@ func (b *Bus) readUpdates(ctx context.Context, p Principal, cursor int64) ([]Upd
 					break
 				}
 				next = e.Seq
+				scanned++
 				u, ok, err := r.update(e)
 				if err != nil {
 					return err
@@ -117,11 +128,11 @@ func (b *Bus) readUpdates(ctx context.Context, p Principal, cursor int64) ([]Upd
 					ups = append(ups, u)
 				}
 			}
-			if len(evs) < MaxUpdates {
+			if len(evs) < limit {
 				break
 			}
 		}
 		return nil
 	})
-	return ups, next, err
+	return ups, next, scanned >= MaxScan, err
 }

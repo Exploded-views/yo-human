@@ -91,6 +91,8 @@ func TestWakeBudgetIsUnderTheCeiling(t *testing.T) {
 	if !ok {
 		t.Fatal("no budget for hosted-answers-wake")
 	}
+	// The 10 ms budget is deliberate: each sample contains a full post commit, so it can't sit below
+	// hosted-post's 10 ms; measured p95 is about 0.5 ms and CI doubles the budget.
 	// CI judges against the budget times the headroom, so that product is what the ceiling bounds.
 	if limit := float64(bud.P95Ms) * b.CIHeadroom; bud.P95Ms < 1 || limit > 200 {
 		t.Errorf("hosted-answers-wake budget %dms (%.0fms in CI): must be at least 1ms and at most 200ms in CI (the plan's ceiling)", bud.P95Ms, limit)
