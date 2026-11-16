@@ -121,10 +121,10 @@ func (s blockingStore) Tx(context.Context, func(bus.Tx) error) error {
 
 func TestDeadlineBoundsToolCall(t *testing.T) {
 	release := make(chan struct{})
-	t.Cleanup(func() { close(release) })
 	const deadline = 300 * time.Millisecond
 	h := newHarnessOver(t, func(*db.DB) bus.Store { return blockingStore{release} }, func(c *web.Config) { c.ToolDeadline = deadline })
 	cs := h.session(h.duet)
+	t.Cleanup(func() { close(release) }) // registered last, so it runs first: the stuck calls end before the server closes
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	start := time.Now()

@@ -2,6 +2,7 @@ package web_test
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -87,6 +88,21 @@ func TestHTTPServerTimeouts(t *testing.T) {
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("server setting %d = %v, want %v", i, got[i], want[i])
+		}
+	}
+}
+
+// TestEveryOriginHeaderIsChecked: a request that repeats the Origin header is refused when any
+// copy is not allowed, whichever comes first.
+func TestEveryOriginHeaderIsChecked(t *testing.T) {
+	h := newHarness(t)
+	for _, origins := range [][]string{{"https://claude.ai", "https://evil.example"}, {"https://evil.example", "https://claude.ai"}} {
+		request := "POST /mcp HTTP/1.1\r\nHost: " + mcpHost + "\r\nAuthorization: Bearer " + h.node + "\r\n" +
+			"Content-Type: application/json\r\nAccept: application/json, text/event-stream\r\n" +
+			"Origin: " + origins[0] + "\r\nOrigin: " + origins[1] + "\r\n" +
+			"Content-Length: " + strconv.Itoa(len(initBody)) + "\r\nConnection: close\r\n\r\n" + initBody
+		if status, _ := h.raw(h.h.MCP, request); status != http.StatusForbidden {
+			t.Errorf("Origin headers %v: %d, want 403", origins, status)
 		}
 	}
 }

@@ -4,6 +4,7 @@ package web
 
 import (
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -21,6 +22,8 @@ type Config struct {
 	ApproveOrigin string   // YH_APPROVE_ORIGIN: the approval host's origin, also the base of approval links
 	OriginAllow   []string // YH_ORIGIN_ALLOW: the Origin values /mcp accepts
 	ToolDeadline  time.Duration
+	// Log receives the cause of an internal error, which no result carries. Nil logs nothing.
+	Log *slog.Logger
 	// Approve serves /approve* and /passkey/* (Tasks 10c and 10d). Nil until they land: the Approve
 	// listener then answers 404 for those paths too.
 	Approve http.Handler

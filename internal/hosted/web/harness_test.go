@@ -30,15 +30,16 @@ type tokenStore struct {
 	access   map[string]bus.Access
 	starters map[string]bus.Starter
 	desks    map[string]bus.Desk
+	err      error // when set, every credential lookup fails with it
 }
 
 func (s *tokenStore) NodeByHash(h string) (bus.Node, bool, error) {
 	n, ok := s.nodes[h]
-	return n, ok, nil
+	return n, ok, s.err
 }
 func (s *tokenStore) AccessByHash(h string) (bus.Access, bool, error) {
 	a, ok := s.access[h]
-	return a, ok, nil
+	return a, ok, s.err
 }
 func (s *tokenStore) DeskByHash(h string) (bus.Desk, bool, error) {
 	d, ok := s.desks[h]
@@ -59,6 +60,7 @@ type harness struct {
 	cfg                              web.Config
 	node, other, duet, starter, desk string // tokens: a node of swarm crew, a node of swarm other, Duet, a desk starter, a desk token
 	extraHits                        int
+	tokens                           *tokenStore
 }
 
 func mint(t *testing.T, prefix string) (token, hash string) {
@@ -105,6 +107,7 @@ func newHarnessOver(t *testing.T, wrap func(*db.DB) bus.Store, edit ...func(*web
 	ts.access[hash] = bus.Access{Expires: time.Now().Add(time.Hour)}
 	h.starter, hash = mint(t, auth.PrefixStarter)
 	ts.starters[hash] = bus.Starter{Name: "laptop"}
+	h.tokens = ts
 	h.desk, hash = mint(t, auth.PrefixDesk)
 	ts.desks[hash] = bus.Desk{Created: time.Now()}
 	h.cfg = web.Config{PublicURL: "https://" + mcpHost, ApproveOrigin: "https://" + approveHost,
@@ -113,9 +116,13 @@ func newHarnessOver(t *testing.T, wrap func(*db.DB) bus.Store, edit ...func(*web
 	for _, f := range edit {
 		f(&h.cfg)
 	}
-	// extra stands for the OAuth mux: two routes, and net/http's own 404 for anything else.
+	// extra stands for the OAuth mux: two routes, net/http's own 404 for anything else, and, so a
+	// test can tell the MCP listener's own guard from extra's routing, a mux that wrongly answers
+	// the approval paths too.
 	extra := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/oauth/github/callback" && r.URL.Path != "/.well-known/oauth-protected-resource/mcp" {
+		p := r.URL.Path
+		if p != "/oauth/github/callback" && p != "/.well-known/oauth-protected-resource/mcp" &&
+			!strings.HasPrefix(p, "/approve") && !strings.HasPrefix(p, "/passkey") {
 			http.NotFound(w, r)
 			return
 		}
