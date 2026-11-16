@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/netip"
 	"net/url"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -71,8 +72,8 @@ func LoadConfig(env func(string) string) (Config, error) {
 		GitHubClientSecret: Secret(l.required("YH_GITHUB_CLIENT_SECRET")),
 		RedirectAllow:      l.list("YH_REDIRECT_ALLOW", "https://claude.ai/api/mcp/auth_callback,https://claude.com/api/mcp/auth_callback"),
 		CIMDHosts:          l.list("YH_CIMD_HOSTS", "claude.ai,claude.com"),
-		OriginAllow:        l.list("YH_ORIGIN_ALLOW", "https://claude.ai,https://claude.com"),
-		LinkHosts:          l.list("YH_LINK_HOSTS", "github.com"),
+		OriginAllow:        l.shaped("YH_ORIGIN_ALLOW", l.list("YH_ORIGIN_ALLOW", "https://claude.ai,https://claude.com"), browserOrigin, "an https origin as a browser sends it: scheme and host in lower case, no path, query, fragment, userinfo or :443"),
+		LinkHosts:          l.shaped("YH_LINK_HOSTS", l.list("YH_LINK_HOSTS", "github.com"), bareHost, "bare hosts, with no scheme, port, path or wildcard"),
 		BarkURL:            l.str("YH_BARK_URL", ""),
 		BarkUser:           l.str("YH_BARK_USER", ""),
 		BarkPassword:       Secret(l.str("YH_BARK_PASSWORD", "")),
@@ -192,6 +193,39 @@ func (l *loader) list(name, def string) []string {
 		}
 	}
 	return parts
+}
+
+// shaped refuses the first entry of a list that ok does not accept. The error names the variable
+// and the rule, never the entry.
+func (l *loader) shaped(name string, entries []string, ok func(string) bool, rule string) []string {
+	for _, e := range entries {
+		if !ok(e) {
+			l.fail(name, "every entry must be "+rule)
+			break
+		}
+	}
+	return entries
+}
+
+var hostRE = regexp.MustCompile(`^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*$`)
+
+// bareHost is a DNS name: no scheme, port, path, userinfo or wildcard.
+func bareHost(s string) bool { return hostRE.MatchString(s) }
+
+// browserOrigin is an https origin exactly as a browser sends it in an Origin header: the scheme
+// and host in lower case, the port only when it is not 443, and nothing after the host (so no
+// slash, no empty "?" and no "#"). The match against a request's Origin is byte for byte, so an
+// entry that differs in any of these would never match.
+func browserOrigin(s string) bool {
+	rest, found := strings.CutPrefix(s, "https://")
+	if !found || rest != strings.ToLower(rest) {
+		return false
+	}
+	host, port, hasPort := strings.Cut(rest, ":")
+	if n, err := strconv.ParseUint(port, 10, 16); hasPort && (err != nil || n == 0 || n == 443 || port != strconv.FormatUint(n, 10)) {
+		return false
+	}
+	return bareHost(host)
 }
 
 func (l *loader) walled() []string {
