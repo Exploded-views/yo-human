@@ -1,0 +1,142 @@
+package web_test
+
+import (
+	"net/http"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/Exploded-views/yo-human/internal/hosted/web"
+)
+
+func TestNoTokenGets401WithResourceMetadata(t *testing.T) {
+	h := newHarness(t)
+	want := `Bearer resource_metadata="https://bus.example.com/.well-known/oauth-protected-resource/mcp"`
+	var first string
+	for name, tok := range map[string]string{"no token": "", "an unknown token": h.node + "x", "a malformed token": "not-a-token"} {
+		resp, body := h.do(h.h.MCP, mcpPost(tok))
+		if resp.StatusCode != http.StatusUnauthorized || resp.Header.Get("WWW-Authenticate") != want {
+			t.Errorf("%s: %d, WWW-Authenticate %q, want 401 and %q", name, resp.StatusCode, resp.Header.Get("WWW-Authenticate"), want)
+		}
+		if name != "no token" && first == "" {
+			first = body
+		} else if name != "no token" && body != first {
+			t.Errorf("%s: body %q differs from another invalid token's %q", name, body, first)
+		}
+	}
+}
+
+func TestDeskStarterGets403OnMCP(t *testing.T) {
+	h := newHarness(t)
+	resp, _ := h.do(h.h.MCP, mcpPost(h.starter))
+	if resp.StatusCode != http.StatusForbidden {
+		t.Errorf("a desk starter: %d, want 403", resp.StatusCode)
+	}
+	for name, tok := range map[string]string{"a node": h.node, "Duet": h.duet} {
+		if resp, _ := h.do(h.h.MCP, mcpPost(tok)); resp.StatusCode != http.StatusOK {
+			t.Errorf("%s: %d, want 200", name, resp.StatusCode)
+		}
+	}
+}
+
+func TestBadOriginGets403(t *testing.T) {
+	h := newHarness(t)
+	for _, c := range []struct {
+		origin, token string
+		want          int
+	}{
+		{"https://evil.example", h.node, 403},
+		{"https://evil.example", "", 403}, // the Origin check comes before the bearer check
+		{"https://claude.ai/", h.node, 403},
+		{"http://claude.ai", h.node, 403},
+		{"https://CLAUDE.ai", h.node, 403},
+		{"https://claude.ai", h.node, 200},
+		{"", h.node, 200},
+		{"https://claude.ai", "", 401},
+	} {
+		r := mcpPost(c.token)
+		if c.origin != "" {
+			r.hdr["Origin"] = c.origin
+		}
+		if resp, _ := h.do(h.h.MCP, r); resp.StatusCode != c.want {
+			t.Errorf("Origin %q, token %v: %d, want %d", c.origin, c.token != "", resp.StatusCode, c.want)
+		}
+	}
+}
+
+func TestBodyOver64KiBRejected(t *testing.T) {
+	h := newHarness(t)
+	r := mcpPost(h.node)
+	r.body = `{"jsonrpc":"2.0","id":1,"method":"ping","params":{"x":"` + strings.Repeat("a", 64<<10) + `"}}`
+	if resp, _ := h.do(h.h.MCP, r); resp.StatusCode != http.StatusRequestEntityTooLarge {
+		t.Errorf("a body over 64 KiB: %d, want 413", resp.StatusCode)
+	}
+}
+
+func TestHTTPServerTimeouts(t *testing.T) {
+	s := web.NewHTTPServer("127.0.0.1:1", http.NotFoundHandler())
+	got := []any{s.Addr, s.ReadHeaderTimeout, s.ReadTimeout, s.WriteTimeout, s.IdleTimeout, s.MaxHeaderBytes}
+	want := []any{"127.0.0.1:1", 5 * time.Second, 10 * time.Second, 35 * time.Second, 60 * time.Second, 16 << 10}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("server setting %d = %v, want %v", i, got[i], want[i])
+		}
+	}
+}
+
+// TestEveryOriginHeaderIsChecked: a request that repeats the Origin header is refused when any
+// copy is not allowed, whichever comes first.
+func TestEveryOriginHeaderIsChecked(t *testing.T) {
+	h := newHarness(t)
+	for _, origins := range [][]string{{"https://claude.ai", "https://evil.example"}, {"https://evil.example", "https://claude.ai"}} {
+		request := "POST /mcp HTTP/1.1\r\nHost: " + mcpHost + "\r\nAuthorization: Bearer " + h.node + "\r\n" +
+			"Content-Type: application/json\r\nAccept: application/json, text/event-stream\r\n" +
+			"Origin: " + origins[0] + "\r\nOrigin: " + origins[1] + "\r\n" +
+			"Content-Length: " + strconv.Itoa(len(initBody)) + "\r\nConnection: close\r\n\r\n" + initBody
+		if status, _ := h.raw(h.h.MCP, request); status != http.StatusForbidden {
+			t.Errorf("Origin headers %v: %d, want 403", origins, status)
+		}
+	}
+}
+
+func bigPing() string {
+	return `{"jsonrpc":"2.0","id":1,"method":"ping","params":{"x":"` + strings.Repeat("a", 64<<10) + `"}}`
+}
+
+// TestBodyLimitIsOutermost: the body limit runs before the Origin and bearer checks, so an
+// oversize body is 413 with no token and with a bad Origin.
+func TestBodyLimitIsOutermost(t *testing.T) {
+	h := newHarness(t)
+	for name, c := range map[string]struct{ token, origin string }{
+		"no token": {"", ""}, "a bad Origin": {h.node, "https://evil.example"}, "an unknown token": {h.node + "x", ""}, "a good token": {h.node, ""},
+	} {
+		r := mcpPost(c.token)
+		r.body = bigPing()
+		if c.origin != "" {
+			r.hdr["Origin"] = c.origin
+		}
+		if resp, _ := h.do(h.h.MCP, r); resp.StatusCode != http.StatusRequestEntityTooLarge {
+			t.Errorf("%s: %d, want 413", name, resp.StatusCode)
+		}
+	}
+}
+
+// chunked is a POST /mcp with the body in one chunk and no Content-Length.
+func chunked(token, body string) string {
+	return "POST /mcp HTTP/1.1\r\nHost: " + mcpHost + "\r\nAuthorization: Bearer " + token + "\r\n" +
+		"Content-Type: application/json\r\nAccept: application/json, text/event-stream\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n" +
+		strconv.FormatInt(int64(len(body)), 16) + "\r\n" + body + "\r\n0\r\n\r\n"
+}
+
+// TestChunkedBodyIsLimitedWhileRead: with no declared length the reader's own limit applies, and
+// a body just under the limit still goes through.
+func TestChunkedBodyIsLimitedWhileRead(t *testing.T) {
+	h := newHarness(t)
+	if status, _ := h.raw(h.h.MCP, chunked(h.node, bigPing())); status != http.StatusRequestEntityTooLarge {
+		t.Errorf("a chunked body over 64 KiB: %d, want 413", status)
+	}
+	if status, _ := h.raw(h.h.MCP, chunked(h.node, initBody)); status != http.StatusOK {
+		t.Errorf("a small chunked body: %d, want 200", status)
+	}
+}

@@ -32,6 +32,7 @@ func TestDecideStoreFailureIsInternalAndRollsBack(t *testing.T) {
 	answer := func(b *bus.Bus, it bus.Item) error { _, err := b.RecordAnswer(ctx, duet, answerIn(it)); return err }
 	supersede := func(b *bus.Bus, it bus.Item) error { _, err := b.RecordAnswer(ctx, deskP, answerIn(it)); return err }
 	relay := func(b *bus.Bus, it bus.Item) error { _, err := b.RelayWords(ctx, duet, relayIn(it)); return err }
+	relayApproval := func(b *bus.Bus, it bus.Item) error { _, err := b.RelayApproval(ctx, duet, approveIn(it)); return err }
 	for _, c := range []struct {
 		name, method string
 		nth          int
@@ -53,6 +54,8 @@ func TestDecideStoreFailureIsInternalAndRollsBack(t *testing.T) {
 		{"relay: insert", "InsertRelay", 1, false, true, relay},
 		{"relay: event", "AppendEvent", 1, false, true, relay},
 		{"relay: update", "UpdateItem", 1, false, true, relay},
+		{"relay approval: decision read", "Decision", 1, false, true, relayApproval},
+		{"relay approval: insert", "InsertRelay", 1, false, true, relayApproval},
 	} {
 		e := newEnv(t)
 		it := e.questionItem(t)

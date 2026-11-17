@@ -54,6 +54,9 @@
   "github.com/Exploded-views/yo-human/internal/hosted/policy": {
     "statements": 100.0
   },
+  "github.com/Exploded-views/yo-human/internal/hosted/web": {
+    "statements": 100.0
+  },
   "github.com/Exploded-views/yo-human/internal/problem": {
     "statements": 100.0
   },

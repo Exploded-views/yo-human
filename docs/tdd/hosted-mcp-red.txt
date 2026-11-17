@@ -1,0 +1,284 @@
+# H1 Task 9 (MCP server), RED records, one section per RED commit. Each section is the command, a note, the output and exit=N.
+
+## 1. config: the origin and link allow-list shapes (against the unchanged LoadConfig)
+$ go test ./internal/hosted/app -run TestConfigOriginAndLinkAllowListShapes -count=1
+--- FAIL: TestConfigOriginAndLinkAllowListShapes (0.00s)
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai/" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai/path" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai?" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai?q=1" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai#frag" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://userinfo-MARK@claude.ai" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai:443" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai:" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="http://claude.ai" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="claude.ai" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://Claude.ai" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="HTTPS://claude.ai" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://*.claude.ai" accepted, want it refused
+    config_shapes_test.go:53: YH_ORIGIN_ALLOW="https://claude.ai,https://claude.com/" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="https://github.com" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="github.com:443" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="github.com:8443" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="*.github.com" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="*" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="github.com/" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="github.com/path" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="user-MARK@github.com" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS=".github.com" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="github..com" accepted, want it refused
+    config_shapes_test.go:53: YH_LINK_HOSTS="github.com,*.example.org" accepted, want it refused
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.235s
+FAIL
+exit=1
+
+## 2. bus: Duet's record_approval relay (against a stub RelayApproval that returns an internal error)
+$ go test ./internal/hosted/bus -run TestRelayApproval -count=1
+--- FAIL: TestRelayApprovalStoresWordsNeverResolves (0.01s)
+    relay_approval_test.go:20: RelayApproval: internal: the bus (valid: a retry)
+--- FAIL: TestRelayApprovalRefusals (0.01s)
+    relay_approval_test.go:65: code = internal (the bus), want forbidden
+--- FAIL: TestRelayApprovalPolicy (0.00s)
+    relay_approval_test.go:94: code = internal (the bus), want standing
+--- FAIL: TestRelayApprovalExcludedAction (0.00s)
+    relay_approval_test.go:112: code = internal (the bus), want excluded_action
+--- FAIL: TestRelayApprovalWalledSwarmIsGoOrHold (0.00s)
+    relay_approval_test.go:143: approve "go sl:12": internal: the bus (valid: a retry), want it stored
+    relay_approval_test.go:143: reject "hold sl:12": internal: the bus (valid: a retry), want it stored
+    relay_approval_test.go:146: code = internal (the bus), want invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.215s
+FAIL
+exit=1
+
+## 3. web: the two listeners, host routing and the middleware (against stubs: every route answers 500, New and NewHTTPServer are placeholders)
+$ go test ./internal/hosted/web -count=1
+--- FAIL: TestApproveListenerServesOnlyApprovalHost (0.01s)
+    listeners_test.go:69: the MCP host, POST /mcp: 500, want 404
+    listeners_test.go:69: the MCP host, oauth callback: 500, want 404
+    listeners_test.go:69: the MCP host, resource metadata: 500, want 404
+    listeners_test.go:69: the MCP host, an approval path: 500, want 404
+    listeners_test.go:69: the approval host, POST /mcp: 500, want 404
+    listeners_test.go:69: the approval host, oauth callback: 500, want 404
+    listeners_test.go:69: an unknown host, /approve/x: 500, want 404
+    listeners_test.go:69: the approval host, an unrouted path: 500, want 404
+    listeners_test.go:69: the approval host, /approve/x: 500, want 200
+    listeners_test.go:69: the approval host, /passkey/enrol: 500, want 200
+    listeners_test.go:69: the approval host, /healthz: 500, want 200
+    listeners_test.go:69: any host, /healthz: 500, want 200
+--- FAIL: TestMCPListenerRefusesApprovalRoutes (0.01s)
+    listeners_test.go:82: host bus.example.com, /approve/x: 500, want 404
+    listeners_test.go:82: host bus.example.com, /approve: 500, want 404
+    listeners_test.go:82: host bus.example.com, /approve/static/app.js: 500, want 404
+    listeners_test.go:82: host bus.example.com, /approvexyz: 500, want 404
+    listeners_test.go:82: host bus.example.com, /passkey/enrol: 500, want 404
+    listeners_test.go:82: host bus.example.com, /passkey/: 500, want 404
+    listeners_test.go:82: host bus.example.com, /passkey/static/app.js: 500, want 404
+    listeners_test.go:82: host approve.example.com, /approve/x: 500, want 404
+    listeners_test.go:82: host approve.example.com, /approve: 500, want 404
+    listeners_test.go:82: host approve.example.com, /approve/static/app.js: 500, want 404
+    listeners_test.go:82: host approve.example.com, /approvexyz: 500, want 404
+    listeners_test.go:82: host approve.example.com, /passkey/enrol: 500, want 404
+    listeners_test.go:82: host approve.example.com, /passkey/: 500, want 404
+    listeners_test.go:82: host approve.example.com, /passkey/static/app.js: 500, want 404
+    listeners_test.go:82: host other.example.net, /approve/x: 500, want 404
+    listeners_test.go:82: host other.example.net, /approve: 500, want 404
+    listeners_test.go:82: host other.example.net, /approve/static/app.js: 500, want 404
+    listeners_test.go:82: host other.example.net, /approvexyz: 500, want 404
+    listeners_test.go:82: host other.example.net, /passkey/enrol: 500, want 404
+    listeners_test.go:82: host other.example.net, /passkey/: 500, want 404
+    listeners_test.go:82: host other.example.net, /passkey/static/app.js: 500, want 404
+    listeners_test.go:87: POST /mcp under the approval host: 500, want 404
+    listeners_test.go:90: POST /mcp under the MCP host: 500, want 401 from the bearer check
+    listeners_test.go:97: /oauth/github/callback under the MCP host: 500 "stub\n", want the extra handler
+    listeners_test.go:97: /.well-known/oauth-protected-resource/mcp under the MCP host: 500 "stub\n", want the extra handler
+--- FAIL: TestHostNormalisation (0.01s)
+    listeners_test.go:105: the plain host: 500, want 401
+--- FAIL: TestHostNormalisationIgnoresForwardedHeaders (0.01s)
+    listeners_test.go:135: MCP, Host approve.example.com with X-Forwarded-Host naming the MCP host: 500, want 404
+    listeners_test.go:139: Approve, Host bus.example.com with X-Forwarded-Host naming the approval host: 500, want 404
+    listeners_test.go:135: MCP, Host approve.example.com with Forwarded naming the MCP host: 500, want 404
+    listeners_test.go:139: Approve, Host bus.example.com with Forwarded naming the approval host: 500, want 404
+    listeners_test.go:135: MCP, Host approve.example.com with Fly-Forwarded-Host naming the MCP host: 500, want 404
+    listeners_test.go:139: Approve, Host bus.example.com with Fly-Forwarded-Host naming the approval host: 500, want 404
+    listeners_test.go:146: MCP, Host "bus.example.com:8443": 500, want 404
+    listeners_test.go:146: MCP, Host "bus.example.com:81": 500, want 404
+    listeners_test.go:150: Approve, the right host on another port: 500, want 404
+--- FAIL: TestHostNormalisationRawRequests (0.01s)
+    listeners_test.go:169: MCP, HTTP/1.0 with no Host: 500, want 404
+    listeners_test.go:169: Approve, HTTP/1.0 with no Host: 500, want 404
+    listeners_test.go:169: MCP, an absolute-form URI naming the approval host: 500, want 404
+    listeners_test.go:169: Approve, an absolute-form URI naming the MCP host: 500, want 404
+--- FAIL: TestHostNormalisationHTTP2 (0.02s)
+    listeners_test.go:208: MCP, :authority = the approval host: HTTP/2 status 500, want HTTP/2 status 404
+    listeners_test.go:208: MCP, :authority = the MCP host: HTTP/2 status 500, want HTTP/2 status 401
+    listeners_test.go:208: Approve, :authority = the MCP host: HTTP/2 status 500, want HTTP/2 status 404
+    listeners_test.go:208: Approve, :authority = the approval host: HTTP/2 status 500, want HTTP/2 status 200
+--- FAIL: TestNotFoundIdentical (0.01s)
+    listeners_test.go:241: /mcp: 500, want 404
+--- FAIL: TestNoTokenGets401WithResourceMetadata (0.01s)
+    middleware_test.go:19: a malformed token: 500, WWW-Authenticate "", want 401 and "Bearer resource_metadata=\"https://bus.example.com/.well-known/oauth-protected-resource/mcp\""
+    middleware_test.go:19: an unknown token: 500, WWW-Authenticate "", want 401 and "Bearer resource_metadata=\"https://bus.example.com/.well-known/oauth-protected-resource/mcp\""
+    middleware_test.go:19: no token: 500, WWW-Authenticate "", want 401 and "Bearer resource_metadata=\"https://bus.example.com/.well-known/oauth-protected-resource/mcp\""
+--- FAIL: TestDeskStarterGets403OnMCP (0.01s)
+    middleware_test.go:33: a desk starter: 500, want 403
+    middleware_test.go:37: Duet: 500, want 200
+    middleware_test.go:37: a node: 500, want 200
+--- FAIL: TestBadOriginGets403 (0.01s)
+    middleware_test.go:62: Origin "https://evil.example", token true: 500, want 403
+    middleware_test.go:62: Origin "https://evil.example", token false: 500, want 403
+    middleware_test.go:62: Origin "https://claude.ai/", token true: 500, want 403
+    middleware_test.go:62: Origin "http://claude.ai", token true: 500, want 403
+    middleware_test.go:62: Origin "https://CLAUDE.ai", token true: 500, want 403
+    middleware_test.go:62: Origin "https://claude.ai", token true: 500, want 200
+    middleware_test.go:62: Origin "", token true: 500, want 200
+    middleware_test.go:62: Origin "https://claude.ai", token false: 500, want 401
+--- FAIL: TestBodyOver64KiBRejected (0.01s)
+    middleware_test.go:72: a body over 64 KiB: 500, want 413
+--- FAIL: TestHTTPServerTimeouts (0.00s)
+    middleware_test.go:89: server setting 1 = 1s, want 5s
+    middleware_test.go:89: server setting 2 = 0s, want 10s
+    middleware_test.go:89: server setting 3 = 0s, want 35s
+    middleware_test.go:89: server setting 4 = 0s, want 1m0s
+    middleware_test.go:89: server setting 5 = 0, want 16384
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	0.312s
+FAIL
+exit=1
+
+## 4. lint rules: the web package may import the MCP SDK (mcp and auth) and nothing else of it (probes against the unchanged .golangci.yml; repeated depguard lines dropped)
+$ make lint-rules-test
+sh scripts/lint_rules_test.sh
+FAIL internal/hosted/web/casesqlite/x.go: hosted web imports the SQLite driver: want hosted-web-imports, got hosted-imports
+internal/hosted/web/casesqlite/x.go:4:2: import 'modernc.org/sqlite' is not allowed from list 'hosted-imports' (depguard)
+FAIL internal/hosted/web/casemcp/x.go: hosted web imports the MCP SDK mcp and auth packages, bus, auth, hostname and version: want clean, got hosted-imports
+internal/hosted/web/casemcp/x.go:4:2: import 'github.com/modelcontextprotocol/go-sdk/mcp' is not allowed from list 'hosted-imports' (depguard)
+internal/hosted/web/casemcp/x.go:5:2: import 'github.com/modelcontextprotocol/go-sdk/auth' is not allowed from list 'hosted-imports' (depguard)
+FAIL internal/hosted/web/casejsonrpc/x.go: hosted web imports an SDK package that is not named (jsonrpc): want hosted-web-imports, got hosted-imports
+internal/hosted/web/casejsonrpc/x.go:4:2: import 'github.com/modelcontextprotocol/go-sdk/jsonrpc' is not allowed from list 'hosted-imports' (depguard)
+FAIL internal/hosted/web/caseoauthex/x.go: hosted web imports an SDK package that is not named (oauthex): want hosted-web-imports, got hosted-imports
+internal/hosted/web/caseoauthex/x.go:4:2: import 'github.com/modelcontextprotocol/go-sdk/oauthex' is not allowed from list 'hosted-imports' (depguard)
+FAIL internal/hosted/web/caseevil/x.go: hosted web imports an unreviewed module: want hosted-web-imports, got hosted-imports
+internal/hosted/web/caseevil/x.go:4:2: import 'example.com/evil' is not allowed from list 'hosted-imports' (depguard)
+FAIL internal/hosted/web/casestore/x.go: hosted web imports the CLI store: want hosted-web-imports, got hosted-imports
+internal/hosted/web/casestore/x.go:4:2: import 'github.com/Exploded-views/yo-human/internal/store' is not allowed from list 'hosted-imports' (depguard)
+lint_rules_test: a case failed
+make: *** [lint-rules-test] Error 1
+exit=1
+
+## 5. web: the Duet and node tool sets, with no tools registered (the servers are empty, so every call is an unknown tool and every list is empty)
+$ go test ./internal/hosted/web -count=1
+--- FAIL: TestNodeWriteTools (0.01s)
+    tools_agent_test.go:17: post: calling "tools/call": sending "tools/call": unknown tool "post": rejected by transport: Bad Request
+--- FAIL: TestNodeReadTools (0.01s)
+    tools_agent_test.go:43: record_answer: calling "tools/call": sending "tools/call": unknown tool "record_answer": rejected by transport: Bad Request
+--- FAIL: TestAnswersWaitSecondsRange (0.01s)
+    tools_agent_test.go:58: answers: protocol error calling "tools/call": sending "tools/call": unknown tool "answers": rejected by transport: Bad Request, want a tool error invalid
+--- FAIL: TestAnswersLongPollWakes (0.31s)
+    tools_agent_test.go:86: record_answer: calling "tools/call": sending "tools/call": unknown tool "record_answer": rejected by transport: Bad Request
+--- FAIL: TestAnswersWaitIsNotCutByToolDeadline (0.01s)
+    tools_agent_test.go:104: answers: calling "tools/call": sending "tools/call": unknown tool "answers": rejected by transport: Bad Request
+--- FAIL: TestDeadlineBoundsToolCall (0.01s)
+    tools_agent_test.go:134: the call did not return a result: calling "tools/call": sending "tools/call": unknown tool "item": rejected by transport: Bad Request (after 622.541µs)
+--- FAIL: TestDuetRecordApprovalReturnsLinkNeverResolves (0.01s)
+    tools_duet_test.go:16: record_approval: calling "tools/call": sending "tools/call": unknown tool "record_approval": rejected by transport: Bad Request
+--- FAIL: TestToolErrorShape (0.01s)
+    tools_duet_test.go:61: record_approval: protocol error calling "tools/call": sending "tools/call": unknown tool "record_approval": rejected by transport: Bad Request, want a tool error excluded_action
+--- FAIL: TestDuetReadTools (0.01s)
+    tools_duet_test.go:75: status_push: calling "tools/call": sending "tools/call": unknown tool "status_push": rejected by transport: Bad Request
+--- FAIL: TestDuetWriteTools (0.01s)
+    tools_duet_test.go:106: record_answer: calling "tools/call": sending "tools/call": unknown tool "record_answer": rejected by transport: Bad Request
+--- FAIL: TestToolsRefuseMissingRequiredArguments (0.01s)
+    tools_duet_test.go:156: item: protocol error calling "tools/call": sending "tools/call": unknown tool "item": rejected by transport: Bad Request, want a tool error invalid
+--- FAIL: TestToolListsPerPrincipal (0.03s)
+    --- FAIL: TestToolListsPerPrincipal/Duet_sees_exactly_the_seven_Duet_tools (0.00s)
+        tools_lists_test.go:22: Duet tools = [], want [ack inbox_for_claude item post record_answer record_approval swarm_status]
+    --- FAIL: TestToolListsPerPrincipal/a_node_sees_exactly_its_six_tools_(escalate_lands_with_Task_11b) (0.00s)
+        tools_lists_test.go:26: node tools = [], want [answers item post relay reply status_push]
+--- FAIL: TestForgedActorKindRejected (0.01s)
+    tools_lists_test.go:73: relay: protocol error calling "tools/call": sending "tools/call": unknown tool "relay": rejected by transport: Bad Request, want a tool error invalid
+--- FAIL: TestNoFileHandOff (0.01s)
+    tools_lists_test.go:112: post: protocol error calling "tools/call": sending "tools/call": unknown tool "post": rejected by transport: Bad Request, want a tool error invalid
+--- FAIL: TestToolSchemasHaveNoFileFields (0.01s)
+    tools_lists_test.go:144: tools checked = 0, want 13
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	0.953s
+FAIL
+exit=1
+
+## 6. bus: a waiting Answers call is woken by an answer or an approval (found by the MCP long-poll test: decide never calls committed; the 5 s is the test's own wait)
+$ go test ./internal/hosted/bus -run TestAnswersLongPollWakesOn -count=1
+--- FAIL: TestAnswersLongPollWakesOnAnswerAndApproval (5.01s)
+    answers_wake_decide_test.go:34: an answer: no return within 5s
+--- FAIL: TestAnswersLongPollWakesOnHumanSupersede (5.01s)
+    answers_wake_decide_test.go:56: supersede: no return within 5s
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	10.264s
+FAIL
+exit=1
+
+## 7. review round 1, bus: RelayApproval on an already-decided revision, and its wake (against the code of f9d14d7)
+$ go test ./internal/hosted/bus -run "TestRelayApprovalAfter|TestRelayApprovalWakes" -count=1
+--- FAIL: TestRelayApprovalAfterPasskeyDecisionIsAlreadyDecided (0.01s)
+    relay_approval_decided_test.go:25: err = <nil> (<nil>), want a *bus.Error with code already_decided
+--- FAIL: TestRelayApprovalWakesWaiters (0.21s)
+    relay_approval_decided_test.go:54: RelayApproval did not wake the waiter: it never read again
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.461s
+FAIL
+exit=1
+
+## 8. review round 1, app: the tool deadline ceiling and DNS-name link hosts (against the code of f9d14d7)
+$ go test ./internal/hosted/app -run "TestConfigToolDeadline|TestConfigLinkHostsAre" -count=1
+--- FAIL: TestConfigToolDeadlineCeiling (0.00s)
+    config_review_test.go:19: YH_TOOL_DEADLINE="10001ms": err = <nil>, want it refused, naming the variable only
+    config_review_test.go:19: YH_TOOL_DEADLINE="11s": err = <nil>, want it refused, naming the variable only
+    config_review_test.go:19: YH_TOOL_DEADLINE="35s": err = <nil>, want it refused, naming the variable only
+    config_review_test.go:19: YH_TOOL_DEADLINE="1m": err = <nil>, want it refused, naming the variable only
+--- FAIL: TestConfigLinkHostsAreDNSNames (0.00s)
+    config_review_test.go:36: YH_LINK_HOSTS="10.0.0.1" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="127.0.0.1" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="1.2.3.4" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="999.999.999.999" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="0x7f.1" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="1234" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="aaaaaaaaaaaaaaaaaaaa" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="aaaaaaaaaaaaaaaaaaaa" accepted, want it refused
+    config_review_test.go:40: an IP literal origin was accepted
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.182s
+FAIL
+exit=1
+
+## 9. review round 1, web: New refuses an unusable origin; a non-canonical path is the shared 404 (against the code of f9d14d7; the other new web tests pin behaviour that already held and are checked by the mutants)
+$ go test ./internal/hosted/web -count=1
+--- FAIL: TestNewRefusesAnUnusableOrigin (0.01s)
+    internal_test.go:96: New({PublicURL: ApproveOrigin:https://approve.example.com OriginAllow:[] ToolDeadline:0s Log:<nil> Approve:<nil>}) did not refuse
+    internal_test.go:96: New({PublicURL:https://bus.example.com ApproveOrigin: OriginAllow:[] ToolDeadline:0s Log:<nil> Approve:<nil>}) did not refuse
+    internal_test.go:96: New({PublicURL:://bad ApproveOrigin:https://approve.example.com OriginAllow:[] ToolDeadline:0s Log:<nil> Approve:<nil>}) did not refuse
+    internal_test.go:96: New({PublicURL:https://bus.example.com ApproveOrigin:https:///path OriginAllow:[] ToolDeadline:0s Log:<nil> Approve:<nil>}) did not refuse
+    internal_test.go:96: New({PublicURL:https://bus.example.com ApproveOrigin:https://bus.example.com OriginAllow:[] ToolDeadline:0s Log:<nil> Approve:<nil>}) did not refuse
+--- FAIL: TestNonCanonicalPathsAre404 (0.01s)
+    listeners_test.go:200: Approve /approve/../mcp: 200 "approve-page", want the shared 404
+    listeners_test.go:200: Approve /approve/./x: 200 "approve-page", want the shared 404
+    listeners_test.go:200: Approve /approve//x: 200 "approve-page", want the shared 404
+    listeners_test.go:200: Approve /passkey/../approve/x: 200 "approve-page", want the shared 404
+    listeners_test.go:200: Approve /approve/x/: 200 "approve-page", want the shared 404
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	2.769s
+FAIL
+exit=1
+
+== Section 10: review round 2 (Opus delta on ae0332f), D1: bareHost refuses a hex last label (RED)
+$ go test -count=1 -run TestConfigLinkHostsAreDNSNames ./internal/hosted/app/
+--- FAIL: TestConfigLinkHostsAreDNSNames (0.00s)
+    config_review_test.go:36: YH_LINK_HOSTS="0x7f000001" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="0X7F" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="0x" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="a.0x7f" accepted, want it refused
+    config_review_test.go:36: YH_LINK_HOSTS="a.0XaBc" accepted, want it refused
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.243s
+FAIL
+exit=1

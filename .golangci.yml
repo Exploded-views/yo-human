@@ -121,11 +121,26 @@ linters:
           files:
             - "**/internal/hosted/**"
             - "!**/internal/hosted/db/**"
+            - "!**/internal/hosted/web/**"
             - "!$test"
           allow:
             - $gostd
             - github.com/Exploded-views/yo-human/internal/hosted/
             - github.com/Exploded-views/yo-human/internal/version$
+        # web is the one package that serves MCP: the same imports as any hosted package, plus the
+        # MCP SDK's mcp and auth packages by exact name (go-sdk v1.8.0, reviewed in H1 Task 9).
+        # Nothing else of the SDK, so its jsonrpc, oauthex and extauth packages stay out until
+        # a task needs and reviews them.
+        hosted-web-imports:
+          files:
+            - "**/internal/hosted/web/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/Exploded-views/yo-human/internal/hosted/
+            - github.com/Exploded-views/yo-human/internal/version$
+            - github.com/modelcontextprotocol/go-sdk/mcp$
+            - github.com/modelcontextprotocol/go-sdk/auth$
         # db implements bus.Store: the standard library, bus, and the one reviewed SQLite driver
         # (modernc.org/sqlite, pure Go; constitution IV). Nothing else, so db never reaches web,
         # oauth, egress or the CLI side.

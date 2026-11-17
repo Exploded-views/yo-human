@@ -152,7 +152,17 @@ internal/hosted/hostname/casebus|hosted-hostname-leaf|x.go|M/internal/hosted/bus
 internal/hosted/hostname/casehttp|internal-no-network|x.go|net/http|hosted hostname imports net/http
 internal/hosted/app/casehostname|clean|x.go|M/internal/hosted/hostname|hosted app imports hostname
 internal/hosted/bus/casehostname|hosted-bus-imports|x.go|M/internal/hosted/hostname|hosted bus imports hostname
-internal/hosted/web/casesqlite|hosted-imports|x.go|modernc.org/sqlite|hosted web imports the SQLite driver
+internal/hosted/web/casesqlite|hosted-web-imports|x.go|modernc.org/sqlite|hosted web imports the SQLite driver
+internal/hosted/web/casemcp|clean|x.go|github.com/modelcontextprotocol/go-sdk/mcp github.com/modelcontextprotocol/go-sdk/auth M/internal/hosted/bus M/internal/hosted/auth M/internal/hosted/hostname M/internal/version|hosted web imports the MCP SDK mcp and auth packages, bus, auth, hostname and version
+internal/hosted/web/casejsonrpc|hosted-web-imports|x.go|github.com/modelcontextprotocol/go-sdk/jsonrpc|hosted web imports an SDK package that is not named (jsonrpc)
+internal/hosted/web/caseoauthex|hosted-web-imports|x.go|github.com/modelcontextprotocol/go-sdk/oauthex|hosted web imports an SDK package that is not named (oauthex)
+internal/hosted/web/caseevil|hosted-web-imports|x.go|example.com/evil|hosted web imports an unreviewed module
+internal/hosted/web/casestore|hosted-web-imports|x.go|M/internal/store|hosted web imports the CLI store
+internal/hosted/bus/casemcp|hosted-imports|x.go|github.com/modelcontextprotocol/go-sdk/mcp|hosted bus imports the MCP SDK (web only)
+internal/hosted/oauth/casemcp|hosted-imports|x.go|github.com/modelcontextprotocol/go-sdk/mcp|hosted oauth imports the MCP SDK (web only)
+internal/hosted/auth/casemcp|hosted-auth-imports hosted-imports|x.go|github.com/modelcontextprotocol/go-sdk/auth|hosted auth imports the MCP SDK (web only)
+internal/core/casemcp|core-imports|x.go|github.com/modelcontextprotocol/go-sdk/mcp|core imports the MCP SDK
+internal/hosted/web/casemcptest|clean|x_test.go|github.com/modelcontextprotocol/go-sdk/mcp github.com/modelcontextprotocol/go-sdk/jsonrpc|a hosted web test imports the SDK client and jsonrpc packages
 internal/core/casesqlite|core-imports|x.go|modernc.org/sqlite|core imports the SQLite driver
 internal/hosted/notify/casehttp|internal-no-network|x.go|net/http|hosted notify imports net/http
 internal/hosted/egress/bark/casebus|hosted-egress-imports|x.go|M/internal/hosted/bus|an egress package imports bus
