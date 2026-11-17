@@ -34,6 +34,9 @@ func (b *Bus) Post(ctx context.Context, p Principal, d Draft) (PostResult, error
 	if err != nil {
 		return PostResult{}, mapStoreErr(err)
 	}
+	if res.Outcome != OutcomeUnchanged { // an unchanged repost appends no event
+		b.committed(res.Item.Swarm)
+	}
 	return res, nil
 }
 

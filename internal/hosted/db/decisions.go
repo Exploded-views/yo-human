@@ -4,18 +4,19 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Exploded-views/yo-human/internal/hosted/bus"
 )
 
-// Decision returns the effective record for one revision: its human record if there is one,
-// else its agent record.
-func (x *txn) Decision(itemID string, rev int) (bus.Record, bool, error) {
+const decisionCols = `item_id, revision, kind, decision, actor_kind, text, source, by_name, source_message, human_ts, recorded`
+
+// oneDecision reads the first record matching where, the human's before the agent's.
+func (x *txn) oneDecision(where string, args ...any) (bus.Record, bool, error) {
 	var r bus.Record
 	var humanTS, recorded string
-	err := x.tx.QueryRowContext(x.ctx, `SELECT item_id, revision, kind, decision, actor_kind, text, source, by_name,
-		source_message, human_ts, recorded FROM decisions WHERE item_id = ? AND revision = ?
-		ORDER BY CASE actor_kind WHEN 'human' THEN 0 ELSE 1 END LIMIT 1`, itemID, rev).
+	err := x.tx.QueryRowContext(x.ctx, "SELECT "+decisionCols+" FROM decisions WHERE "+where+
+		" ORDER BY CASE actor_kind WHEN 'human' THEN 0 ELSE 1 END LIMIT 1", args...).
 		Scan(&r.ItemID, &r.Revision, &r.Kind, &r.Decision, &r.ActorKind, &r.Text, &r.Source, &r.By,
 			&r.SourceMessage, &humanTS, &recorded)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -31,6 +32,18 @@ func (x *txn) Decision(itemID string, rev int) (bus.Record, bool, error) {
 		return bus.Record{}, false, fmt.Errorf("db: read decision: %w", err)
 	}
 	return r, true, nil
+}
+
+// Decision returns the effective record for one revision: its human record if there is one,
+// else its agent record.
+func (x *txn) Decision(itemID string, rev int) (bus.Record, bool, error) {
+	return x.oneDecision("item_id = ? AND revision = ?", itemID, rev)
+}
+
+// DecisionRecorded returns the item's record of the given kind written at exactly recorded: the
+// record an answer or approval event names by its Created time (see bus.Tx).
+func (x *txn) DecisionRecorded(itemID string, kind bus.RecordKind, recorded time.Time) (bus.Record, bool, error) {
+	return x.oneDecision("item_id = ? AND kind = ? AND recorded = ?", itemID, kind, fmtTime(recorded))
 }
 
 // The errors InsertDecision and UpdateItem return when a write doesn't fit its item. They are

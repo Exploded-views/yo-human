@@ -18,7 +18,7 @@ func TestHostedScenariosAreRegistered(t *testing.T) {
 	for _, s := range scenarios {
 		have[s.Name] = s.Sample != nil
 	}
-	for _, name := range []string{"hosted-post", "hosted-revise"} {
+	for _, name := range []string{"hosted-post", "hosted-revise", "hosted-answers-wake"} {
 		if !have[name] {
 			t.Errorf("scenario %s is not registered with a Sample", name)
 		}
@@ -77,5 +77,24 @@ func TestBudgetsFileHasTheHostedScenarios(t *testing.T) {
 			// measurements (round 3, MED-1).
 			t.Errorf("%s budget %dms: must be 10 to 20ms (the plan's ceiling)", name, bud.P95Ms)
 		}
+	}
+}
+
+// The wake budget is a latency bound, not a commit time: a waiter returns within 200 ms of the
+// commit (the plan's ceiling), and the budget is the measured p95 times the headroom.
+func TestWakeBudgetIsUnderTheCeiling(t *testing.T) {
+	b, err := ReadBudgets("../../perf-budgets.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bud, ok := b.Budgets["hosted-answers-wake"]
+	if !ok {
+		t.Fatal("no budget for hosted-answers-wake")
+	}
+	// The 10 ms budget is deliberate: each sample contains a full post commit, so it can't sit below
+	// hosted-post's 10 ms; measured p95 is about 0.5 ms and CI doubles the budget.
+	// CI judges against the budget times the headroom, so that product is what the ceiling bounds.
+	if limit := float64(bud.P95Ms) * b.CIHeadroom; bud.P95Ms < 1 || limit > 200 {
+		t.Errorf("hosted-answers-wake budget %dms (%.0fms in CI): must be at least 1ms and at most 200ms in CI (the plan's ceiling)", bud.P95Ms, limit)
 	}
 }

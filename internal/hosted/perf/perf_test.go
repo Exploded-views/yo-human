@@ -13,7 +13,7 @@ import (
 	"github.com/Exploded-views/yo-human/internal/hosted/bus"
 )
 
-var samplers = map[string]sampler{"post": PostIn, "revise": ReviseIn}
+var samplers = map[string]sampler{"post": PostIn, "revise": ReviseIn, "wake": WakeIn}
 
 func TestSeedItemsIsTheBudgetLine(t *testing.T) {
 	if SeedItems != 10000 {
@@ -55,7 +55,7 @@ func TestRunPrintsOneTimingPerLine(t *testing.T) {
 	old := seedItems
 	seedItems = 20
 	t.Cleanup(func() { seedItems = old })
-	for _, kind := range []string{"post", "revise"} {
+	for _, kind := range []string{"post", "revise", "wake"} {
 		var out, errOut bytes.Buffer
 		if code := Run([]string{kind, "3"}, &out, &errOut); code != 0 {
 			t.Fatalf("%s: code %d, stderr %q", kind, code, errOut.String())
@@ -95,7 +95,7 @@ func TestSamplersOnTheRealSize(t *testing.T) {
 	if testing.Short() {
 		t.Skip("seeds 10,000 items")
 	}
-	for name, fn := range map[string]func(int) ([]time.Duration, error){"post": Post, "revise": Revise} {
+	for name, fn := range map[string]func(int) ([]time.Duration, error){"post": Post, "revise": Revise, "wake": Wake} {
 		got, err := fn(2)
 		if err != nil || len(got) != 2 {
 			t.Errorf("%s: %v, %d samples", name, err, len(got))
@@ -164,5 +164,66 @@ func TestWarmUpFollowsTheSeed(t *testing.T) {
 	}
 	if res.Item.LastSeq != items+1 {
 		t.Errorf("warm-up event seq = %d, want %d: the warm-up must follow all %d seed events", res.Item.LastSeq, items+1, items)
+	}
+}
+
+// The wake sampler times a waiter, not the post: each sample is how long a blocked Answers took
+// to return after the commit that woke it, and it must have returned what the commit made.
+func TestWakeSamplesAreTheWaitersLatency(t *testing.T) {
+	got, err := WakeIn(filepath.Join(t.TempDir(), "data"), 25, 5)
+	if err != nil || len(got) != 5 {
+		t.Fatalf("%v, %d samples", err, len(got))
+	}
+	for _, d := range got {
+		if d <= 0 || d > 5*time.Second {
+			t.Errorf("a sample of %v: a waiter that waited out its timeout measures nothing", d)
+		}
+	}
+}
+
+func TestUsageNamesWake(t *testing.T) {
+	var out, errOut bytes.Buffer
+	if code := Run([]string{"sleep", "3"}, &out, &errOut); code != 2 || !strings.Contains(errOut.String(), "wake") {
+		t.Errorf("code %d, stderr %q: the usage line must name wake", code, errOut.String())
+	}
+}
+
+// A waiter that returns something other than the one post it was waiting for measures the wrong
+// operation, and a post that fails is an error, not a sample.
+func TestWakeOnceRefusesTheWrongOperation(t *testing.T) {
+	b, closeDB, err := seeded(filepath.Join(t.TempDir(), "data"), 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeDB()
+	// From cursor 0 the waiter reads the seed's events as well, so it returns more than the post.
+	if _, _, err := wakeOnce(context.Background(), b, 0, "wake-x"); err == nil || !strings.Contains(err.Error(), "wrong operation") {
+		t.Errorf("err = %v, want the wrong-operation refusal", err)
+	}
+	cursor, err := drain(context.Background(), b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := wakeOnce(context.Background(), b, cursor, strings.Repeat("h", bus.MaxHandle+1)); err == nil {
+		t.Error("a post the bus refuses was timed")
+	}
+}
+
+func TestDrainReturnsTheEndOfTheSwarm(t *testing.T) {
+	b, closeDB, err := seeded(filepath.Join(t.TempDir(), "data"), 250)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeDB()
+	cursor, err := drain(context.Background(), b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err := b.Answers(context.Background(), perfNode, cursor, 0)
+	if err != nil || len(u.Events) != 0 {
+		t.Errorf("after drain: %+v, %v", u, err)
+	}
+	if cursor == 0 {
+		t.Error("drain stayed at 0 over a seeded swarm")
 	}
 }

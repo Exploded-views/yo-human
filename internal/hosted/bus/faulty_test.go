@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Exploded-views/yo-human/internal/hosted/bus"
 )
@@ -137,4 +138,60 @@ func TestStoreFailureIsInternalAndRollsBack(t *testing.T) {
 		same(t, c.name+": state after rollback", []any{len(e.events(t)), got.Revision, got.State, len(e.messages(t, it.ID))},
 			[]any{before, 1, bus.StateDecided, 0})
 	}
+}
+
+func (t *faultyTx) EventsSince(swarm string, since int64, limit int) ([]bus.Event, error) {
+	if err := t.hit("EventsSince"); err != nil {
+		return nil, err
+	}
+	return t.Tx.EventsSince(swarm, since, limit)
+}
+
+func (t *faultyTx) Messages(id string) ([]bus.Message, error) {
+	if err := t.hit("Messages"); err != nil {
+		return nil, err
+	}
+	return t.Tx.Messages(id)
+}
+
+func (t *faultyTx) ListOpenForHuman() ([]bus.Item, error) {
+	if err := t.hit("ListOpenForHuman"); err != nil {
+		return nil, err
+	}
+	return t.Tx.ListOpenForHuman()
+}
+
+func (t *faultyTx) ListThreadItems(since int64) ([]bus.Item, error) {
+	if err := t.hit("ListThreadItems"); err != nil {
+		return nil, err
+	}
+	return t.Tx.ListThreadItems(since)
+}
+
+func (t *faultyTx) PutStatus(s bus.StatusDoc) error {
+	if err := t.hit("PutStatus"); err != nil {
+		return err
+	}
+	return t.Tx.PutStatus(s)
+}
+
+func (t *faultyTx) Statuses(swarm string) ([]bus.StatusDoc, error) {
+	if err := t.hit("Statuses"); err != nil {
+		return nil, err
+	}
+	return t.Tx.Statuses(swarm)
+}
+
+func (t *faultyTx) DecisionRecorded(id string, kind bus.RecordKind, at time.Time) (bus.Record, bool, error) {
+	if err := t.hit("DecisionRecorded"); err != nil {
+		return bus.Record{}, false, err
+	}
+	return t.Tx.DecisionRecorded(id, kind, at)
+}
+
+func (t *faultyTx) ListInboxItems(since int64) ([]bus.Item, error) {
+	if err := t.hit("ListInboxItems"); err != nil {
+		return nil, err
+	}
+	return t.Tx.ListInboxItems(since)
 }

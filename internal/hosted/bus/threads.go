@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -15,6 +16,7 @@ func (b *Bus) Reply(ctx context.Context, p Principal, threadID, body string, sev
 		return Message{}, e
 	}
 	var m Message
+	var swarm string
 	err := b.s.Tx(ctx, func(x Tx) error {
 		it, found, err := x.ItemByID(threadID)
 		if err != nil {
@@ -26,12 +28,14 @@ func (b *Bus) Reply(ctx context.Context, p Principal, threadID, body string, sev
 		if err := b.checkSwarmMessage(p, it.Swarm, body); err != nil {
 			return err
 		}
+		swarm = it.Swarm
 		m, err = b.appendMessage(x, it, p, body, sev, urg)
 		return err
 	})
 	if err != nil {
 		return Message{}, mapStoreErr(err)
 	}
+	b.committed(swarm)
 	return m, nil
 }
 
@@ -48,6 +52,9 @@ func checkReply(p Principal, body string, sev Severity, urg Urgency) *Error {
 
 func (b *Bus) appendMessage(x Tx, it Item, p Principal, body string, sev Severity, urg Urgency) (Message, error) {
 	now := b.now().UTC()
+	if !now.After(it.Updated) {
+		now = it.Updated.Add(time.Nanosecond) // a thread's message times strictly increase: an event finds its message by time
+	}
 	m := Message{ID: NewID("msg"), ThreadID: it.ID, From: p.Name, FromKind: p.Kind, Body: body, Severity: sev, Urgency: urg, Created: now}
 	if err := x.InsertMessage(m); err != nil {
 		return Message{}, err

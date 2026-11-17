@@ -1,0 +1,197 @@
+# H1 Task 7 RED, 2026-11-16T01:42:49Z: bus stubs (Inbox, Item, Ack, Answers, PushStatus and SwarmStatus return an error), a db ListThreadItems that returns nothing, and a perf WakeIn that returns an error
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestAnswersSinceCursorNoLoss (0.09s)
+    answers_test.go:50: Answers: not implemented
+--- FAIL: TestAnswersExcludesWhatTheNodeCaused (0.00s)
+    answers_test.go:80: not implemented
+--- FAIL: TestAnswersReturnsWhatOthersDid (0.01s)
+    answers_test.go:92: not implemented
+--- FAIL: TestAnswersCarryTheRecord (0.00s)
+    answers_test.go:117: Answers: not implemented
+--- FAIL: TestAnswersScopedToSwarm (0.00s)
+    answers_test.go:133: Answers: not implemented
+--- FAIL: TestAnswersOnlyForNodes (0.00s)
+    answers_test.go:148: err = not implemented (*errors.errorString), want a *bus.Error with code forbidden
+--- FAIL: TestAnswersLongPollWakesOnCommit (5.00s)
+    answers_test.go:210: the waiter never started its timer
+--- FAIL: TestAnswersLongPollIgnoresOtherSwarms (5.01s)
+    answers_test.go:251: the waiter never started its timer
+--- FAIL: TestAnswersLongPollTimesOutEmpty (5.01s)
+    answers_test.go:278: the waiter never started its timer
+--- FAIL: TestAnswersLongPollKeepsWaitingThroughOwnEvents (5.01s)
+    answers_test.go:295: the waiter never started its timer
+--- FAIL: TestAnswersWaitIsCappedAt25s (5.01s)
+    answers_test.go:313: the waiter never started its timer
+--- FAIL: TestAnswersLongPollCancelReturnsAtOnce (5.00s)
+    answers_test.go:343: the waiter never started its timer
+--- FAIL: TestAnswersLongPollSeesACommitBetweenReadAndWait (0.00s)
+    answers_test.go:387: not implemented
+    answers_test.go:376: internal: the bus (valid: a retry)
+--- FAIL: TestInboxGroupsAndExcludesDuetPosts (0.01s)
+    read_test.go:34: Inbox: not implemented
+--- FAIL: TestInboxSummaryFields (0.01s)
+    read_test.go:52: Inbox: not implemented
+--- FAIL: TestInboxInterruptLaneIsItsOwnGroup (0.01s)
+    read_test.go:65: Inbox: not implemented
+--- FAIL: TestInboxIsReadOnly (0.01s)
+    read_test.go:78: Inbox: not implemented
+--- FAIL: TestInboxSinceAndNext (0.01s)
+    read_test.go:87: Inbox: not implemented
+--- FAIL: TestInboxForbiddenForNode (0.01s)
+    read_test.go:108: err = not implemented (*errors.errorString), want a *bus.Error with code forbidden
+--- FAIL: TestAckHidesUntilNewActivity (0.00s)
+    read_test.go:118: not implemented
+--- FAIL: TestAckUnknownItemIsNotFound (0.00s)
+    read_test.go:133: err = not implemented (*errors.errorString), want a *bus.Error with code not_found
+--- FAIL: TestInboxThreadsListDuetItemsWithNewMessagesFromOthers (0.01s)
+    read_test.go:148: Inbox: not implemented
+--- FAIL: TestItemIncludesThread (0.00s)
+    read_test.go:178: not implemented
+--- FAIL: TestItemShowsOnlyTheCurrentRevisionsDecision (0.01s)
+    read_test.go:194: not implemented
+--- FAIL: TestItemCrossSwarmIsIndistinguishableFromMissing (0.01s)
+    read_test.go:215: err = not implemented (*errors.errorString), want a *bus.Error with code not_found
+--- FAIL: TestStatusPushAndSwarmStatus (0.00s)
+    status_test.go:21: not implemented
+--- FAIL: TestStatusDocRoundTrips (0.00s)
+    status_test.go:36: not implemented
+--- FAIL: TestStatusPushReplacesAndAppendsAnEvent (0.00s)
+    status_test.go:54: not implemented
+--- FAIL: TestStatusReadsAreDuetOnly (0.00s)
+    status_test.go:70: err = not implemented (*errors.errorString), want a *bus.Error with code forbidden
+--- FAIL: TestStatusPushOnlyForNodes (0.00s)
+    status_test.go:79: err = not implemented (*errors.errorString), want a *bus.Error with code forbidden
+--- FAIL: TestStatusPushRejectsOtherSwarm (0.00s)
+    status_test.go:86: err = not implemented (*errors.errorString), want a *bus.Error with code invalid
+--- FAIL: TestStatusPushRejectsBadShape (0.00s)
+    status_test.go:120: err = not implemented (*errors.errorString), want a *bus.Error with code invalid
+--- FAIL: TestStatusIsStoredCanonical (0.00s)
+    status_test.go:135: not implemented
+--- FAIL: TestWalledStatusDocIdsOnly (0.00s)
+    status_test.go:149: a typed document: not implemented
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	30.790s
+FAIL
+exit=1
+$ go test -count=1 -timeout 300s ./internal/hosted/db/
+--- FAIL: TestListThreadItems (0.01s)
+    thread_items_test.go:29: got 0 items, want itm_a then itm_b: []
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.467s
+FAIL
+exit=1
+$ go test -count=1 -timeout 300s ./internal/hosted/perf/
+--- FAIL: TestSamplersTimeEachCall (0.02s)
+    perf_test.go:28: wake: not implemented
+--- FAIL: TestRunPrintsOneTimingPerLine (0.02s)
+    perf_test.go:61: wake: code 1, stderr "perf: not implemented\n"
+--- FAIL: TestSamplersOnTheRealSize (1.00s)
+    perf_test.go:101: wake: not implemented, 0 samples
+--- FAIL: TestWakeSamplesAreTheWaitersLatency (0.00s)
+    perf_test.go:175: not implemented, 0 samples
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	1.247s
+FAIL
+exit=1
+$ go test -count=1 -timeout 300s ./tools/perf/
+--- FAIL: TestHostedScenariosAreRegistered (0.00s)
+    hosted_test.go:23: scenario hosted-answers-wake is not registered with a Sample
+--- FAIL: TestWakeBudgetIsUnderTheCeiling (0.00s)
+    hosted_test.go:92: no budget for hosted-answers-wake
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	7.739s
+FAIL
+exit=1
+
+# Round 2, 8993753: make test (via crew-heavy) finds the 400-line limit broken by internal/hosted/bus/answers_test.go (432 lines)
+$ make test   (only the failing package shown)
+--- FAIL: TestRepoWithinLimit (0.03s)
+    filesize_test.go:30: internal/hosted/bus/answers_test.go:432 exceeds 400 lines
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	3.128s
+exit=2
+
+# Review round 3 (Opus on 5e14049), 2026-11-16T04:14:32Z: tests for M1 (the record an event wrote), M2 (status enum and digit bounds), S1 (subscribe before read), S2 (scan cap), S3 (decided items in the inbox), S4 (Ack with the seq seen), S5 (invalid UTF-8), S6 (strictly increasing message times) against stubs (DecisionRecorded and ListInboxItems find nothing; Ack ignores seenSeq; Summary.LastSeq unset); N1 (budget times headroom) passes already, so it has no RED
+$ go test -count=1 -timeout 300s ./internal/hosted/bus/
+--- FAIL: TestAnswersRecordIsTheOneTheEventRecorded (0.01s)
+    answers_record_test.go:64: approval updates = [{Seq:2 Type:approval_recorded ItemID:itm_7vjomdoan6ox7evdlfhuogkia2 Handle:m7 Revision:2 Record:0x17bf8c0cc0c0 Message:<nil>} {Seq:5 Type:approval_recorded ItemID:itm_7vjomdoan6ox7evdlfhuog
+--- FAIL: TestAnswersRecordUpdateNamesTheRecordsRevision (0.01s)
+    answers_record_test.go:78: approval update = [{Seq:2 Type:approval_recorded ItemID:itm_wzgy34hjorxriratvtxa376t2q Handle:m7 Revision:2 Record:0x17bf8c0cc600 Message:<nil>}], want Revision 1 and a record for revision 1
+--- FAIL: TestAnswersRecordBeyondSixteenRevisions (0.02s)
+    answers_record_test.go:93: approval update = [{Seq:4 Type:approval_recorded ItemID:itm_qxfljxwax74uotcw5cyh2gdn35 Handle:m7 Revision:20 Record:<nil> Message:<nil>}], want the record for revision 3
+--- FAIL: TestAnswersScanIsBounded (5.07s)
+    answers_record_test.go:115: capped call: no return within 5s
+--- FAIL: TestAnswersMessageMatchSurvivesEqualTimestamps (0.01s)
+    answers_record_test.go:144: answers = {Events:[] Next:3}, <nil>, want duet's message and only it
+--- FAIL: TestReadStoreFailureIsInternal (0.10s)
+    read_errors_test.go:70: err = <nil> (<nil>), want a *bus.Error with code internal
+--- FAIL: TestInboxShowsReplyOnDecidedItem (0.01s)
+    read_test.go:240: after the reply = [], want [itm_qba74r44qaw3udojwawxchloa7]
+--- FAIL: TestAckDoesNotHideActivityAfterTheRead (0.01s)
+    read_test.go:250: summary LastSeq = 0, want the item's 1
+--- FAIL: TestWalledStatusMainHealthIsAnEnum (0.01s)
+    status_wall_test.go:31: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestWalledStatusDigitsAreBounded (0.01s)
+    status_wall_test.go:58: err = <nil> (<nil>), want a *bus.Error with code invalid
+--- FAIL: TestStatusPushRefusesInvalidUTF8 (0.00s)
+    status_wall_test.go:83: err = <nil> (<nil>), want a *bus.Error with code invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	6.523s
+FAIL
+exit=1
+$ go test -count=1 -timeout 300s ./internal/hosted/db/
+--- FAIL: TestDecisionRecordedMatchesTheRecordByKindAndTime (0.01s)
+    decisions_test.go:362: first approval: {ItemID: Revision:0 Kind: Decision: ActorKind: Text: Source: By: SourceMessage: HumanTS:0001-01-01 00:00:00 +0000 UTC Recorded:0001-01-01 00:00:00 +0000 UTC}, false
+    decisions_test.go:365: second approval: {ItemID: Revision:0 Kind: Decision: ActorKind: Text: Source: By: SourceMessage: HumanTS:0001-01-01 00:00:00 +0000 UTC Recorded:0001-01-01 00:00:00 +0000 UTC}, false
+--- FAIL: TestListThreadItemsIncludesDecidedItems (0.01s)
+    thread_items_test.go:52: a decided item's new activity is news: got []
+--- FAIL: TestListInboxItems (0.00s)
+    thread_items_test.go:87: ids = [], want [itm_a itm_f itm_b] (open and decided, oldest first)
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.492s
+FAIL
+exit=1
+$ go test -count=1 -timeout 300s ./tools/perf/
+ok  	github.com/Exploded-views/yo-human/tools/perf	8.701s
+exit=0
+
+# Review round 4, 2026-11-16T04:35:23Z: walled session names are typed ids (lead ruling on N7)
+$ go test -count=1 ./internal/hosted/bus/
+--- FAIL: TestWalledStatusSessionNamesAreIds (0.01s)
+    status_wall_test.go:103: err = <nil> (<nil>), want a *bus.Error with code invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	1.921s
+FAIL
+exit=1
+
+# Review round 5, 2026-11-16T05:06:18Z: case-variant and extra status keys
+$ go test -count=1 ./internal/hosted/bus/
+--- FAIL: TestStatusRefusesCaseVariantKeys (0.02s)
+    status_wall_test.go:127: err = <nil> (<nil>), want a *bus.Error with code invalid
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	2.072s
+FAIL
+exit=1
+
+# Review round 6, 2026-11-16T05:09:37Z: the gocyclo limit on parseStatus (complexity 11 at 70cfa63, once the exact-key check was added), and TestWalledStatusCaseVariantKeyRefused (it passes already: the exact-key check is in e13b21a)
+$ golangci-lint run ./internal/hosted/bus/
+internal/hosted/bus/status.go:102:1: cyclomatic complexity 11 of func `parseStatus` is high (> 10) (gocyclo)
+func parseStatus(doc json.RawMessage) (statusDoc, *Error) {
+^
+1 issues:
+* gocyclo: 1
+exit=1
+
+# Review fix round (merge 34d2aa3), 2026-11-16: MF1, Task 6's decide and RelayWords never call committed, so an answers long-poll sleeps through an answer, an approval, a supersede and a relay. SF1, TestAnswersReadsTask6Writes (through RecordAnswer, RecordApproval, RelayWords, no putAnswer) PASSES at once: it is a guard, not a RED; the convention already holds. TestAnswersLongPollIgnoresAnswerInOtherSwarm also passes (a guard: nothing fires today).
+$ go test -count=1 ./internal/hosted/bus/
+--- FAIL: TestAnswersLongPollWakesOnAnswer (5.01s)
+    answers_wake_test.go:35: waiter: no return within 5s
+--- FAIL: TestAnswersLongPollWakesOnApproval (5.02s)
+    answers_wake_test.go:48: waiter: no return within 5s
+--- FAIL: TestAnswersLongPollWakesOnSupersede (5.01s)
+    answers_wake_test.go:64: waiter: no return within 5s
+--- FAIL: TestAnswersLongPollWakesOnRelay (0.21s)
+    answers_wake_test.go:116: a relay did not wake the waiter: it never read again
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	17.508s
+exit=1

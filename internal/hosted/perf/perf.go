@@ -34,6 +34,84 @@ func Post(n int) ([]time.Duration, error) { return inTempDir(SeedItems, n, PostI
 // its event appends.
 func Revise(n int) ([]time.Duration, error) { return inTempDir(SeedItems, n, ReviseIn) }
 
+// Wake times n long-poll waiters: how long Answers took to return after the commit that woke it.
+func Wake(n int) ([]time.Duration, error) { return inTempDir(SeedItems, n, WakeIn) }
+
+// WakeIn is Wake against a database of items items in dir. Each sample is a node's blocked
+// Answers call and Duet's post to its swarm: the time from the start of that post to the waiter's
+// return. That is the commit plus the wake, so it bounds the plan's "within 200 ms of a commit"
+// from above.
+func WakeIn(dir string, items, n int) ([]time.Duration, error) {
+	b, closeDB, err := seeded(dir, items)
+	if err != nil {
+		return nil, err
+	}
+	defer closeDB()
+	ctx := context.Background()
+	cursor, err := drain(ctx, b)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]time.Duration, 0, n)
+	for i := range n {
+		d, next, err := wakeOnce(ctx, b, cursor, fmt.Sprintf("wake-%d", i))
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+		cursor = next
+	}
+	return out, nil
+}
+
+var perfDuet = bus.Principal{Kind: bus.PrincipalDuet, Name: "duet"}
+
+// drain reads the perf node's swarm to its end and returns the cursor there.
+func drain(ctx context.Context, b *bus.Bus) (int64, error) {
+	var cursor int64
+	for {
+		u, err := b.Answers(ctx, perfNode, cursor, 0)
+		if err != nil {
+			return 0, err
+		}
+		if len(u.Events) == 0 {
+			return cursor, nil
+		}
+		cursor = u.Next
+	}
+}
+
+// wakeOnce blocks a waiter, posts to its swarm and returns how long the waiter took to return
+// after the post started, and the new cursor. The waiter must return the post's event: one that
+// waited out its timeout, or returned something else, measures nothing.
+func wakeOnce(ctx context.Context, b *bus.Bus, cursor int64, handle string) (time.Duration, int64, error) {
+	type result struct {
+		at  time.Time
+		u   bus.Updates
+		err error
+	}
+	ch := make(chan result, 1)
+	go func() {
+		u, err := b.Answers(ctx, perfNode, cursor, bus.MaxWait)
+		ch <- result{time.Now(), u, err}
+	}()
+	time.Sleep(2 * time.Millisecond) // let the waiter block; one that didn't reads the post at once
+	d := perfDraft(handle, "Wake")
+	d.To, d.Kind = perfNode.Swarm, bus.KindQuestion
+	start := time.Now()
+	if _, err := b.Post(ctx, perfDuet, d); err != nil {
+		return 0, 0, err
+	}
+	r := <-ch
+	if r.err != nil {
+		return 0, 0, r.err
+	}
+	if len(r.u.Events) != 1 || r.u.Events[0].Handle != handle {
+		return 0, 0, fmt.Errorf("the waiter returned %d events, want the one post: the scenario measures the wrong operation", len(r.u.Events))
+	}
+	return max(r.at.Sub(start), time.Nanosecond), r.u.Next, nil
+}
+
 // inTempDir runs fn in a fresh 0700 temp directory and removes it afterwards.
 func inTempDir(items, n int, fn sampler) ([]time.Duration, error) {
 	dir, err := os.MkdirTemp(tmpRoot, "yh-perf-")
@@ -51,10 +129,10 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	n := 0
 	if len(args) == 2 {
 		n, _ = strconv.Atoi(args[1])
-		fn = map[string]sampler{"post": PostIn, "revise": ReviseIn}[args[0]]
+		fn = map[string]sampler{"post": PostIn, "revise": ReviseIn, "wake": WakeIn}[args[0]]
 	}
 	if fn == nil || n < 1 {
-		_, _ = fmt.Fprintln(stderr, "usage: perf post|revise N")
+		_, _ = fmt.Fprintln(stderr, "usage: perf post|revise|wake N")
 		return 2
 	}
 	samples, err := inTempDir(seedItems, n, fn)

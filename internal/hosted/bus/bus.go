@@ -11,6 +11,8 @@ type Bus struct {
 	now    func() time.Time
 	l      Limits
 	walled map[string]struct{} // the walled swarms, set once by New and never written again
+	wakes  *wakes              // the long-poll broadcast, see committed
+	timer  timerFunc           // the long-poll's timeout; a test replaces it
 }
 
 // New returns a Bus over s, reading time from now and checking drafts against l. The walled
@@ -21,7 +23,7 @@ func New(s Store, now func() time.Time, l Limits) *Bus {
 		walled[w] = struct{}{}
 	}
 	l.WalledSwarms = nil // the set above is the only copy
-	return &Bus{s: s, now: now, l: l, walled: walled}
+	return &Bus{s: s, now: now, l: l, walled: walled, wakes: newWakes(), timer: realTimer}
 }
 
 // The typed errors a Store returns when a write doesn't fit what is stored. internal/hosted/db
