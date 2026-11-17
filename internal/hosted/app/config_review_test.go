@@ -26,7 +26,8 @@ func TestConfigToolDeadlineCeiling(t *testing.T) {
 func TestConfigLinkHostsAreDNSNames(t *testing.T) {
 	label := strings.Repeat("a", 63)
 	long := strings.Join([]string{label, label, label, strings.Repeat("a", 61)}, ".") // 253 bytes
-	for _, v := range []string{"example.org", label + ".example.org", long} {
+	// A last label that only starts like hex (0xford.com, a.0xg) is a name, not an IP literal.
+	for _, v := range []string{"example.org", label + ".example.org", long, "0xford.com", "a.0xg"} {
 		if _, err := LoadConfig(envOf(with("YH_LINK_HOSTS", v))); err != nil {
 			t.Errorf("YH_LINK_HOSTS=%.20q (%d bytes): %v, want it accepted", v, len(v), err)
 		}
