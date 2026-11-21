@@ -45,8 +45,10 @@ keep_env() {
 
 # cloudflared's environment: the token and what the binary needs, nothing else.
 run_cloudflared() {
+  # the address is read before the filter, so an inherited cf_metrics cannot be unset out from under it
+  set -- "$cf_metrics"
   keep_env PATH HOME PWD SHLVL SSL_CERT_FILE NO_AUTOUPDATE TUNNEL_TOKEN
-  exec cloudflared tunnel --no-autoupdate --metrics "$cf_metrics" run
+  exec cloudflared tunnel --no-autoupdate --metrics "$1" run
 }
 
 # The server's environment: everything but the tunnel token.
@@ -82,27 +84,30 @@ wait_gone() {
 }
 
 # The stop budget. fly.toml's kill_timeout is 15 s, after which the platform KILLs the machine.
-# The server's own drain (Grace) is 10 s. So a stop signals both children, and KILLs whatever
-# still runs 13 s later: serve's 10 s, plus about 2 s for Litestream's last sync, plus the poll's
-# 1 s granularity, inside the 15 s. Without the bound a wedged child, cloudflared's own grace is 30 s,
-# would keep a half-dead machine up.
+# The server's own drain (Grace) is 10 s. Worst case, counted from the platform's SIGTERM: up to 1 s
+# until the trap runs (after the current sleep), serve's 10 s drain, then up to 2 s more for
+# Litestream's last sync: Litestream is KILLed 12 s after it was signalled. cloudflared has nothing
+# in flight once the server is gone, so it gets 1 s. About 14 s in all, inside the 15 s with about a
+# second of slack for forks and polling. When one child dies on its own (stop_children) both are
+# signalled together and whatever still runs 13 s later is KILLed. Without a bound a wedged child
+# (cloudflared's own grace is 30 s) would keep a half-dead machine up.
 stop_children() {
   kill -TERM "$cf_pid" "$ls_pid" 2>/dev/null
   wait_gone 13 "$cf_pid" "$ls_pid"
   wait
 }
 
-# A stop from the platform: pass it on, let Litestream finish its last sync (up to 11 s, then KILL),
-# then stop cloudflared (up to 2 s), so the whole stop stays inside the 13 s above. Report how the
-# server's stop went. A second signal during this changes nothing.
+# A stop from the platform: pass it on, let Litestream finish its last sync (up to 12 s, then KILL),
+# then stop cloudflared (up to 1 s). Report how the server's stop went. A second signal during this
+# is ignored: handled, it would restart the bounds above and run past the 15 s.
 terminate() {
   trap '' TERM INT
   kill -TERM "$ls_pid" 2>/dev/null
-  wait_gone 11 "$ls_pid"
+  wait_gone 12 "$ls_pid"
   wait "$ls_pid"
   status=$?
   kill -TERM "$cf_pid" 2>/dev/null
-  wait_gone 2 "$cf_pid"
+  wait_gone 1 "$cf_pid"
   wait
   exit "$status"
 }

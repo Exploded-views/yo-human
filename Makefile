@@ -138,16 +138,18 @@ release-check:
 	@echo "release-check: 4 archives match checksums.txt"
 
 # The example deploy (deploy/example/): hosted-image builds the image and pushes nothing;
-# hosted-image-test runs the entrypoint's kill and secret tests in the pinned busybox image, with
-# fake cloudflared, litestream and server binaries. Both need Docker, so neither is in `make test`
+# hosted-image-test builds the image, runs the entrypoint's kill and secret tests in the pinned
+# busybox image, with fake cloudflared, litestream and server binaries, then smoke-tests the built
+# image (exit 78 without a token, uid 65532). Both need Docker, so neither is in `make test`
 # or `make ci`; hosted-deploy-check needs none and is in both.
 HOSTED_IMAGE ?= yo-human-hosted:local
 
 hosted-image:
 	docker build -f deploy/example/Dockerfile -t $(HOSTED_IMAGE) --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) .
 
-hosted-image-test:
+hosted-image-test: hosted-image
 	sh scripts/hosted_entrypoint_test.sh
+	sh scripts/hosted_image_smoke.sh $(HOSTED_IMAGE)
 
 # deploy/example/ holds only placeholders and meets Task 12's image and fly.toml rules; then both
 # checks' own tests.

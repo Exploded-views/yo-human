@@ -49,7 +49,8 @@ What `make ci-base` cannot reproduce:
   local run has none, so it is stricter, not looser.
 - Push events. On a push to `main`, CI compares against the previous tip
   (`github.event.before`), not a merge base.
-- The example image's entrypoint tests. `make hosted-image-test` (and `make hosted-image`) need
+- The example image's entrypoint tests. `make hosted-image-test` (the entrypoint tests and a smoke run of the built image) and
+  `make hosted-image` need
   Docker and are local only: they are in neither `make ci` nor CI. Run them before changing
   `deploy/example/`.
 - The toolchain. CI pins Go 1.27.4 with `GOTOOLCHAIN=local` and installs the
