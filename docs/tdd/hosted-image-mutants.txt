@@ -1,0 +1,300 @@
+# H1 Task 12 slice 12b mutants, 2026-11-21T06:54:58Z: one mutant per rule of deploy/example/entrypoint.sh (ep), scripts/hosted_placeholders.sh (ph) and scripts/hosted_deploy_check.sh (dc), each applied to the committed file, its test script run (entrypoint: scripts/hosted_entrypoint_test.sh in the pinned busybox container; the others: their *_test.sh), then reverted. Never committed. Baselines pass.
+# Tally: 78 killed, 0 survived at the end. 25 entrypoint, 19 placeholder, 34 deploy-check.
+# First pass, kept for the record:
+#  - ph13 (userinfo in a URL allowed) survived: equivalent, since the anchored host allow-list already refuses "user@host"; the dead branch was removed from the script.
+#  - dc7 (cloudflared digest not required by its own rule) survived: equivalent, the every-FROM digest rule covers it; the redundant check was removed.
+#  - dc23 was not applied in the first pass (its pattern matched twice); rewritten, killed (last block).
+#  - dc11, dc18, dc19, dc20, dc26, dc28 and dc35 survived: tests added (a USER in an earlier stage, a second service with port 8080, port 9090, a mapped port 8081, an approval listener on :9090, a changed primary_region, an unreadable fly.toml), each mutant re-run and killed (second block below).
+#  - ep22 first used a no-op mutation (it did not reach the command line) and "survived"; rewritten to append --token to cloudflared's arguments, killed.
+#  - The serve-exits-0 case (ep11) was written into the entrypoint test before this pass, from the mutant list.
+
+mutant ep1 missing token exits 1 not 78: KILLED (exit 1)
+    FAIL token-missing: want exit 78, got 1
+    FAIL token-empty: want exit 78, got 1
+    hosted_entrypoint_inner: 2 failure(s)
+mutant ep2 token check removed: KILLED (exit 1)
+    FAIL token-missing: the entrypoint hung
+    FAIL token-missing: want exit 78, got 137
+    FAIL token-missing: the message does not name TUNNEL_TOKEN
+    FAIL token-missing: restore ran before the token check
+mutant ep3 restore without -if-db-not-exists: KILLED (exit 1)
+    FAIL happy: litestream's first call is not 'restore -if-db-not-exists -if-replica-exists /data/bus.db'
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep4 restore without -if-replica-exists: KILLED (exit 1)
+    FAIL happy: litestream's first call is not 'restore -if-db-not-exists -if-replica-exists /data/bus.db'
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep5 failed restore ignored: KILLED (exit 1)
+    FAIL restore-fails: want a non-zero exit, got 137 (timed out: 1)
+    FAIL restore-fails: a child started after a failed restore
+    hosted_entrypoint_inner: 2 failure(s)
+mutant ep6 metrics on every interface: KILLED (exit 1)
+    FAIL happy: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep7 cloudflared keeps the whole environment: KILLED (exit 1)
+    FAIL happy: cloudflared's environment holds an app variable
+    FAIL happy: cloudflared has unexpected variables: YH_GITHUB_CLIENT_SECRET
+    hosted_entrypoint_inner: 2 failure(s)
+mutant ep8 cloudflared keeps YH_ variables: KILLED (exit 1)
+    FAIL happy: cloudflared's environment holds an app variable
+    FAIL happy: cloudflared has unexpected variables: YH_GITHUB_CLIENT_SECRET
+    hosted_entrypoint_inner: 2 failure(s)
+mutant ep9 serve keeps the tunnel token: KILLED (exit 1)
+    FAIL happy: serve's environment holds the tunnel token
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep10 SIGTERM not forwarded: KILLED (exit 1)
+    FAIL happy: SIGTERM did not stop the entrypoint
+    FAIL happy: after SIGTERM want exit 0, got 137
+    FAIL happy: a child outlived SIGTERM
+    hosted_entrypoint_inner: 3 failure(s)
+mutant ep11 clean child exit not turned non-zero: KILLED (exit 1)
+    FAIL serve-exits-0: want a non-zero exit, got 0 (timed out: 0)
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep12 the other child not stopped: KILLED (exit 1)
+    FAIL kill-serve: the entrypoint did not exit
+    FAIL kill-serve: want a non-zero exit, got 137
+    FAIL kill-serve: cloudflared kept running
+    FAIL kill-cloudflared: the entrypoint did not exit
+mutant ep13 only cloudflared watched: KILLED (exit 1)
+    FAIL kill-serve: the entrypoint did not exit
+    FAIL kill-serve: want a non-zero exit, got 137
+    FAIL kill-serve: cloudflared kept running
+    FAIL serve-exits-0: want a non-zero exit, got 137 (timed out: 1)
+mutant ep14 only serve watched: KILLED (exit 1)
+    FAIL kill-cloudflared: the entrypoint did not exit
+    FAIL kill-cloudflared: want a non-zero exit, got 137
+    FAIL kill-cloudflared: serve or litestream kept running
+    FAIL cloudflared-term: want a non-zero exit, got 137 (timed out: 1)
+mutant ep15 tracing on: KILLED (exit 1)
+    FAIL token-missing: more than the name was printed
+    FAIL token-empty: more than the name was printed
+    FAIL happy: a secret value is in the container output
+    FAIL kill-serve: a secret value is in the container output
+mutant ep16 environment printed on the 78 path: KILLED (exit 1)
+    FAIL token-missing: more than the name was printed
+    FAIL token-missing: a secret value is in the container output
+    FAIL token-empty: more than the name was printed
+    FAIL token-empty: a secret value is in the container output
+mutant ep17 token printed on the 78 path: KILLED (exit 1)
+    FAIL token-missing: a secret value is in the container output
+    FAIL token-empty: a secret value is in the container output
+    hosted_entrypoint_inner: 2 failure(s)
+mutant ep18 no --no-autoupdate: KILLED (exit 1)
+    FAIL happy: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep19 no run subcommand: KILLED (exit 1)
+    FAIL happy: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep20 serve command changed: KILLED (exit 1)
+    FAIL happy: litestream's second call is not 'replicate -exec /app/yo-human-hosted serve'
+    FAIL happy: serve got other arguments
+    hosted_entrypoint_inner: 2 failure(s)
+mutant ep21 SIGTERM exit status lost: KILLED (exit 1)
+    FAIL happy: after SIGTERM want exit 0, got 1
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep23 serve not started with litestream replicate: KILLED (exit 1)
+    FAIL happy: the children did not start
+    FAIL kill-serve: the children did not start
+    FAIL kill-cloudflared: the children did not start
+    hosted_entrypoint_inner: 3 failure(s)
+mutant ep24 cloudflared allowlist loses the token: KILLED (exit 1)
+    FAIL happy: cloudflared lacks TUNNEL_TOKEN
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep25 serve loses the app secrets: KILLED (exit 1)
+    FAIL happy: serve lost YH_GITHUB_CLIENT_SECRET
+    hosted_entrypoint_inner: 1 failure(s)
+
+mutant ep22 token on the command line: KILLED (exit 1)
+    FAIL happy: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    FAIL happy: the token is on cloudflared's command line
+    hosted_entrypoint_inner: 2 failure(s)
+
+# placeholder check
+mutant ph1 platform-host rule dropped: KILLED (exit 1)
+    FAIL clean: want exit 0, got 2
+    FAIL repo-example: want exit 0, got 2
+    FAIL host-fly.dev: want exit 1, got 2
+    FAIL host-workers.dev: want exit 1, got 2
+mutant ph2 one platform host dropped (tigris.dev): KILLED (exit 1)
+    FAIL host-tigris.dev: want exit 1, got 0
+    hosted_placeholders_test: 1 failure(s)
+mutant ph3 home-path rule dropped: KILLED (exit 1)
+    FAIL clean: want exit 0, got 2
+    FAIL repo-example: want exit 0, got 2
+    FAIL host-fly.dev: want exit 1, got 2
+    FAIL host-workers.dev: want exit 1, got 2
+mutant ph4 (the home-path rule's macOS home-directory branch dropped): NOT TESTED IN THE REPO.
+    Its fixture would be a macOS home path, which test data may not use and the push scrub refuses
+    in any added line, so the scrub is that branch's guard. The original run killed ph4 through a
+    fixture case that this branch replaced when it was replayed onto feat/hosted-image-v2.
+mutant ph5 /home/ dropped: KILLED (exit 1)
+    FAIL home-linux: want exit 1, got 0
+    hosted_placeholders_test: 1 failure(s)
+mutant ph6 ~/ dropped: KILLED (exit 1)
+    FAIL home-tilde: want exit 1, got 0
+    hosted_placeholders_test: 1 failure(s)
+mutant ph7 placeholder-value rule dropped: KILLED (exit 1)
+    FAIL clean: want exit 0, got 2
+    FAIL repo-example: want exit 0, got 2
+    FAIL host-fly.dev: want exit 1, got 2
+    FAIL host-workers.dev: want exit 1, got 2
+mutant ph8 placeholder match accepts any text: KILLED (exit 1)
+    FAIL value-app: want exit 1, got 0
+    FAIL value-app-double: want exit 1, got 0
+    FAIL value-region: want exit 1, got 0
+    FAIL value-bucket: want exit 1, got 0
+mutant ph9 placeholder match unanchored: KILLED (exit 1)
+    FAIL value-partial: want exit 1, got 0
+    hosted_placeholders_test: 1 failure(s)
+mutant ph10 bucket key dropped: KILLED (exit 1)
+    FAIL value-bucket: want exit 1, got 0
+    FAIL value-bucket-list: want exit 1, got 0
+    hosted_placeholders_test: 2 failure(s)
+mutant ph11 endpoint key dropped: KILLED (exit 1)
+    FAIL value-endpoint: want exit 1, got 0
+    hosted_placeholders_test: 1 failure(s)
+mutant ph12 url-host rule dropped (host): KILLED (exit 1)
+    FAIL url-real: want exit 1, got 0
+    FAIL url-http: want exit 1, got 0
+    FAIL url-in-env: want exit 1, got 0
+    FAIL url-sub: want exit 1, got 0
+mutant ph13 userinfo allowed: SURVIVED (exit 0)
+mutant ph14 allow list unanchored: KILLED (exit 1)
+    FAIL url-sub: want exit 1, got 0
+    hosted_placeholders_test: 1 failure(s)
+mutant ph15 only the first URL on a line checked: KILLED (exit 1)
+    FAIL clean: want exit 0, got 2
+    FAIL repo-example: want exit 0, got 2
+    FAIL host-fly.dev: want exit 1, got 2
+    FAIL host-workers.dev: want exit 1, got 2
+mutant ph16 the empty directory passes: KILLED (exit 1)
+    FAIL empty-dir: want exit 2, got 0
+    hosted_placeholders_test: 1 failure(s)
+mutant ph17 findings exit 0: KILLED (exit 1)
+    FAIL host-fly.dev: want exit 1, got 0
+    FAIL host-workers.dev: want exit 1, got 0
+    FAIL host-trycloudflare.com: want exit 1, got 0
+    FAIL host-cfargotunnel.com: want exit 1, got 0
+mutant ph18 files after the first not scanned: KILLED (exit 1)
+    FAIL host-fly.dev: want exit 1, got 0
+    FAIL host-workers.dev: want exit 1, got 0
+    FAIL host-trycloudflare.com: want exit 1, got 0
+    FAIL host-cfargotunnel.com: want exit 1, got 0
+mutant ph19 lowercasing dropped for hosts: KILLED (exit 1)
+    FAIL host-upper: want exit 1, got 0
+    hosted_placeholders_test: 1 failure(s)
+mutant ph20 the config rule applied to Dockerfiles only: KILLED (exit 1)
+    FAIL value-bucket: want exit 1, got 0
+    FAIL value-bucket-list: want exit 1, got 0
+    FAIL value-region-yaml: want exit 1, got 0
+    FAIL value-endpoint: want exit 1, got 0
+
+# deploy-file check, first pass
+mutant dc1 digest rule dropped: KILLED (exit 1)
+    FAIL digest-golang: output lacks 'digest'
+    FAIL digest-litestream: output lacks 'digest'
+    FAIL digest-short: want exit 1, got 0
+    hosted_deploy_check_test: 3 failure(s)
+mutant dc2 digest accepts any hex length: KILLED (exit 1)
+    FAIL digest-short: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc3 go patch floor 4 to 3: KILLED (exit 1)
+    FAIL go-old: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc4 go minor not pinned: KILLED (exit 1)
+    FAIL go-minor: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc5 litestream version dropped: KILLED (exit 1)
+    FAIL litestream-old: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc6 cloudflared rule dropped: KILLED (exit 1)
+    FAIL no-cloudflared: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc7 cloudflared digest not required: SURVIVED (exit 0)
+mutant dc8 final base not checked: KILLED (exit 1)
+    FAIL final-alpine: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc9 user may be root: KILLED (exit 1)
+    FAIL user-zero: want exit 1, got 0
+    FAIL user-named-root: want exit 1, got 0
+    hosted_deploy_check_test: 2 failure(s)
+mutant dc10 gid may be root: KILLED (exit 1)
+    FAIL user-named-root: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc11 USER of an earlier stage counts: SURVIVED (exit 0)
+mutant dc12 file note dropped: KILLED (exit 1)
+    FAIL no-file-note: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc13 entrypoint dropped: KILLED (exit 1)
+    FAIL entrypoint-line: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc14 kill_timeout dropped: KILLED (exit 1)
+    FAIL kill-timeout: want exit 1, got 0
+    FAIL kill-timeout-missing: want exit 1, got 0
+    hosted_deploy_check_test: 2 failure(s)
+mutant dc15 kill_timeout any number: KILLED (exit 1)
+    FAIL kill-timeout: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc16 auto_stop dropped: KILLED (exit 1)
+    FAIL auto-stop: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc17 min_machines dropped: KILLED (exit 1)
+    FAIL min-machines: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc18 service count dropped: SURVIVED (exit 0)
+mutant dc19 internal port value dropped: SURVIVED (exit 0)
+mutant dc20 8081 mapping allowed: SURVIVED (exit 0)
+mutant dc21 mount dropped: KILLED (exit 1)
+    FAIL mount: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc22 healthz dropped: KILLED (exit 1)
+    FAIL healthz: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc23 vm size dropped: PATTERN COUNT 2 (not applied)
+mutant dc24 vm memory dropped: KILLED (exit 1)
+    FAIL vm-memory: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc25 mcp listen dropped: KILLED (exit 1)
+    FAIL mcp-listen: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc26 approve listen dropped: SURVIVED (exit 0)
+mutant dc27 app placeholder dropped: KILLED (exit 1)
+    FAIL app-name: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc28 region placeholder dropped: SURVIVED (exit 0)
+mutant dc29 secret rule dropped: KILLED (exit 1)
+    FAIL secret-in-env: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc30 secret rule misses PASSWORD: KILLED (exit 1)
+    FAIL secret-in-env: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc31 replica path dropped: KILLED (exit 1)
+    FAIL litestream-db: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc32 bucket dropped: KILLED (exit 1)
+    FAIL litestream-bucket: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
+mutant dc33 missing files not reported: KILLED (exit 1)
+    FAIL missing-Dockerfile: want exit 1, got 0
+    FAIL missing-fly.toml: want exit 1, got 0
+    FAIL missing-litestream.yml: want exit 1, got 0
+    FAIL missing-entrypoint.sh: want exit 1, got 0
+mutant dc34 failure exits 0: KILLED (exit 1)
+    FAIL digest-golang: want exit 1, got 0
+    FAIL digest-litestream: want exit 1, got 0
+    FAIL digest-cloudflared: want exit 1, got 0
+    FAIL digest-final: want exit 1, got 0
+mutant dc35 read errors ignored: SURVIVED (exit 0)
+
+# deploy-file check, survivors re-run after the new tests
+mutant dc11 USER of an earlier stage counts: KILLED (exit 1)
+mutant dc18 service count dropped: KILLED (exit 1)
+mutant dc19 internal port value dropped: KILLED (exit 1)
+mutant dc20 8081 mapping allowed: KILLED (exit 1)
+mutant dc26 approve listen dropped: KILLED (exit 1)
+mutant dc28 region placeholder dropped: KILLED (exit 1)
+mutant dc35 read errors ignored: KILLED (exit 1)
+
+# dc23 was not applied in the first pass (its pattern matched twice); rewritten and run
+mutant dc23 vm size dropped: KILLED (exit 1)
+    FAIL vm-size: want exit 1, got 0
+    hosted_deploy_check_test: 1 failure(s)
