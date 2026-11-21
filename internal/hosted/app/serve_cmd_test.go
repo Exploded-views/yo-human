@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -82,6 +83,7 @@ func TestServeExitCodes(t *testing.T) {
 		{"a listener that would not bind", errors.New("approval listener: address in use"), ExitInternal},
 		{"a non-loopback MCP address", web.ErrMCPNotLoopback, ExitConfig},
 		{"two listeners on one port", web.ErrSamePort, ExitConfig},
+		{"an approval port that is not a number", web.ErrBadPort, ExitConfig},
 	} {
 		f := replaceServe(t, c.ret)
 		code, _, stderr := runApp(serveEnv(t), "serve")
@@ -175,5 +177,37 @@ func TestUsageNamesServeAndSelfcheck(t *testing.T) {
 		if !strings.Contains(stderr, w) {
 			t.Errorf("usage lacks %q:\n%s", w, stderr)
 		}
+	}
+}
+
+// The first signal ends the signal context, and the default handling must come back right then,
+// so a second Ctrl-C during the drain kills the process: stop runs when the context ends, not
+// when serve returns.
+func TestServeRestoresDefaultSignalsAfterTheFirst(t *testing.T) {
+	var stops atomic.Int32
+	var end context.CancelFunc
+	oldServe, oldNotify := serveFn, notifyContext
+	t.Cleanup(func() { serveFn, notifyContext = oldServe, oldNotify })
+	notifyContext = func() (context.Context, context.CancelFunc) {
+		ctx, cancel := context.WithCancel(context.Background())
+		end = cancel
+		return ctx, func() { stops.Add(1); cancel() }
+	}
+	var during int32
+	serveFn = func(_ context.Context, _ web.Handlers, _ web.ServeConfig) error {
+		// The first signal: the context ends, and serve is still draining.
+		end()
+		deadline := time.Now().Add(time.Second)
+		for stops.Load() == 0 && time.Now().Before(deadline) {
+			time.Sleep(5 * time.Millisecond)
+		}
+		during = stops.Load()
+		return nil
+	}
+	if code, _, stderr := runApp(serveEnv(t), "serve"); code != ExitOK {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+	if during != 1 {
+		t.Errorf("stop had run %d times while serve was still draining, want 1", during)
 	}
 }

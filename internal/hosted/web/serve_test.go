@@ -128,6 +128,19 @@ func TestServeRefusesSamePort(t *testing.T) {
 	}
 }
 
+// An approval port that is not a number is refused before anything binds, as LoadConfig does.
+func TestServeRefusesAnApprovalPortThatIsNotANumber(t *testing.T) {
+	h := web.Handlers{MCP: say("mcp"), Approve: say("approve")}
+	for _, approve := range []string{":http", ":", "127.0.0.1:", "", "0.0.0.0"} {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second) // an unfixed Serve would otherwise run on
+		err := web.Serve(ctx, h, web.ServeConfig{MCPAddr: "127.0.0.1:18081", ApproveAddr: approve, Grace: time.Second})
+		cancel()
+		if !errors.Is(err, web.ErrBadPort) {
+			t.Errorf("ApproveAddr %q: %v, want ErrBadPort", approve, err)
+		}
+	}
+}
+
 // A non-loopback MCP address is refused as that, whatever the ports are.
 func TestServeChecksLoopbackBeforePorts(t *testing.T) {
 	h := web.Handlers{MCP: say("mcp"), Approve: say("approve")}
@@ -182,14 +195,19 @@ func TestServeRoutesEachListenerAndEndsCleanly(t *testing.T) {
 func TestServeGraceThenForcedClose(t *testing.T) {
 	mcp, approve := freeAddr(t), freeAddr(t)
 	inFlight, released := make(chan struct{}), make(chan struct{})
-	block := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+	block := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/block" {
+			_, _ = io.WriteString(w, "up")
+			return
+		}
 		close(inFlight)
 		<-r.Context().Done()
 		close(released)
 	})
 	s := start(t, web.Handlers{MCP: block, Approve: say("approve")}, web.ServeConfig{MCPAddr: mcp, ApproveAddr: approve, Grace: 200 * time.Millisecond})
-	fetch(t, "http://"+approve+"/") // the approval listener is up; the MCP one binds with it
-	clientErr := blockedGet("http://" + mcp + "/")
+	fetch(t, "http://"+approve+"/")
+	fetch(t, "http://"+mcp+"/") // each listener binds on its own goroutine: wait for MCP itself, then block on /block only
+	clientErr := blockedGet("http://" + mcp + "/block")
 	select {
 	case <-inFlight:
 	case <-time.After(3 * time.Second):

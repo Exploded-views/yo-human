@@ -15,6 +15,7 @@ import (
 var (
 	ErrMCPNotLoopback = errors.New("web: the MCP listener must be a literal loopback IP address and a port")
 	ErrSamePort       = errors.New("web: the two listeners must listen on different ports")
+	ErrBadPort        = errors.New("web: the approval address must end in a numeric port")
 	ErrForcedClose    = errors.New("web: the shutdown grace ran out and requests in flight were cut")
 )
 

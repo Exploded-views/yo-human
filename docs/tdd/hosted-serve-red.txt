@@ -97,3 +97,35 @@ exit=0
 uptime under the lock: load averages 6.31 5.64 6.66
 hosted-selfcheck: p95 14.9ms, with no budget yet (exit=2)
 budget = measured p95 x ci_headroom (2.0) = 29.8, rounded up to p95_ms 30
+
+# Review round 1 (S1, S2, N1, N3), against 82656b7 plus the stub web.ErrBadPort
+
+# S1: TestServeGraceThenForcedClose could be refused before MCP bound. A real flake has no deterministic RED, so it is shown with a mutant that delays the MCP bind by 300 ms (newListener sleeps before ListenAndServe). The OLD test, against that mutant:
+$ go test -race -count=1 -run TestServeGraceThenForcedClose ./internal/hosted/web
+--- FAIL: TestServeGraceThenForcedClose (3.00s)
+    serve_test.go:196: the blocking request never reached its handler
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	3.318s
+exit=1
+# The NEW test (waits for MCP to answer, then blocks only on /block) against the same mutant: ok (exit=0).
+
+# S2: TestServeFailureDuringDrainBeatsCancel, against mutant #10 (the drain loop ignores a later failure), -count=20:
+$ go test -race -count=20 -run TestServeFailureDuringDrainBeatsCancel ./internal/hosted/web
+    serve_internal_test.go:85: serve = <nil>, want the failure from the drain
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	0.327s
+exit=1
+
+# N1 and N3, against the unfixed code:
+$ go test -race -count=1 ./internal/hosted/web ./internal/hosted/app
+--- FAIL: TestServeRefusesAnApprovalPortThatIsNotANumber (4.01s)
+    serve_test.go:139: ApproveAddr ":http": <nil>, want ErrBadPort
+    serve_test.go:139: ApproveAddr ":": <nil>, want ErrBadPort
+    serve_test.go:139: ApproveAddr "127.0.0.1:": <nil>, want ErrBadPort
+    serve_test.go:139: ApproveAddr "": <nil>, want ErrBadPort
+    serve_test.go:139: ApproveAddr "0.0.0.0": web: approval listener: listen tcp: address 0.0.0.0: missing port in address, want ErrBadPort
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	10.161s
+--- FAIL: TestServeExitCodes (0.45s)
+    serve_cmd_test.go:91: an approval port that is not a number: exit 70 after 1 Serve calls, want exit 78 after 1; stderr "yo-human-hosted: serve: web: the approval address must end in a numeric port\n"
+--- FAIL: TestServeRestoresDefaultSignalsAfterTheFirst (1.07s)
+    serve_cmd_test.go:211: stop had run 0 times while serve was still draining, want 1
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	4.673s
+exit=1

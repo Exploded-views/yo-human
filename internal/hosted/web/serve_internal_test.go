@@ -15,7 +15,8 @@ import (
 type fake struct {
 	name              string
 	runErr            error
-	hang              bool // shutdown waits for its deadline, as a drain that never ends
+	failOnStop        error // run returns this, not http.ErrServerClosed, once stopped
+	hang              bool  // shutdown waits for its deadline, as a drain that never ends
 	stopped           chan struct{}
 	once              sync.Once
 	shutdowns, closes atomic.Int32
@@ -34,6 +35,9 @@ func (f *fake) listener() listener {
 				return f.runErr
 			}
 			<-f.stopped
+			if f.failOnStop != nil {
+				return f.failOnStop
+			}
 			return http.ErrServerClosed
 		},
 		shutdown: func(ctx context.Context) error {
@@ -67,6 +71,18 @@ func TestServeFailureBeatsCancel(t *testing.T) {
 	}
 	if other.shutdowns.Load() != 1 {
 		t.Errorf("the other listener was shut down %d times, want 1", other.shutdowns.Load())
+	}
+}
+
+// With ctx cancelled and nothing failed yet, the ctx arm is the only one that can fire; a listener
+// that fails while it drains must still be what serve returns.
+func TestServeFailureDuringDrainBeatsCancel(t *testing.T) {
+	boom := errors.New("died while draining")
+	dying, other := newFake("MCP"), newFake("approval")
+	dying.failOnStop = boom
+	err := serve(cancelled(), []listener{dying.listener(), other.listener()}, time.Second)
+	if !errors.Is(err, boom) || errors.Is(err, ErrForcedClose) {
+		t.Fatalf("serve = %v, want the failure from the drain", err)
 	}
 }
 
