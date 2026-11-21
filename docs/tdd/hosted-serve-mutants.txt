@@ -191,4 +191,13 @@
     FAIL internal/hosted/app/casehttp/x.go: hosted app imports net/http (the listeners live in web, so app gets no internal-no-network exclusion): want internal-no-network, got clean
     FAIL internal/hosted/app/casenet/x.go: hosted app imports net: want internal-no-network, got clean
     lint_rules_test: a case failed
-# 41 of 41 mutants killed (the 2 first-pass survivors, #36 and #37, were killed after the added test; none are equivalent).
+# 41 of 41 mutants killed at 82656b7 (the 2 first-pass survivors, #36 and #37, were killed after the added test; none are equivalent).
+
+# Review round 1 (against 19993db): two mutants for the new rules, each applied to the fixed code.
+#41 numeric approval port check dropped [internal/hosted/web/serve.go]: KILLED (exit=1)
+    --- FAIL: TestServeRefusesAnApprovalPortThatIsNotANumber (4.01s)
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	4.848s
+#42 context.AfterFunc(ctx, stop) dropped [internal/hosted/app/serve_cmd.go]: KILLED (exit=1)
+    --- FAIL: TestServeRestoresDefaultSignalsAfterTheFirst (1.07s)
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	2.266s
+# 43 of 43 mutants killed in all.
