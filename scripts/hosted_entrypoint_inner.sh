@@ -23,7 +23,7 @@ echo $$ >/out/cloudflared.pid
 # Flag files, not variables (the entrypoint strips cloudflared's environment): /ctl/ignore-term is a
 # cloudflared that ignores SIGTERM (an ignored signal survives exec); /ctl/clean one that exits 0
 # on SIGTERM, as the real one does.
-[ ! -e /ctl/ignore-term ] || { trap '' TERM; exec sleep 600; }
+[ ! -e /ctl/serve-ignore-term ] || { trap '' TERM; exec sleep 600; }
 if [ -e /ctl/clean ]; then
   sleep 600 &
   c=$!
@@ -38,6 +38,7 @@ cat >/app/yo-human-hosted <<'EOF'
 echo "$*" >/out/serve.args
 echo $$ >/out/serve.pid
 [ -z "${FAKE_SERVE_EXIT:-}" ] || exit 0
+[ ! -e /ctl/ignore-term ] || { trap '' TERM; exec sleep 600; }
 exec sleep 600
 EOF
 cat >/fakebin/litestream <<'EOF'
@@ -240,6 +241,19 @@ if running stuck-term TUNNEL_TOKEN=$TOKEN; then
   [ "$timed" = 0 ] && ok "SIGTERM with a stuck cloudflared still ends" || fail "stuck-term: the entrypoint did not exit"
   [ $((t1 - t0)) -lt 15 ] || fail "stuck-term: the stop took $((t1 - t0)) s, over the platform's 15 s"
   if alive "$cf"; then fail "stuck-term: cloudflared is still alive"; fi
+fi
+
+# --- a server that ignores SIGTERM is killed too, within the platform's 15 s ---
+touch /ctl/serve-ignore-term
+if running stuck-serve TUNNEL_TOKEN=$TOKEN; then
+  ls=$(cat /out/litestream.pid)
+  t0=$(date +%s)
+  kill -TERM "$ep"
+  finish 25
+  t1=$(date +%s)
+  [ "$timed" = 0 ] && ok "SIGTERM with a stuck server still ends" || fail "stuck-serve: the entrypoint did not exit"
+  [ $((t1 - t0)) -lt 15 ] || fail "stuck-serve: the stop took $((t1 - t0)) s, over the platform's 15 s"
+  if alive "$ls"; then fail "stuck-serve: litestream is still alive"; fi
 fi
 
 # --- a failed restore stops the start: no children ---

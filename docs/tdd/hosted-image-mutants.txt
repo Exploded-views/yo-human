@@ -298,3 +298,50 @@ mutant dc35 read errors ignored: KILLED (exit 1)
 mutant dc23 vm size dropped: KILLED (exit 1)
     FAIL vm-size: want exit 1, got 0
     hosted_deploy_check_test: 1 failure(s)
+
+# ===== Review round 1 (after the fixes), 2026-11-21T07:45:49Z: the mutation pass re-run on everything the fixes changed =====
+# The entrypoint was rewritten (cf_metrics, keep_env, wait_gone, the bounded stop), so all its mutants were re-applied to the new text (ep1-ep25, with their patterns updated) and eleven added (ep26-ep36: TUNNEL_METRICS back, restore unfiltered or with the token or without the replica keys, no KILL, each bound raised to 40 s, the signal trap, literal pattern matching, the early-exit of the stop wait). The placeholder check gained the YH_ rule (ph21-ph27) and the deploy check the credential, replica-key and COPY --from rules (dc36-dc40); ph1-ph27 and dc1-dc40 were re-run on the new scripts (ph13 and dc7 stay removed as equivalent).
+# Tally of this pass: 36 entrypoint mutants (35 killed, 1 equivalent), 26 placeholder (26 killed), 39 deploy-check (39 killed): 100 killed, 1 equivalent. With the first pass this record covers every rule.
+# First run of this pass, kept for the record:
+#  - ep5 (a failed restore ignored) was not applied: its text changed with the subshell; the pattern was updated and the mutant killed.
+#  - ep32 (terminate's Litestream bound 11 s raised to 40 s) survived: no test had a server that ignores SIGTERM. Test added (stuck-serve), mutant re-run and killed.
+#  - ep34 (the second-signal trap removed) survives and is equivalent: after the fix the stop's waits are bounded polls, and a signal that lands in a poll re-enters terminate and finishes it with the same status; the one window where it mattered (a signal during an unbounded wait) no longer exists. The trap stays as a defence.
+#  - ph15 (only the first URL of a line checked) survived because the awk loop's "continue" had gone with the equivalent userinfo branch; a two-URL test was added and the mutant killed.
+#  - ph7 and dc29 were not applied (their patterns now matched twice); narrowed to the one rule, killed.
+
+mutant ep1 missing token exits 1 not 78: KILLED (exit 1)
+mutant ep2 token check removed: KILLED (exit 1)
+mutant ep3 restore without -if-db-not-exists: KILLED (exit 1)
+mutant ep4 restore without -if-replica-exists: KILLED (exit 1)
+mutant ep6 metrics on every interface: KILLED (exit 1)
+mutant ep7 cloudflared keeps the whole environment: KILLED (exit 1)
+mutant ep8 cloudflared keeps YH_ variables: KILLED (exit 1)
+mutant ep9 serve keeps the tunnel token: KILLED (exit 1)
+mutant ep10 SIGTERM not forwarded: KILLED (exit 1)
+mutant ep11 clean child exit not turned non-zero: KILLED (exit 1)
+mutant ep12 the other child not stopped: KILLED (exit 1)
+mutant ep13 only cloudflared watched: KILLED (exit 1)
+mutant ep14 only serve watched: KILLED (exit 1)
+mutant ep15 tracing on: KILLED (exit 1)
+mutant ep16 environment printed on the 78 path: KILLED (exit 1)
+mutant ep17 token printed on the 78 path: KILLED (exit 1)
+mutant ep18 no --no-autoupdate: KILLED (exit 1)
+mutant ep19 no run subcommand: KILLED (exit 1)
+mutant ep20 serve command changed: KILLED (exit 1)
+mutant ep21 SIGTERM exit status lost: KILLED (exit 1)
+mutant ep22 token on the command line: KILLED (exit 1)
+mutant ep23 serve not started with litestream replicate: KILLED (exit 1)
+mutant ep24 cloudflared allowlist loses the token: KILLED (exit 1)
+mutant ep25 serve loses the app secrets: KILLED (exit 1)
+mutant ep26 TUNNEL_METRICS used again (M1): KILLED (exit 1)
+mutant ep27 restore unfiltered (S-restore): KILLED (exit 1)
+mutant ep28 restore keeps the tunnel token: KILLED (exit 1)
+mutant ep29 restore loses the replica keys: KILLED (exit 1)
+mutant ep30 no KILL after the bound (S-stop): KILLED (exit 1)
+mutant ep31 stop bound 13 to 40: KILLED (exit 1)
+mutant ep33 terminate cloudflared bound 2 to 40: KILLED (exit 1)
+mutant ep34 terminate takes a second signal: SURVIVED (exit 0)
+mutant ep35 patterns matched literally: KILLED (exit 1)
+mutant ep36 stop wait never ends early: KILLED (exit 1)
+mutant ep5 failed restore ignored: KILLED (exit 1)
+mutant ep32 terminate Litestream bound 11 to 40: KILLED (exit 1)
