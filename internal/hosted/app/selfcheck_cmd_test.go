@@ -113,3 +113,23 @@ func TestExerciseBusStepsEachFailLoudly(t *testing.T) {
 		}
 	}
 }
+
+// The read step wants exactly one update, and it must be the answer to the question.
+func TestCheckReadWantsExactlyTheAnswer(t *testing.T) {
+	answer := bus.Update{Type: bus.EventAnswerRecorded, ItemID: "itm_q"}
+	for _, c := range []struct {
+		name string
+		ups  []bus.Update
+		ok   bool
+	}{
+		{"the answer", []bus.Update{answer}, true},
+		{"nothing", nil, false},
+		{"another kind of update", []bus.Update{{Type: bus.EventItemPosted, ItemID: "itm_q"}}, false},
+		{"another item's answer", []bus.Update{{Type: bus.EventAnswerRecorded, ItemID: "itm_other"}}, false},
+		{"the answer and more", []bus.Update{answer, answer}, false},
+	} {
+		if err := checkRead(bus.Updates{Events: c.ups}, "itm_q"); (err == nil) != c.ok {
+			t.Errorf("%s: err = %v, want ok=%t", c.name, err, c.ok)
+		}
+	}
+}
