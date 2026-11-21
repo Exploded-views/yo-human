@@ -345,3 +345,183 @@ mutant ep35 patterns matched literally: KILLED (exit 1)
 mutant ep36 stop wait never ends early: KILLED (exit 1)
 mutant ep5 failed restore ignored: KILLED (exit 1)
 mutant ep32 terminate Litestream bound 11 to 40: KILLED (exit 1)
+
+# ===== Review round 2, 2026-11-21T09:39:11Z: the entrypoint changed again (cf_metrics read before the filter, Litestream 12 s and cloudflared 1 s in the stop, a corrected harness), so every entrypoint mutant was re-applied (ep1-ep40; every Docker run through crew-heavy). Each entry below carries its failing-test lines. =====
+# Corrections to round 1: with the swapped flag files, stuck-cf passed whatever stop_children did, so the round-1 entry for ep31 (stop_children bound 13 -> 40, "KILLED") was not backed by the case that mattered, and ep30-ep33 each named a case that tested the other child. After the fix ep30 and ep31 are killed by stuck-cf (a cloudflared that survives a TERM), ep32 by stuck-serve, ep33 by stuck-term. The entries below replace the round-1 entries ep26-ep36.
+# ep34 (no trap at the top of terminate) is NOT equivalent, contrary to the round-1 note: a second SIGTERM re-enters terminate and restarts the Litestream bound; with a stuck server and a second TERM 5 s in the stop took 18 s. The double-term-stuck case kills it (below).
+# ep26 (the lowercase cf_metrics renamed back to TUNNEL_METRICS) now SURVIVES and is equivalent: the address is read into $1 before keep_env, so an inherited TUNNEL_METRICS or cf_metrics cannot un-pin it, whatever the variable is called. Both inherited-variable cases (metrics-env, cf-metrics-env) pass on the mutant by design; ep37 and ep38 (the capture removed, or the flag reading the variable after the filter) are the mutants that kill them.
+# ep40 survived the first pass (no test checked that serve gets its drain when cloudflared dies); the drain-after-cf-death case was added and the mutant killed (last entries). Tally of this pass: 40 mutants, 39 killed, 1 equivalent (ep26). The placeholder and deploy-check scripts did not change in this round; their round-1 entries stand.
+# When Litestream is KILLed in stuck-term and stuck-serve, a stuck serve is orphaned; the cases do not check serve after the stop (on Fly and in Docker the container ends with the entrypoint).
+# A first run of the full set hit crew-heavy's 50 minute limit after ep32; ep33-ep40 were run afterwards in a second job.
+
+mutant ep1 missing token exits 1 not 78: KILLED (exit 1)
+    FAIL token-missing: want exit 78, got 1
+    FAIL token-empty: want exit 78, got 1
+    hosted_entrypoint_inner: 2 failure(s)
+mutant ep2 token check removed: KILLED (exit 1)
+    FAIL token-missing: the entrypoint hung
+    FAIL token-missing: want exit 78, got 137
+    FAIL token-missing: the message does not name TUNNEL_TOKEN
+    FAIL token-missing: restore ran before the token check
+mutant ep3 restore without -if-db-not-exists: KILLED (exit 1)
+    FAIL happy: litestream's first call is not 'restore -if-db-not-exists -if-replica-exists /data/bus.db'
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep4 restore without -if-replica-exists: KILLED (exit 1)
+    FAIL happy: litestream's first call is not 'restore -if-db-not-exists -if-replica-exists /data/bus.db'
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep5 failed restore ignored: KILLED (exit 1)
+    FAIL restore-fails: want a non-zero exit, got 137 (timed out: 1)
+    FAIL restore-fails: a child started after a failed restore
+    hosted_entrypoint_inner: 2 failure(s)
+mutant ep6 metrics on every interface: KILLED (exit 1)
+    FAIL happy: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    FAIL metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    FAIL cf-metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    hosted_entrypoint_inner: 3 failure(s)
+mutant ep7 cloudflared keeps the whole environment: KILLED (exit 1)
+    FAIL happy: restore's environment holds the tunnel token or an app secret
+    FAIL happy: cloudflared's environment holds an app variable
+    FAIL happy: cloudflared has unexpected variables: YH_GITHUB_CLIENT_SECRET LITESTREAM_SECRET_ACCESS_KEY
+    FAIL metrics-env: TUNNEL_METRICS is in cloudflared's environment
+mutant ep8 cloudflared keeps YH_ variables: KILLED (exit 1)
+    FAIL happy: cloudflared's environment holds an app variable
+    FAIL happy: cloudflared has unexpected variables: YH_GITHUB_CLIENT_SECRET
+    hosted_entrypoint_inner: 2 failure(s)
+mutant ep9 serve keeps the tunnel token: KILLED (exit 1)
+    FAIL happy: serve's environment holds the tunnel token
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep10 SIGTERM not forwarded: KILLED (exit 1)
+    FAIL happy: SIGTERM did not stop the entrypoint
+    FAIL happy: after SIGTERM want exit 0, got 137
+    FAIL happy: a child outlived SIGTERM
+    FAIL double-term: want exit 0, got 137 (timed out: 1)
+mutant ep11 clean child exit not turned non-zero: KILLED (exit 1)
+    FAIL cloudflared-term: want a non-zero exit, got 0 (timed out: 0)
+    FAIL serve-exits-0: want a non-zero exit, got 0 (timed out: 0)
+    hosted_entrypoint_inner: 2 failure(s)
+mutant ep12 the other child not stopped: KILLED (exit 1)
+    FAIL kill-serve: the entrypoint did not exit
+    FAIL kill-serve: want a non-zero exit, got 137
+    FAIL kill-serve: cloudflared kept running
+    FAIL kill-cloudflared: the entrypoint did not exit
+mutant ep13 only cloudflared watched: KILLED (exit 1)
+    FAIL kill-serve: the entrypoint did not exit
+    FAIL kill-serve: want a non-zero exit, got 137
+    FAIL kill-serve: cloudflared kept running
+    FAIL serve-exits-0: want a non-zero exit, got 137 (timed out: 1)
+mutant ep14 only serve watched: KILLED (exit 1)
+    FAIL kill-cloudflared: the entrypoint did not exit
+    FAIL kill-cloudflared: want a non-zero exit, got 137
+    FAIL kill-cloudflared: serve or litestream kept running
+    FAIL cloudflared-term: want a non-zero exit, got 137 (timed out: 1)
+mutant ep15 tracing on: KILLED (exit 1)
+    FAIL token-missing: more than the name was printed
+    FAIL token-empty: more than the name was printed
+    FAIL happy: a secret value is in the container output
+    FAIL kill-serve: a secret value is in the container output
+mutant ep16 environment printed on the 78 path: KILLED (exit 1)
+    FAIL token-missing: more than the name was printed
+    FAIL token-missing: a secret value is in the container output
+    FAIL token-empty: more than the name was printed
+    FAIL token-empty: a secret value is in the container output
+mutant ep17 token printed on the 78 path: KILLED (exit 1)
+    FAIL token-missing: a secret value is in the container output
+    FAIL token-empty: a secret value is in the container output
+    hosted_entrypoint_inner: 2 failure(s)
+mutant ep18 no --no-autoupdate: KILLED (exit 1)
+    FAIL happy: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    FAIL metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    FAIL cf-metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    hosted_entrypoint_inner: 3 failure(s)
+mutant ep19 no run subcommand: KILLED (exit 1)
+    FAIL happy: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    FAIL metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    FAIL cf-metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    hosted_entrypoint_inner: 3 failure(s)
+mutant ep20 serve command changed: KILLED (exit 1)
+    FAIL happy: litestream's second call is not 'replicate -exec /app/yo-human-hosted serve'
+    FAIL happy: serve got other arguments
+    hosted_entrypoint_inner: 2 failure(s)
+mutant ep21 SIGTERM exit status lost: KILLED (exit 1)
+    FAIL happy: after SIGTERM want exit 0, got 1
+    FAIL double-term: want exit 0, got 1 (timed out: 0)
+    FAIL worst-case: want exit 0, got 1 (timed out: 0)
+    hosted_entrypoint_inner: 3 failure(s)
+mutant ep22 token on the command line: KILLED (exit 1)
+    FAIL happy: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    FAIL happy: the token is on cloudflared's command line
+    FAIL metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    FAIL cf-metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+mutant ep23 serve not started with litestream replicate: KILLED (exit 1)
+    FAIL happy: the children did not start
+    FAIL kill-serve: the children did not start
+    FAIL kill-cloudflared: the children did not start
+    FAIL metrics-env: the children did not start
+mutant ep24 cloudflared allowlist loses the token: KILLED (exit 1)
+    FAIL happy: cloudflared lacks TUNNEL_TOKEN
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep25 serve loses the app secrets: KILLED (exit 1)
+    FAIL happy: serve lost YH_GITHUB_CLIENT_SECRET
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep26 TUNNEL_METRICS used again (M1): SURVIVED (exit 0)
+mutant ep27 restore unfiltered (S-restore): KILLED (exit 1)
+    FAIL happy: restore's environment holds the tunnel token or an app secret
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep28 restore keeps the tunnel token: KILLED (exit 1)
+    FAIL happy: restore's environment holds the tunnel token or an app secret
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep29 restore loses the replica keys: KILLED (exit 1)
+    FAIL happy: restore lost LITESTREAM_SECRET_ACCESS_KEY
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep30 no KILL after the bound (S-stop): KILLED (exit 1)
+    FAIL stuck-cf: want a non-zero exit, got 137 (timed out: 1)
+    FAIL stuck-cf: the stop took 25 s, over the platform's 15 s
+    FAIL stuck-cf: cloudflared is still alive
+    FAIL stuck-term: the entrypoint did not exit
+mutant ep31 stop bound 13 to 40: KILLED (exit 1)
+    FAIL stuck-cf: want a non-zero exit, got 137 (timed out: 1)
+    FAIL stuck-cf: the stop took 26 s, over the platform's 15 s
+    FAIL stuck-cf: cloudflared is still alive
+    hosted_entrypoint_inner: 3 failure(s)
+mutant ep32 terminate Litestream bound 11 to 40: KILLED (exit 1)
+    FAIL stuck-serve: the entrypoint did not exit
+    FAIL stuck-serve: the stop took 25 s, over the platform's 15 s
+    FAIL stuck-serve: litestream is still alive
+    FAIL double-term-stuck: the entrypoint did not exit
+mutant ep33 terminate cloudflared bound 2 to 40: KILLED (exit 1)
+    FAIL stuck-term: the entrypoint did not exit
+    FAIL stuck-term: the stop took 25 s, over the platform's 15 s
+    FAIL stuck-term: cloudflared is still alive
+    FAIL worst-case: want exit 0, got 137 (timed out: 1)
+mutant ep34 terminate takes a second signal: KILLED (exit 1)
+    FAIL double-term-stuck: the stop took 19 s, over the platform's 15 s
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep35 patterns matched literally: KILLED (exit 1)
+    FAIL happy: restore lost LITESTREAM_SECRET_ACCESS_KEY
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep36 stop wait never ends early: KILLED (exit 1)
+    FAIL happy: SIGTERM did not stop the entrypoint
+    FAIL happy: after SIGTERM want exit 0, got 137
+    FAIL happy: a child outlived SIGTERM
+    FAIL kill-serve: the entrypoint did not exit
+mutant ep37 metrics read after the filter (N1): KILLED (exit 1)
+    FAIL happy: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    FAIL metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    FAIL cf-metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    hosted_entrypoint_inner: 3 failure(s)
+mutant ep38 metrics read from the variable after the filter: KILLED (exit 1)
+    FAIL cf-metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep39 Litestream bound cut to 5 s: KILLED (exit 1)
+    FAIL worst-case: want exit 0, got 137 (timed out: 0)
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep40 stop_children bound cut to 5 s: SURVIVED (exit 0)
+
+# ep40 and ep39 re-run with the drain checks added
+mutant ep40 stop_children bound cut to 5 s: KILLED (exit 1)
+    FAIL drain-after-cf-death: serve was killed before its drain finished
+    hosted_entrypoint_inner: 1 failure(s)
+mutant ep39 Litestream bound cut to 5 s: KILLED (exit 1)
+    FAIL worst-case: want exit 0, got 137 (timed out: 0)
+    FAIL worst-case: serve was killed before its drain finished
+    hosted_entrypoint_inner: 2 failure(s)
