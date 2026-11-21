@@ -120,6 +120,7 @@ bad url-http fly.toml "# docs: http://real-service.net"
 bad url-in-env fly.toml "  YH_BARK_URL = 'https://bark.real-service.net'"
 bad url-sub fly.toml "# docs: https://sub.example.com.evil.net/x"
 bad url-userinfo fly.toml "# docs: https://example.com@real-service.net/x"
+bad url-second fly.toml "# docs: https://example.com and https://real-service.net/x"
 bad url-in-dockerfile Dockerfile "# fetch https://real-service.net/x.tgz"
 d=$(fixture url-rule-name)
 echo '# https://real-service.net' >>"$d/fly.toml"
