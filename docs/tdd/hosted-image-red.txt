@@ -262,3 +262,33 @@ FAIL stuck-cf: the stop took 25 s, over the platform's 15 s
 FAIL stuck-cf: cloudflared is still alive
 hosted_entrypoint_inner: 3 failure(s)
 exit=1
+
+# Review round 2, should-fix: S1 (a second SIGTERM must not restart the stop's clock; ep34 is not equivalent), S2 (worst-case stop budget), S3 (image smoke test), N1 (an inherited lowercase cf_metrics), 2026-11-21T08:06:06Z.
+
+$ sh scripts/hosted_entrypoint_test.sh   (entrypoint at HEAD: only N1 is a RED here)
+FAIL cf-metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+hosted_entrypoint_inner: 1 failure(s)
+exit=1
+
+$ sh scripts/hosted_entrypoint_test.sh   (ep34 applied: the trap at the top of terminate removed; the S1 RED)
+mutant ep34 terminate takes a second signal: KILLED (exit 1)
+FAIL double-term-stuck: the stop took 18 s, over the platform's 15 s
+FAIL cf-metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+hosted_entrypoint_inner: 2 failure(s)
+exit=1
+
+$ sh scripts/hosted_entrypoint_test.sh   (ep33 applied: terminate's cloudflared bound 2 s -> 40 s; the S2 worst-case case is among those that fail)
+mutant ep33 terminate cloudflared bound 2 to 40: KILLED (exit 1)
+FAIL stuck-term: the entrypoint did not exit
+FAIL stuck-term: the stop took 25 s, over the platform's 15 s
+FAIL stuck-term: cloudflared is still alive
+FAIL worst-case: want exit 0, got 137 (timed out: 1)
+exit=1
+
+$ HOSTED_IMAGE=<the pinned busybox image> sh scripts/hosted_image_smoke.sh   (a stub image, not the built one)
+FAIL no token: want exit 78, got 0
+FAIL no token: the output is not the one line naming TUNNEL_TOKEN
+FAIL the image's uid is not 65532
+FAIL the image's USER is not 65532:65532
+hosted_image_smoke: 4 failure(s)
+exit=1

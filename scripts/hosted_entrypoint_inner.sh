@@ -38,6 +38,14 @@ cat >/app/yo-human-hosted <<'EOF'
 echo "$*" >/out/serve.args
 echo $$ >/out/serve.pid
 [ -z "${FAKE_SERVE_EXIT:-}" ] || exit 0
+# /ctl/serve-slow-term: a server that uses 9 s of its drain after SIGTERM, then exits 0.
+if [ -e /ctl/serve-slow-term ]; then
+  sleep 600 &
+  c=$!
+  trap 'kill $c; sleep 9; exit 0' TERM
+  wait $c
+  exit 0
+fi
 # /ctl/serve-ignore-term: a server that ignores SIGTERM.
 [ ! -e /ctl/serve-ignore-term ] || { trap '' TERM; exec sleep 600; }
 exec sleep 600
@@ -259,6 +267,43 @@ if running stuck-serve TUNNEL_TOKEN=$TOKEN; then
   [ "$timed" = 0 ] && ok "SIGTERM with a stuck server still ends" || fail "stuck-serve: the entrypoint did not exit"
   [ $((t1 - t0)) -lt 15 ] || fail "stuck-serve: the stop took $((t1 - t0)) s, over the platform's 15 s"
   if alive "$ls"; then fail "stuck-serve: litestream is still alive"; fi
+fi
+
+# --- a second SIGTERM must not restart the stop's clock: a stuck server, a second TERM 5 s in ---
+touch /ctl/serve-ignore-term
+if running double-term-stuck TUNNEL_TOKEN=$TOKEN; then
+  ls=$(cat /out/litestream.pid)
+  t0=$(date +%s)
+  kill -TERM "$ep"
+  sleep 5
+  kill -TERM "$ep"
+  finish 25
+  t1=$(date +%s)
+  [ "$timed" = 0 ] && ok "a stuck server and a second SIGTERM still end" || fail "double-term-stuck: the entrypoint did not exit"
+  [ $((t1 - t0)) -lt 15 ] || fail "double-term-stuck: the stop took $((t1 - t0)) s, over the platform's 15 s"
+  if alive "$ls"; then fail "double-term-stuck: litestream is still alive"; fi
+fi
+
+# --- the worst case: serve uses its drain (9 s after SIGTERM) and cloudflared is stuck ---
+touch /ctl/serve-slow-term /ctl/cf-ignore-term
+if running worst-case TUNNEL_TOKEN=$TOKEN; then
+  cf=$(cat /out/cloudflared.pid)
+  ls=$(cat /out/litestream.pid)
+  t0=$(date +%s)
+  kill -TERM "$ep"
+  finish 25
+  t1=$(date +%s)
+  [ "$timed" = 0 ] && [ "$rc" = 0 ] && ok "the worst-case stop ends with serve's status ($rc)" || fail "worst-case: want exit 0, got $rc (timed out: $timed)"
+  [ $((t1 - t0)) -lt 15 ] || fail "worst-case: the stop took $((t1 - t0)) s, over the platform's 15 s"
+  if alive "$cf" || alive "$ls"; then fail "worst-case: cloudflared or litestream is still alive"; fi
+fi
+
+# --- an inherited lowercase cf_metrics must not un-pin the metrics address either ---
+if running cf-metrics-env TUNNEL_TOKEN=$TOKEN cf_metrics=0.0.0.0:2000; then
+  want='tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+  [ "$(cat /out/cloudflared.args)" = "$want" ] && ok "metrics stay on loopback with cf_metrics set" || fail "cf-metrics-env: cloudflared's arguments are not '$want'"
+  kill -TERM "$ep"
+  finish 10
 fi
 
 # --- a failed restore stops the start: no children ---
