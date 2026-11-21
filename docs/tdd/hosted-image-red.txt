@@ -292,3 +292,11 @@ FAIL the image's uid is not 65532
 FAIL the image's USER is not 65532:65532
 hosted_image_smoke: 4 failure(s)
 exit=1
+
+# Review round 2, ep40 (stop_children's bound 13 s cut to 5 s) survived the first round-2 pass: no test checked that serve gets its drain when cloudflared dies. The case drain-after-cf-death (and a drained check in worst-case) was added; the harness passes at HEAD (exit=0) and fails the mutant. 2026-11-21T09:39:06Z
+
+$ sh scripts/hosted_entrypoint_test.sh   (ep40 applied: stop_children's wait_gone 13 -> 5)
+mutant ep40 stop_children bound cut to 5 s: KILLED (exit 1)
+FAIL drain-after-cf-death: serve was killed before its drain finished
+hosted_entrypoint_inner: 1 failure(s)
+exit=1

@@ -42,7 +42,7 @@ echo $$ >/out/serve.pid
 if [ -e /ctl/serve-slow-term ]; then
   sleep 600 &
   c=$!
-  trap 'kill $c; sleep 9; exit 0' TERM
+  trap 'kill $c; sleep 9; echo drained >/out/serve.drained; exit 0' TERM
   wait $c
   exit 0
 fi
@@ -269,6 +269,15 @@ if running stuck-serve TUNNEL_TOKEN=$TOKEN; then
   if alive "$ls"; then fail "stuck-serve: litestream is still alive"; fi
 fi
 
+# --- cloudflared dies while serve is draining: serve gets its drain, not an early KILL ---
+touch /ctl/serve-slow-term
+if running drain-after-cf-death TUNNEL_TOKEN=$TOKEN; then
+  kill -9 "$(cat /out/cloudflared.pid)"
+  finish 25
+  [ "$timed" = 0 ] && [ "$rc" != 0 ] && ok "cloudflared's death ends the container non-zero ($rc)" || fail "drain-after-cf-death: want a non-zero exit, got $rc (timed out: $timed)"
+  [ -e /out/serve.drained ] && ok "serve finished its 9 s drain before the stop ended" || fail "drain-after-cf-death: serve was killed before its drain finished"
+fi
+
 # --- a second SIGTERM must not restart the stop's clock: a stuck server, a second TERM 5 s in ---
 touch /ctl/serve-ignore-term
 if running double-term-stuck TUNNEL_TOKEN=$TOKEN; then
@@ -295,6 +304,7 @@ if running worst-case TUNNEL_TOKEN=$TOKEN; then
   t1=$(date +%s)
   [ "$timed" = 0 ] && [ "$rc" = 0 ] && ok "the worst-case stop ends with serve's status ($rc)" || fail "worst-case: want exit 0, got $rc (timed out: $timed)"
   [ $((t1 - t0)) -lt 15 ] || fail "worst-case: the stop took $((t1 - t0)) s, over the platform's 15 s"
+  [ -e /out/serve.drained ] || fail "worst-case: serve was killed before its drain finished"
   if alive "$cf" || alive "$ls"; then fail "worst-case: cloudflared or litestream is still alive"; fi
 fi
 
