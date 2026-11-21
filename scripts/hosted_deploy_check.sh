@@ -52,6 +52,10 @@ if [ -f "$d" ]; then
   else
     printf '%s\n' "$user_v" | grep -E -q '^[1-9][0-9]*(:[1-9][0-9]*)?$' || fail user "the final USER is not a numeric non-root uid and gid"
   fi
+  # every COPY --from names a stage defined by an earlier FROM ... AS
+  stray=$(awk '/^FROM / { for (i = 1; i < NF; i++) if (toupper($i) == "AS") stages[$(i + 1)] = 1 }
+    /^COPY / { for (i = 1; i <= NF; i++) if ($i ~ /^--from=/) { n = substr($i, 8); if (!(n in stages)) print NR } }' "$d") || exit 2
+  [ -z "$stray" ] || fail digest "a COPY --from does not name an earlier stage (line $(echo $stray))"
   need "$d" file-note '^#.*ELF .*statically linked' "the Dockerfile does not record the file result for the Litestream binary"
   need "$d" entrypoint '^ENTRYPOINT \["/app/entrypoint\.sh"\]$' "ENTRYPOINT is not /app/entrypoint.sh"
 fi
@@ -75,8 +79,8 @@ if [ -f "$f" ]; then
   need "$f" listen "^ *YH_LISTEN_APPROVE = ['\"]:8080['\"]" "the approval listener must be :8080"
   need "$f" placeholder "^app = ['\"]<app>['\"]" "app must be the <app> placeholder"
   need "$f" placeholder "^primary_region = ['\"]<region>['\"]" "primary_region must be the <region> placeholder"
-  if [ -n "$(grep -v '^ *#' "$f" | grep -E 'YH_[A-Z_]*(SECRET|PASSWORD|KEY|TOKEN)[A-Z_]* *=')" ]; then
-    fail no-secret "a secret setting is in fly.toml; secrets go in through fly secrets import"
+  if [ -n "$(grep -v '^ *#' "$f" | grep -E '^ *[A-Z0-9_]*(SECRET|PASSWORD|KEY|TOKEN)[A-Z0-9_]* *=')" ]; then
+    fail no-secret "a credential-named setting is in fly.toml; secrets go in through fly secrets import"
   fi
 fi
 
@@ -84,6 +88,9 @@ f=$dir/litestream.yml
 if [ -f "$f" ]; then
   need "$f" replica-path '^ *- path: /data/bus\.db$' "the replicated database must be /data/bus.db"
   need "$f" placeholder '^ *bucket: <bucket>$' "bucket must be the <bucket> placeholder"
+  if [ -n "$(lines "$f" '^ *(access-key-id|secret-access-key) *:' | grep -v -E ': *\$\{[A-Za-z_]+\} *$')" ]; then
+    fail no-secret "a replica credential is in litestream.yml; use an \${ENV} reference or a secret"
+  fi
 fi
 
 if [ "$bad" != 0 ]; then

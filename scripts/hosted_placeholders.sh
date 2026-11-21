@@ -4,7 +4,8 @@
 # real name that slipped in is not copied into a log. Rules:
 #   platform-host      no platform hostname (fly.dev, workers.dev, trycloudflare.com, ...)
 #   home-path          no home-directory path: a macOS or Linux home directory, or ~/...
-#   placeholder-value  app, primary_region, bucket, region and endpoint hold only a <placeholder>
+#   placeholder-value  app, primary_region, bucket, region and endpoint hold only a <placeholder>, and
+#                      so does every YH_* setting (or one of 127.0.0.1:8081, :8080, /data/bus.db)
 #   url-host           a URL names only a loopback address, example.com, example.org or a <placeholder>
 # Exit: 0 clean, 1 findings, 2 usage, a missing or empty directory, or a read error.
 set -u
@@ -29,6 +30,18 @@ prog='function report(rule) { printf "%s:%d: %s\n", name, FNR, rule }
     sub(/^["\047]/, "", v)
     sub(/["\047]$/, "", v)
     if (v !~ /^<[a-z][a-z0-9-]*>$/) report("placeholder-value")
+  }
+  if (conf && match(line, "^[ \t]*YH_[A-Z0-9_]*[ \t]*[:=]")) {
+    v = substr(line, RSTART + RLENGTH)
+    sub(/[ \t]+#.*$/, "", v)
+    sub(/^[ \t]+/, "", v)
+    sub(/[ \t]+$/, "", v)
+    sub(/^["\047]/, "", v)
+    sub(/["\047]$/, "", v)
+    r = v
+    n = gsub(/<[a-z][a-z0-9-]*>/, "", r)
+    ok = (v == "127.0.0.1:8081" || v == ":8080" || v == "/data/bus.db" || (n > 0 && (r == "" || r == "https://")))
+    if (!ok) report("placeholder-value")
   }
   rest = low
   while (match(rest, "[a-z][a-z0-9+.-]*://[^/?# \t\047\"]*")) {
