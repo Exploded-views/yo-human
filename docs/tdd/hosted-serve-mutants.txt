@@ -1,0 +1,190 @@
+# H1 Task 12 slice 12a mutation pass on 82656b7 (serve and selfcheck). One mutant per rule, applied to a file, the package tests run, the file restored.
+# web mutants run `go test -race -run Serve ./internal/hosted/web`; app mutants `-run 'Serve|Selfcheck|ExerciseBus|ExitCode|Usage|CheckRead' ./internal/hosted/app`; the perf one `-run Selfcheck ./tools/perf`.
+# A mutant that did not compile is not a kill: #8, #14 and #23-#25, #35 failed to build at first and were rewritten to compile (the first attempts are not counted).
+# Baseline (unmutated): all pass. Survivors: #36 and #37 survived the first pass (checkRead accepted any event type, and another item's answer); TestCheckReadWantsExactlyTheAnswer was added (commit 3ea46e4) and kills both.
+
+#0 loopback check dropped [internal/hosted/web/serve.go]: KILLED
+    --- FAIL: TestServeRefusesNonLoopbackMCP (0.00s)
+    --- FAIL: TestServeChecksLoopbackBeforePorts (0.00s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	0.928s
+#1 Is4In6 check dropped [internal/hosted/web/serve.go]: KILLED
+    --- FAIL: TestServeRefusesNonLoopbackMCP (0.00s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	1.014s
+    FAIL
+#2 zone check dropped [internal/hosted/web/serve.go]: KILLED
+    --- FAIL: TestServeRefusesNonLoopbackMCP (0.00s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	0.989s
+    FAIL
+#3 non-loopback returns the wrong error [internal/hosted/web/serve.go]: KILLED
+    --- FAIL: TestServeRefusesNonLoopbackMCP (0.00s)
+    --- FAIL: TestServeChecksLoopbackBeforePorts (0.00s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	0.961s
+#4 port equality inverted [internal/hosted/web/serve.go]: KILLED
+    panic: test timed out after 1m30s
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	90.360s
+    FAIL
+#5 ports compared as text [internal/hosted/web/serve.go]: KILLED
+    panic: test timed out after 1m30s
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	90.371s
+    FAIL
+#6 checks skipped before bind [internal/hosted/web/serve.go]: KILLED
+    --- FAIL: TestServeRefusesNonLoopbackMCP (0.01s)
+    panic: test timed out after 1m30s
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	90.394s
+    FAIL
+#7 ErrServerClosed counted as failure [internal/hosted/web/serve.go]: KILLED
+    --- FAIL: TestServeClosedServersAreNotFailures (0.00s)
+    --- FAIL: TestServeShutdownHasTheGraceDeadline (0.00s)
+    --- FAIL: TestServeForcedCloseClosesBoth (0.05s)
+    --- FAIL: TestServeRoutesEachListenerAndEndsCleanly (0.00s)
+#8 failure not named [internal/hosted/web/serve.go]: KILLED
+    --- FAIL: TestServeFailureNamesItsListener (0.00s)
+    --- FAIL: TestServeStopsBothWhenOneFails (0.00s)
+    --- FAIL: TestServeNamesTheMCPListenerWhenItFails (0.00s)
+    FAIL
+#9 forced close beats a failure [internal/hosted/web/serve.go]: KILLED
+    --- FAIL: TestServeFailureBeatsForcedClose (0.05s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	0.875s
+    FAIL
+#10 a later failure ignored [internal/hosted/web/serve.go]: KILLED
+    --- FAIL: TestServeFailureBeatsCancel (0.00s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	0.911s
+    FAIL
+#11 ctx never ends serve [internal/hosted/web/serve.go]: KILLED
+    panic: test timed out after 1m30s
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	90.340s
+    FAIL
+#12 grace 100x [internal/hosted/web/serve.go]: KILLED
+    --- FAIL: TestServeShutdownHasTheGraceDeadline (0.00s)
+    --- FAIL: TestServeGraceThenForcedClose (1.00s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	11.564s
+#13 a failed drain never forced [internal/hosted/web/serve.go]: KILLED
+    panic: test timed out after 1m30s
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	90.323s
+    FAIL
+#14 Close not called after grace [internal/hosted/web/serve.go]: KILLED
+    panic: test timed out after 1m30s
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	90.349s
+    FAIL
+#15 forced close returns nil [internal/hosted/web/serve.go]: KILLED
+    --- FAIL: TestServeForcedCloseClosesBoth (0.05s)
+    --- FAIL: TestServeGraceThenForcedClose (0.20s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	0.870s
+#16 handlers swapped [internal/hosted/web/serve.go]: KILLED
+    --- FAIL: TestServeRoutesEachListenerAndEndsCleanly (0.00s)
+    --- FAIL: TestServeGraceThenForcedClose (3.02s)
+    panic: test timed out after 1m30s
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	90.314s
+#17 other listener not shut down on failure [internal/hosted/web/serve.go]: KILLED
+    panic: test timed out after 1m30s
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	90.316s
+    FAIL
+#18 exit 0 for forced close dropped [internal/hosted/app/serve_cmd.go]: KILLED
+    --- FAIL: TestServeExitCodes (0.41s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	1.792s
+    FAIL
+#19 config errors from Serve exit 70 [internal/hosted/app/serve_cmd.go]: KILLED
+    --- FAIL: TestServeExitCodes (0.41s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	7.071s
+    FAIL
+#20 LoadConfig error exits 70 [internal/hosted/app/serve_cmd.go]: KILLED
+    --- FAIL: TestServeBadConfigIsRefusedBeforeAnythingOpens (0.00s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	7.183s
+    FAIL
+#21 db error exits 70 [internal/hosted/app/serve_cmd.go]: KILLED
+    --- FAIL: TestServeDatabaseThatWillNotOpenIsExitStore (0.00s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	1.743s
+    FAIL
+#22 grace 5s [internal/hosted/app/serve_cmd.go]: KILLED
+    --- FAIL: TestServePassesItsConfigAndSignalContext (0.07s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	1.745s
+    FAIL
+#23 SIGINT not handled [internal/hosted/app/serve_cmd.go]: KILLED
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	1.572s
+    FAIL
+#24 SIGTERM not handled [internal/hosted/app/serve_cmd.go]: KILLED
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	1.488s
+    FAIL
+#25 signal context not stopped [internal/hosted/app/serve_cmd.go]: KILLED
+    --- FAIL: TestServePassesItsConfigAndSignalContext (0.07s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	7.106s
+    FAIL
+#26 approval address from the MCP setting [internal/hosted/app/serve_cmd.go]: KILLED
+    --- FAIL: TestServePassesItsConfigAndSignalContext (0.07s)
+    --- FAIL: TestServeShutsDownOnSignal (0.07s)
+    --- FAIL: TestServeBindsMCPOnLoopbackOnly (0.07s)
+    --- FAIL: TestServeAuthenticatesAgainstTheDatabase (0.08s)
+#27 verifier over no store [internal/hosted/app/serve_cmd.go]: KILLED
+    panic({0x10168c328?, 0x1017910d0?})
+    --- FAIL: TestServeAuthenticatesAgainstTheDatabase (0.11s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	1.781s
+#28 ExitInternal value [internal/hosted/app/app.go]: KILLED
+    --- FAIL: TestExitCodeValuesOfServe (0.00s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	1.784s
+    FAIL
+#29 ExitConfig value [internal/hosted/app/app.go]: KILLED
+    --- FAIL: TestExitCodeValuesOfServe (0.00s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	7.069s
+    FAIL
+#30 serve not dispatched [internal/hosted/app/app.go]: KILLED
+    --- FAIL: TestServeExitCodes (0.00s)
+    --- FAIL: TestServeFailureIsNamedOnStderr (0.00s)
+    --- FAIL: TestServePassesItsConfigAndSignalContext (0.00s)
+    --- FAIL: TestServeBadConfigIsRefusedBeforeAnythingOpens (0.00s)
+#31 selfcheck not dispatched [internal/hosted/app/app.go]: KILLED
+    --- FAIL: TestSelfcheckRunsOffline (0.00s)
+    --- FAIL: TestSelfcheckWithoutATempDirIsInternal (0.00s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	1.696s
+#32 selfcheck failure exits 0 [internal/hosted/app/selfcheck_cmd.go]: KILLED
+    --- FAIL: TestSelfcheckWithoutATempDirIsInternal (0.00s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	1.753s
+    FAIL
+#33 selfcheck leaves its temp dir [internal/hosted/app/selfcheck_cmd.go]: KILLED
+    --- FAIL: TestSelfcheckRunsOffline (0.08s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	7.109s
+    FAIL
+#34 selfcheck policy has no merge rule [internal/hosted/app/selfcheck_cmd.go]: KILLED
+    --- FAIL: TestSelfcheckRunsOffline (0.05s)
+    --- FAIL: TestSelfcheckInOpensOnlyADatabaseItMay (0.05s)
+    --- FAIL: TestExerciseBusStepsEachFailLoudly (0.34s)
+    FAIL
+#35 selfcheck skips the relay [internal/hosted/app/selfcheck_cmd.go]: KILLED
+    --- FAIL: TestExerciseBusStepsEachFailLoudly (0.49s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	2.027s
+    FAIL
+#36 selfcheck read accepts any event [internal/hosted/app/selfcheck_cmd.go]: KILLED
+    --- FAIL: TestCheckReadWantsExactlyTheAnswer (0.00s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	2.056s
+    FAIL
+#37 selfcheck wrong item accepted [internal/hosted/app/selfcheck_cmd.go]: KILLED
+    --- FAIL: TestCheckReadWantsExactlyTheAnswer (0.00s)
+    FAIL
+    FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	1.968s
+    FAIL
+#38 selfcheck message changed: KILLED
+    --- FAIL: TestSelfcheckRunsOffline
+#39 perf scenario runs the CLI binary: KILLED
+    --- FAIL: TestSelfcheckScenarioRunsTheHostedBinary
+#40 lint probe: .golangci.yml internal-no-network given an exclusion "!**/internal/hosted/app/**" (LINT_RULES_CONFIG): PENDING, queued behind the heavy lock (see below)
