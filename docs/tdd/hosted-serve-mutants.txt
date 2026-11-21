@@ -187,4 +187,8 @@
     --- FAIL: TestSelfcheckRunsOffline
 #39 perf scenario runs the CLI binary: KILLED
     --- FAIL: TestSelfcheckScenarioRunsTheHostedBinary
-#40 lint probe: .golangci.yml internal-no-network given an exclusion "!**/internal/hosted/app/**" (LINT_RULES_CONFIG): PENDING, queued behind the heavy lock (see below)
+#40 lint probe: .golangci.yml internal-no-network given an exclusion "!**/internal/hosted/app/**" (LINT_RULES_CONFIG=<mutated copy> sh scripts/lint_rules_test.sh, under crew-heavy): KILLED (exit=1)
+    FAIL internal/hosted/app/casehttp/x.go: hosted app imports net/http (the listeners live in web, so app gets no internal-no-network exclusion): want internal-no-network, got clean
+    FAIL internal/hosted/app/casenet/x.go: hosted app imports net: want internal-no-network, got clean
+    lint_rules_test: a case failed
+# 41 of 41 mutants killed (the 2 first-pass survivors, #36 and #37, were killed after the added test; none are equivalent).
