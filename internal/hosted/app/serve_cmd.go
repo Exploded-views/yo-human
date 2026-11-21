@@ -57,6 +57,8 @@ func runServe(args []string, env func(string) string, stdout, stderr io.Writer) 
 			ToolDeadline: cfg.ToolDeadline, Log: slog.New(slog.NewTextHandler(stderr, nil))}, nil)
 	ctx, stop := notifyContext()
 	defer stop()
+	// The first signal ends ctx; restore the default handling then, so a second one kills the drain.
+	context.AfterFunc(ctx, stop)
 	return a.served(serveFn(ctx, h, web.ServeConfig{MCPAddr: cfg.ListenMCP, ApproveAddr: cfg.ListenApprove, Grace: serveGrace}))
 }
 
@@ -66,7 +68,7 @@ func (a admin) served(err error) int {
 	switch {
 	case err == nil || errors.Is(err, web.ErrForcedClose):
 		return ExitOK
-	case errors.Is(err, web.ErrMCPNotLoopback) || errors.Is(err, web.ErrSamePort):
+	case errors.Is(err, web.ErrMCPNotLoopback) || errors.Is(err, web.ErrSamePort) || errors.Is(err, web.ErrBadPort):
 		a.say("serve: %v", err)
 		return ExitConfig
 	}

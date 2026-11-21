@@ -25,7 +25,7 @@ const (
 	ExitConfig = 78
 )
 
-const usage = "usage: yo-human-hosted <command>\n\ncommands:\n  version    print the version\n  token      create, list and revoke node tokens and desk starters\n  check      check the database's integrity and count its rows\n  serve      run the MCP and approval listeners until SIGTERM or SIGINT\n  selfcheck  post, record and read one approval in a temporary database, offline\n"
+const usage = "usage: yo-human-hosted <command>\n\ncommands:\n  version    print the version\n  token      create, list and revoke node tokens and desk starters\n  check      check the database's integrity and count its rows\n  serve      run the MCP and approval listeners until SIGTERM or SIGINT\n  selfcheck  post an approval and a question, record Duet's words and read the answer, offline\n"
 
 // Run executes yo-human-hosted with args (without the program name), reading configuration
 // through env, and returns the exit code.

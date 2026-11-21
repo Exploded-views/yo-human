@@ -51,15 +51,18 @@ func newListener(name, addr string, h http.Handler) listener {
 }
 
 // checkAddrs: the MCP address is a literal loopback IP and a port (IsLoopback unmaps, so Is4In6
-// is what refuses ::ffff:127.0.0.1), and the ports differ.
+// is what refuses ::ffff:127.0.0.1), the approval address ends in a number, and the ports differ.
 func checkAddrs(mcp, approve string) error {
 	a, err := netip.ParseAddrPort(mcp)
 	if err != nil || !a.Addr().IsLoopback() || a.Addr().Is4In6() || a.Addr().Zone() != "" {
 		return ErrMCPNotLoopback
 	}
-	pm, errM := strconv.Atoi(mcp[strings.LastIndex(mcp, ":")+1:])
-	pa, errA := strconv.Atoi(approve[strings.LastIndex(approve, ":")+1:])
-	if errM == nil && errA == nil && pm == pa {
+	pm, _ := strconv.Atoi(mcp[strings.LastIndex(mcp, ":")+1:]) // ParseAddrPort checked it
+	pa, err := strconv.Atoi(approve[strings.LastIndex(approve, ":")+1:])
+	switch {
+	case err != nil:
+		return ErrBadPort
+	case pm == pa:
 		return ErrSamePort
 	}
 	return nil
