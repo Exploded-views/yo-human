@@ -98,6 +98,8 @@ make test             # go test -race ./...
 
 Then set it up: `yo-human config init` writes a starter config, the pages in [docs/setup/](docs/setup/README.md) set up each channel (secrets go in with `yo-human secret set <name>`, piped on stdin), `yo-human config check` validates the result, `yo-human channel test <instance>` sends one test message, and a [cron flush](docs/setup/cron-flush.md) sends what quiet hours held and retries what failed. Agents learn the contract from the skill in [skills/yo-human/SKILL.md](skills/yo-human/SKILL.md).
 
+The optional hosted service is a second binary, `yo-human-hosted` (`make build` writes `dist/yo-human-hosted` too). Its commands: `version`; `token create|create-desk-starter|list|revoke` for node tokens and desk starters; `check` for the database's integrity and row counts; `serve` for the MCP and approval listeners (MCP on loopback only, SIGTERM or SIGINT drains and exits 0); and `selfcheck`, an offline post, record and read in a temporary database. [docs/hosted/local.md](docs/hosted/local.md) runs one instance on a single Mac for local crews. Duet cannot connect until the OAuth task, and there are no Bark nudges until the nudge task.
+
 `make tools` installs the pinned linters and scanners, and `make ci` runs every gate in CI's order. [CONTRIBUTING.md](CONTRIBUTING.md) covers the rest, including `make ci-base` before a push.
 
 ## Roadmap

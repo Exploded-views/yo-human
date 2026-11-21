@@ -85,3 +85,10 @@ FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	3.831s
     hosted_test.go:31: no scenario named hosted-selfcheck
 FAIL	github.com/Exploded-views/yo-human/tools/perf	9.710s
 exit=1
+
+$ make lint-rules-test   (run under crew-heavy against the RED commit's scripts/lint_rules_test.sh and the unchanged .golangci.yml)
+ok   internal/hosted/app/casehttp/x.go: hosted app imports net/http (the listeners live in web, so app gets no internal-no-network exclusion) (internal-no-network)
+ok   internal/hosted/app/casenet/x.go: hosted app imports net (internal-no-network)
+lint_rules_test: all 168 cases pass
+exit=0
+# The two app probes are guards, not RED failures: the rule had no exclusion for app, so they pass at once. Their mutant (an exclusion for app) is in hosted-serve-mutants.txt.
