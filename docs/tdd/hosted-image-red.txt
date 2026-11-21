@@ -89,3 +89,122 @@ FAIL missing-litestream.yml: want exit 1, got 127
 FAIL missing-entrypoint.sh: want exit 1, got 127
 FAIL missing-dir: want exit 2, got 127
 exit=1
+
+# Appended after review round 1 (S9): the same tests against stubs, so that assertions are seen to fail. The stubs: deploy/example/entrypoint.sh is 'exec sleep 600'; scripts/hosted_placeholders.sh and scripts/hosted_deploy_check.sh are 'exit 0'. 2026-11-21T07:03:41Z.
+
+$ sh scripts/hosted_entrypoint_test.sh   (stubs)
+Killed
+FAIL token-missing: the entrypoint hung
+FAIL token-missing: want exit 78, got 137
+FAIL token-missing: the message does not name TUNNEL_TOKEN
+Killed
+FAIL token-empty: the entrypoint hung
+FAIL token-empty: want exit 78, got 137
+FAIL token-empty: the message does not name TUNNEL_TOKEN
+FAIL happy: the children did not start
+FAIL kill-serve: the children did not start
+FAIL kill-cloudflared: the children did not start
+cat: can't open '/out/cloudflared.pid': No such file or directory
+Killed
+FAIL cloudflared-term: want a non-zero exit, got 137 (timed out: 1)
+cat: can't open '/out/cloudflared.pid': No such file or directory
+Killed
+FAIL serve-exits-0: want a non-zero exit, got 137 (timed out: 1)
+FAIL serve-exits-0: cloudflared kept running
+FAIL restore-fails: want a non-zero exit, got 137 (timed out: 1)
+Killed
+hosted_entrypoint_inner: 13 failure(s)
+exit=1
+
+$ sh scripts/hosted_placeholders_test.sh   (stubs)
+FAIL host-fly.dev: want exit 1, got 0
+FAIL host-workers.dev: want exit 1, got 0
+FAIL host-trycloudflare.com: want exit 1, got 0
+FAIL host-cfargotunnel.com: want exit 1, got 0
+FAIL host-herokuapp.com: want exit 1, got 0
+FAIL host-vercel.app: want exit 1, got 0
+FAIL host-onrender.com: want exit 1, got 0
+FAIL host-railway.app: want exit 1, got 0
+FAIL host-pages.dev: want exit 1, got 0
+FAIL host-netlify.app: want exit 1, got 0
+FAIL host-ngrok.io: want exit 1, got 0
+FAIL host-tigris.dev: want exit 1, got 0
+FAIL host-flycast: want exit 1, got 0
+FAIL host-in-dockerfile: want exit 1, got 0
+FAIL host-upper: want exit 1, got 0
+FAIL home-users: want exit 1, got 0
+FAIL home-linux: want exit 1, got 0
+FAIL home-tilde: want exit 1, got 0
+FAIL home-in-yaml: want exit 1, got 0
+FAIL value-app: want exit 1, got 0
+FAIL value-app-double: want exit 1, got 0
+FAIL value-region: want exit 1, got 0
+FAIL value-bucket: want exit 1, got 0
+FAIL value-bucket-list: want exit 1, got 0
+FAIL value-region-yaml: want exit 1, got 0
+FAIL value-endpoint: want exit 1, got 0
+FAIL value-partial: want exit 1, got 0
+FAIL value-empty: want exit 1, got 0
+FAIL value-rule-name: want exit 1, got 0
+FAIL url-real: want exit 1, got 0
+FAIL url-http: want exit 1, got 0
+FAIL url-in-env: want exit 1, got 0
+FAIL url-sub: want exit 1, got 0
+FAIL url-userinfo: want exit 1, got 0
+FAIL url-in-dockerfile: want exit 1, got 0
+FAIL url-rule-name: want exit 1, got 0
+FAIL many-findings: want exit 1, got 0
+FAIL empty-dir: want exit 2, got 0
+FAIL missing-dir: want exit 2, got 0
+FAIL not-a-dir: want exit 2, got 0
+FAIL two-args: want exit 2
+hosted_placeholders_test: 41 failure(s)
+exit=1
+
+$ sh scripts/hosted_deploy_check_test.sh   (stubs)
+FAIL digest-golang: want exit 1, got 0
+FAIL digest-litestream: want exit 1, got 0
+FAIL digest-cloudflared: want exit 1, got 0
+FAIL digest-final: want exit 1, got 0
+FAIL digest-short: want exit 1, got 0
+FAIL go-old: want exit 1, got 0
+FAIL go-minor: want exit 1, got 0
+FAIL litestream-old: want exit 1, got 0
+FAIL litestream-latest: want exit 1, got 0
+FAIL no-cloudflared: want exit 1, got 0
+FAIL user-root: want exit 1, got 0
+FAIL user-zero: want exit 1, got 0
+FAIL user-named-root: want exit 1, got 0
+FAIL user-missing: want exit 1, got 0
+FAIL final-alpine: want exit 1, got 0
+FAIL no-file-note: want exit 1, got 0
+FAIL entrypoint-line: want exit 1, got 0
+FAIL kill-timeout: want exit 1, got 0
+FAIL kill-timeout-missing: want exit 1, got 0
+FAIL auto-stop: want exit 1, got 0
+FAIL min-machines: want exit 1, got 0
+FAIL port-8081: want exit 1, got 0
+FAIL port-extra: want exit 1, got 0
+FAIL mount: want exit 1, got 0
+FAIL healthz: want exit 1, got 0
+FAIL vm-size: want exit 1, got 0
+FAIL vm-memory: want exit 1, got 0
+FAIL app-name: want exit 1, got 0
+FAIL secret-in-env: want exit 1, got 0
+FAIL mcp-listen: want exit 1, got 0
+FAIL approve-listen: want exit 1, got 0
+FAIL region-placeholder: want exit 1, got 0
+FAIL port-9090: want exit 1, got 0
+FAIL port-dup: want exit 1, got 0
+FAIL port-8081-mapped: want exit 1, got 0
+FAIL user-earlier-stage: want exit 1, got 0
+FAIL unreadable: want exit 2, got 0
+FAIL litestream-db: want exit 1, got 0
+FAIL litestream-bucket: want exit 1, got 0
+FAIL missing-Dockerfile: want exit 1, got 0
+FAIL missing-fly.toml: want exit 1, got 0
+FAIL missing-litestream.yml: want exit 1, got 0
+FAIL missing-entrypoint.sh: want exit 1, got 0
+FAIL missing-dir: want exit 2, got 0
+FAIL two-args: want exit 2
+exit=1
