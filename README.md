@@ -10,7 +10,7 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </p>
 
-yo-human is a Go CLI that AI agents call when they need their human: to notify, to ask, and to escalate ("yo, human!"). It delivers through the channels you configure (PagerDuty, ntfy and Bark first, Heeler later), at the level the agent picks, and return within a deadline so the agent never stalls. It runs on your machine when called. There is no daemon and no hosted service.
+yo-human is a Go CLI that AI agents call when they need their human: to notify, to ask, and to escalate ("yo, human!"). It delivers through the channels you configure (PagerDuty, ntfy and Bark first, Heeler later), at the level the agent picks, and return within a deadline so the agent never stalls. It runs on your machine when called, with no daemon. An optional hosted service, `yo-human-hosted`, is described under Build from source.
 
 > [!IMPORTANT]
 > **Early days.** v1 (M0 and M1) is built: `notify`, `resolve`, `flush`, `status`, `levels`, `page`, `channel test` and the config and secret commands, over PagerDuty, ntfy and Bark. It is not released yet (`v0.1.0` has no tag), so build it from source. Ask (M2) and everything after it is design, not shipped behavior.
@@ -98,7 +98,7 @@ make test             # go test -race ./...
 
 Then set it up: `yo-human config init` writes a starter config, the pages in [docs/setup/](docs/setup/README.md) set up each channel (secrets go in with `yo-human secret set <name>`, piped on stdin), `yo-human config check` validates the result, `yo-human channel test <instance>` sends one test message, and a [cron flush](docs/setup/cron-flush.md) sends what quiet hours held and retries what failed. Agents learn the contract from the skill in [skills/yo-human/SKILL.md](skills/yo-human/SKILL.md).
 
-The optional hosted service is a second binary, `yo-human-hosted` (`make build` writes `dist/yo-human-hosted` too). Its commands: `version`; `token create|create-desk-starter|list|revoke` for node tokens and desk starters; `check` for the database's integrity and row counts; `serve` for the MCP and approval listeners (MCP on loopback only, SIGTERM or SIGINT drains and exits 0); and `selfcheck`, an offline post, record and read in a temporary database. [docs/hosted/local.md](docs/hosted/local.md) runs one instance on a single Mac for local crews. Duet cannot connect until the OAuth task, and there are no Bark nudges until the nudge task.
+The optional hosted service is a second binary, `yo-human-hosted` (`make build` writes `dist/yo-human-hosted` too). Its commands: `version`; `token create|create-desk-starter|list|revoke` for node tokens and desk starters; `check` for the database's integrity and row counts; `serve` for the MCP and approval listeners (MCP on loopback only, SIGTERM or SIGINT drains and exits 0); and `selfcheck`, an offline post, record and read in a temporary database. [docs/hosted/local.md](docs/hosted/local.md) runs one instance on a single Mac for local crews. Its exit codes follow the table above (0 done, 64 usage, 69 refused, 70 internal, 74 database, 78 bad configuration). Duet cannot connect until the OAuth task, and there are no Bark nudges until the nudge task.
 
 `make tools` installs the pinned linters and scanners, and `make ci` runs every gate in CI's order. [CONTRIBUTING.md](CONTRIBUTING.md) covers the rest, including `make ci-base` before a push.
 
