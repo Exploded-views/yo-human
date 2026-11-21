@@ -3,6 +3,11 @@ package web
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/netip"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -27,9 +32,99 @@ type listener struct {
 	close    func() error
 }
 
-var errNotBuilt = errors.New("web: Serve is not built yet")
+// Serve runs one http.Server per listener, each with the contract's timeouts, until ctx is done or
+// one fails. Before it binds anything it repeats the config's two listener checks, so a caller that
+// skipped the config still cannot expose MCP. A failure is returned wrapped with the listener's
+// name and beats a cancelled ctx. On ctx it drains both within Grace and returns nil, or cuts what
+// is left and returns ErrForcedClose.
+func Serve(ctx context.Context, h Handlers, c ServeConfig) error {
+	if err := checkAddrs(c.MCPAddr, c.ApproveAddr); err != nil {
+		return err
+	}
+	return serve(ctx, []listener{newListener("MCP", c.MCPAddr, h.MCP), newListener("approval", c.ApproveAddr, h.Approve)}, c.Grace)
+}
 
-// Serve is a stub until its tests are red.
-func Serve(_ context.Context, _ Handlers, _ ServeConfig) error { return errNotBuilt }
+func newListener(name, addr string, h http.Handler) listener {
+	s := NewHTTPServer(addr, h)
+	return listener{name: name, run: s.ListenAndServe, shutdown: s.Shutdown, close: s.Close}
+}
 
-func serve(_ context.Context, _ []listener, _ time.Duration) error { return errNotBuilt }
+// checkAddrs: the MCP address is a literal loopback IP and a port (IsLoopback unmaps, so Is4In6
+// is what refuses ::ffff:127.0.0.1), and the ports differ.
+func checkAddrs(mcp, approve string) error {
+	a, err := netip.ParseAddrPort(mcp)
+	if err != nil || !a.Addr().IsLoopback() || a.Addr().Is4In6() || a.Addr().Zone() != "" {
+		return ErrMCPNotLoopback
+	}
+	pm, errM := strconv.Atoi(mcp[strings.LastIndex(mcp, ":")+1:])
+	pa, errA := strconv.Atoi(approve[strings.LastIndex(approve, ":")+1:])
+	if errM == nil && errA == nil && pm == pa {
+		return ErrSamePort
+	}
+	return nil
+}
+
+type ended struct {
+	name string
+	err  error
+}
+
+// failure is nil for the http.ErrServerClosed of a server serve shut down.
+func (o ended) failure() error {
+	if errors.Is(o.err, http.ErrServerClosed) {
+		return nil
+	}
+	return fmt.Errorf("web: %s listener: %w", o.name, o.err)
+}
+
+// serve runs the listeners and returns when they have all ended. The first to end, or ctx, starts
+// the shutdown of all; any real failure, from either, is what it returns.
+func serve(ctx context.Context, ls []listener, grace time.Duration) error {
+	done := make(chan ended, len(ls))
+	for _, l := range ls {
+		go func() { done <- ended{l.name, l.run()} }()
+	}
+	var failure error
+	pending := len(ls)
+	select {
+	case o := <-done:
+		pending--
+		failure = o.failure()
+	case <-ctx.Done():
+	}
+	forced := stop(ls, grace)
+	for ; pending > 0; pending-- {
+		if o := <-done; failure == nil {
+			failure = o.failure()
+		}
+	}
+	switch {
+	case failure != nil:
+		return failure
+	case forced:
+		return ErrForcedClose
+	}
+	return nil
+}
+
+// stop shuts every listener down under one grace deadline. When any drain fails, which includes
+// running out of time, it closes them all and reports that it had to.
+func stop(ls []listener, grace time.Duration) (forced bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), grace)
+	defer cancel()
+	errs := make(chan error, len(ls))
+	for _, l := range ls {
+		go func() { errs <- l.shutdown(ctx) }()
+	}
+	for range ls {
+		if err := <-errs; err != nil {
+			forced = true
+		}
+	}
+	if forced {
+		for _, l := range ls {
+			_ = l.close()
+		}
+	}
+	return forced
+}

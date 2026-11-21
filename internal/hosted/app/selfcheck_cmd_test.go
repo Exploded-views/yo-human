@@ -47,7 +47,11 @@ func TestSelfcheckTakesNoArguments(t *testing.T) {
 }
 
 func TestSelfcheckInOpensOnlyADatabaseItMay(t *testing.T) {
-	if err := selfcheckIn(t.TempDir()); err != nil {
+	private := t.TempDir()
+	if err := os.Chmod(private, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := selfcheckIn(private); err != nil {
 		t.Errorf("selfcheckIn in a private directory: %v", err)
 	}
 	dir := t.TempDir()
@@ -88,9 +92,11 @@ func TestExerciseBusStepsEachFailLoudly(t *testing.T) {
 	}{
 		{"all steps pass", flaky{}, ""},
 		{"the node's post fails", flaky{failAt: 1}, "post"},
-		{"Duet's record fails", flaky{failAt: 2}, "record"},
-		{"the node's read fails", flaky{failAt: 3}, "read"},
-		{"the node reads no answer", flaky{noEventsAt: 3}, "answer"},
+		{"the node's second post fails", flaky{failAt: 2}, "post"},
+		{"Duet's relay of the approval fails", flaky{failAt: 3}, "record"},
+		{"Duet's answer fails", flaky{failAt: 4}, "record"},
+		{"the node's read fails", flaky{failAt: 5}, "read"},
+		{"the node reads no answer", flaky{noEventsAt: 5}, "answer"},
 	} {
 		d, err := db.Open(filepath.Join(t.TempDir(), "data", "bus.db"))
 		if err != nil {
