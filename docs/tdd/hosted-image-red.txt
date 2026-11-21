@@ -225,3 +225,27 @@ FAIL stuck-term: cloudflared is still alive
 hosted_entrypoint_inner: 8 failure(s)
 exit=1
 # the double-SIGTERM case already passed on the round-0 code (kept as a pin for the trap change)
+
+# Review round 1, cluster B (S-secret-rule, S-placeholders, S-copyfrom), against the round-0 check scripts, 2026-11-21T07:10:12Z.
+
+$ sh scripts/hosted_placeholders_test.sh
+FAIL value-rp-id: want exit 1, got 0
+FAIL value-owner-id: want exit 1, got 0
+FAIL value-client-id: want exit 1, got 0
+FAIL value-host-suffix: want exit 1, got 0
+FAIL value-nudge: want exit 1, got 0
+hosted_placeholders_test: 5 failure(s)
+exit=1
+
+$ sh scripts/hosted_deploy_check_test.sh
+FAIL secret-tunnel: want exit 1, got 0
+FAIL secret-litestream: want exit 1, got 0
+FAIL secret-litestream-id: want exit 1, got 0
+FAIL secret-aws: want exit 1, got 0
+FAIL litestream-key: want exit 1, got 0
+FAIL litestream-key-id: want exit 1, got 0
+FAIL copy-from-image: want exit 1, got 0
+FAIL copy-from-unknown-stage: want exit 1, got 0
+FAIL copy-from-index: want exit 1, got 0
+hosted_deploy_check_test: 9 failure(s)
+exit=1

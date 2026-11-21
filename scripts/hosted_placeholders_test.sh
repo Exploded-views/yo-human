@@ -38,7 +38,7 @@ primary_region = "<region>"
 [env]
   YH_LISTEN_MCP = '127.0.0.1:8081'
   YH_PUBLIC_URL = 'https://<mcp-host>'
-  YH_BARK_URL = 'https://example.com'
+  YH_BARK_URL = 'https://<bark-host>'
 EOF
   cat >"$d/litestream.yml" <<'EOF'
 dbs:
@@ -101,6 +101,18 @@ bad value-empty fly.toml "app = ''"
 d=$(fixture value-rule-name)
 echo "app = 'realname'" >>"$d/fly.toml"
 check value-rule-name 1 "$d" && expect value-rule-name placeholder-value
+
+# Rule placeholder-value, YH_* settings: a placeholder, or one of a few literals, and nothing real.
+bad value-rp-id fly.toml "  YH_WEBAUTHN_RP_ID = 'approve.real-service.net'"
+bad value-owner-id fly.toml "  YH_OWNER_GITHUB_ID = '1234567'"
+bad value-client-id fly.toml "  YH_GITHUB_CLIENT_ID = 'Iv1.0123456789abcdef'"
+bad value-public-url fly.toml "  YH_PUBLIC_URL = 'https://real-service.net'"
+bad value-origin fly.toml "  YH_APPROVE_ORIGIN = 'https://approve.real-service.net'"
+bad value-host-suffix fly.toml "  YH_WEBAUTHN_RP_ID = '<approve-host>.real-service.net'"
+bad value-nudge fly.toml "  YH_NUDGE_WINDOW = '30m'"
+d=$(fixture value-literals)
+printf '%s\n' "  YH_LISTEN_APPROVE = ':8080'" "  YH_DB_PATH = '/data/bus.db'" "  YH_WEBAUTHN_RP_ID = '<approve-host>'" "  YH_APPROVE_ORIGIN = 'https://<approve-host>'" >>"$d/fly.toml"
+check value-literals 0 "$d"
 
 # Rule url-host: a URL names only a loopback address, example.com or a placeholder.
 bad url-real fly.toml "# docs: https://docs.real-service.net/x"

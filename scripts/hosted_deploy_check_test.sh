@@ -102,6 +102,22 @@ appendm port-dup internal-port fly.toml '[[services]]
 appendm port-8081-mapped internal-port fly.toml '  [[services.ports]]
     port = 8081'
 
+# secrets: any credential-named setting in fly.toml, and any key in litestream.yml that is not an ${ENV} reference
+appendm secret-tunnel no-secret fly.toml "  TUNNEL_TOKEN = 'TUNNEL-TOKEN-FAKE'"
+appendm secret-litestream no-secret fly.toml "  LITESTREAM_SECRET_ACCESS_KEY = 'R0UTING-KEY-FAKE'"
+appendm secret-litestream-id no-secret fly.toml "  LITESTREAM_ACCESS_KEY_ID = 'KEY-ID-FAKE'"
+appendm secret-aws no-secret fly.toml "  AWS_SECRET_ACCESS_KEY = 'R0UTING-KEY-FAKE'"
+appendm litestream-key no-secret litestream.yml "      secret-access-key: R0UTING-KEY-FAKE"
+appendm litestream-key-id no-secret litestream.yml "      access-key-id: KEY-ID-FAKE"
+d=$(copy litestream-env-ref)
+printf '%s\n' '      access-key-id: ${LITESTREAM_ACCESS_KEY_ID}' '      secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}' >>"$d/litestream.yml"
+check litestream-env-ref 0 "$d"
+
+# COPY --from must name an earlier stage, never an image or an index
+appendm copy-from-image digest Dockerfile 'COPY --from=busybox:latest /bin/busybox /bin/'
+appendm copy-from-unknown-stage digest Dockerfile 'COPY --from=nosuch /x /x'
+appendm copy-from-index digest Dockerfile 'COPY --from=0 /x /x'
+
 # a USER in an earlier stage does not make the final stage non-root
 d=$(copy user-earlier-stage)
 awk '/^FROM golang/ { print; print "USER 65532"; next } !/^USER / { print }' "$d/Dockerfile" >"$d/Dockerfile.new" && mv "$d/Dockerfile.new" "$d/Dockerfile"
