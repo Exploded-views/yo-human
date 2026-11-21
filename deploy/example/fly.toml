@@ -1,0 +1,50 @@
+# Example only: every name is a placeholder. Nothing here is deployed by the repository. Build
+# from the repository root, with this file and deploy/example/Dockerfile named explicitly.
+app = '<app>'
+primary_region = '<region>'
+kill_signal = 'SIGTERM'
+# Longer than the server's 10 s grace, so the platform does not kill the machine mid-drain.
+kill_timeout = 15
+
+[build]
+  dockerfile = 'Dockerfile'
+
+# Non-secret settings only. Secrets go in through `fly secrets import`, never here.
+[env]
+  YH_DB_PATH = '/data/bus.db'
+  YH_PUBLIC_URL = 'https://<mcp-host>'
+  YH_OWNER_GITHUB_ID = '<owner-github-id>'
+  YH_GITHUB_CLIENT_ID = '<github-client-id>'
+  YH_BARK_URL = 'https://<bark-host>'
+  YH_WEBAUTHN_RP_ID = '<approve-host>'
+  YH_APPROVE_ORIGIN = 'https://<approve-host>'
+  # The MCP listener is loopback only: the tunnel connector in the same machine reaches it.
+  YH_LISTEN_MCP = '127.0.0.1:8081'
+  YH_LISTEN_APPROVE = ':8080'
+
+[[mounts]]
+  source = 'bus_data'
+  destination = '/data'
+
+# One service: the approval listener. Nothing is mapped to the MCP listener (8081).
+[[services]]
+  protocol = 'tcp'
+  internal_port = 8080
+  auto_stop_machines = 'off'
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[services.ports]]
+    port = 443
+    handlers = ['tls', 'http']
+
+  [[services.http_checks]]
+    method = 'GET'
+    path = '/healthz'
+    interval = '15s'
+    timeout = '2s'
+    grace_period = '10s'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '256mb'

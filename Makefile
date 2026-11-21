@@ -6,7 +6,7 @@ VERSION := $(shell git describe --tags --always --dirty | sed 's/^v//')
 COMMIT  := $(shell git rev-parse --short=12 HEAD)
 LDFLAGS := -s -w -X $(MODULE)/internal/version.Version=$(VERSION) -X $(MODULE)/internal/version.Commit=$(COMMIT)
 
-.PHONY: build smoke test e2e nohooks nodeps lint lint-rules-test release-net-check tools hooks hooks-check hooks-test workflows ci ci-base cover cover-profile floors perf secrets secrets-test scripts-test vuln release-check
+.PHONY: build smoke test e2e nohooks nodeps lint lint-rules-test release-net-check tools hooks hooks-check hooks-test workflows ci ci-base cover cover-profile floors perf secrets secrets-test scripts-test vuln release-check hosted-image hosted-image-test hosted-deploy-check
 
 # The release's settings: CGO_ENABLED=0; no GOFLAGS, GOEXPERIMENT, GOAMD64, GOARM64 or go env
 # file from the developer's setup; no go.work.
@@ -137,12 +137,32 @@ release-check:
 	scripts/nohooks.sh dist/yo-human_*.tar.gz
 	@echo "release-check: 4 archives match checksums.txt"
 
-ci: hooks-check hooks-test workflows lint lint-rules-test release-net-check test e2e smoke nohooks nodeps floors perf secrets secrets-test scripts-test
+# The example deploy (deploy/example/): hosted-image builds the image and pushes nothing;
+# hosted-image-test runs the entrypoint's kill and secret tests in the pinned busybox image, with
+# fake cloudflared, litestream and server binaries. Both need Docker, so neither is in `make test`
+# or `make ci`; hosted-deploy-check needs none and is in both.
+HOSTED_IMAGE ?= yo-human-hosted:local
+
+hosted-image:
+	docker build -f deploy/example/Dockerfile -t $(HOSTED_IMAGE) --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) .
+
+hosted-image-test:
+	sh scripts/hosted_entrypoint_test.sh
+
+# deploy/example/ holds only placeholders and meets Task 12's image and fly.toml rules; then both
+# checks' own tests.
+hosted-deploy-check:
+	sh scripts/hosted_placeholders.sh
+	sh scripts/hosted_deploy_check.sh
+	sh scripts/hosted_placeholders_test.sh
+	sh scripts/hosted_deploy_check_test.sh
+
+ci: hooks-check hooks-test workflows lint lint-rules-test release-net-check test e2e smoke nohooks nodeps floors perf secrets secrets-test scripts-test hosted-deploy-check
 
 # ci plus what CI does with a base: floors and budgets compared with the merge base of HEAD and
 # BASE (default origin/main), and govulncheck, advisory as in CI (its failure is reported and
 # ignored). Gaps CI has that this cannot reproduce are listed in CONTRIBUTING.md.
 BASE ?= origin/main
-ci-base: hooks-check hooks-test workflows lint lint-rules-test release-net-check test e2e smoke nohooks nodeps secrets secrets-test scripts-test
+ci-base: hooks-check hooks-test workflows lint lint-rules-test release-net-check test e2e smoke nohooks nodeps secrets secrets-test scripts-test hosted-deploy-check
 	BASE=$(BASE) sh scripts/ci-base.sh
 	-$(MAKE) vuln

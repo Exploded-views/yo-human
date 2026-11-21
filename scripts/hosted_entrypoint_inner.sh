@@ -26,6 +26,7 @@ cat >/app/yo-human-hosted <<'EOF'
 #!/bin/sh
 echo "$*" >/out/serve.args
 echo $$ >/out/serve.pid
+[ -z "${FAKE_SERVE_EXIT:-}" ] || exit 0
 exec sleep 600
 EOF
 cat >/fakebin/litestream <<'EOF'
@@ -89,9 +90,11 @@ environ() { tr '\0' '\n' <"/proc/$1/environ"; }
 
 # running NAME [VAR=value ...]: start, and wait for both children to be up.
 running() {
+  case_name=$1
+  shift
   start "$@"
   if ! waitfor /out/cloudflared.pid || ! waitfor /out/serve.pid || ! waitfor /out/litestream.pid; then
-    fail "$1: the children did not start"
+    fail "$case_name: the children did not start"
     return 1
   fi
 }
@@ -125,7 +128,7 @@ if running happy TUNNEL_TOKEN=$TOKEN YH_GITHUB_CLIENT_SECRET=$GHSEC; then
   environ "$(cat /out/cloudflared.pid)" >/out/cf.env
   grep -q "^TUNNEL_TOKEN=$TOKEN\$" /out/cf.env && ok "cloudflared has its token" || fail "happy: cloudflared lacks TUNNEL_TOKEN"
   if grep -q -e "$GHSEC" -e '^YH_' /out/cf.env; then fail "happy: cloudflared's environment holds an app variable"; else ok "cloudflared's environment lacks the app's secrets"; fi
-  extra=$(sed 's/=.*//' /out/cf.env | grep -v -x -e PATH -e HOME -e TUNNEL_TOKEN -e SSL_CERT_FILE -e NO_AUTOUPDATE -e PWD -e '')
+  extra=$(sed 's/=.*//' /out/cf.env | grep -v -x -e PATH -e HOME -e TUNNEL_TOKEN -e SSL_CERT_FILE -e NO_AUTOUPDATE -e PWD -e SHLVL -e '')
   [ -z "$extra" ] || fail "happy: cloudflared has unexpected variables: $(echo $extra)"
   if grep -q "$TOKEN" /out/cloudflared.args; then fail "happy: the token is on cloudflared's command line"; fi
 
@@ -165,6 +168,14 @@ waitfor /out/serve.pid && waitfor /out/cloudflared.pid
 kill -TERM "$(cat /out/cloudflared.pid)"
 finish 10
 [ "$timed" = 0 ] && [ "$rc" != 0 ] && ok "a cloudflared stop ends the container non-zero ($rc)" || fail "cloudflared-term: want a non-zero exit, got $rc (timed out: $timed)"
+
+# --- serve exiting on its own with status 0 still ends the container non-zero, and stops the tunnel ---
+start TUNNEL_TOKEN=$TOKEN FAKE_SERVE_EXIT=1
+waitfor /out/cloudflared.pid
+cf=$(cat /out/cloudflared.pid)
+finish 10
+[ "$timed" = 0 ] && [ "$rc" != 0 ] && ok "a clean serve exit still ends the container non-zero ($rc)" || fail "serve-exits-0: want a non-zero exit, got $rc (timed out: $timed)"
+if alive "$cf"; then fail "serve-exits-0: cloudflared kept running"; fi
 
 # --- a failed restore stops the start: no children ---
 start TUNNEL_TOKEN=$TOKEN FAKE_RESTORE_RC=3

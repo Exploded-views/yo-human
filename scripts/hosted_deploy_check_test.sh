@@ -94,7 +94,28 @@ mutant vm-memory vm fly.toml 's|memory = .*|memory = "512mb"|'
 mutant app-name placeholder fly.toml "s|^app = .*|app = 'realname'|"
 appendm secret-in-env no-secret fly.toml 'YH_BARK_PASSWORD = "x"'
 mutant mcp-listen listen fly.toml "s|YH_LISTEN_MCP = .*|YH_LISTEN_MCP = '0.0.0.0:8081'|"
-mutant approve-listen listen fly.toml "s|YH_LISTEN_APPROVE = .*|YH_LISTEN_APPROVE = ':8081'|"
+mutant approve-listen listen fly.toml "s|YH_LISTEN_APPROVE = .*|YH_LISTEN_APPROVE = ':9090'|"
+mutant region-placeholder placeholder fly.toml "s|^primary_region = .*|primary_region = 'ord'|"
+mutant port-9090 internal-port fly.toml 's|internal_port = 8080|internal_port = 9090|'
+appendm port-dup internal-port fly.toml '[[services]]
+  internal_port = 8080'
+appendm port-8081-mapped internal-port fly.toml '  [[services.ports]]
+    port = 8081'
+
+# a USER in an earlier stage does not make the final stage non-root
+d=$(copy user-earlier-stage)
+awk '/^FROM golang/ { print; print "USER 65532"; next } !/^USER / { print }' "$d/Dockerfile" >"$d/Dockerfile.new" && mv "$d/Dockerfile.new" "$d/Dockerfile"
+check user-earlier-stage 1 "$d" && expect user-earlier-stage user
+
+# an unreadable file is an error (exit 2), not a pass; root reads anything, so skip as root
+if [ "$(id -u)" != 0 ]; then
+  d=$(copy unreadable)
+  chmod 000 "$d/fly.toml"
+  check unreadable 2 "$d"
+  chmod 600 "$d/fly.toml"
+else
+  echo "skip unreadable (running as root)"
+fi
 
 # litestream.yml
 mutant litestream-db replica-path litestream.yml 's|/data/bus.db|/data/other.db|'
