@@ -12,7 +12,7 @@ fails=0
 fail() { echo "FAIL $1"; fails=$((fails + 1)); }
 ok() { echo "ok   $1"; }
 
-mkdir -p /out /fakebin /app /data || exit 1
+mkdir -p /out /ctl /fakebin /app /data || exit 1
 
 # The fakes record what they were started with, then wait. A fake writes its own pid and execs
 # sleep, so the pid in the file is the process that holds the environment under test.
@@ -20,6 +20,17 @@ cat >/fakebin/cloudflared <<'EOF'
 #!/bin/sh
 echo "$*" >/out/cloudflared.args
 echo $$ >/out/cloudflared.pid
+# Flag files, not variables (the entrypoint strips cloudflared's environment): /ctl/ignore-term is a
+# cloudflared that ignores SIGTERM (an ignored signal survives exec); /ctl/clean one that exits 0
+# on SIGTERM, as the real one does.
+[ ! -e /ctl/ignore-term ] || { trap '' TERM; exec sleep 600; }
+if [ -e /ctl/clean ]; then
+  sleep 600 &
+  c=$!
+  trap 'kill $c; exit 0' TERM
+  wait $c
+  exit 0
+fi
 exec sleep 600
 EOF
 cat >/app/yo-human-hosted <<'EOF'
@@ -33,13 +44,17 @@ cat >/fakebin/litestream <<'EOF'
 #!/bin/sh
 echo "$*" >>/out/litestream.args
 case "$1" in
-restore) exit "${FAKE_RESTORE_RC:-0}" ;;
+restore)
+  env >/out/restore.env
+  exit "${FAKE_RESTORE_RC:-0}"
+  ;;
 replicate)
   [ "$2" = -exec ] || exit 64
   echo $$ >/out/litestream.pid
+  env >/out/litestream.env
   sh -c "$3" &
   c=$!
-  trap 'kill -TERM $c; wait $c; exit 0' TERM
+  trap 'kill -TERM $c; wait $c; [ -z "${FAKE_LS_SLOW:-}" ] || sleep 1; exit 0' TERM
   wait $c
   exit $?
   ;;
@@ -78,6 +93,7 @@ finish() {
   kill "$wd" 2>/dev/null
   wait "$wd" 2>/dev/null
   if [ -f /tmp/timedout ]; then timed=1; else timed=0; fi
+  rm -f /ctl/*
 }
 
 # noleak NAME: the entrypoint's own output holds neither fake secret value.
@@ -112,7 +128,12 @@ for variant in missing empty; do
 done
 
 # --- the happy path: the commands, the environments and a clean stop on SIGTERM ---
-if running happy TUNNEL_TOKEN=$TOKEN YH_GITHUB_CLIENT_SECRET=$GHSEC; then
+REPKEY=REPLICA-KEY-FAKE
+if running happy TUNNEL_TOKEN=$TOKEN YH_GITHUB_CLIENT_SECRET=$GHSEC LITESTREAM_SECRET_ACCESS_KEY=$REPKEY; then
+  # restore and replicate get what Litestream needs, and not the tunnel token or the app's secrets
+  if grep -q -e "$TOKEN" -e "$GHSEC" -e '^TUNNEL_TOKEN' -e '^YH_' /out/restore.env; then fail "happy: restore's environment holds the tunnel token or an app secret"; else ok "restore's environment lacks the token and the app's secrets"; fi
+  grep -q "^LITESTREAM_SECRET_ACCESS_KEY=$REPKEY\$" /out/restore.env && ok "restore keeps the replica's key" || fail "happy: restore lost LITESTREAM_SECRET_ACCESS_KEY"
+  grep -q "^LITESTREAM_SECRET_ACCESS_KEY=$REPKEY\$" /out/litestream.env && ok "replicate keeps the replica's key" || fail "happy: replicate lost LITESTREAM_SECRET_ACCESS_KEY"
   want='restore -if-db-not-exists -if-replica-exists /data/bus.db'
   [ "$(sed -n 1p /out/litestream.args)" = "$want" ] && ok "restore comes first, with its flags" || fail "happy: litestream's first call is not '$want'"
   want='replicate -exec /app/yo-human-hosted serve'
@@ -127,7 +148,7 @@ if running happy TUNNEL_TOKEN=$TOKEN YH_GITHUB_CLIENT_SECRET=$GHSEC; then
 
   environ "$(cat /out/cloudflared.pid)" >/out/cf.env
   grep -q "^TUNNEL_TOKEN=$TOKEN\$" /out/cf.env && ok "cloudflared has its token" || fail "happy: cloudflared lacks TUNNEL_TOKEN"
-  if grep -q -e "$GHSEC" -e '^YH_' /out/cf.env; then fail "happy: cloudflared's environment holds an app variable"; else ok "cloudflared's environment lacks the app's secrets"; fi
+  if grep -q -e "$GHSEC" -e "$REPKEY" -e '^YH_' -e '^LITESTREAM_' /out/cf.env; then fail "happy: cloudflared's environment holds an app variable"; else ok "cloudflared's environment lacks the app's secrets"; fi
   extra=$(sed 's/=.*//' /out/cf.env | grep -v -x -e PATH -e HOME -e TUNNEL_TOKEN -e SSL_CERT_FILE -e NO_AUTOUPDATE -e PWD -e SHLVL -e '')
   [ -z "$extra" ] || fail "happy: cloudflared has unexpected variables: $(echo $extra)"
   if grep -q "$TOKEN" /out/cloudflared.args; then fail "happy: the token is on cloudflared's command line"; fi
@@ -162,12 +183,13 @@ if running kill-cloudflared TUNNEL_TOKEN=$TOKEN YH_GITHUB_CLIENT_SECRET=$GHSEC; 
   noleak kill-cloudflared
 fi
 
-# --- a child that exits on its own with status 0 still ends the container non-zero ---
-start TUNNEL_TOKEN=$TOKEN FAKE_RESTORE_RC=0
+# --- cloudflared exiting with status 0 (its clean stop) still ends the container non-zero ---
+touch /ctl/clean
+start TUNNEL_TOKEN=$TOKEN
 waitfor /out/serve.pid && waitfor /out/cloudflared.pid
 kill -TERM "$(cat /out/cloudflared.pid)"
 finish 10
-[ "$timed" = 0 ] && [ "$rc" != 0 ] && ok "a cloudflared stop ends the container non-zero ($rc)" || fail "cloudflared-term: want a non-zero exit, got $rc (timed out: $timed)"
+[ "$timed" = 0 ] && [ "$rc" != 0 ] && ok "a clean cloudflared exit ends the container non-zero ($rc)" || fail "cloudflared-term: want a non-zero exit, got $rc (timed out: $timed)"
 
 # --- serve exiting on its own with status 0 still ends the container non-zero, and stops the tunnel ---
 start TUNNEL_TOKEN=$TOKEN FAKE_SERVE_EXIT=1
@@ -176,6 +198,48 @@ cf=$(cat /out/cloudflared.pid)
 finish 10
 [ "$timed" = 0 ] && [ "$rc" != 0 ] && ok "a clean serve exit still ends the container non-zero ($rc)" || fail "serve-exits-0: want a non-zero exit, got $rc (timed out: $timed)"
 if alive "$cf"; then fail "serve-exits-0: cloudflared kept running"; fi
+
+# --- an inherited TUNNEL_METRICS must not un-pin cloudflared's metrics address ---
+if running metrics-env TUNNEL_TOKEN=$TOKEN TUNNEL_METRICS=0.0.0.0:2000; then
+  want='tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+  [ "$(cat /out/cloudflared.args)" = "$want" ] && ok "metrics stay on loopback with TUNNEL_METRICS set" || fail "metrics-env: cloudflared's arguments are not '$want'"
+  if environ "$(cat /out/cloudflared.pid)" | grep -q '^TUNNEL_METRICS='; then fail "metrics-env: TUNNEL_METRICS is in cloudflared's environment"; fi
+  kill -TERM "$ep"
+  finish 10
+fi
+
+# --- a second SIGTERM during the stop does not change the exit status ---
+if running double-term TUNNEL_TOKEN=$TOKEN FAKE_LS_SLOW=1; then
+  kill -TERM "$ep"
+  sleep 0.3
+  kill -TERM "$ep"
+  finish 10
+  [ "$timed" = 0 ] && [ "$rc" = 0 ] && ok "a second SIGTERM leaves exit 0" || fail "double-term: want exit 0, got $rc (timed out: $timed)"
+fi
+
+# --- a child that ignores SIGTERM is killed, within the platform's 15 s ---
+touch /ctl/ignore-term
+if running stuck-cf TUNNEL_TOKEN=$TOKEN; then
+  cf=$(cat /out/cloudflared.pid)
+  t0=$(date +%s)
+  kill -9 "$(cat /out/serve.pid)"
+  finish 25
+  t1=$(date +%s)
+  [ "$timed" = 0 ] && [ "$rc" != 0 ] && ok "a stuck cloudflared does not keep the container up ($rc)" || fail "stuck-cf: want a non-zero exit, got $rc (timed out: $timed)"
+  [ $((t1 - t0)) -lt 15 ] || fail "stuck-cf: the stop took $((t1 - t0)) s, over the platform's 15 s"
+  if alive "$cf"; then fail "stuck-cf: cloudflared is still alive"; fi
+fi
+touch /ctl/ignore-term
+if running stuck-term TUNNEL_TOKEN=$TOKEN; then
+  cf=$(cat /out/cloudflared.pid)
+  t0=$(date +%s)
+  kill -TERM "$ep"
+  finish 25
+  t1=$(date +%s)
+  [ "$timed" = 0 ] && ok "SIGTERM with a stuck cloudflared still ends" || fail "stuck-term: the entrypoint did not exit"
+  [ $((t1 - t0)) -lt 15 ] || fail "stuck-term: the stop took $((t1 - t0)) s, over the platform's 15 s"
+  if alive "$cf"; then fail "stuck-term: cloudflared is still alive"; fi
+fi
 
 # --- a failed restore stops the start: no children ---
 start TUNNEL_TOKEN=$TOKEN FAKE_RESTORE_RC=3

@@ -208,3 +208,20 @@ FAIL missing-entrypoint.sh: want exit 1, got 0
 FAIL missing-dir: want exit 2, got 0
 FAIL two-args: want exit 2
 exit=1
+
+# Review round 1, cluster A (entrypoint: M1 inherited TUNNEL_METRICS, S-restore environment, S-stop bounded stop, N2 second SIGTERM, N6 clean cloudflared exit, N7 replica key), against the round-0 entrypoint, 2026-11-21T07:07:47Z.
+
+$ sh scripts/hosted_entrypoint_test.sh
+FAIL happy: restore's environment holds the tunnel token or an app secret
+FAIL metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+Killed
+FAIL stuck-cf: want a non-zero exit, got 137 (timed out: 1)
+FAIL stuck-cf: the stop took 25 s, over the platform's 15 s
+FAIL stuck-cf: cloudflared is still alive
+Killed
+FAIL stuck-term: the entrypoint did not exit
+FAIL stuck-term: the stop took 25 s, over the platform's 15 s
+FAIL stuck-term: cloudflared is still alive
+hosted_entrypoint_inner: 8 failure(s)
+exit=1
+# the double-SIGTERM case already passed on the round-0 code (kept as a pin for the trap change)
