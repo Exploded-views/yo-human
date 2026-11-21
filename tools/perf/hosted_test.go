@@ -25,6 +25,15 @@ func TestHostedScenariosAreRegistered(t *testing.T) {
 	}
 }
 
+// hosted-selfcheck times `yo-human-hosted selfcheck` as a process: the command opens a fresh
+// database, posts, records and reads, with no network. Its budget is recorded under the heavy lock.
+func TestSelfcheckScenarioRunsTheHostedBinary(t *testing.T) {
+	sc := scenarioNamed(t, "hosted-selfcheck")
+	if got := strings.Join(sc.Argv, " "); got != "dist/yo-human-hosted selfcheck" || sc.Sample != nil || sc.Exit != 0 {
+		t.Errorf("scenario = %+v, want `dist/yo-human-hosted selfcheck` run as a command that exits 0", sc)
+	}
+}
+
 func TestHostedSampleReadsTheHelperOutput(t *testing.T) {
 	fakeHelper(t, `printf '1000000\n2500000\n'`)
 	got, err := hostedSample("post")(2)

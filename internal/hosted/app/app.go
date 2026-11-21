@@ -9,8 +9,7 @@ import (
 	"github.com/Exploded-views/yo-human/internal/version"
 )
 
-// Exit codes, with the CLI's meanings (sysexits style). 70 (internal) and 78 (configuration)
-// arrive with serve (Task 12), the first command that can fail those ways.
+// Exit codes, with the CLI's meanings (sysexits style).
 const (
 	ExitOK    = 0
 	ExitUsage = 64
@@ -19,9 +18,14 @@ const (
 	ExitFailed = 69
 	// ExitStore is a database that would not open or answer.
 	ExitStore = 74
+	// ExitInternal is serve or selfcheck failing in a way the caller cannot fix by changing its
+	// input: a listener that would not bind, a bus that did not answer as it should.
+	ExitInternal = 70
+	// ExitConfig is a configuration the server refuses to start with.
+	ExitConfig = 78
 )
 
-const usage = "usage: yo-human-hosted <command>\n\ncommands:\n  version  print the version\n  token    create, list and revoke node tokens and desk starters\n  check    check the database's integrity and count its rows\n"
+const usage = "usage: yo-human-hosted <command>\n\ncommands:\n  version    print the version\n  token      create, list and revoke node tokens and desk starters\n  check      check the database's integrity and count its rows\n  serve      run the MCP and approval listeners until SIGTERM or SIGINT\n  selfcheck  post, record and read one approval in a temporary database, offline\n"
 
 // Run executes yo-human-hosted with args (without the program name), reading configuration
 // through env, and returns the exit code.
@@ -38,6 +42,10 @@ func Run(args []string, env func(string) string, stdout, stderr io.Writer) int {
 		return runToken(args[1:], env, stdout, stderr)
 	case "check":
 		return admin{name: "check", env: env, stdout: stdout, stderr: stderr}.check(args[1:])
+	case "serve":
+		return runServe(args[1:], env, stdout, stderr)
+	case "selfcheck":
+		return runSelfcheck(args[1:], stdout, stderr)
 	default:
 		_, _ = fmt.Fprintf(stderr, "yo-human-hosted: unknown command %q\n\n%s", args[0], usage)
 		return ExitUsage
