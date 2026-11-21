@@ -3,32 +3,50 @@
 # tunnel connector (cloudflared) and Litestream, which runs the server. When either exits, the
 # other is stopped and this script exits non-zero.
 #
-# The tunnel token is the only secret cloudflared gets, and the server never sees it. The names of
-# secrets are never printed here, and neither are their values or the environment.
+# Each process gets its own environment: the tunnel token is not in the server's or Litestream's
+# restore environment, and cloudflared gets neither the app's secrets nor the replica's keys.
+# Nothing here separates them by uid: the three processes run as one user, so a compromised server
+# could still read /proc/<pid>/environ of its siblings (a follow-up, which needs a root start).
+# The names of secrets are never printed here, and neither are their values or the environment.
 # POSIX sh and busybox applets only (env, sed, sleep): this runs in a distroless image with busybox.
 
-TUNNEL_METRICS=127.0.0.1:20241 # cloudflared binds every interface by default; pin it to loopback
+# cloudflared binds its metrics server to every interface by default; pin it to loopback. The
+# address lives in a lowercase name that no tool reads: cloudflared reads TUNNEL_METRICS itself, and
+# an inherited one must not reach it (see keep_env).
+cf_metrics=127.0.0.1:20241
 
 if [ -z "${TUNNEL_TOKEN:-}" ]; then
   echo "TUNNEL_TOKEN is required" >&2
   exit 78
 fi
 
+# keep_env PATTERN...: in this shell, unset every variable whose name matches none of the patterns.
+# Callers run it in a subshell.
+keep_env() {
+  for name in $(env | sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p'); do
+    keep=0
+    for pat in "$@"; do
+      case $name in
+      $pat) keep=1 ;;
+      esac
+    done
+    [ "$keep" = 1 ] || unset "$name" 2>/dev/null
+  done
+}
+
 # A replica that does not exist yet (the first start) or a database that does (a restart) is not an
 # error; any other failure stops the start, so a server never opens an empty database over a
-# replica it could not read.
-litestream restore -if-db-not-exists -if-replica-exists /data/bus.db || exit 1
+# replica it could not read. Restore gets what Litestream needs (its replica credentials), and not
+# the tunnel token or the app's secrets.
+(
+  keep_env PATH HOME PWD SHLVL SSL_CERT_FILE 'LITESTREAM_*' 'AWS_*'
+  exec litestream restore -if-db-not-exists -if-replica-exists /data/bus.db
+) || exit 1
 
-# cloudflared's environment: the token and what the binary needs, nothing else. The app's secrets
-# (YH_*, the replica's keys) are in this shell's environment and are dropped here, in a subshell.
+# cloudflared's environment: the token and what the binary needs, nothing else.
 run_cloudflared() {
-  for name in $(env | sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p'); do
-    case $name in
-    PATH | HOME | PWD | SSL_CERT_FILE | NO_AUTOUPDATE | TUNNEL_TOKEN) ;;
-    *) unset "$name" 2>/dev/null ;;
-    esac
-  done
-  exec cloudflared tunnel --no-autoupdate --metrics "$TUNNEL_METRICS" run
+  keep_env PATH HOME PWD SHLVL SSL_CERT_FILE NO_AUTOUPDATE TUNNEL_TOKEN
+  exec cloudflared tunnel --no-autoupdate --metrics "$cf_metrics" run
 }
 
 # The server's environment: everything but the tunnel token.
@@ -37,17 +55,54 @@ run_serve() {
   exec litestream replicate -exec "/app/yo-human-hosted serve"
 }
 
+# busybox ash has no dependable `wait -n`, so poll: a child that has exited but not been waited for
+# is a zombie, and counts as gone.
+alive() {
+  { read -r stat <"/proc/$1/stat"; } 2>/dev/null || return 1
+  case $stat in *") Z "*) return 1 ;; esac
+  return 0
+}
+
+# wait_gone SECONDS PID...: wait until every PID is gone, then KILL what is left.
+wait_gone() {
+  n=$1
+  shift
+  while [ "$n" -gt 0 ]; do
+    any=0
+    for p in "$@"; do
+      if alive "$p"; then any=1; fi
+    done
+    [ "$any" = 0 ] && return 0
+    sleep 1
+    n=$((n - 1))
+  done
+  for p in "$@"; do
+    if alive "$p"; then kill -KILL "$p" 2>/dev/null; fi
+  done
+}
+
+# The stop budget. fly.toml's kill_timeout is 15 s, after which the platform KILLs the machine.
+# The server's own drain (Grace) is 10 s. So a stop signals both children, and KILLs whatever
+# still runs 13 s later: serve's 10 s, plus about 2 s for Litestream's last sync, plus the poll's
+# 1 s granularity, inside the 15 s. Without the bound a wedged child, cloudflared's own grace is 30 s,
+# would keep a half-dead machine up.
 stop_children() {
   kill -TERM "$cf_pid" "$ls_pid" 2>/dev/null
+  wait_gone 13 "$cf_pid" "$ls_pid"
   wait
 }
 
-# A stop from the platform: pass it on, let Litestream finish its last sync, and report how it went.
+# A stop from the platform: pass it on, let Litestream finish its last sync (up to 11 s, then KILL),
+# then stop cloudflared (up to 2 s), so the whole stop stays inside the 13 s above. Report how the
+# server's stop went. A second signal during this changes nothing.
 terminate() {
+  trap '' TERM INT
   kill -TERM "$ls_pid" 2>/dev/null
+  wait_gone 11 "$ls_pid"
   wait "$ls_pid"
   status=$?
   kill -TERM "$cf_pid" 2>/dev/null
+  wait_gone 2 "$cf_pid"
   wait
   exit "$status"
 }
@@ -56,15 +111,9 @@ terminate() {
 cf_pid=$!
 (run_serve) &
 ls_pid=$!
+# The trap is set after both forks: a TERM during the restore above ends the shell outright.
 trap terminate TERM INT
 
-# busybox ash has no dependable `wait -n`, so poll: a child that has exited but not been waited for
-# is a zombie, and counts as gone.
-alive() {
-  { read -r stat <"/proc/$1/stat"; } 2>/dev/null || return 1
-  case $stat in *") Z "*) return 1 ;; esac
-  return 0
-}
 while alive "$cf_pid" && alive "$ls_pid"; do
   sleep 1
 done

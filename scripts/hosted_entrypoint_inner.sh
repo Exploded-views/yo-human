@@ -46,7 +46,8 @@ echo "$*" >>/out/litestream.args
 case "$1" in
 restore)
   env >/out/restore.env
-  exit "${FAKE_RESTORE_RC:-0}"
+  [ ! -e /ctl/restore-fails ] || exit 3
+  exit 0
   ;;
 replicate)
   [ "$2" = -exec ] || exit 64
@@ -242,7 +243,8 @@ if running stuck-term TUNNEL_TOKEN=$TOKEN; then
 fi
 
 # --- a failed restore stops the start: no children ---
-start TUNNEL_TOKEN=$TOKEN FAKE_RESTORE_RC=3
+touch /ctl/restore-fails
+start TUNNEL_TOKEN=$TOKEN
 finish 10
 [ "$timed" = 0 ] && [ "$rc" != 0 ] && ok "a failed restore exits non-zero ($rc)" || fail "restore-fails: want a non-zero exit, got $rc (timed out: $timed)"
 if [ -e /out/serve.pid ] || [ -e /out/cloudflared.pid ]; then fail "restore-fails: a child started after a failed restore"; fi
