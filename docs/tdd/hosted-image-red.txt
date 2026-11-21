@@ -1,0 +1,91 @@
+# H1 Task 12, slice 12b (image and example deploy): the tests against the missing deploy/example files and missing scripts, 2026-11-21T05:02:09Z.
+
+$ sh scripts/hosted_entrypoint_test.sh
+FAIL deploy/example/Dockerfile is missing
+exit=1
+
+$ sh scripts/hosted_placeholders_test.sh
+FAIL clean: want exit 0, got 127
+FAIL repo-example: want exit 0, got 127
+FAIL host-fly.dev: want exit 1, got 127
+FAIL host-workers.dev: want exit 1, got 127
+FAIL host-trycloudflare.com: want exit 1, got 127
+FAIL host-cfargotunnel.com: want exit 1, got 127
+FAIL host-herokuapp.com: want exit 1, got 127
+FAIL host-vercel.app: want exit 1, got 127
+FAIL host-onrender.com: want exit 1, got 127
+FAIL host-railway.app: want exit 1, got 127
+FAIL host-pages.dev: want exit 1, got 127
+FAIL host-netlify.app: want exit 1, got 127
+FAIL host-ngrok.io: want exit 1, got 127
+FAIL host-tigris.dev: want exit 1, got 127
+FAIL host-flycast: want exit 1, got 127
+FAIL host-in-dockerfile: want exit 1, got 127
+FAIL host-upper: want exit 1, got 127
+FAIL home-users: want exit 1, got 127
+FAIL home-linux: want exit 1, got 127
+FAIL home-tilde: want exit 1, got 127
+FAIL home-in-yaml: want exit 1, got 127
+FAIL value-app: want exit 1, got 127
+FAIL value-app-double: want exit 1, got 127
+FAIL value-region: want exit 1, got 127
+FAIL value-bucket: want exit 1, got 127
+FAIL value-bucket-list: want exit 1, got 127
+FAIL value-region-yaml: want exit 1, got 127
+FAIL value-endpoint: want exit 1, got 127
+FAIL value-partial: want exit 1, got 127
+FAIL value-empty: want exit 1, got 127
+FAIL value-rule-name: want exit 1, got 127
+FAIL url-real: want exit 1, got 127
+FAIL url-http: want exit 1, got 127
+FAIL url-in-env: want exit 1, got 127
+FAIL url-sub: want exit 1, got 127
+FAIL url-userinfo: want exit 1, got 127
+FAIL url-in-dockerfile: want exit 1, got 127
+FAIL url-rule-name: want exit 1, got 127
+FAIL many-findings: want exit 1, got 127
+FAIL empty-dir: want exit 2, got 127
+exit=1
+
+$ sh scripts/hosted_deploy_check_test.sh
+FAIL pristine: want exit 0, got 127
+FAIL repo-example: want exit 0, got 127
+FAIL digest-golang: Dockerfile is missing from the example
+FAIL digest-litestream: Dockerfile is missing from the example
+FAIL digest-cloudflared: Dockerfile is missing from the example
+FAIL digest-final: Dockerfile is missing from the example
+FAIL digest-short: Dockerfile is missing from the example
+FAIL go-old: Dockerfile is missing from the example
+FAIL go-minor: Dockerfile is missing from the example
+FAIL litestream-old: Dockerfile is missing from the example
+FAIL litestream-latest: Dockerfile is missing from the example
+FAIL no-cloudflared: Dockerfile is missing from the example
+FAIL user-root: Dockerfile is missing from the example
+FAIL user-zero: Dockerfile is missing from the example
+FAIL user-named-root: Dockerfile is missing from the example
+FAIL user-missing: Dockerfile is missing from the example
+FAIL final-alpine: Dockerfile is missing from the example
+FAIL no-file-note: Dockerfile is missing from the example
+FAIL entrypoint-line: Dockerfile is missing from the example
+FAIL kill-timeout: fly.toml is missing from the example
+FAIL kill-timeout-missing: fly.toml is missing from the example
+FAIL auto-stop: fly.toml is missing from the example
+FAIL min-machines: fly.toml is missing from the example
+FAIL port-8081: fly.toml is missing from the example
+FAIL port-extra: want exit 1, got 127
+FAIL mount: fly.toml is missing from the example
+FAIL healthz: fly.toml is missing from the example
+FAIL vm-size: fly.toml is missing from the example
+FAIL vm-memory: fly.toml is missing from the example
+FAIL app-name: fly.toml is missing from the example
+FAIL secret-in-env: want exit 1, got 127
+FAIL mcp-listen: fly.toml is missing from the example
+FAIL approve-listen: fly.toml is missing from the example
+FAIL litestream-db: litestream.yml is missing from the example
+FAIL litestream-bucket: litestream.yml is missing from the example
+FAIL missing-Dockerfile: want exit 1, got 127
+FAIL missing-fly.toml: want exit 1, got 127
+FAIL missing-litestream.yml: want exit 1, got 127
+FAIL missing-entrypoint.sh: want exit 1, got 127
+FAIL missing-dir: want exit 2, got 127
+exit=1
