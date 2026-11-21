@@ -51,6 +51,9 @@ What `make ci-base` cannot reproduce:
   (`github.event.before`), not a merge base.
 - The toolchain. CI pins Go 1.27.4 with `GOTOOLCHAIN=local` and installs the
   pinned linters fresh; locally you get whatever `make tools` installed.
+  `go.mod` names `toolchain go1.27.4`, so a local Go older than that (with the
+  default `GOTOOLCHAIN=auto`) downloads and uses 1.27.4. 1.27.3 has
+  GO-2026-6859, which `make vuln` reports.
 
 ## Work from an issue
 
