@@ -5,8 +5,10 @@
 # `file` on the Litestream 0.5.17 binary from its release image:
 #   litestream: ELF 64-bit LSB executable, x86-64, statically linked, stripped
 # litestream: statically linked, so the final base is distroless static, not alpine. Distroless has
-# no shell, and entrypoint.sh needs one: the busybox stage supplies sh, env, sed and sleep (a static
-# busybox), and nothing else.
+# no shell, and entrypoint.sh needs one: the busybox stage supplies a static busybox, linked as sh,
+# env, sed and sleep. Those links only name the applets the entrypoint uses: every other applet
+# (wget, nc and the rest) is still reachable as `/bin/busybox <name>`. A busybox built with only
+# those four is a follow-up (a pinned source build); it is not done here.
 
 FROM golang:1.27.4@sha256:205c7636d74e0ffbe3d007162df7d74f859f5a8c8322dfb9f907977686c126cf AS build
 ARG TARGETARCH
@@ -35,6 +37,8 @@ COPY --from=busybox /out/ /bin/
 COPY --from=litestream /usr/local/bin/litestream /usr/local/bin/litestream
 COPY --from=cloudflared /usr/local/bin/cloudflared /usr/local/bin/cloudflared
 COPY --from=build /out/yo-human-hosted /app/yo-human-hosted
+# /data is owned by 65532 here, but a platform volume mounted over it is usually root-owned, and the
+# server then cannot create its database: the volume must be chowned to 65532 once (setup.md's job).
 COPY --from=build --chown=65532:65532 /out/data /data
 COPY --chmod=0555 deploy/example/entrypoint.sh /app/entrypoint.sh
 COPY deploy/example/litestream.yml /etc/litestream.yml

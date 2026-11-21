@@ -22,6 +22,9 @@ kill_timeout = 15
   YH_LISTEN_MCP = '127.0.0.1:8081'
   YH_LISTEN_APPROVE = ':8080'
 
+# The image runs as uid 65532, and a new volume is root-owned: until it is chowned to 65532 once, the
+# server cannot create /data/bus.db and the machine crash-loops on its first boot. docs/hosted/setup.md
+# carries that step.
 [[mounts]]
   source = 'bus_data'
   destination = '/data'
