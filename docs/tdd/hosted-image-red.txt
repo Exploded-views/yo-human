@@ -249,3 +249,16 @@ FAIL copy-from-unknown-stage: want exit 1, got 0
 FAIL copy-from-index: want exit 1, got 0
 hosted_deploy_check_test: 9 failure(s)
 exit=1
+
+# Review round 2, M1 (the ignore-SIGTERM flag files were swapped in the harness: stuck-cf tested nothing), 2026-11-21T08:01:01Z. The corrected harness (cloudflared fake checks /ctl/cf-ignore-term, serve fake /ctl/serve-ignore-term, stuck-cf asserts the fake survives a TERM) passes on the entrypoint at HEAD (exit=0), and fails on the ep31-style mutant (stop_children's KILL bound 13 s raised to 40 s), which the swapped harness did not catch (per the review: stuck-cf passed whatever stop_children did).
+
+$ sh scripts/hosted_entrypoint_test.sh   (entrypoint at HEAD)
+exit=0
+
+$ sh scripts/hosted_entrypoint_test.sh   (ep31 applied: wait_gone 13 -> 40 in stop_children)
+mutant ep31 stop bound 13 to 40: KILLED (exit 1)
+FAIL stuck-cf: want a non-zero exit, got 137 (timed out: 1)
+FAIL stuck-cf: the stop took 25 s, over the platform's 15 s
+FAIL stuck-cf: cloudflared is still alive
+hosted_entrypoint_inner: 3 failure(s)
+exit=1

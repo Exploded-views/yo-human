@@ -20,10 +20,10 @@ cat >/fakebin/cloudflared <<'EOF'
 #!/bin/sh
 echo "$*" >/out/cloudflared.args
 echo $$ >/out/cloudflared.pid
-# Flag files, not variables (the entrypoint strips cloudflared's environment): /ctl/ignore-term is a
-# cloudflared that ignores SIGTERM (an ignored signal survives exec); /ctl/clean one that exits 0
+# Flag files, not variables (the entrypoint strips cloudflared's environment): /ctl/cf-ignore-term is
+# a cloudflared that ignores SIGTERM (an ignored signal survives exec); /ctl/clean one that exits 0
 # on SIGTERM, as the real one does.
-[ ! -e /ctl/serve-ignore-term ] || { trap '' TERM; exec sleep 600; }
+[ ! -e /ctl/cf-ignore-term ] || { trap '' TERM; exec sleep 600; }
 if [ -e /ctl/clean ]; then
   sleep 600 &
   c=$!
@@ -38,7 +38,8 @@ cat >/app/yo-human-hosted <<'EOF'
 echo "$*" >/out/serve.args
 echo $$ >/out/serve.pid
 [ -z "${FAKE_SERVE_EXIT:-}" ] || exit 0
-[ ! -e /ctl/ignore-term ] || { trap '' TERM; exec sleep 600; }
+# /ctl/serve-ignore-term: a server that ignores SIGTERM.
+[ ! -e /ctl/serve-ignore-term ] || { trap '' TERM; exec sleep 600; }
 exec sleep 600
 EOF
 cat >/fakebin/litestream <<'EOF'
@@ -220,9 +221,13 @@ if running double-term TUNNEL_TOKEN=$TOKEN FAKE_LS_SLOW=1; then
 fi
 
 # --- a child that ignores SIGTERM is killed, within the platform's 15 s ---
-touch /ctl/ignore-term
+touch /ctl/cf-ignore-term
 if running stuck-cf TUNNEL_TOKEN=$TOKEN; then
   cf=$(cat /out/cloudflared.pid)
+  # the fake really is stuck: a TERM to it changes nothing, so the case cannot pass vacuously
+  kill -TERM "$cf"
+  sleep 0.5
+  alive "$cf" || fail "stuck-cf: the fake cloudflared died on SIGTERM, so it is not stuck"
   t0=$(date +%s)
   kill -9 "$(cat /out/serve.pid)"
   finish 25
@@ -231,7 +236,7 @@ if running stuck-cf TUNNEL_TOKEN=$TOKEN; then
   [ $((t1 - t0)) -lt 15 ] || fail "stuck-cf: the stop took $((t1 - t0)) s, over the platform's 15 s"
   if alive "$cf"; then fail "stuck-cf: cloudflared is still alive"; fi
 fi
-touch /ctl/ignore-term
+touch /ctl/cf-ignore-term
 if running stuck-term TUNNEL_TOKEN=$TOKEN; then
   cf=$(cat /out/cloudflared.pid)
   t0=$(date +%s)
