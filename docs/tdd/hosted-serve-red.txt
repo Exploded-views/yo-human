@@ -92,3 +92,8 @@ ok   internal/hosted/app/casenet/x.go: hosted app imports net (internal-no-netwo
 lint_rules_test: all 168 cases pass
 exit=0
 # The two app probes are guards, not RED failures: the rule had no exclusion for app, so they pass at once. Their mutant (an exclusion for app) is in hosted-serve-mutants.txt.
+
+--- GREEN: hosted-selfcheck perf budget, recorded under the heavy lock (crew-heavy run 900, make perf at d58e4d0)
+uptime under the lock: load averages 6.31 5.64 6.66
+hosted-selfcheck: p95 14.9ms, with no budget yet (exit=2)
+budget = measured p95 x ci_headroom (2.0) = 29.8, rounded up to p95_ms 30
