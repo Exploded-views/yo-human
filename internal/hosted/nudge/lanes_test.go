@@ -75,6 +75,9 @@ func TestPageBoundedPerItemAndSwarm(t *testing.T) {
 	if n := len(r.ledger(a.ID)); n != 2 {
 		t.Errorf("%d ledger rows for the paged item, want 2", n)
 	}
+	if n := len(r.ch.delivered()) - len(r.pushes()); n != 0 {
+		t.Errorf("%d nudges for items in the page lane, want none: a page never waits on the nudge", n)
+	}
 }
 
 func TestRepostEvery30mNudgesHourly(t *testing.T) {
