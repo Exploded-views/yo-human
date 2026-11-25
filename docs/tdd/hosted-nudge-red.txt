@@ -414,3 +414,21 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.235s
 FAIL
 exit=1
+
+$ go test -count=1 -run Redirect ./internal/hosted/egress/bark   # review should-fix 4
+--- FAIL: TestBarkNeverFollowsARedirectAndTreatsItAsBroken (0.01s)
+    bark_test.go:284: 301: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 301: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 302: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 302: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 303: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 303: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 307: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 307: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 308: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 308: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:295: the second host got 10 requests, want none: the device key must never be re-sent
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/egress/bark	0.179s
+FAIL
+exit=1

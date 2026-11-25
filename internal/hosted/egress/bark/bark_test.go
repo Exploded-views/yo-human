@@ -268,3 +268,30 @@ func TestBarkWithAnUnusableBaseURLIsABrokenChannel(t *testing.T) {
 		t.Errorf("err = %v, want a broken channel (nothing it sends will arrive) that does not echo the URL", err)
 	}
 }
+
+// A redirect is never followed: a 307 or 308 would re-post the body, device key and all, to
+// whatever host the Location names. The channel is misconfigured, so it is broken.
+func TestBarkNeverFollowsARedirectAndTreatsItAsBroken(t *testing.T) {
+	second := newFake(t)
+	for _, code := range []int{301, 302, 303, 307, 308} {
+		first := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, second.URL+"/push", code)
+		}))
+		for _, hc := range []*http.Client{nil, {}} { // the package's own client, and one the caller supplied
+			c := &bark.Client{BaseURL: first.URL, User: user, Password: pass, DeviceKey: device, HTTP: hc}
+			err := c.Send(context.Background(), notify.Message{Title: "t", Body: "b", Group: "g", Level: notify.LevelActive})
+			if err == nil || !notify.IsBroken(err) || notify.Status(err) != code {
+				t.Errorf("%d: err = %v (broken %v, status %d), want a broken channel with that status", code, err, notify.IsBroken(err), notify.Status(err))
+			}
+			if err != nil && (strings.Contains(err.Error(), device) || strings.Contains(err.Error(), second.URL)) {
+				t.Errorf("%d: the error %q names the key or the second host", code, err)
+			}
+		}
+		first.Close()
+	}
+	second.mu.Lock()
+	defer second.mu.Unlock()
+	if len(second.reqs) != 0 {
+		t.Errorf("the second host got %d requests, want none: the device key must never be re-sent", len(second.reqs))
+	}
+}
