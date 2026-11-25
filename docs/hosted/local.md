@@ -9,8 +9,10 @@ the machine, and nothing outside it can reach the bus.
 - Node tokens, the MCP server for agents (post, answers, replies, status) and the health check work.
 - **Duet cannot connect until Task 10.** Duet reaches the bus through OAuth with GitHub, and that is not
   built yet, so every Duet request is refused.
-- **There are no Bark nudges until Task 11.** The nudge worker is not built, so nothing is sent to
-  your phone. You read the bus through Duet (later) or `yo-human-hosted check` for counts.
+- **Bark nudges need your Bark server.** With `YH_BARK_URL`, `YH_BARK_USER`, `YH_BARK_PASSWORD` and
+  `YH_BARK_DEVICE_KEY` all set, `serve` sends quiet nudges and Duet's messages to your phone; with none
+  set it says so and sends nothing. `yo-human-hosted outbox test` queues a test push, and
+  `yo-human-hosted check` exits 1 and prints the delivery counts while delivery is not healthy.
 - **There is no approval page until Tasks 10c and 10d, and no policy file until Task 10f.** Until the
   policy exists every approval is refused as not approvable.
 
