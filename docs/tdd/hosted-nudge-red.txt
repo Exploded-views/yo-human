@@ -330,3 +330,25 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.162s
 FAIL
 exit=1
+
+$ go test -race -count=1 -timeout 120s ./internal/hosted/perf ./tools/perf
+--- FAIL: TestNudgeTickDoesNotGrowWithOldEvents (0.00s)
+    nudge_test.go:34: 0 and 0 samples, want 40 each
+--- FAIL: TestNudgeSamplesAreEachATickWithAnEventToRead (0.00s)
+    nudge_test.go:44: samples = [], <nil>, want 5
+--- FAIL: TestSamplersTimeEachCall (0.41s)
+    perf_test.go:31: nudge: 0 samples, want 4
+--- FAIL: TestSamplersReportSetupErrors (0.00s)
+    perf_test.go:49: nudge: no error for an unusable directory
+--- FAIL: TestRunPrintsOneTimingPerLine (0.36s)
+    perf_test.go:61: nudge: code 2, stderr "usage: perf post|revise|wake N\n"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	58.662s
+--- FAIL: TestHostedScenariosAreRegistered (0.00s)
+    hosted_test.go:23: scenario hosted-nudge-tick is not registered with a Sample
+--- FAIL: TestNudgeTickHasABudget (0.00s)
+    hosted_test.go:118: hosted-nudge-tick budget = {P95Ms:0}, false, want a budget of at least 1 ms
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	7.997s
+FAIL
+exit=1
