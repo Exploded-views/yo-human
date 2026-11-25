@@ -71,11 +71,7 @@ func (c *Client) Send(ctx context.Context, m notify.Message) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.SetBasicAuth(c.User, c.Password)
-	hc := c.HTTP
-	if hc == nil {
-		hc = ownClient
-	}
-	resp, err := hc.Do(req)
+	resp, err := c.noRedirects().Do(req)
 	if err != nil {
 		// The transport's error names the URL; the cause that matters survives as a context error
 		// or as the bare fact that the request failed.
@@ -89,6 +85,18 @@ func (c *Client) Send(ctx context.Context, m notify.Message) error {
 	return classify(resp)
 }
 
+// noRedirects is the caller's client, or the package's own, that never follows a redirect: a 307
+// or 308 would re-post the body, device key included, to whatever host the Location names.
+func (c *Client) noRedirects() *http.Client {
+	hc := ownClient
+	if c.HTTP != nil {
+		hc = c.HTTP
+	}
+	cp := *hc
+	cp.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	return &cp
+}
+
 // classify turns a response into nil (2xx) or an error in one of the notify classes. The message
 // names the status only: the response body may echo anything.
 func classify(resp *http.Response) error {
@@ -98,7 +106,7 @@ func classify(resp *http.Response) error {
 	}
 	err := notify.WithStatus(fmt.Errorf("bark: push refused with status %d", code), code)
 	switch {
-	case code == http.StatusUnauthorized || code == http.StatusForbidden:
+	case code == http.StatusUnauthorized || code == http.StatusForbidden || (code >= 300 && code < 400):
 		return notify.Broken(err)
 	case code == http.StatusTooManyRequests || code == http.StatusServiceUnavailable:
 		return notify.WithRetryAfter(err, retryAfter(resp.Header.Get("Retry-After")))
