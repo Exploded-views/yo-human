@@ -56,6 +56,32 @@ type Tx interface {
 
 	PutStatus(StatusDoc) error
 	Statuses(swarm string) ([]StatusDoc, error)
+
+	// The outbox, the owner-push ledger, the nudge's memory and the delivery flag (Task 11).
+	// InsertOutbox returns the new row's id. PendingOutbox returns the pending rows whose NextAt
+	// is not after now, oldest first, at most limit. UpdateOutbox rewrites every field but ID,
+	// Kind, Swarm, ItemID, Revision, Title, Body and Created. FailedSince returns the failed rows
+	// whose FailedAt is not before since. LastPush is the newest ledger time for the item, at any
+	// revision; LastPageSent is the newest SentAt of a page row of the swarm. A zero NudgeState
+	// and BrokenFlag are what nothing has written yet. PutDeferred inserts or replaces.
+	// DeliveryState is nil while delivery is healthy.
+	InsertOutbox(OutboxRow) (int64, error)
+	UpdateOutbox(OutboxRow) error
+	PendingOutbox(now time.Time, limit int) ([]OutboxRow, error)
+	FailedSince(since time.Time) ([]OutboxRow, error)
+	AllOutbox() ([]OutboxRow, error)
+	LastPush(itemID string) (time.Time, bool, error)
+	InsertPush(Push) error
+	Pushes(itemID string) ([]Push, error)
+	LastPageSent(swarm string) (time.Time, bool, error)
+	NudgeState() (NudgeState, error)
+	PutNudgeState(NudgeState) error
+	Deferred() ([]Deferred, error)
+	PutDeferred(Deferred) error
+	DeleteDeferred(itemID string) error
+	BrokenFlag() (BrokenFlag, error)
+	PutBrokenFlag(BrokenFlag) error
+	DeliveryState(now time.Time) (*DeliveryState, error)
 }
 
 // Relay is the owner's words passed on by a node. Its actor kind is always agent, and it

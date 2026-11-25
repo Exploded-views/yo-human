@@ -26,6 +26,8 @@ type Inbox struct {
 	Interrupt []Summary
 	Threads   []Summary
 	Next      int64
+	// Delivery is non-nil when the owner's phone may not be hearing from the bus.
+	Delivery *DeliveryState
 }
 
 // ItemView is an item with its thread and the decision for its current revision.
@@ -33,6 +35,8 @@ type ItemView struct {
 	Item     Item
 	Messages []Message
 	Decision *Record
+	// Delivery is set for Duet only, and only while delivery is not healthy.
+	Delivery *DeliveryState
 }
 
 // inboxKinds are the five kinds that have an inbox group. A notice has none.
@@ -164,3 +168,7 @@ func (b *Bus) Ack(ctx context.Context, p Principal, id string, seenSeq int64) er
 	})
 	return mapStoreErr(err)
 }
+
+// Waiting is how many items the inbox holds for Claude: the items in its groups, not the
+// interrupt lane. A collapsed nudge reports it.
+func (b *Bus) Waiting(ctx context.Context) (int, error) { return 0, nil }

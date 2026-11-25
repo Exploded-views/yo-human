@@ -55,3 +55,71 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/egress/bark	0.209s
 FAIL
 exit=1
+
+$ go test -race -count=1 ./internal/hosted/bus ./internal/hosted/db
+--- FAIL: TestInboxAndItemShowABrokenChannel (0.06s)
+    delivery_test.go:36: inbox delivery = <nil> (<nil>), want broken with status 401 since t0
+    delivery_test.go:40: item delivery = <nil> (<nil>), want the same
+--- FAIL: TestWaitingCountsTheGroupsOnly (0.07s)
+    delivery_test.go:69: Waiting = 0, <nil>, want 1: the question, since a notice has no inbox group
+--- FAIL: TestDuetPostToHumanQueuesOneMessage (0.05s)
+    queue_test.go:36: low: 0 rows, want 1
+--- FAIL: TestDuetPostCarriesAtMostABoundedBody (0.06s)
+    queue_test.go:54: 0 rows, want 1
+--- FAIL: TestNodePageQueuesAPageRow (0.05s)
+    queue_test.go:69: 0 rows, want 1
+--- FAIL: TestRepostQueuesOnlyWhenTheItemChanged (0.06s)
+    queue_test.go:101: 0 rows after an unchanged repost, want 1
+--- FAIL: TestOutboxRowIsInTheSameTransactionAsThePost (0.06s)
+    queue_test.go:131: err = <nil>, want a refusal that names no path
+--- FAIL: TestDuetReplyOnAnOwnerItemQueuesAMessage (0.07s)
+    queue_test.go:150: 0 rows, want 1
+--- FAIL: TestNodePageReplyQueuesAPageRow (0.06s)
+    queue_test.go:191: rows = [], want one page row for the thread
+--- FAIL: TestOnCommitIsCalledAfterACommittedWrite (0.06s)
+    queue_test.go:204: after a post: calls=0 err=<nil>, want 1
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	23.578s
+--- FAIL: TestOpenMigratesAndReopens (0.05s)
+    db_test.go:40: user_version = 3, want 4
+--- FAIL: TestNudgeStateStartsZeroAndRoundTrips (0.05s)
+    nudge_test.go:23: state = {LastSeq:0 Count:0 LastSent:0001-01-01 00:00:00 +0000 UTC FailedAt:0001-01-01 00:00:00 +0000 UTC LastStatus:0}, want {LastSeq:42 Count:7 LastSent:2026-10-28 09:30:15.123456 +0000 UTC FailedAt:2026-10-28 09:31:15.123456 +0000 UTC LastStatus:400}
+    nudge_test.go:28: state after a second put = {LastSeq:0 Count:0 LastSent:0001-01-01 00:00:00 +0000 UTC FailedAt:0001-01-01 00:00:00 +0000 UTC LastStatus:0}, want the second alone
+--- FAIL: TestDeferredPutReplacesAndDeleteRemoves (0.05s)
+    nudge_test.go:51: deferred = [], want a then b, with b's second due time
+    nudge_test.go:56: deferred after delete = [], want b
+--- FAIL: TestBrokenFlagRoundTrip (0.06s)
+    nudge_test.go:79: flag after reopen = {Raised:false Since:0001-01-01 00:00:00 +0000 UTC Status:0}, want {Raised:true Since:2026-10-28 09:30:15.123456 +0000 UTC Status:403}
+--- FAIL: TestDeliveryStateBrokenCarriesSinceAndStatus (0.05s)
+    nudge_test.go:116: state = <nil>, want broken since t0 with status 401
+--- FAIL: TestDeliveryStateFailedAgesOutAfter24Hours (0.05s)
+    nudge_test.go:126: just under 24 h: <nil>, want one failed with status 400
+--- FAIL: TestDeliveryStateCountsARefusedNudge (0.05s)
+    nudge_test.go:140: state = <nil>, want the refused nudge counted with its status
+--- FAIL: TestDeliveryStatePendingIsOverdueAfterTenMinutes (0.05s)
+    nudge_test.go:156: overdue: <nil>, want one pending
+    nudge_test.go:160: pending counts every pending row: <nil>, want 2
+--- FAIL: TestOutboxRoundTrip (0.05s)
+    outbox_test.go:68: ids = 0, 0, want increasing from 1
+--- FAIL: TestOutboxRefusesAnUnknownKindOrState (0.06s)
+    outbox_test.go:90: row {ID:0 Kind:loud Swarm:duet ItemID: Revision:2 Level:active Title:Title one Body:Body one State:pending Attempts:0 NextAt:2026-10-28 09:30:15.123456 +0000 UTC Created:2026-10-28 09:30:15.123456 +0000 UTC SentAt:0001-01-01 00:00:00 +0000 UTC FailedAt:0001-01-01 00:00:00 +0000 UTC LastStatus:0 Retried:false} was stored
+    outbox_test.go:90: row {ID:0 Kind:test Swarm:duet ItemID: Revision:2 Level:active Title:Title one Body:Body one State:done Attempts:0 NextAt:2026-10-28 09:30:15.123456 +0000 UTC Created:2026-10-28 09:30:15.123456 +0000 UTC SentAt:0001-01-01 00:00:00 +0000 UTC FailedAt:0001-01-01 00:00:00 +0000 UTC LastStatus:0 Retried:false} was stored
+--- FAIL: TestPendingOutboxIsDueOldestFirstAndLimited (0.05s)
+    outbox_test.go:114: due rows = [], want [0 0 0] (oldest created first, then id)
+    outbox_test.go:117: limit 2 = [], want the two oldest
+--- FAIL: TestUpdateOutboxChangesOnlyTheMutableFields (0.05s)
+    outbox_test.go:131: 0 rows after the update, want 1
+--- FAIL: TestFailedSince (0.05s)
+    outbox_test.go:159: failed since = [], want [0 0]
+--- FAIL: TestLedgerKeepsOneRowPerSourceAndItem (0.05s)
+    outbox_test.go:178: a second ledger row for one source and item: <nil>, want a conflict
+--- FAIL: TestLastPushIsTheNewestOfAnyRevision (0.05s)
+    outbox_test.go:204: LastPush(itm_1) = 0001-01-01 00:00:00 +0000 UTC false, itm_9 found=false; want the newest of any revision, and none for another item
+--- FAIL: TestPushesAreInTimeOrder (0.05s)
+    outbox_test.go:214: Pushes = [], want the two rows for itm_1 in time order
+--- FAIL: TestLastPageSentIsPerSwarmAndPagesOnly (0.05s)
+    outbox_test.go:241: LastPageSent(crew) = 0001-01-01 00:00:00 +0000 UTC false, client found=false; want the newest sent page of that swarm
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.533s
+FAIL
+exit=1
