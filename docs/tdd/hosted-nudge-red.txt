@@ -123,3 +123,124 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.533s
 FAIL
 exit=1
+
+$ go test -race -count=1 -timeout 120s ./internal/hosted/nudge
+--- FAIL: TestChannelBrokenRaisesFlag (0.07s)
+    broken_test.go:17: 0 attempts, want the pass to stop at the broken channel
+--- FAIL: TestBrokenChannelIsProbedEveryFiveMinutesAndClearsOnA2xx (0.07s)
+    broken_test.go:39: 0 attempts inside the probe spacing
+--- FAIL: TestBrokenSendsOnlyTheProbe (0.07s)
+    broken_test.go:68: 0 attempts in four minutes, want one probe and nothing else
+--- FAIL: TestBrokenFlagReRaisedAfterRestartWithBadKey (0.06s)
+    broken_test.go:85: 0 attempts, want the restart's probe
+--- FAIL: TestBrokenFlagStaysWhenTheOnlyRowIsSuperseded (0.08s)
+    broken_test.go:103: row is pending, want superseded
+--- FAIL: TestBrokenFlagClearsOnFirst2xx (0.08s)
+    broken_test.go:120: flag {Raised:true Since:2026-11-02 09:00:00 +0000 UTC Status:401}, 0 delivered, want the probe's 200 to clear it
+--- FAIL: TestOutboxTestClearsBrokenFlag (0.07s)
+    broken_test.go:141: flag {Raised:true Since:2026-11-02 09:00:00 +0000 UTC Status:401}, want it cleared by the test push's 200
+--- FAIL: TestRefusedAgesOutAfter24h (0.07s)
+    broken_test.go:151: delivery = <nil>, want one refused with status 400
+--- FAIL: TestNudgeBrokenRaisesTheFlagAndRollsBack (0.07s)
+    broken_test.go:165: flag = {Raised:false Since:0001-01-01 00:00:00 +0000 UTC Status:0}
+--- FAIL: TestSameItemNotPushedTwiceWithin60m (0.08s)
+    cap_test.go:24: delivered [], want ["first"]
+--- FAIL: TestNewRevisionWaitsForItemWindow (0.09s)
+    cap_test.go:53: delivered [], want ["at revision one"]
+--- FAIL: TestHeldDuetPostSupersededOnDecision (0.09s)
+    cap_test.go:72: delivered [], want ["first"]
+--- FAIL: TestHeldDuetPostSupersededOnRepost (0.08s)
+    cap_test.go:91: delivered [], want ["first"]
+--- FAIL: TestEscalationBypassesCap (0.08s)
+    cap_test.go:105: delivered [], want ["first" "escalated"]
+--- FAIL: TestCoalescedPushHasStableID (0.10s)
+    cap_test.go:136: attempts = [], want the same id and text twice: "yh-2 third (+1 more)"
+--- FAIL: TestProbeRespectsCapAndSupersede (0.07s)
+    cap_test.go:151: next_at = 2026-11-02 09:00:00 +0000 UTC, want the push plus 60 minutes
+--- FAIL: TestPageNeverWaits (0.09s)
+    lanes_test.go:49: delivered "", want the page alone in the minute after a nudge
+--- FAIL: TestPageBoundedPerItemAndSwarm (0.08s)
+    lanes_test.go:66: delivered [], want ["1 page for Claude"]
+--- FAIL: TestRepostEvery30mNudgesHourly (0.10s)
+    lanes_test.go:95: nudges at [], want [0s 1h0m0s 2h0m0s 3h0m0s]
+--- FAIL: TestDeferredItemNudgedWhenWindowOpens (0.07s)
+    lanes_test.go:120: delivered [], want one nudge counting the deferred item
+--- FAIL: TestNudgeSkipsRecentlyPushedItem (0.09s)
+    lanes_test.go:152: delivered [], want a nudge counting only the free item
+--- FAIL: TestDuetRepliesAndItsOwnThreadNeverNudge (0.09s)
+    lanes_test.go:178: delivered [], want one nudge
+--- FAIL: TestDuetPostToHumanSendsItsOwnMessage (0.08s)
+    outbox_test.go:26: delivered 0, want one message for each of Duet's three posts
+--- FAIL: TestOutboxSentNotResent (0.06s)
+    outbox_test.go:48: 0 sends, want the one
+    outbox_test.go:51: row = {ID:1 Kind:test Swarm: ItemID: Revision:0 Level:active Title:yo-human Body:test push State:pending Attempts:0 NextAt:2026-11-02 09:00:00 +0000 UTC Created:2026-11-02 09:00:00 +0000 UTC SentAt:0001-01-01 00:00:00 +0000 UTC FailedAt:0001-01-01 00:00:00 +0000 UTC LastStatus:0 Retried:false}, want sent at t0 after one attempt
+--- FAIL: TestOutboxUnsentSentAfterRestart (0.07s)
+    outbox_test.go:61: delivered [], want ["hello"]
+--- FAIL: TestOutboxCrashAfterSendResendsSameID (0.07s)
+    outbox_test.go:77: delivered [], want the same id twice
+--- FAIL: TestOutboxTransientBackoff (0.06s)
+    outbox_test.go:99: attempts at [], want [0s 30s 1m30s 3m30s]
+--- FAIL: TestOutboxBackoffIsCappedAtFiveMinutes (0.08s)
+    outbox_test.go:125: waits = [0s 0s 0s 0s 0s 0s 0s 0s], want [30s 1m0s 2m0s 4m0s 5m0s 5m0s 5m0s 5m0s]
+--- FAIL: TestOutboxRetryAfterHonoured (0.06s)
+    outbox_test.go:138: 0 attempts inside the Retry-After
+--- FAIL: TestRetryAfterCappedAtFiveMinutes (0.06s)
+    outbox_test.go:155: 0 attempts before 5 min
+--- FAIL: TestOutboxPassStopsAtFirstTransient (0.08s)
+    outbox_test.go:172: 0 attempts, want the pass to stop at the first transient error
+--- FAIL: TestOutboxOldestFirstCapped (0.10s)
+    outbox_test.go:194: sends per tick = [0 0 0], want 10, 10, 5
+--- FAIL: TestOutboxRefusedMessageFails (0.07s)
+    outbox_test.go:209: row = {ID:1 Kind:test Swarm: ItemID: Revision:0 Level:active Title:yo-human Body:test push State:pending Attempts:0 NextAt:2026-11-02 09:00:00 +0000 UTC Created:2026-11-02 09:00:00 +0000 UTC SentAt:0001-01-01 00:00:00 +0000 UTC FailedAt:0001-01-01 00:00:00 +0000 UTC LastStatus:0 Retried:false}, want failed at t0 with status 400
+--- FAIL: TestRefusedMessageGetsOneMoreTryAfterARestartIfYoung (0.06s)
+    outbox_test.go:237: attempts after the restart = [], want one, for row 2 and not 1
+--- FAIL: TestRetriedPushRecordedOnceInLedger (0.07s)
+    outbox_test.go:265: ledger = [], want exactly one row, written with sent
+--- FAIL: TestOutboxLogCarriesIdsOnly (0.07s)
+    outbox_test.go:287: the log lacks "outbox_id=1":
+    outbox_test.go:287: the log lacks "item_id=itm_ty6cj5pkwowb57rixxx3jxbmle":
+    outbox_test.go:287: the log lacks "kind=duet_post":
+    outbox_test.go:287: the log lacks "status=500":
+    outbox_test.go:287: the log lacks "attempts=1":
+    outbox_test.go:287: the log lacks "attempts=2":
+--- FAIL: TestDuetPostSurvivesRestart (0.06s)
+    outbox_test.go:297: delivered [], want ["A summary"]
+--- FAIL: TestNudgeConfigRefusesLoudLevels (0.00s)
+    worker_test.go:34: critical: Validate accepted {Window:1m0s MinSeverity:normal Level:critical Log:<nil>}
+    worker_test.go:34: time-sensitive: Validate accepted {Window:1m0s MinSeverity:normal Level:time-sensitive Log:<nil>}
+    worker_test.go:34: no level: Validate accepted {Window:1m0s MinSeverity:normal Level: Log:<nil>}
+    worker_test.go:34: no window: Validate accepted {Window:0s MinSeverity:normal Level:active Log:<nil>}
+    worker_test.go:34: no severity: Validate accepted {Window:1m0s MinSeverity: Level:active Log:<nil>}
+    worker_test.go:34: unknown severity: Validate accepted {Window:1m0s MinSeverity:urgent Level:active Log:<nil>}
+--- FAIL: TestWorkerWithALoudConfigSendsNothing (0.07s)
+    worker_test.go:52: Tick accepted a critical nudge level
+--- FAIL: TestOneNudgeForBurst (0.09s)
+    worker_test.go:67: delivered [], want ["5 new, 5 waiting for Claude"]
+--- FAIL: TestNudgeCountsOnlyNew (0.09s)
+    worker_test.go:88: delivered [], want ["3 new, 3 waiting for Claude" "1 new, 4 waiting for Claude"]
+--- FAIL: TestNudgeCountsAnItemOnceWhateverItsEvents (0.08s)
+    worker_test.go:98: delivered [], want ["1 new, 1 waiting for Claude"]
+--- FAIL: TestWindowCollapses (0.08s)
+    worker_test.go:109: 0 sends 10 minutes after a nudge, want still 1
+--- FAIL: TestLowSeverityAndDuetToCrewDontNudge (0.08s)
+    worker_test.go:135: delivered [], want ["1 new, 2 waiting for Claude"]
+--- FAIL: TestFailedSendRetriesNextTick (0.10s)
+    worker_test.go:162: delivered [], want ["1 new, 1 waiting for Claude"]
+--- FAIL: TestRefusedNudgeNotRetried (0.08s)
+    worker_test.go:183: 0 attempts, want the refused nudge tried once
+--- FAIL: TestRefusedNudgeIsNotACrash (0.10s)
+    worker_test.go:203: 0 attempts after a restart, want the refused nudge not re-sent
+--- FAIL: TestRestartDoesNotResend (0.07s)
+    worker_test.go:215: delivered [], want ["1 new, 1 waiting for Claude"]
+--- FAIL: TestNudgeCarriesNoItemText (0.11s)
+    worker_test.go:233: no nudge went out
+--- FAIL: TestRunTicksOnStart (5.07s)
+    worker_test.go:261: timed out
+--- FAIL: TestRunTicksOnKickAndOnTheInterval (5.07s)
+    worker_test.go:273: timed out
+--- FAIL: TestTicksNeverOverlap (2.07s)
+    worker_test.go:295: the first tick never reached its send
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/nudge	16.571s
+FAIL
+exit=1
