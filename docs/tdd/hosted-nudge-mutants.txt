@@ -139,3 +139,16 @@ mutant 44: ruling ev-1794: the Duet reply switch ignored
   file: internal/hosted/bus/queue.go
   exit=1 KILLED; failing tests: TestDuetReplyPushSwitch
 exit=0
+
+# After the holdUntil and classify refactor, mutants 13, 34 and 41 re-run against their new locations.
+$ python3 mutate.py 13 34 41
+mutant 13: a 401 treated as permanent (refused) instead of broken
+  file: internal/hosted/egress/bark/bark.go
+  exit=1 KILLED; failing tests: TestBarkErrorClasses
+mutant 34: review 1, the cap-queue half of the plan's page mutant: a page held by the general owner-push ledger
+  file: internal/hosted/nudge/outbox.go
+  exit=1 KILLED; failing tests: TestPageIsNotHeldByANudgeOrADuetPost
+mutant 41: review 4: a 3xx is not a broken channel
+  file: internal/hosted/egress/bark/bark.go
+  exit=1 KILLED; failing tests: TestBarkNeverFollowsARedirectAndTreatsItAsBroken
+exit=0
