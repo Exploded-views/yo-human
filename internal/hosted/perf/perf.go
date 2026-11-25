@@ -129,10 +129,10 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	n := 0
 	if len(args) == 2 {
 		n, _ = strconv.Atoi(args[1])
-		fn = map[string]sampler{"post": PostIn, "revise": ReviseIn, "wake": WakeIn}[args[0]]
+		fn = map[string]sampler{"post": PostIn, "revise": ReviseIn, "wake": WakeIn, "nudge": NudgeIn}[args[0]]
 	}
 	if fn == nil || n < 1 {
-		_, _ = fmt.Fprintln(stderr, "usage: perf post|revise|wake N")
+		_, _ = fmt.Fprintln(stderr, "usage: perf post|revise|wake|nudge N")
 		return 2
 	}
 	samples, err := inTempDir(seedItems, n, fn)

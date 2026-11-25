@@ -11,6 +11,7 @@
     "hosted-post": { "p95_ms": 10 },
     "hosted-revise": { "p95_ms": 10 },
     "hosted-answers-wake": { "p95_ms": 10 },
+    "hosted-nudge-tick": { "p95_ms": 5 },
     "hosted-selfcheck": { "p95_ms": 30 }
   },
   "binary_bytes": 10000000
