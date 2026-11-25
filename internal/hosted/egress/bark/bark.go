@@ -106,7 +106,7 @@ func classify(resp *http.Response) error {
 	}
 	err := notify.WithStatus(fmt.Errorf("bark: push refused with status %d", code), code)
 	switch {
-	case code == http.StatusUnauthorized || code == http.StatusForbidden || (code >= 300 && code < 400):
+	case channelRefused(code):
 		return notify.Broken(err)
 	case code == http.StatusTooManyRequests || code == http.StatusServiceUnavailable:
 		return notify.WithRetryAfter(err, retryAfter(resp.Header.Get("Retry-After")))
@@ -114,6 +114,12 @@ func classify(resp *http.Response) error {
 		return notify.Permanent(err)
 	}
 	return err
+}
+
+// channelRefused says the status means the channel itself is refused: bad credentials (401, 403),
+// or a redirect, which means the configured URL is not where Bark is.
+func channelRefused(code int) bool {
+	return code == http.StatusUnauthorized || code == http.StatusForbidden || (code >= 300 && code < 400)
 }
 
 // retryAfter reads a Retry-After in whole seconds; anything else is absent.

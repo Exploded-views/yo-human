@@ -121,24 +121,30 @@ func (w *Worker) holdUntil(x bus.Tx, now time.Time, r bus.OutboxRow) (time.Time,
 		}
 		return until, err
 	}
-	var until time.Time
-	if r.ItemID != "" {
-		last, ok, err := x.LastPageSentForItem(r.ItemID)
-		if err != nil {
-			return until, err
-		}
-		if u := last.Add(pushWindow); ok && now.Before(u) {
-			until = u
-		}
+	item, err := pageItemHold(x, now, r.ItemID)
+	if err != nil {
+		return item, err
 	}
 	last, ok, err := x.LastPageSent(r.Swarm)
 	if err != nil || !ok {
-		return until, err
+		return item, err
 	}
-	if u := last.Add(pageSpacing); now.Before(u) && u.After(until) {
-		until = u
+	if u := last.Add(pageSpacing); now.Before(u) && u.After(item) {
+		return u, nil
 	}
-	return until, nil
+	return item, nil
+}
+
+// pageItemHold is the end of the hour after the item's last sent page, or the zero time.
+func pageItemHold(x bus.Tx, now time.Time, itemID string) (time.Time, error) {
+	if itemID == "" {
+		return time.Time{}, nil
+	}
+	last, ok, err := x.LastPageSentForItem(itemID)
+	if u := last.Add(pushWindow); err == nil && ok && now.Before(u) {
+		return u, nil
+	}
+	return time.Time{}, err
 }
 
 // stale says whether a Duet post is no longer worth sending: its item's revision moved on, or
