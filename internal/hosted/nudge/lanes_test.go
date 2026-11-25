@@ -181,3 +181,23 @@ func TestDuetRepliesAndItsOwnThreadNeverNudge(t *testing.T) {
 		t.Errorf("delivered %+v, want one nudge", got)
 	}
 }
+
+// A page is bounded by the last page for its item, never by a nudge or a Duet post: an item the
+// nudge counted at minute 0 can still be paged at minute 5.
+func TestPageIsNotHeldByANudgeOrADuetPost(t *testing.T) {
+	r := newRig(t)
+	it := r.post(crewNode, question("a"))
+	r.tick() // minute 0: the nudge counts the item and writes its ledger row
+	r.advance(5 * time.Minute)
+	r.reply(crewNode, it.ID, "prod is down", bus.SeverityHigh, bus.UrgencyPage)
+	r.tick()
+	wantBodies(t, r.pushes(), "1 page for Claude")
+
+	b := r.post(crewNode, quietItem("b"))
+	r.duetSays(b, "looking at it")
+	r.tick() // Duet's message goes out and is in the ledger
+	r.advance(time.Minute)
+	r.reply(crewNode, b.ID, "now it is on fire", bus.SeverityHigh, bus.UrgencyPage)
+	r.tick()
+	wantBodies(t, r.pushes(), "1 page for Claude", "looking at it", "1 page for Claude")
+}

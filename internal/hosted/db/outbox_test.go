@@ -241,3 +241,29 @@ func TestLastPageSentIsPerSwarmAndPagesOnly(t *testing.T) {
 		t.Errorf("LastPageSent(crew) = %v %v, client found=%v; want the newest sent page of that swarm", at, found, none)
 	}
 }
+
+func TestLastPageSentForItemIsThatItemsPagesOnly(t *testing.T) {
+	d, _ := openTemp(t)
+	mk := func(kind bus.OutboxKind, item string, state bus.OutboxState, sent time.Time) {
+		r := outboxRow(kind, item, t0)
+		r.State, r.SentAt = state, sent
+		addRow(t, d, r)
+	}
+	mk(bus.OutboxPage, "itm_1", bus.OutboxSent, t0.Add(time.Minute))
+	mk(bus.OutboxPage, "itm_1", bus.OutboxSent, t0.Add(5*time.Minute))
+	mk(bus.OutboxPage, "itm_1", bus.OutboxPending, t0.Add(9*time.Minute))
+	mk(bus.OutboxDuetPost, "itm_1", bus.OutboxSent, t0.Add(8*time.Minute))
+	mk(bus.OutboxPage, "itm_2", bus.OutboxSent, t0.Add(7*time.Minute))
+	var at time.Time
+	var found, none bool
+	tx(t, d, func(x bus.Tx) (err error) {
+		at, found, err = x.LastPageSentForItem("itm_1")
+		if err == nil {
+			_, none, err = x.LastPageSentForItem("itm_9")
+		}
+		return err
+	})
+	if !found || !at.Equal(t0.Add(5*time.Minute)) || none {
+		t.Errorf("LastPageSentForItem(itm_1) = %v %v, itm_9 found=%v; want the newest sent page of that item only", at, found, none)
+	}
+}

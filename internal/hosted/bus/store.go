@@ -74,6 +74,8 @@ type Tx interface {
 	InsertPush(Push) error
 	Pushes(itemID string) ([]Push, error)
 	LastPageSent(swarm string) (time.Time, bool, error)
+	// LastPageSentForItem is the newest SentAt of a page row for the item, from no other source.
+	LastPageSentForItem(itemID string) (time.Time, bool, error)
 	NudgeState() (NudgeState, error)
 	PutNudgeState(NudgeState) error
 	Deferred() ([]Deferred, error)

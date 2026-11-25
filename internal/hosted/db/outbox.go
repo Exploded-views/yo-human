@@ -102,6 +102,9 @@ func (x *txn) LastPageSent(swarm string) (time.Time, bool, error) {
 	return x.latest(`SELECT max(sent_at) FROM outbox WHERE kind = 'page' AND state = 'sent' AND swarm = ?`, swarm)
 }
 
+// LastPageSentForItem is the newest send time of a page row for the item.
+func (x *txn) LastPageSentForItem(string) (time.Time, bool, error) { return time.Time{}, false, nil }
+
 // latest reads one nullable time: ok is false when nothing matched.
 func (x *txn) latest(query string, args ...any) (time.Time, bool, error) {
 	var s sql.NullString

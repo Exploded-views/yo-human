@@ -360,3 +360,15 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/egress/bark	5.220s
 FAIL
 exit=1
+
+$ go test -race -count=1 ./internal/hosted/db ./internal/hosted/nudge   # review must-fix 1: a page was held by the general ledger
+--- FAIL: TestLastPageSentForItemIsThatItemsPagesOnly (0.07s)
+    outbox_test.go:267: LastPageSentForItem(itm_1) = 0001-01-01 00:00:00 +0000 UTC false, itm_9 found=false; want the newest sent page of that item only
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	6.534s
+--- FAIL: TestPageIsNotHeldByANudgeOrADuetPost (0.08s)
+    lanes_test.go:194: delivered [], want ["1 page for Claude"]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/nudge	27.369s
+FAIL
+exit=1
