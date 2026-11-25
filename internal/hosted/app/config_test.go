@@ -112,7 +112,7 @@ func TestConfigOverrides(t *testing.T) {
 		"YH_ESCALATE_AFTER", "low=45m,normal=40m,high=30m,critical=20m", "YH_ESCALATE_CRITICAL", "on",
 		"YH_WALLED_SWARMS", "client, other", "YH_LINK_HOSTS", "github.com,example.org", "YH_CHALLENGE_TTL", "10m",
 		"YH_DESK_TTL", "1h", "YH_LISTEN_MCP", "[::1]:9000", "YH_LISTEN_APPROVE", "0.0.0.0:9001",
-		"YH_BARK_URL", "https://bark.example.org", "YH_BARK_USER", "u", "YH_BARK_PASSWORD", "BARK-PASSWORD-FAKE", "YH_BARK_DEVICE_KEY", "DEVICE-KEY-FAKE",
+		"YH_BARK_URL", "https://bark.example.org", "YH_BARK_USER", "BARK-USER-FAKE", "YH_BARK_PASSWORD", "BARK-PASSWORD-FAKE", "YH_BARK_DEVICE_KEY", "DEVICE-KEY-FAKE",
 		"YH_ACCESS_TTL", "2h", "YH_REFRESH_TTL", "48h", "YH_TOOL_DEADLINE", "2s",
 		"YH_REDIRECT_ALLOW", "https://a.example.org/cb", "YH_CIMD_HOSTS", "a.example.org", "YH_ORIGIN_ALLOW", "https://a.example.org",
 	))
@@ -123,7 +123,7 @@ func TestConfigOverrides(t *testing.T) {
 		{"EscalateCritical", c.EscalateCritical, true}, {"WalledSwarms", c.WalledSwarms, []string{"client", "other"}},
 		{"LinkHosts", c.LinkHosts, []string{"github.com", "example.org"}}, {"ChallengeTTL", c.ChallengeTTL, 10 * time.Minute},
 		{"DeskTTL", c.DeskTTL, time.Hour}, {"ListenMCP", c.ListenMCP, "[::1]:9000"}, {"ListenApprove", c.ListenApprove, "0.0.0.0:9001"},
-		{"BarkURL", c.BarkURL, "https://bark.example.org"}, {"BarkUser", c.BarkUser, "u"},
+		{"BarkURL", c.BarkURL, "https://bark.example.org"}, {"BarkUser", c.BarkUser, "BARK-USER-FAKE"},
 		{"BarkPassword", c.BarkPassword.Reveal(), "BARK-PASSWORD-FAKE"}, {"BarkDeviceKey", c.BarkDeviceKey.Reveal(), "DEVICE-KEY-FAKE"},
 		{"AccessTTL", c.AccessTTL, 2 * time.Hour}, {"RefreshTTL", c.RefreshTTL, 48 * time.Hour}, {"ToolDeadline", c.ToolDeadline, 2 * time.Second},
 		{"RedirectAllow", c.RedirectAllow, []string{"https://a.example.org/cb"}}, {"CIMDHosts", c.CIMDHosts, []string{"a.example.org"}},

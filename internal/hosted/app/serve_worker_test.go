@@ -87,12 +87,17 @@ func TestServeWithoutBarkSaysSoAndRuns(t *testing.T) {
 
 func TestServeRefusesAHalfConfiguredBark(t *testing.T) {
 	replaceServe(t, nil) // a refusal comes before the listeners; if it did not, serve would return at once
-	for _, kv := range [][]string{{"YH_BARK_URL", "https://bark.example.com"}, {"YH_BARK_URL", "https://bark.example.com", "YH_BARK_USER", "u", "YH_BARK_PASSWORD", "p"},
-		{"YH_BARK_USER", "u", "YH_BARK_PASSWORD", "p", "YH_BARK_DEVICE_KEY", "k"}} {
+	for _, kv := range [][]string{{"YH_BARK_URL", "https://bark.example.com"}, {"YH_BARK_URL", "https://bark.example.com", "YH_BARK_USER", "BARK-USER-FAKE", "YH_BARK_PASSWORD", "BARK-PASS-FAKE"},
+		{"YH_BARK_USER", "BARK-USER-FAKE", "YH_BARK_PASSWORD", "BARK-PASS-FAKE", "YH_BARK_DEVICE_KEY", "DEVICE-KEY-FAKE"}} {
 		var out, errb strings.Builder
 		code := Run([]string{"serve"}, envOf(serveEnv(t, kv...)), &out, &errb)
 		if code != ExitConfig || !strings.Contains(errb.String(), "YH_BARK") || strings.Contains(errb.String(), "https://bark") {
 			t.Errorf("%v: code=%d err=%q, want a config refusal that names the variable and no value", kv, code, errb.String())
+		}
+		for _, secret := range []string{"BARK-USER-FAKE", "BARK-PASS-FAKE", "DEVICE-KEY-FAKE"} {
+			if strings.Contains(errb.String()+out.String(), secret) {
+				t.Errorf("%v: serve printed %s", kv, secret)
+			}
 		}
 	}
 }
@@ -103,7 +108,7 @@ func TestKickerIsSafeBeforeAndAfterTheWorkerExists(t *testing.T) {
 	var out strings.Builder
 	a := admin{name: "serve", stderr: &out, env: noEnv}
 	cfg := Config{NudgeWindow: time.Minute, NudgeMinSeverity: "normal", NudgeLevel: "active"}
-	ch, err := barkChannel(Config{BarkURL: "https://bark.example.com", BarkUser: "u", BarkPassword: "p", BarkDeviceKey: "k"})
+	ch, err := barkChannel(Config{BarkURL: "https://bark.example.com", BarkUser: "BARK-USER-FAKE", BarkPassword: "BARK-PASS-FAKE", BarkDeviceKey: "DEVICE-KEY-FAKE"})
 	if err != nil || ch == nil {
 		t.Fatalf("barkChannel = %v, %v", ch, err)
 	}
