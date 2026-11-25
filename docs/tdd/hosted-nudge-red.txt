@@ -322,3 +322,11 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	5.958s
 FAIL
 exit=1
+
+$ go test -race -count=1 -run NeverWakes ./internal/repolint
+--- FAIL: TestNeverWakesSessionsFixtures (0.00s)
+    herdr_test.go:26: paths = [], want [cmd/yo-human-approved/bad.go cmd/yo-human-desk/bad.go internal/hosted/nudge/bad_test.go internal/hosted/web/bad_alias.go internal/hosted/web/bad_dial.go internal/hosted/web/bad_dialer.go internal/hosted/web/bad_dialtimeout.go internal/hosted/web/bad_dialunix.go internal/hosted/web/bad_dot.go internal/hosted/web/bad_dotaddr.go internal/hosted/web/bad_import.go internal/hosted/web/bad_literal.go internal/hosted/web/bad_unixaddr.go]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.162s
+FAIL
+exit=1
