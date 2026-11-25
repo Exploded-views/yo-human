@@ -1,0 +1,101 @@
+$ python3 mutate.py   # each mutant: edit one line, go test the named packages, restore; run through crew-heavy run 1800
+mutant 1: window comparison: the window opens at exactly Window (< becomes <=)
+  file: internal/hosted/nudge/nudge.go
+  exit=1 KILLED; failing tests: TestWindowCollapses
+mutant 2: state committed after the send, not before
+  file: internal/hosted/nudge/nudge.go
+  exit=1 KILLED; failing tests: TestRepostEvery30mNudgesHourly, TestWindowCollapses, TestRefusedNudgeNotRetried, TestRefusedNudgeIsNotACrash, TestRestartDoesNotResend
+mutant 3: the Duet filter removed from items
+  file: internal/hosted/nudge/nudge.go
+  exit=1 KILLED; failing tests: TestDuetPostToHumanSendsItsOwnMessage, TestDuetPostSurvivesRestart, TestOnlyDigestItemsAreCountedAndDuetPostsGoTheirOwnWay
+mutant 4: time-sensitive passed through unmapped
+  file: internal/hosted/egress/bark/bark.go
+  exit=1 KILLED; failing tests: TestBarkLevelMapping
+mutant 5: a 4xx retried as transient
+  file: internal/hosted/egress/bark/bark.go
+  exit=1 KILLED; failing tests: TestBarkErrorClasses
+mutant 6: a 429 treated as permanent
+  file: internal/hosted/egress/bark/bark.go
+  exit=1 KILLED; failing tests: TestBarkErrorClasses, TestBarkRetryAfter
+mutant 7: the outbox query ignores state
+  file: internal/hosted/db/outbox.go
+  exit=1 KILLED; failing tests: TestPendingOutboxIsDueOldestFirstAndLimited, TestBrokenChannelIsProbedEveryFiveMinutesAndClearsOnA2xx, TestBrokenFlagClearsOnFirst2xx, TestSameItemNotPushedTwiceWithin60m, TestCoalescedPushHasStableID, TestPageBoundedPerItemAndSwarm
+mutant 8: the pass goes on after a transient error
+  file: internal/hosted/nudge/outbox.go
+  exit=1 KILLED; failing tests: TestOutboxPassStopsAtFirstTransient
+mutant 9: delivery_broken cleared on start instead of on a 2xx
+  file: internal/hosted/nudge/worker.go
+  exit=1 KILLED; failing tests: TestBrokenSendsOnlyTheProbe, TestBrokenFlagStaysWhenTheOnlyRowIsSuperseded, TestOutboxTestClearsBrokenFlag, TestProbeRespectsCapAndSupersede, TestAStoreFailureIsNeverSwallowed
+mutant 10: the per-item cap keyed on (item, revision) instead of the item
+  file: internal/hosted/db/outbox.go
+  exit=1 KILLED; failing tests: TestNewRevisionWaitsForItemWindow, TestPageBoundedPerItemAndSwarm, TestRepostEvery30mNudgesHourly
+mutant 11: deferred items never fired without a new event
+  file: internal/hosted/nudge/nudge.go
+  exit=1 KILLED; failing tests: TestDeferredItemNudgedWhenWindowOpens, TestNudgeSkipsRecentlyPushedItem
+mutant 12: a row marked sent before the send
+  file: internal/hosted/nudge/outbox.go
+  exit=1 KILLED; failing tests: TestChannelBrokenRaisesFlag, TestBrokenChannelIsProbedEveryFiveMinutesAndClearsOnA2xx, TestBrokenFlagReRaisedAfterRestartWithBadKey, TestOutboxTestClearsBrokenFlag, TestSameItemNotPushedTwiceWithin60m, TestNewRevisionWaitsForItemWindow
+mutant 13: a 401 treated as permanent (refused) instead of broken
+  file: internal/hosted/egress/bark/bark.go
+  exit=1 KILLED; failing tests: TestBarkErrorClasses
+mutant 14: RetryAfter not capped at 5 min
+  file: internal/hosted/nudge/outbox.go
+  exit=1 KILLED; failing tests: TestRetryAfterCappedAtFiveMinutes
+mutant 15: a missing urgency defaulted instead of refused
+  file: internal/hosted/bus/post.go
+  exit=1 KILLED; failing tests: TestReplyWithoutUrgencyRefused
+mutant 16: interrupt-when-good counted by the nudge
+  file: internal/hosted/nudge/nudge.go
+  exit=1 KILLED; failing tests: TestBrokenFlagStaysWhenTheOnlyRowIsSuperseded, TestSameItemNotPushedTwiceWithin60m, TestNewRevisionWaitsForItemWindow, TestHeldDuetPostSupersededOnDecision, TestHeldDuetPostSupersededOnRepost, TestEscalationBypassesCap
+mutant 17: page routed through the nudge (a page item counted by it)
+  file: internal/hosted/nudge/nudge.go
+  exit=1 KILLED; failing tests: TestPageBoundedPerItemAndSwarm
+mutant 18: a page never queued to the outbox
+  file: internal/hosted/bus/queue.go
+  exit=1 KILLED; failing tests: TestNodePageQueuesAPageRow, TestPageNeverWaits, TestPageBoundedPerItemAndSwarm
+mutant 19: the 60-minute cap ends one tick late (Before becomes !After)
+  file: internal/hosted/nudge/nudge.go
+  exit=1 KILLED; failing tests: TestSameItemNotPushedTwiceWithin60m, TestNewRevisionWaitsForItemWindow, TestCoalescedPushHasStableID, TestPageBoundedPerItemAndSwarm, TestRepostEvery30mNudgesHourly, TestDeferredItemNudgedWhenWindowOpens
+mutant 20: the supersede rule removed
+  file: internal/hosted/nudge/outbox.go
+  exit=1 KILLED; failing tests: TestBrokenFlagStaysWhenTheOnlyRowIsSuperseded, TestHeldDuetPostSupersededOnDecision, TestHeldDuetPostSupersededOnRepost
+mutant 21: the ledger row not written with sent
+  file: internal/hosted/nudge/outbox.go
+  exit=1 KILLED; failing tests: TestSameItemNotPushedTwiceWithin60m, TestNewRevisionWaitsForItemWindow, TestHeldDuetPostSupersededOnDecision, TestHeldDuetPostSupersededOnRepost, TestEscalationBypassesCap, TestCoalescedPushHasStableID
+mutant 22: held Duet posts never coalesce
+  file: internal/hosted/nudge/outbox.go
+  exit=1 KILLED; failing tests: TestSameItemNotPushedTwiceWithin60m, TestCoalescedPushHasStableID
+mutant 23: the backoff does not double
+  file: internal/hosted/nudge/outbox.go
+  exit=1 KILLED; failing tests: TestOutboxTransientBackoff, TestOutboxBackoffIsCappedAtFiveMinutes
+mutant 24: a swarm's pages are not spaced
+  file: internal/hosted/nudge/outbox.go
+  exit=1 KILLED; failing tests: TestPageBoundedPerItemAndSwarm
+mutant 25: a transient nudge failure keeps its committed state
+  file: internal/hosted/nudge/nudge.go
+  exit=1 KILLED; failing tests: TestFailedSendRetriesNextTick
+mutant 26: the cap is not applied to a nudge's items
+  file: internal/hosted/nudge/nudge.go
+  exit=1 KILLED; failing tests: TestRepostEvery30mNudgesHourly, TestDeferredItemNudgedWhenWindowOpens, TestNoZeroNudge, TestNudgeSkipsRecentlyPushedItem
+mutant 27: the minimum severity ignored
+  file: internal/hosted/nudge/nudge.go
+  exit=1 KILLED; failing tests: TestDuetRepliesAndItsOwnThreadNeverNudge, TestLowSeverityAndDuetToCrewDontNudge
+mutant 28: the probe spacing ignored
+  file: internal/hosted/nudge/worker.go
+  exit=1 KILLED; failing tests: TestBrokenChannelIsProbedEveryFiveMinutesAndClearsOnA2xx, TestBrokenSendsOnlyTheProbe
+mutant 29: DeliveryState: a refusal counts at exactly 24 h (> becomes >=)
+  file: internal/hosted/db/nudge.go
+  exit=1 KILLED; failing tests: TestDeliveryStateFailedAgesOutAfter24Hours
+mutant 30: DeliveryState: a pending row is overdue at exactly 10 min (< becomes <=)
+  file: internal/hosted/db/nudge.go
+  exit=1 KILLED; failing tests: TestDeliveryStatePendingIsOverdueAfterTenMinutes
+mutant 31: a held row is dropped instead of moved
+  file: internal/hosted/nudge/outbox.go
+  exit=1 KILLED; failing tests: TestSameItemNotPushedTwiceWithin60m, TestNewRevisionWaitsForItemWindow, TestCoalescedPushHasStableID, TestProbeRespectsCapAndSupersede, TestPageBoundedPerItemAndSwarm
+mutant 32: the group's id is the highest outbox id, not the lowest
+  file: internal/hosted/nudge/outbox.go
+  exit=1 KILLED; failing tests: TestCoalescedPushHasStableID
+mutant 33: a refused row is requeued after any restart
+  file: internal/hosted/nudge/worker.go
+  exit=1 KILLED; failing tests: TestRefusedMessageGetsOneMoreTryAfterARestartIfYoung
+exit=0

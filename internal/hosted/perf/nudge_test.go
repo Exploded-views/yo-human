@@ -1,10 +1,14 @@
 package perf
 
 import (
+	"context"
 	"path/filepath"
 	"slices"
 	"testing"
 	"time"
+
+	"github.com/Exploded-views/yo-human/internal/hosted/db"
+	"github.com/Exploded-views/yo-human/internal/hosted/notify"
 )
 
 func p95(ds []time.Duration) time.Duration {
@@ -46,6 +50,27 @@ func TestNudgeSamplesAreEachATickWithAnEventToRead(t *testing.T) {
 	for _, d := range got {
 		if d <= 0 {
 			t.Errorf("a sample of %v", d)
+		}
+	}
+}
+
+func TestQuietChannelAcceptsEverything(t *testing.T) {
+	var q quiet
+	if q.Name() != "quiet" || len(q.Levels()) == 0 || q.Send(context.Background(), notify.Message{}) != nil {
+		t.Error("the scenario's channel must accept every message")
+	}
+}
+
+// A step that fails is an error, never a sample: the database is closed before each step in turn.
+func TestNudgeScenarioReportsEachStepThatFails(t *testing.T) {
+	for _, at := range []string{"events", "first", "post", "tick"} {
+		_, err := nudgeStaged(filepath.Join(t.TempDir(), at), 5, 3, 2, func(stage string, d *db.DB) {
+			if stage == at {
+				_ = d.Close()
+			}
+		})
+		if err == nil {
+			t.Errorf("closing the database before %q gave no error", at)
 		}
 	}
 }

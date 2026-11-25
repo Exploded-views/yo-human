@@ -3,7 +3,6 @@ package perf
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/Exploded-views/yo-human/internal/hosted/bus"
@@ -32,17 +31,19 @@ func (quiet) Send(context.Context, notify.Message) error { return nil }
 // after an untimed first tick that moves the cursor past the older events. The window is one
 // nanosecond so every tick looks at the events.
 func nudgeIn(dir string, items, oldEvents, n int) ([]time.Duration, error) {
-	b, closeDB, err := seeded(dir, items)
+	return nudgeStaged(dir, items, oldEvents, n, func(string, *db.DB) {})
+}
+
+// nudgeStaged is nudgeIn that calls stage before each step ("events", "first", "post", "tick"),
+// so a test can break the database at a chosen step.
+func nudgeStaged(dir string, items, oldEvents, n int, stage func(string, *db.DB)) ([]time.Duration, error) {
+	b, d, closeDB, err := seededStore(dir, items, perfDraft("warm-up", "Warm-up"))
 	if err != nil {
 		return nil, err
 	}
 	defer closeDB()
-	d, err := db.Open(filepath.Join(dir, "bus.db")) // a second handle on the seeded file, for the events and the worker
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = d.Close() }()
 	ctx := context.Background()
+	stage("events", d)
 	err = d.Tx(ctx, func(x bus.Tx) error {
 		for range oldEvents {
 			if _, err := x.AppendEvent(bus.Event{Swarm: "crew", ItemID: "itm_old", Type: bus.EventStatusPushed, Created: time.Now()}); err != nil {
@@ -55,14 +56,17 @@ func nudgeIn(dir string, items, oldEvents, n int) ([]time.Duration, error) {
 		return nil, err
 	}
 	w := nudge.NewWorker(b, d, quiet{}, nudge.Config{Window: time.Nanosecond, MinSeverity: bus.SeverityCritical, Level: notify.LevelActive}, time.Now)
+	stage("first", d)
 	if err := w.Tick(ctx); err != nil {
 		return nil, err
 	}
 	out := make([]time.Duration, 0, n)
 	for i := range n {
+		stage("post", d)
 		if _, err := b.Post(ctx, perfNode, perfDraft(fmt.Sprintf("tick-%d", i), "Tick")); err != nil {
 			return nil, err
 		}
+		stage("tick", d)
 		start := time.Now()
 		err := w.Tick(ctx)
 		out = append(out, max(time.Since(start), time.Nanosecond))

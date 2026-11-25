@@ -46,10 +46,19 @@
     "statements": 100.0
   },
   "github.com/Exploded-views/yo-human/internal/hosted/db": {
-    "statements": 84.9
+    "statements": 87.0
+  },
+  "github.com/Exploded-views/yo-human/internal/hosted/egress/bark": {
+    "statements": 97.4
   },
   "github.com/Exploded-views/yo-human/internal/hosted/hostname": {
     "statements": 100.0
+  },
+  "github.com/Exploded-views/yo-human/internal/hosted/notify": {
+    "statements": 100.0
+  },
+  "github.com/Exploded-views/yo-human/internal/hosted/nudge": {
+    "statements": 97.7
   },
   "github.com/Exploded-views/yo-human/internal/hosted/policy": {
     "statements": 100.0
@@ -61,7 +70,7 @@
     "statements": 100.0
   },
   "github.com/Exploded-views/yo-human/internal/repolint": {
-    "statements": 96.7
+    "statements": 96.8
   },
   "github.com/Exploded-views/yo-human/internal/secrets": {
     "statements": 93.1
@@ -76,7 +85,7 @@
     "statements": 98.2
   },
   "github.com/Exploded-views/yo-human/internal/hosted/perf": {
-    "statements": 91.4
+    "statements": 92.8
   },
   "github.com/Exploded-views/yo-human/internal/hosted/perf/cmd": {
     "statements": 100.0
