@@ -67,7 +67,7 @@ func (c *Client) Send(ctx context.Context, m notify.Message) error {
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimSuffix(c.BaseURL, "/")+"/push", bytes.NewReader(body))
 	if err != nil {
-		return errors.New("bark: the base URL is not usable")
+		return notify.Broken(errors.New("bark: the base URL is not usable"))
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.SetBasicAuth(c.User, c.Password)
