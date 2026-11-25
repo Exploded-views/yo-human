@@ -54,6 +54,8 @@ var scenarios = []Scenario{
 	{Name: "hosted-post", Sample: hostedSample("post")},
 	{Name: "hosted-revise", Sample: hostedSample("revise")},
 	{Name: "hosted-answers-wake", Sample: hostedSample("wake")},
+	// A fresh database, one approval posted, recorded and read, with no network: the whole command.
+	{Name: "hosted-selfcheck", Argv: []string{"dist/yo-human-hosted", "selfcheck"}},
 }
 
 // remeasurePause is how long a run waits, once, before it re-measures the scenarios that missed.

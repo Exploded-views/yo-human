@@ -172,6 +172,8 @@ internal/hosted/web/casehttp|clean|x.go|net/http|hosted web imports net/http (in
 internal/hosted/oauth/casehttp|clean|x.go|net/http|hosted oauth imports net/http (inbound)
 internal/hosted/web/caseegress|hosted-egress-only-via-app|x.go|M/internal/hosted/egress/bark|hosted web imports an egress package
 internal/hosted/app/caseegress|clean|x.go|M/internal/hosted/egress/bark M/internal/hosted/web M/internal/version|hosted app imports egress, web and version
+internal/hosted/app/casehttp|internal-no-network|x.go|net/http|hosted app imports net/http (the listeners live in web, so app gets no internal-no-network exclusion)
+internal/hosted/app/casenet|internal-no-network|x.go|net|hosted app imports net
 internal/cli/casetransport|forbidigo internal-no-network|x.go|net/http|cli uses http.DefaultTransport outside the e2e hook file|var _ = http.DefaultTransport
 internal/cli|forbidigo|testhooks_e2e.go|net/http syscall|the e2e hook file is excused for http.DefaultTransport only: its syscall.Socket is still flagged, and nothing else is|var _ = http.DefaultTransport; var _ = syscall.Socket|||opens sockets
 internal/core|forbidigo|x_e2e.go|net/http|an _e2e.go file outside the hook (core) still may not use http.DefaultTransport|var _ = http.DefaultTransport

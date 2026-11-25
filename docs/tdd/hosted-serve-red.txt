@@ -1,0 +1,131 @@
+$ go test -race -count=1 ./internal/hosted/web ./internal/hosted/app ./tools/perf
+# H1 Task 12 slice 12a, against stubs: web.Serve and the internal serve return an error ("not built yet"), the app serve and selfcheck commands exit 70 with no output, selfcheckIn and exerciseBus return an error, and the perf scenario hosted-selfcheck is not registered. The errors, the ServeConfig type, the listener struct, the exit constants and the usage text exist so the tests compile and fail on assertions.
+--- FAIL: TestServeFailureBeatsCancel (0.00s)
+    serve_internal_test.go:66: serve = web: Serve is not built yet, want the failure
+--- FAIL: TestServeFailureNamesItsListener (0.00s)
+    serve_internal_test.go:78: serve = web: Serve is not built yet, want the failure wrapped with the listener's name
+--- FAIL: TestServeFailureBeatsForcedClose (0.00s)
+    serve_internal_test.go:89: serve = web: Serve is not built yet, want the failure
+--- FAIL: TestServeClosedServersAreNotFailures (0.00s)
+    serve_internal_test.go:99: serve = web: Serve is not built yet, want nil: http.ErrServerClosed from a server serve shut down is no failure
+--- FAIL: TestServeShutdownHasTheGraceDeadline (0.00s)
+    serve_internal_test.go:111: web: Serve is not built yet
+--- FAIL: TestServeForcedCloseClosesBoth (0.00s)
+    serve_internal_test.go:125: serve = web: Serve is not built yet, want ErrForcedClose
+--- FAIL: TestServeRefusesNonLoopbackMCP (0.00s)
+    serve_test.go:111: MCPAddr "0.0.0.0:0": web: Serve is not built yet, want ErrMCPNotLoopback
+    serve_test.go:111: MCPAddr "[::]:0": web: Serve is not built yet, want ErrMCPNotLoopback
+    serve_test.go:111: MCPAddr ":0": web: Serve is not built yet, want ErrMCPNotLoopback
+    serve_test.go:111: MCPAddr "localhost:0": web: Serve is not built yet, want ErrMCPNotLoopback
+    serve_test.go:111: MCPAddr "[::ffff:127.0.0.1]:0": web: Serve is not built yet, want ErrMCPNotLoopback
+    serve_test.go:111: MCPAddr "[::1%lo0]:0": web: Serve is not built yet, want ErrMCPNotLoopback
+    serve_test.go:111: MCPAddr "192.0.2.1:0": web: Serve is not built yet, want ErrMCPNotLoopback
+    serve_test.go:111: MCPAddr "127.0.0.1": web: Serve is not built yet, want ErrMCPNotLoopback
+    serve_test.go:111: MCPAddr "": web: Serve is not built yet, want ErrMCPNotLoopback
+    serve_test.go:111: MCPAddr "[::ffff:127.0.0.1]:8081": web: Serve is not built yet, want ErrMCPNotLoopback
+--- FAIL: TestServeRefusesSamePort (0.00s)
+    serve_test.go:126: {MCPAddr:127.0.0.1:18081 ApproveAddr::18081 Grace:1s}: web: Serve is not built yet, want ErrSamePort
+    serve_test.go:126: {MCPAddr:127.0.0.1:18081 ApproveAddr:0.0.0.0:18081 Grace:1s}: web: Serve is not built yet, want ErrSamePort
+    serve_test.go:126: {MCPAddr:127.0.0.1:18081 ApproveAddr:[::]:18081 Grace:1s}: web: Serve is not built yet, want ErrSamePort
+    serve_test.go:126: {MCPAddr:127.0.0.1:18081 ApproveAddr::018081 Grace:1s}: web: Serve is not built yet, want ErrSamePort
+--- FAIL: TestServeChecksLoopbackBeforePorts (0.00s)
+    serve_test.go:136: web: Serve is not built yet, want ErrMCPNotLoopback
+--- FAIL: TestServeStopsBothWhenOneFails (0.00s)
+    serve_test.go:146: Serve = web: Serve is not built yet, want a bind error naming the approval listener
+--- FAIL: TestServeNamesTheMCPListenerWhenItFails (0.00s)
+    serve_test.go:157: Serve = web: Serve is not built yet, want a bind error naming the MCP listener
+--- FAIL: TestServeRoutesEachListenerAndEndsCleanly (3.01s)
+    serve_test.go:166: GET http://127.0.0.1:60492/: Get "http://127.0.0.1:60492/": dial tcp 127.0.0.1:60492: connect: connection refused
+--- FAIL: TestServeGraceThenForcedClose (3.01s)
+    serve_test.go:191: GET http://127.0.0.1:60730/: Get "http://127.0.0.1:60730/": dial tcp 127.0.0.1:60730: connect: connection refused
+--- FAIL: TestServeDrainsWithinGrace (3.01s)
+    serve_test.go:240: GET http://127.0.0.1:60961/: Get "http://127.0.0.1:60961/": dial tcp 127.0.0.1:60961: connect: connection refused
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	17.900s
+--- FAIL: TestSelfcheckRunsOffline (0.00s)
+    selfcheck_cmd_test.go:26: exit 70, stdout "", stderr ""; want 0, "selfcheck: ok\n" and nothing
+--- FAIL: TestSelfcheckWithoutATempDirIsInternal (0.00s)
+    selfcheck_cmd_test.go:38: exit 70, stdout "", stderr ""; want 70 naming selfcheck
+--- FAIL: TestSelfcheckTakesNoArguments (0.00s)
+    selfcheck_cmd_test.go:45: exit 70, stdout ""; want 64
+--- FAIL: TestSelfcheckInOpensOnlyADatabaseItMay (0.00s)
+    selfcheck_cmd_test.go:51: selfcheckIn in a private directory: selfcheck is not built yet
+--- FAIL: TestExerciseBusStepsEachFailLoudly (0.39s)
+    selfcheck_cmd_test.go:104: all steps pass: selfcheck is not built yet
+    selfcheck_cmd_test.go:106: the node's post fails: err = selfcheck is not built yet, want one naming "post"
+    selfcheck_cmd_test.go:106: Duet's record fails: err = selfcheck is not built yet, want one naming "record"
+    selfcheck_cmd_test.go:106: the node's read fails: err = selfcheck is not built yet, want one naming "read"
+    selfcheck_cmd_test.go:106: the node reads no answer: err = selfcheck is not built yet, want one naming "answer"
+--- FAIL: TestServeExitCodes (0.01s)
+    serve_cmd_test.go:89: a clean drain: exit 70 after 0 Serve calls, want exit 0 after 1; stderr ""
+    serve_cmd_test.go:89: a forced close: exit 70 after 0 Serve calls, want exit 0 after 1; stderr ""
+    serve_cmd_test.go:89: a wrapped forced close: exit 70 after 0 Serve calls, want exit 0 after 1; stderr ""
+    serve_cmd_test.go:89: a listener that would not bind: exit 70 after 0 Serve calls, want exit 70 after 1; stderr ""
+    serve_cmd_test.go:89: a non-loopback MCP address: exit 70 after 0 Serve calls, want exit 78 after 1; stderr ""
+    serve_cmd_test.go:89: two listeners on one port: exit 70 after 0 Serve calls, want exit 78 after 1; stderr ""
+--- FAIL: TestServeFailureIsNamedOnStderr (0.00s)
+    serve_cmd_test.go:103: stderr "" does not say why serve stopped
+--- FAIL: TestServePassesItsConfigAndSignalContext (0.00s)
+    serve_cmd_test.go:111: exit 70: 
+--- FAIL: TestServeBadConfigIsRefusedBeforeAnythingOpens (0.00s)
+    serve_cmd_test.go:139: a missing variable: exit 70 after 0 Serve calls, stderr ""; want exit 78, no call, the variable named, no secret
+    serve_cmd_test.go:139: a non-loopback MCP address: exit 70 after 0 Serve calls, stderr ""; want exit 78, no call, the variable named, no secret
+--- FAIL: TestServeDatabaseThatWillNotOpenIsExitStore (0.00s)
+    serve_cmd_test.go:158: exit 70 after 0 Serve calls, stderr ""; want exit 74, no call and a reason
+--- FAIL: TestServeTakesNoArguments (0.00s)
+    serve_cmd_test.go:165: exit 70 after 0 Serve calls, stderr ""; want 64 and no call
+    serve_cmd_test.go:168: serve -h: exit 70 after 0 Serve calls, want 0 and none
+--- FAIL: TestServeShutsDownOnSignal (0.00s)
+    serve_run_test.go:88: serve exited 70 before it was up: 
+--- FAIL: TestServeBindsMCPOnLoopbackOnly (0.00s)
+    serve_run_test.go:115: serve exited 70 before it was up: 
+--- FAIL: TestServeAuthenticatesAgainstTheDatabase (0.08s)
+    serve_run_test.go:140: serve exited 70 before it was up: 
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	3.831s
+--- FAIL: TestSelfcheckScenarioRunsTheHostedBinary (0.00s)
+    hosted_test.go:31: no scenario named hosted-selfcheck
+FAIL	github.com/Exploded-views/yo-human/tools/perf	9.710s
+exit=1
+
+$ make lint-rules-test   (run under crew-heavy against the RED commit's scripts/lint_rules_test.sh and the unchanged .golangci.yml)
+ok   internal/hosted/app/casehttp/x.go: hosted app imports net/http (the listeners live in web, so app gets no internal-no-network exclusion) (internal-no-network)
+ok   internal/hosted/app/casenet/x.go: hosted app imports net (internal-no-network)
+lint_rules_test: all 168 cases pass
+exit=0
+# The two app probes are guards, not RED failures: the rule had no exclusion for app, so they pass at once. Their mutant (an exclusion for app) is in hosted-serve-mutants.txt.
+
+--- GREEN: hosted-selfcheck perf budget, recorded under the heavy lock (crew-heavy run 900, make perf at d58e4d0)
+uptime under the lock: load averages 6.31 5.64 6.66
+hosted-selfcheck: p95 14.9ms, with no budget yet (exit=2)
+budget = measured p95 x ci_headroom (2.0) = 29.8, rounded up to p95_ms 30
+
+# Review round 1 (S1, S2, N1, N3), against 82656b7 plus the stub web.ErrBadPort
+
+# S1: TestServeGraceThenForcedClose could be refused before MCP bound. A real flake has no deterministic RED, so it is shown with a mutant that delays the MCP bind by 300 ms (newListener sleeps before ListenAndServe). The OLD test, against that mutant:
+$ go test -race -count=1 -run TestServeGraceThenForcedClose ./internal/hosted/web
+--- FAIL: TestServeGraceThenForcedClose (3.00s)
+    serve_test.go:196: the blocking request never reached its handler
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	3.318s
+exit=1
+# The NEW test (waits for MCP to answer, then blocks only on /block) against the same mutant: ok (exit=0).
+
+# S2: TestServeFailureDuringDrainBeatsCancel, against mutant #10 (the drain loop ignores a later failure), -count=20:
+$ go test -race -count=20 -run TestServeFailureDuringDrainBeatsCancel ./internal/hosted/web
+    serve_internal_test.go:85: serve = <nil>, want the failure from the drain
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	0.327s
+exit=1
+
+# N1 and N3, against the unfixed code:
+$ go test -race -count=1 ./internal/hosted/web ./internal/hosted/app
+--- FAIL: TestServeRefusesAnApprovalPortThatIsNotANumber (4.01s)
+    serve_test.go:139: ApproveAddr ":http": <nil>, want ErrBadPort
+    serve_test.go:139: ApproveAddr ":": <nil>, want ErrBadPort
+    serve_test.go:139: ApproveAddr "127.0.0.1:": <nil>, want ErrBadPort
+    serve_test.go:139: ApproveAddr "": <nil>, want ErrBadPort
+    serve_test.go:139: ApproveAddr "0.0.0.0": web: approval listener: listen tcp: address 0.0.0.0: missing port in address, want ErrBadPort
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	10.161s
+--- FAIL: TestServeExitCodes (0.45s)
+    serve_cmd_test.go:91: an approval port that is not a number: exit 70 after 1 Serve calls, want exit 78 after 1; stderr "yo-human-hosted: serve: web: the approval address must end in a numeric port\n"
+--- FAIL: TestServeRestoresDefaultSignalsAfterTheFirst (1.07s)
+    serve_cmd_test.go:211: stop had run 0 times while serve was still draining, want 1
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	4.673s
+exit=1
