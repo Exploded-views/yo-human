@@ -99,3 +99,43 @@ mutant 33: a refused row is requeued after any restart
   file: internal/hosted/nudge/worker.go
   exit=1 KILLED; failing tests: TestRefusedMessageGetsOneMoreTryAfterARestartIfYoung
 exit=0
+
+# Review round (7c32fa8): mutant 13 re-run against the 3xx change, and mutants 34 to 44 for the review fixes. The failing-test lists above and below show at most six names each.
+$ python3 mutate.py 13 34 35 36 37 38 39 40 41 42 43 44
+mutant 13: a 401 treated as permanent (refused) instead of broken
+  file: internal/hosted/egress/bark/bark.go
+  exit=1 KILLED; failing tests: TestBarkErrorClasses
+mutant 34: review 1, the cap-queue half of the plan's page mutant: a page held by the general owner-push ledger
+  file: internal/hosted/nudge/outbox.go
+  exit=1 KILLED; failing tests: TestPageIsNotHeldByANudgeOrADuetPost
+mutant 35: review 2: a tried row's age ignored (only next_at counts)
+  file: internal/hosted/db/nudge.go
+  exit=1 KILLED; failing tests: TestDeliveryStateCountsARowStillRetryingAfterTenMinutes, TestAnOutageThatAnswersTransientlyIsVisible
+mutant 36: review 2: a transient nudge failure not recorded
+  file: internal/hosted/nudge/nudge.go
+  exit=1 KILLED; failing tests: TestANudgeOutageIsVisibleAndClearedByA2xx
+mutant 37: review 2: a 2xx does not clear the nudge's failure run
+  file: internal/hosted/nudge/worker.go
+  exit=1 KILLED; failing tests: TestANudgeOutageIsVisibleAndClearedByA2xx
+mutant 38: review 3: the scheme of YH_BARK_URL unchecked
+  file: internal/hosted/app/config.go
+  exit=1 KILLED; failing tests: TestBarkURLIsAnAbsoluteHTTPSURLOrLoopbackHTTP
+mutant 39: review 3: http allowed for any host
+  file: internal/hosted/app/config.go
+  exit=1 KILLED; failing tests: TestBarkURLIsAnAbsoluteHTTPSURLOrLoopbackHTTP
+mutant 40: review 4: a redirect is followed
+  file: internal/hosted/egress/bark/bark.go
+  exit=1 KILLED; failing tests: TestBarkNeverFollowsARedirectAndTreatsItAsBroken
+mutant 41: review 4: a 3xx is not a broken channel
+  file: internal/hosted/egress/bark/bark.go
+  exit=1 KILLED; failing tests: TestBarkNeverFollowsARedirectAndTreatsItAsBroken
+mutant 42: review 7: a nudge's bookkeeping on the cancellable context
+  file: internal/hosted/nudge/nudge.go
+  exit=1 KILLED; failing tests: TestShutdownBetweenANudgeSendAndItsLedgerWrite
+mutant 43: review 7: an outbox row's sent bookkeeping on the cancellable context
+  file: internal/hosted/nudge/outbox.go
+  exit=1 KILLED; failing tests: TestShutdownBetweenAnOutboxSendAndItsLedgerWrite
+mutant 44: ruling ev-1794: the Duet reply switch ignored
+  file: internal/hosted/bus/queue.go
+  exit=1 KILLED; failing tests: TestDuetReplyPushSwitch
+exit=0
