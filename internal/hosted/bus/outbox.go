@@ -68,6 +68,10 @@ type NudgeState struct {
 	LastSeq, Count     int64
 	LastSent, FailedAt time.Time
 	LastStatus         int
+	// StuckSince and StuckStatus: the first transient failure of a run of them with no 2xx
+	// between, and the latest one's status (0 for a network error). A 2xx clears them.
+	StuckSince  time.Time
+	StuckStatus int
 }
 
 // Deferred is an item a nudge may not count until DueAt, because it reached the owner less than

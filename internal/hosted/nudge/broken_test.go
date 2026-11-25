@@ -171,3 +171,41 @@ func TestNudgeBrokenRaisesTheFlagAndRollsBack(t *testing.T) {
 		t.Error("the flag survived a 2xx")
 	}
 }
+
+func TestAnOutageThatAnswersTransientlyIsVisible(t *testing.T) {
+	r := newRig(t)
+	r.queue(bus.OutboxTest, bus.Item{}, "yo-human", "x")
+	r.ch.setDefault(statusErr(503))
+	r.tickEvery(5*time.Minute, 10*time.Minute)
+	if ds := r.delivery(); ds != nil {
+		t.Fatalf("delivery after 10 min = %+v, want nil", ds)
+	}
+	r.tickEvery(5*time.Minute, 10*time.Minute)
+	if ds := r.delivery(); ds == nil || ds.Pending != 1 || ds.Broken {
+		t.Fatalf("delivery after 20 min of 503s = %+v, want one pending row", ds)
+	}
+	r.ch.setDefault(nil)
+	r.tickEvery(5*time.Minute, 5*time.Minute)
+	if ds := r.delivery(); ds != nil {
+		t.Errorf("delivery after a 2xx = %+v, want nil", ds)
+	}
+}
+
+func TestANudgeOutageIsVisibleAndClearedByA2xx(t *testing.T) {
+	r := newRig(t)
+	r.post(crewNode, question("a"))
+	r.ch.setDefault(errNetwork)
+	r.tickEvery(5*time.Minute, 10*time.Minute)
+	if ds := r.delivery(); ds != nil {
+		t.Fatalf("delivery after 10 min = %+v, want nil", ds)
+	}
+	r.tickEvery(5*time.Minute, 10*time.Minute)
+	if ds := r.delivery(); ds == nil || ds.Broken || ds.Failed != 0 {
+		t.Fatalf("delivery after 20 min of failed nudges = %+v, want it unhealthy", ds)
+	}
+	r.ch.setDefault(nil)
+	r.tickEvery(5*time.Minute, 5*time.Minute)
+	if ds := r.delivery(); ds != nil || len(r.ch.delivered()) != 1 {
+		t.Errorf("delivery after a 2xx = %+v with %d delivered, want nil and the nudge", ds, len(r.ch.delivered()))
+	}
+}

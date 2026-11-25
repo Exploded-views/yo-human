@@ -16,7 +16,7 @@ func TestNudgeStateStartsZeroAndRoundTrips(t *testing.T) {
 	if got != (bus.NudgeState{}) {
 		t.Errorf("fresh state = %+v, want zero", got)
 	}
-	want := bus.NudgeState{LastSeq: 42, Count: 7, LastSent: t0, FailedAt: t0.Add(time.Minute), LastStatus: 400}
+	want := bus.NudgeState{LastSeq: 42, Count: 7, LastSent: t0, FailedAt: t0.Add(time.Minute), LastStatus: 400, StuckSince: t0.Add(2 * time.Minute), StuckStatus: 503}
 	tx(t, d, func(x bus.Tx) error { return x.PutNudgeState(want) })
 	tx(t, d, func(x bus.Tx) (err error) { got, err = x.NudgeState(); return })
 	if got != want {
@@ -171,5 +171,37 @@ func TestOutboxRollsBackWithItsTransaction(t *testing.T) {
 	})
 	if n := len(allRows(t, d)); n != 0 {
 		t.Errorf("%d rows after a rolled-back transaction", n)
+	}
+}
+
+func TestDeliveryStateCountsARowStillRetryingAfterTenMinutes(t *testing.T) {
+	d, _ := openTemp(t)
+	r := outboxRow(bus.OutboxDuetPost, "itm", t0)
+	r.Attempts, r.NextAt = 3, t0.Add(time.Hour) // backing off: next_at is always ahead while the worker runs
+	addRow(t, d, r)
+	if ds := deliveryAt(t, d, t0.Add(10*time.Minute)); ds != nil {
+		t.Errorf("a retrying row 10 min old: %+v, want nil", ds)
+	}
+	ds := deliveryAt(t, d, t0.Add(10*time.Minute+time.Nanosecond))
+	if ds == nil || ds.Pending != 1 || ds.Broken {
+		t.Errorf("a retrying row older than 10 min: %+v, want one pending", ds)
+	}
+	held := outboxRow(bus.OutboxDuetPost, "itm_2", t0)
+	held.NextAt = t0.Add(time.Hour) // held by the cap: never tried, so not stuck
+	addRow(t, d, held)
+	if ds := deliveryAt(t, d, t0.Add(20*time.Minute)); ds == nil || ds.Pending != 2 {
+		t.Errorf("pending = %+v, want both rows counted but only the tried one making it unhealthy", ds)
+	}
+}
+
+func TestDeliveryStateCountsANudgeThatKeepsFailing(t *testing.T) {
+	d, _ := openTemp(t)
+	tx(t, d, func(x bus.Tx) error { return x.PutNudgeState(bus.NudgeState{StuckSince: t0, StuckStatus: 503}) })
+	if ds := deliveryAt(t, d, t0.Add(10*time.Minute)); ds != nil {
+		t.Errorf("a nudge failing for 10 min: %+v, want nil", ds)
+	}
+	ds := deliveryAt(t, d, t0.Add(10*time.Minute+time.Nanosecond))
+	if ds == nil || ds.Status != 503 || ds.Pending != 1 {
+		t.Errorf("a nudge failing for over 10 min: %+v, want status 503", ds)
 	}
 }

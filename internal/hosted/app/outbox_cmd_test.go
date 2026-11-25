@@ -123,3 +123,22 @@ func TestCheckExitsOneForARefusedMessageAndAnOverduePushOnly(t *testing.T) {
 		t.Errorf("code=%d out=%q, want an overdue pending row called stuck", code, out)
 	}
 }
+
+func TestCheckExitsOneForARowThatKeepsFailing(t *testing.T) {
+	a := newAdmin(t)
+	a.seedDB()
+	d, err := db.Open(a.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	created := time.Now().UTC().Add(-time.Hour)
+	_ = d.Tx(context.Background(), func(x bus.Tx) error {
+		_, err := x.InsertOutbox(bus.OutboxRow{Kind: bus.OutboxTest, Level: "passive", Title: "t", Body: "b", State: bus.OutboxPending,
+			Attempts: 4, NextAt: time.Now().UTC().Add(time.Minute), Created: created})
+		return err
+	})
+	_ = d.Close()
+	if code, out, _ := a.run("check"); code != ExitDegraded || !strings.Contains(out, "delivery_pending: 1\n") {
+		t.Errorf("code=%d out=%q, want exit 1 for a row retried for an hour", code, out)
+	}
+}

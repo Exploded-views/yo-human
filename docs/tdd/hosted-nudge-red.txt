@@ -372,3 +372,28 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/nudge	27.369s
 FAIL
 exit=1
+
+$ go test -count=1 -timeout 100s ./internal/hosted/db ./internal/hosted/nudge ./internal/hosted/app   # review must-fix 2: a transient outage was invisible
+--- FAIL: TestOpenMigratesAndReopens (0.01s)
+    db_test.go:40: user_version = 4, want 5
+--- FAIL: TestNudgeStateStartsZeroAndRoundTrips (0.00s)
+    nudge_test.go:23: state = {LastSeq:42 Count:7 LastSent:2026-10-28 09:30:15.123456 +0000 UTC FailedAt:2026-10-28 09:31:15.123456 +0000 UTC LastStatus:400 StuckSince:0001-01-01 00:00:00 +0000 UTC StuckStatus:0}, want {LastSeq:42 Count:7 LastSent:2026-10-28 09:30:15.123456 +0000 UTC FailedAt:2026-10-28 09:31:15.123456 +0000 UTC LastStatus:400 StuckSince:2026-10-28 09:32:15.123456 +0000 UTC StuckStatus:503}
+--- FAIL: TestDeliveryStateCountsARowStillRetryingAfterTenMinutes (0.01s)
+    nudge_test.go:187: a retrying row older than 10 min: <nil>, want one pending
+    nudge_test.go:193: pending = <nil>, want both rows counted but only the tried one making it unhealthy
+--- FAIL: TestDeliveryStateCountsANudgeThatKeepsFailing (0.00s)
+    nudge_test.go:205: a nudge failing for over 10 min: <nil>, want status 503
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.830s
+--- FAIL: TestAnOutageThatAnswersTransientlyIsVisible (0.01s)
+    broken_test.go:185: delivery after 20 min of 503s = <nil>, want one pending row
+--- FAIL: TestANudgeOutageIsVisibleAndClearedByA2xx (0.01s)
+    broken_test.go:204: delivery after 20 min of failed nudges = <nil>, want it unhealthy
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/nudge	2.308s
+--- FAIL: TestCheckExitsOneForARowThatKeepsFailing (0.01s)
+    outbox_cmd_test.go:142: code=0 out="integrity: ok\nitems: 0\ndecisions: 0\nrelays: 0\nevents: 0\nmessages: 0\ntokens: 1\n", want exit 1 for a row retried for an hour
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	6.036s
+FAIL
+exit=1
