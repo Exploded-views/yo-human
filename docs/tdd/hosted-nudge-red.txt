@@ -397,3 +397,20 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	6.036s
 FAIL
 exit=1
+
+$ go test -count=1 -run TestBarkURL ./internal/hosted/app   # review should-fix 3
+--- FAIL: TestBarkURLIsAnAbsoluteHTTPSURLOrLoopbackHTTP (0.00s)
+    config_bark_test.go:19: "bark.example.com": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "ftp://bark.example.com": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "http://bark.example.com": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "https://": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "https:///push": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "https://user:PASS-FAKE@bark.example.com": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "https://bark.example.com?key=DEVICE-KEY-FAKE": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "https://bark.example.com#x": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: " ": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "//bark.example.com": err = <nil>, want a refusal naming YH_BARK_URL
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.235s
+FAIL
+exit=1
