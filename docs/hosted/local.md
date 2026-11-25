@@ -13,6 +13,11 @@ the machine, and nothing outside it can reach the bus.
   `YH_BARK_DEVICE_KEY` all set, `serve` sends quiet nudges and Duet's messages to your phone; with none
   set it says so and sends nothing. `yo-human-hosted outbox test` queues a test push, and
   `yo-human-hosted check` exits 1 and prints the delivery counts while delivery is not healthy.
+  `YH_BARK_URL` must be an absolute `https` URL (`http` only for a loopback host). A pending message
+  that keeps failing, or a nudge that keeps failing, counts as unhealthy once it is 10 minutes old.
+- **Duet's replies in a thread on an item addressed to you push to your phone.** `YH_DUET_REPLY_PUSH`
+  defaults to `on`. Set it to `off` and Duet's replies queue nothing; its own posts to you, and a node's
+  `page`, are not affected.
 - **There is no approval page until Tasks 10c and 10d, and no policy file until Task 10f.** Until the
   policy exists every approval is refused as not approvable.
 

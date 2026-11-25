@@ -52,6 +52,8 @@ func (b *Bus) queueReply(x Tx, p Principal, it Item, body string, sev Severity, 
 	}
 	row := b.pushRow(it, sev)
 	switch {
+	case p.Kind == PrincipalDuet && b.l.NoDuetReplyPush:
+		return nil
 	case p.Kind == PrincipalDuet:
 		row.Kind, row.Title, row.Body = OutboxDuetPost, "yo-human", clip(body, maxPushBody)
 	case p.Kind == PrincipalNode && urg == UrgencyPage:

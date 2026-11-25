@@ -95,6 +95,7 @@ func LoadConfig(env func(string) string) (Config, error) {
 		ApproveOrigin:      l.approveOrigin(l.required("YH_APPROVE_ORIGIN")),
 		ChallengeTTL:       l.dur("YH_CHALLENGE_TTL", "5m", maxChallengeTTL),
 		DeskTTL:            l.dur("YH_DESK_TTL", "15m", maxDeskTTL),
+		DuetReplyPush:      l.oneOf("YH_DUET_REPLY_PUSH", "on", "on", "off") == "on",
 	}
 	c.WalledSwarms = l.walled()
 	c.ListenMCP, c.ListenApprove = l.listeners()

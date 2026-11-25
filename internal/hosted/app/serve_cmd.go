@@ -89,5 +89,5 @@ func (a admin) served(err error) int {
 // busLimits is the bus's settings from the configuration. The bus kicks the worker after every
 // commit.
 func busLimits(cfg Config, k *kicker) bus.Limits {
-	return bus.Limits{LinkHosts: cfg.LinkHosts, WalledSwarms: cfg.WalledSwarms, OnCommit: k.kick}
+	return bus.Limits{LinkHosts: cfg.LinkHosts, WalledSwarms: cfg.WalledSwarms, OnCommit: k.kick, NoDuetReplyPush: !cfg.DuetReplyPush}
 }
