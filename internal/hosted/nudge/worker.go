@@ -174,8 +174,19 @@ func (w *Worker) raise(ctx context.Context, now time.Time, status int) error {
 	})
 }
 
-// clearIn clears the flag in x when this worker saw it raised. Only a 2xx calls it.
+// clearIn is what a 2xx does in x: it clears the broken flag when this worker saw it raised, and
+// the record of transient nudge failures.
 func (w *Worker) clearIn(x bus.Tx) error {
+	ns, err := x.NudgeState()
+	if err != nil {
+		return err
+	}
+	if !ns.StuckSince.IsZero() {
+		ns.StuckSince, ns.StuckStatus = time.Time{}, 0
+		if err := x.PutNudgeState(ns); err != nil {
+			return err
+		}
+	}
 	if !w.broken {
 		return nil
 	}

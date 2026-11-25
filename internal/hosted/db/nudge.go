@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -11,9 +13,9 @@ import (
 // NudgeState is the collapsed nudge's memory (one row, written by the migration).
 func (x *txn) NudgeState() (bus.NudgeState, error) {
 	var n bus.NudgeState
-	var sent, failed string
-	err := x.tx.QueryRowContext(x.ctx, `SELECT last_seq, last_sent, count, last_status, failed_at FROM nudge_state WHERE id = 1`).
-		Scan(&n.LastSeq, &sent, &n.Count, &n.LastStatus, &failed)
+	var sent, failed, stuck string
+	err := x.tx.QueryRowContext(x.ctx, `SELECT last_seq, last_sent, count, last_status, failed_at, stuck_since, stuck_status FROM nudge_state WHERE id = 1`).
+		Scan(&n.LastSeq, &sent, &n.Count, &n.LastStatus, &failed, &stuck, &n.StuckStatus)
 	if err != nil {
 		return bus.NudgeState{}, fmt.Errorf("db: read nudge state: %w", err)
 	}
@@ -23,13 +25,17 @@ func (x *txn) NudgeState() (bus.NudgeState, error) {
 	if n.FailedAt, err = parseTime(failed); err != nil {
 		return bus.NudgeState{}, fmt.Errorf("db: read nudge state: %w", err)
 	}
+	if n.StuckSince, err = parseTime(stuck); err != nil {
+		return bus.NudgeState{}, fmt.Errorf("db: read nudge state: %w", err)
+	}
 	return n, nil
 }
 
 // PutNudgeState replaces the nudge's memory.
 func (x *txn) PutNudgeState(n bus.NudgeState) error {
-	_, err := x.tx.ExecContext(x.ctx, `UPDATE nudge_state SET last_seq = ?, last_sent = ?, count = ?, last_status = ?, failed_at = ? WHERE id = 1`,
-		n.LastSeq, fmtTime(n.LastSent), n.Count, n.LastStatus, fmtTime(n.FailedAt))
+	_, err := x.tx.ExecContext(x.ctx, `UPDATE nudge_state SET last_seq = ?, last_sent = ?, count = ?, last_status = ?, failed_at = ?,
+		stuck_since = ?, stuck_status = ? WHERE id = 1`,
+		n.LastSeq, fmtTime(n.LastSent), n.Count, n.LastStatus, fmtTime(n.FailedAt), fmtTime(n.StuckSince), n.StuckStatus)
 	if err != nil {
 		return fmt.Errorf("db: write nudge state: %w", err)
 	}
@@ -117,11 +123,9 @@ func (x *txn) DeliveryState(now time.Time) (*bus.DeliveryState, error) {
 	if err := x.countFailed(ds, fmtTime(now.Add(-bus.DeliveryFailedWindow))); err != nil {
 		return nil, err
 	}
-	var overdue int
-	err = x.tx.QueryRowContext(x.ctx, `SELECT count(*), coalesce(sum(next_at < ?), 0) FROM outbox WHERE state = 'pending'`,
-		fmtTime(now.Add(-bus.DeliveryOverdue))).Scan(&ds.Pending, &overdue)
+	overdue, err := x.countPending(ds, fmtTime(now.Add(-bus.DeliveryOverdue)))
 	if err != nil {
-		return nil, fmt.Errorf("db: count pending: %w", err)
+		return nil, err
 	}
 	if !ds.Broken && ds.Failed == 0 && overdue == 0 {
 		return nil, nil //nolint:nilnil // nil is the documented healthy answer
@@ -156,4 +160,29 @@ func (x *txn) countFailed(ds *bus.DeliveryState, cutoff string) error {
 func (d *DB) Delivery(ctx context.Context, now time.Time) (ds *bus.DeliveryState, err error) {
 	err = d.Tx(ctx, func(x bus.Tx) (err error) { ds, err = x.DeliveryState(now); return })
 	return ds, err
+}
+
+// countPending counts every pending row into ds.Pending and returns how many are overdue: past
+// their time by DeliveryOverdue, or tried at least once and created longer ago than that (a row
+// in backoff always has a next_at ahead, so its age is what shows an outage). A nudge whose
+// transient failures began before the cutoff counts as one more, with its status.
+func (x *txn) countPending(ds *bus.DeliveryState, cutoff string) (overdue int, err error) {
+	err = x.tx.QueryRowContext(x.ctx, `SELECT count(*), coalesce(sum(next_at < ? OR (attempts > 0 AND created < ?)), 0)
+		FROM outbox WHERE state = 'pending'`, cutoff, cutoff).Scan(&ds.Pending, &overdue)
+	if err != nil {
+		return 0, fmt.Errorf("db: count pending: %w", err)
+	}
+	var status int
+	err = x.tx.QueryRowContext(x.ctx, `SELECT stuck_status FROM nudge_state WHERE stuck_since <> '' AND stuck_since < ?`, cutoff).Scan(&status)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return overdue, nil
+	case err != nil:
+		return 0, fmt.Errorf("db: count stuck nudge: %w", err)
+	}
+	ds.Pending++
+	if !ds.Broken && ds.Status == 0 {
+		ds.Status = status
+	}
+	return overdue + 1, nil
 }

@@ -218,7 +218,24 @@ func (w *Worker) nudged(ctx context.Context, now time.Time, p *plan, res error) 
 		return errors.Join(w.restore(ctx, p), w.raise(ctx, now, notify.Status(res)))
 	}
 	w.log.Info("nudge will retry", "nudge", p.seq, "status", notify.Status(res))
-	return w.restore(ctx, p)
+	return errors.Join(w.restore(ctx, p), w.stuck(ctx, now, notify.Status(res)))
+}
+
+// stuck records a transient failure of the nudge: when the run of them began, and the latest
+// status. A 2xx from anything clears it (clearIn). Without it an outage that answers with a 5xx
+// or a timeout would show nowhere when only a nudge is due.
+func (w *Worker) stuck(ctx context.Context, now time.Time, status int) error {
+	return w.s.Tx(ctx, func(x bus.Tx) error {
+		ns, err := x.NudgeState()
+		if err != nil {
+			return err
+		}
+		if ns.StuckSince.IsZero() {
+			ns.StuckSince = now
+		}
+		ns.StuckStatus = status
+		return x.PutNudgeState(ns)
+	})
 }
 
 // restore puts back the nudge state and the deferred rows the plan changed, so the next tick
