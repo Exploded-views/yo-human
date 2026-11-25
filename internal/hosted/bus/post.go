@@ -29,6 +29,9 @@ func (b *Bus) Post(ctx context.Context, p Principal, d Draft) (PostResult, error
 	err := b.s.Tx(ctx, func(x Tx) error {
 		var err error
 		res, err = b.upsert(x, p, swarm, d, hash)
+		if err == nil && res.Outcome != OutcomeUnchanged {
+			err = b.queuePost(x, p, res.Item)
+		}
 		return err
 	})
 	if err != nil {

@@ -2,7 +2,9 @@ package bus_test
 
 import (
 	"context"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/Exploded-views/yo-human/internal/hosted/bus"
 )
@@ -67,5 +69,50 @@ func TestWaitingCountsTheGroupsOnly(t *testing.T) {
 	e.post(t, duet, notice("d"))          // Duet's own posts are not waiting for Duet
 	if n, err := e.b.Waiting(ctx); err != nil || n != 1 {
 		t.Errorf("Waiting = %d, %v, want 1: the question, since a notice has no inbox group", n, err)
+	}
+}
+
+// failing is a Store whose DeliveryState or ListInboxItems fails.
+type failing struct {
+	bus.Store
+	delivery, inbox bool
+}
+
+type failingTx struct {
+	bus.Tx
+	f failing
+}
+
+func (f failing) Tx(ctx context.Context, fn func(bus.Tx) error) error {
+	return f.Store.Tx(ctx, func(x bus.Tx) error { return fn(failingTx{x, f}) })
+}
+
+func (t failingTx) DeliveryState(now time.Time) (*bus.DeliveryState, error) {
+	if t.f.delivery {
+		return nil, errDisk
+	}
+	return t.Tx.DeliveryState(now)
+}
+
+func (t failingTx) ListInboxItems(since int64) ([]bus.Item, error) {
+	if t.f.inbox {
+		return nil, errDisk
+	}
+	return t.Tx.ListInboxItems(since)
+}
+
+func TestReadsReportAStoreFailureWithoutItsText(t *testing.T) {
+	e := newEnv(t)
+	it := e.post(t, node("ci-1", "crew"), notice("h1")).Item
+	ctx := context.Background()
+	bd := bus.New(failing{Store: e.d, delivery: true}, e.now, e.l)
+	bi := bus.New(failing{Store: e.d, inbox: true}, e.now, e.l)
+	_, err1 := bd.Inbox(ctx, duet, 0)
+	_, err2 := bd.Item(ctx, duet, it.ID)
+	_, err3 := bi.Waiting(ctx)
+	for i, err := range []error{err1, err2, err3} {
+		if be, ok := bus.AsError(err); !ok || be.Code != bus.CodeInternal || strings.Contains(err.Error(), "secret") {
+			t.Errorf("call %d: %v, want an internal error that names no path", i, err)
+		}
 	}
 }

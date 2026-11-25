@@ -29,8 +29,10 @@ func (b *Bus) Reply(ctx context.Context, p Principal, threadID, body string, sev
 			return err
 		}
 		swarm = it.Swarm
-		m, err = b.appendMessage(x, it, p, body, sev, urg)
-		return err
+		if m, err = b.appendMessage(x, it, p, body, sev, urg); err != nil {
+			return err
+		}
+		return b.queueReply(x, p, it, body, sev, urg)
 	})
 	if err != nil {
 		return Message{}, mapStoreErr(err)
