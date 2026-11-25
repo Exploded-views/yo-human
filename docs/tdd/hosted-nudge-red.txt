@@ -244,3 +244,81 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/nudge	16.571s
 FAIL
 exit=1
+
+$ go test -race -count=1 -timeout 120s ./internal/hosted/web ./internal/hosted/app
+--- FAIL: TestInboxAndItemShowDeliveryOnlyWhileItIsNotHealthy (0.13s)
+    delivery_test.go:31: inbox_for_claude delivery = <nil>, want map[broken:true failed:0 pending:0 since:2026-10-28T09:00:00Z status:401]
+    delivery_test.go:31: item delivery = <nil>, want map[broken:true failed:0 pending:0 since:2026-10-28T09:00:00Z status:401]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	7.493s
+--- FAIL: TestOutboxTestQueuesOneTestPush (0.07s)
+    outbox_cmd_test.go:37: code=64 out="" err="yo-human-hosted: unknown command \"outbox\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version    print the version\n  token      create, list and revoke node tokens and desk starters\n  check      check the database's integrity and count its rows\n  serve      run the MCP and approval listeners until SIGTERM or SIGINT\n  selfcheck  post an approval and a question, record Duet's words and read the answer, offline\n"
+--- FAIL: TestOutboxRefusesAMissingDatabaseAndBadUsage (0.00s)
+    outbox_cmd_test.go:62: missing database: code=64 out="" err="yo-human-hosted: unknown command \"outbox\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version    print the version\n  token      create, list and revoke node tokens and desk starters\n  check      check the database's integrity and count its rows\n  serve      run the MCP and approval listeners until SIGTERM or SIGINT\n  selfcheck  post an approval and a question, record Duet's words and read the answer, offline\n"
+--- FAIL: TestUsageNamesOutbox (0.00s)
+    outbox_cmd_test.go:73: the usage text does not mention outbox
+--- FAIL: TestCheckExitsOneAndPrintsTheCountsWhileDeliveryIsNotHealthy (0.09s)
+    outbox_cmd_test.go:100: output lacks "delivery: broken\n":
+        integrity: ok
+        items: 0
+        decisions: 0
+        relays: 0
+        events: 0
+        messages: 0
+        tokens: 1
+    outbox_cmd_test.go:100: output lacks "delivery_since: 2026-11-02T09:00:00Z\n":
+        integrity: ok
+        items: 0
+        decisions: 0
+        relays: 0
+        events: 0
+        messages: 0
+        tokens: 1
+    outbox_cmd_test.go:100: output lacks "delivery_status: 401\n":
+        integrity: ok
+        items: 0
+        decisions: 0
+        relays: 0
+        events: 0
+        messages: 0
+        tokens: 1
+    outbox_cmd_test.go:100: output lacks "delivery_failed: 0\n":
+        integrity: ok
+        items: 0
+        decisions: 0
+        relays: 0
+        events: 0
+        messages: 0
+        tokens: 1
+    outbox_cmd_test.go:100: output lacks "delivery_pending: 0\n":
+        integrity: ok
+        items: 0
+        decisions: 0
+        relays: 0
+        events: 0
+        messages: 0
+        tokens: 1
+    outbox_cmd_test.go:104: code=0 err="", want exit 1 with a word on stderr
+--- FAIL: TestCheckExitsOneForARefusedMessageAndAnOverduePushOnly (0.09s)
+    outbox_cmd_test.go:123: code=0 out="integrity: ok\nitems: 0\ndecisions: 0\nrelays: 0\nevents: 0\nmessages: 0\ntokens: 1\n", want an overdue pending row called stuck
+--- FAIL: TestServeSendsTheOutboxThroughBark (0.07s)
+    serve_worker_test.go:46: outbox test: 64 yo-human-hosted: unknown command "outbox"
+        
+        usage: yo-human-hosted <command>
+        
+        commands:
+          version    print the version
+          token      create, list and revoke node tokens and desk starters
+          check      check the database's integrity and count its rows
+          serve      run the MCP and approval listeners until SIGTERM or SIGINT
+          selfcheck  post an approval and a question, record Duet's words and read the answer, offline
+--- FAIL: TestServeWithoutBarkSaysSoAndRuns (0.10s)
+    serve_worker_test.go:79: stderr "" does not say no push will be sent
+--- FAIL: TestServeRefusesAHalfConfiguredBark (0.26s)
+    serve_worker_test.go:90: [YH_BARK_URL https://bark.example.com]: code=0 err="", want a config refusal that names the variable and no value
+    serve_worker_test.go:90: [YH_BARK_URL https://bark.example.com YH_BARK_USER u YH_BARK_PASSWORD p]: code=0 err="", want a config refusal that names the variable and no value
+    serve_worker_test.go:90: [YH_BARK_USER u YH_BARK_PASSWORD p YH_BARK_DEVICE_KEY k]: code=0 err="", want a config refusal that names the variable and no value
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	5.958s
+FAIL
+exit=1

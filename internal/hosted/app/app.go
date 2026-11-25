@@ -21,6 +21,9 @@ const (
 	// ExitInternal is serve or selfcheck failing in a way the caller cannot fix by changing its
 	// input: a listener that would not bind, a bus that did not answer as it should.
 	ExitInternal = 70
+	// ExitDegraded is `check` finding the database sound but delivery not healthy: the channel is
+	// refused, a message was refused in the last 24 hours, or a pending message is overdue.
+	ExitDegraded = 1
 	// ExitConfig is a configuration the server refuses to start with.
 	ExitConfig = 78
 )

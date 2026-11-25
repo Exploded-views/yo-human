@@ -182,3 +182,14 @@ func statusesOf(in []bus.StatusDoc) []statusWire {
 	}
 	return out
 }
+
+// deliveryWire says the owner's phone may not be hearing from the bus. It is present only then.
+type deliveryWire struct {
+	Broken  bool   `json:"broken"`
+	Since   string `json:"since"`
+	Status  int    `json:"status"`
+	Failed  int    `json:"failed"`
+	Pending int    `json:"pending"`
+}
+
+func deliveryOf(d *bus.DeliveryState) *deliveryWire { return nil }
