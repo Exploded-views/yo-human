@@ -352,3 +352,11 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/tools/perf	7.997s
 FAIL
 exit=1
+
+$ go test -race -count=1 ./internal/hosted/egress/bark   # review of my own slice A: an unusable base URL was classed transient and retried forever
+--- FAIL: TestBarkWithAnUnusableBaseURLIsABrokenChannel (0.00s)
+    bark_test.go:268: err = bark: the base URL is not usable, want a broken channel (nothing it sends will arrive) that does not echo the URL
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/egress/bark	5.220s
+FAIL
+exit=1

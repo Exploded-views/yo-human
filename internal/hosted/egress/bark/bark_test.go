@@ -260,3 +260,11 @@ func TestBarkTrailingSlashBaseURL(t *testing.T) {
 		t.Errorf("path = %q, want /push", got)
 	}
 }
+
+func TestBarkWithAnUnusableBaseURLIsABrokenChannel(t *testing.T) {
+	c := &bark.Client{BaseURL: "http://\x7f" + device, User: user, Password: pass, DeviceKey: device}
+	err := c.Send(context.Background(), notify.Message{Title: "t", Body: "b", Group: "g", Level: notify.LevelActive})
+	if err == nil || strings.Contains(err.Error(), device) || notify.IsPermanent(err) || !notify.IsBroken(err) {
+		t.Errorf("err = %v, want a broken channel (nothing it sends will arrive) that does not echo the URL", err)
+	}
+}
