@@ -1,0 +1,57 @@
+$ go test -race -count=1 ./internal/hosted/notify ./internal/hosted/egress/bark
+--- FAIL: TestClassesAreDistinct (0.00s)
+    notify_test.go:25: permanent: permanent=false broken=false, want true false
+    notify_test.go:25: broken: permanent=false broken=false, want false true
+    notify_test.go:25: wrapped permanent: permanent=false broken=false, want true false
+    notify_test.go:25: wrapped broken: permanent=false broken=false, want false true
+--- FAIL: TestStatusSurvivesClassing (0.00s)
+    notify_test.go:41: status 0 permanent false, want 413 true
+    notify_test.go:45: status 0 broken false, want 401 true
+--- FAIL: TestRetryAfter (0.00s)
+    notify_test.go:68: two minutes: RetryAfter = 0s, want 2m0s
+    notify_test.go:68: capped at an hour: RetryAfter = 0s, want 1h0m0s
+    notify_test.go:68: exactly an hour: RetryAfter = 0s, want 1h0m0s
+    notify_test.go:68: kept through a class: RetryAfter = 0s, want 1m0s
+    notify_test.go:68: kept through a wrap: RetryAfter = 0s, want 1m0s
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/notify	0.085s
+--- FAIL: TestBarkRequestShape (0.00s)
+    bark_test.go:87: Bark got no request
+--- FAIL: TestBarkLevelMapping (0.00s)
+    bark_test.go:109: Bark got no request
+--- FAIL: TestBarkSendsIDOnlyWhenSet (0.00s)
+    bark_test.go:120: Bark got no request
+--- FAIL: TestBarkNameAndLevels (0.00s)
+    bark_test.go:128: Name = ""
+    bark_test.go:136: Levels lacks passive
+    bark_test.go:136: Levels lacks active
+    bark_test.go:136: Levels lacks time-sensitive
+    bark_test.go:136: Levels lacks critical
+--- FAIL: TestBarkErrorsCarryNoSecrets (0.00s)
+    bark_test.go:146: err = <nil>, want one naming status 500
+--- FAIL: TestBarkErrorClasses (0.00s)
+    bark_test.go:179: 400: err=<nil> permanent=false broken=false status=0, want permanent=true broken=false
+    bark_test.go:179: 404: err=<nil> permanent=false broken=false status=0, want permanent=true broken=false
+    bark_test.go:179: 413: err=<nil> permanent=false broken=false status=0, want permanent=true broken=false
+    bark_test.go:179: 401: err=<nil> permanent=false broken=false status=0, want permanent=false broken=true
+    bark_test.go:179: 403: err=<nil> permanent=false broken=false status=0, want permanent=false broken=true
+    bark_test.go:179: 408: err=<nil> permanent=false broken=false status=0, want permanent=false broken=false
+    bark_test.go:179: 429: err=<nil> permanent=false broken=false status=0, want permanent=false broken=false
+    bark_test.go:179: 500: err=<nil> permanent=false broken=false status=0, want permanent=false broken=false
+    bark_test.go:179: 503: err=<nil> permanent=false broken=false status=0, want permanent=false broken=false
+--- FAIL: TestBarkSuccessAndClosedServer (0.00s)
+    bark_test.go:195: a closed server: <nil>, want a transient error
+--- FAIL: TestBarkRetryAfter (0.00s)
+    bark_test.go:214: 429 Retry-After "120": RetryAfter = 0s, want 2m0s
+    bark_test.go:214: 503 Retry-After "30": RetryAfter = 0s, want 30s
+    bark_test.go:214: 429 Retry-After "99999": RetryAfter = 0s, want 1h0m0s
+--- FAIL: TestBarkHonoursTheContext (0.00s)
+    bark_test.go:225: err = <nil>, want one wrapping context.Canceled
+--- FAIL: TestBarkNilHTTPUsesFiveSecondClient (0.00s)
+    bark_test.go:245: a stalled server gave <nil> after 125ns, want a transient error near 5 s
+--- FAIL: TestBarkTrailingSlashBaseURL (0.00s)
+    bark_test.go:259: Bark got no request
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/egress/bark	0.209s
+FAIL
+exit=1
