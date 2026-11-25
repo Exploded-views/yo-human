@@ -470,3 +470,12 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.219s
 FAIL
 exit=1
+
+# Delta review (a85ad9f), must-fix: a row held by the cap after a 2xx counted as an outage.
+$ go test -count=1 -run 'TestAHeldRowThatFailed|TestARowTriedAfter' ./internal/hosted/nudge
+--- FAIL: TestAHeldRowThatFailedOnceInABlipIsNotAnOutage (0.01s)
+    lastok_test.go:27: delivery = &{Broken:false Since:0001-01-01 00:00:00 +0000 UTC Status:0 Failed:0 Pending:1} at t+16m with the channel healthy, want nil
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/nudge	0.253s
+FAIL
+exit=1
