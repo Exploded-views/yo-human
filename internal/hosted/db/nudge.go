@@ -165,7 +165,9 @@ func (d *DB) Delivery(ctx context.Context, now time.Time) (ds *bus.DeliveryState
 // countPending counts every pending row into ds.Pending and returns how many are overdue: past
 // their time by DeliveryOverdue, or tried at least once and created longer ago than that (a row
 // in backoff always has a next_at ahead, so its age is what shows an outage). A nudge whose
-// transient failures began before the cutoff counts as one more, with its status.
+// transient failures began before the cutoff counts as one more, with its status. A row the cap
+// holds after a 2xx has its attempts reset by the worker, so only a row with no 2xx since its
+// last attempt is tried and counted here.
 func (x *txn) countPending(ds *bus.DeliveryState, cutoff string) (overdue int, err error) {
 	err = x.tx.QueryRowContext(x.ctx, `SELECT count(*), coalesce(sum(next_at < ? OR (attempts > 0 AND created < ?)), 0)
 		FROM outbox WHERE state = 'pending'`, cutoff, cutoff).Scan(&ds.Pending, &overdue)

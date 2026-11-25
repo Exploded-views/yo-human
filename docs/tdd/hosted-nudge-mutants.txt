@@ -152,3 +152,9 @@ mutant 41: review 4: a 3xx is not a broken channel
   file: internal/hosted/egress/bark/bark.go
   exit=1 KILLED; failing tests: TestBarkNeverFollowsARedirectAndTreatsItAsBroken
 exit=0
+
+# Delta review (a85ad9f): mutant 45, run by hand (edit one line, go test ./internal/hosted/nudge ./internal/hosted/db, restore).
+mutant 45: delta review: a row the cap holds keeps its attempts, so it still counts as retrying after a 2xx
+  file: internal/hosted/nudge/outbox.go
+  exit=1 KILLED; failing tests: TestAHeldRowThatFailedOnceInABlipIsNotAnOutage
+exit=0

@@ -106,7 +106,9 @@ func (w *Worker) judge(x bus.Tx, now time.Time, r *bus.OutboxRow) (verdict, erro
 	if err != nil || until.IsZero() {
 		return send, err
 	}
-	r.NextAt = until
+	// A row is only held after a push of its item went out, so a 2xx has come since its last
+	// failed attempt: it waits by design, and no longer counts as retrying (see countPending).
+	r.NextAt, r.Attempts = until, 0
 	return held, x.UpdateOutbox(*r)
 }
 
