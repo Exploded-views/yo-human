@@ -432,3 +432,23 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/egress/bark	0.179s
 FAIL
 exit=1
+
+$ go test -count=1 -run Shutdown ./internal/hosted/nudge   # review should-fix 7
+--- FAIL: TestShutdownBetweenAnOutboxSendAndItsLedgerWrite (0.01s)
+    shutdown_test.go:27: Tick = db: begin: context canceled, want the bookkeeping done on a context the shutdown does not end
+    shutdown_test.go:29: row is pending, want sent
+    shutdown_test.go:32: 0 ledger rows, want the push recorded
+--- FAIL: TestShutdownBetweenANudgeSendAndItsLedgerWrite (0.01s)
+    shutdown_test.go:39: Tick = db: begin: context canceled, want the bookkeeping done on a context the shutdown does not end
+    shutdown_test.go:41: 0 ledger rows, want the nudge recorded
+--- FAIL: TestShutdownAfterATransientNudgeFailureStillRestoresTheState (0.01s)
+    shutdown_test.go:49: Tick = db: begin: context canceled
+        db: begin: context canceled, want the bookkeeping done on a context the shutdown does not end
+    shutdown_test.go:53: delivered [], want ["1 new, 1 waiting for Claude"]
+--- FAIL: TestShutdownAfterABrokenChannelStillRaisesTheFlag (0.00s)
+    shutdown_test.go:60: Tick = db: begin: context canceled, want the bookkeeping done on a context the shutdown does not end
+    shutdown_test.go:62: the flag was not raised
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/nudge	0.218s
+FAIL
+exit=1

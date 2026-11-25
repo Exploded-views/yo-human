@@ -54,6 +54,7 @@ type fakeChan struct {
 	def      error
 	gate     chan struct{}
 	entered  chan struct{}
+	onSend   func() // called after the send is recorded, before it answers
 }
 
 func (c *fakeChan) Name() string { return "fake" }
@@ -75,6 +76,9 @@ func (c *fakeChan) Send(ctx context.Context, m notify.Message) error {
 		err, c.queue = c.queue[0], c.queue[1:]
 	}
 	c.attempts = append(c.attempts, attempt{m, c.clk.now(), err})
+	if c.onSend != nil {
+		c.onSend()
+	}
 	return err
 }
 
