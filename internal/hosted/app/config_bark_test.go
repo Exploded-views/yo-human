@@ -26,3 +26,30 @@ func TestBarkURLIsAnAbsoluteHTTPSURLOrLoopbackHTTP(t *testing.T) {
 		}
 	}
 }
+
+func TestDuetReplyPushDefaultsOnAndTakesOffAndOn(t *testing.T) {
+	for _, c := range []struct {
+		val  string
+		want bool
+	}{{"", true}, {"on", true}, {"off", false}} {
+		cfg, err := LoadConfig(envOf(with("YH_DUET_REPLY_PUSH", c.val)))
+		if err != nil || cfg.DuetReplyPush != c.want {
+			t.Errorf("%q: DuetReplyPush=%v err=%v, want %v", c.val, cfg.DuetReplyPush, err, c.want)
+		}
+	}
+	for _, bad := range []string{"yes", "OFF", "0"} {
+		if _, err := LoadConfig(envOf(with("YH_DUET_REPLY_PUSH", bad))); err == nil || !strings.HasPrefix(err.Error(), "YH_DUET_REPLY_PUSH:") {
+			t.Errorf("%q: err = %v, want a refusal naming the variable", bad, err)
+		}
+	}
+}
+
+// serve hands the switch to the bus.
+func TestBusLimitsFollowTheDuetReplySwitch(t *testing.T) {
+	for _, push := range []bool{true, false} {
+		l := busLimits(Config{DuetReplyPush: push, LinkHosts: []string{"github.com"}, WalledSwarms: []string{"client"}}, &kicker{})
+		if l.NoDuetReplyPush == push || len(l.LinkHosts) != 1 || len(l.WalledSwarms) != 1 || l.OnCommit == nil {
+			t.Errorf("DuetReplyPush=%v: limits %+v", push, l)
+		}
+	}
+}

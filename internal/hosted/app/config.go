@@ -49,6 +49,8 @@ type Config struct {
 	WebAuthnRPID, ApproveOrigin                      string
 	ChallengeTTL, DeskTTL                            time.Duration
 	ListenMCP, ListenApprove                         string
+	// DuetReplyPush: Duet's reply in a thread on an owner item pushes to his phone (YH_DUET_REPLY_PUSH).
+	DuetReplyPush bool
 }
 
 // The ceilings the plan puts on three durations.

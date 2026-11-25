@@ -452,3 +452,21 @@ FAIL
 FAIL	github.com/Exploded-views/yo-human/internal/hosted/nudge	0.218s
 FAIL
 exit=1
+
+$ go test -count=1 -run "DuetReply|BusLimits" ./internal/hosted/bus ./internal/hosted/app   # ruling ev-1794: finding 5 behind a switch
+--- FAIL: TestDuetReplyPushSwitch (0.01s)
+    queue_test.go:245: switch off=true: rows [duet_post page duet_post], want [page duet_post]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.210s
+--- FAIL: TestDuetReplyPushDefaultsOnAndTakesOffAndOn (0.00s)
+    config_bark_test.go:37: "": DuetReplyPush=false err=<nil>, want true
+    config_bark_test.go:37: "on": DuetReplyPush=false err=<nil>, want true
+    config_bark_test.go:42: "yes": err = <nil>, want a refusal naming the variable
+    config_bark_test.go:42: "OFF": err = <nil>, want a refusal naming the variable
+    config_bark_test.go:42: "0": err = <nil>, want a refusal naming the variable
+--- FAIL: TestBusLimitsFollowTheDuetReplySwitch (0.00s)
+    config_bark_test.go:52: DuetReplyPush=false: limits {LinkHosts:[github.com] Policy:{V:0 Rules:[]} WalledSwarms:[client] OnCommit:0x100dfc790 NoDuetReplyPush:false}
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.219s
+FAIL
+exit=1

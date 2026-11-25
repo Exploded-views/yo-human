@@ -190,4 +190,7 @@ type Limits struct {
 	// OnCommit, if set, is called after every write that has committed, so a delivery worker can
 	// look again at once instead of at its next tick. It must not block.
 	OnCommit func()
+	// NoDuetReplyPush stops Duet's reply in a thread on an item addressed to the owner from
+	// pushing to his phone (YH_DUET_REPLY_PUSH=off). The zero value pushes it.
+	NoDuetReplyPush bool
 }

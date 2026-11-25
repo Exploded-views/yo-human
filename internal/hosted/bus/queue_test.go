@@ -212,3 +212,42 @@ func TestOnCommitIsCalledAfterACommittedWrite(t *testing.T) {
 		t.Fatalf("after a refused post: calls=%d err=%v, want still 1", calls, err)
 	}
 }
+
+// YH_DUET_REPLY_PUSH: Duet's reply in a node's thread addressed to the owner pushes by default
+// (the ruling on review finding 5) and not when the switch is off. A node's page reply and
+// Duet's own post to the owner are not the switch's business.
+func TestDuetReplyPushSwitch(t *testing.T) {
+	for _, off := range []bool{false, true} {
+		e := newEnv(t)
+		l := e.l
+		l.NoDuetReplyPush = off
+		b := bus.New(e.d, e.now, l)
+		ctx := context.Background()
+		it := e.post(t, node("ci-1", "crew"), notice("h1")).Item
+		if _, err := b.Reply(ctx, duet, it.ID, "which port?", bus.SeverityNormal, bus.UrgencyDigest); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := b.Reply(ctx, node("ci-2", "crew"), it.ID, "now", bus.SeverityNormal, bus.UrgencyPage); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := b.Post(ctx, duet, duetNote("own", bus.SeverityNormal)); err != nil {
+			t.Fatal(err)
+		}
+		var kinds []bus.OutboxKind
+		for _, r := range e.outbox(t) {
+			kinds = append(kinds, r.Kind)
+		}
+		want := []bus.OutboxKind{bus.OutboxDuetPost, bus.OutboxPage, bus.OutboxDuetPost}
+		if off {
+			want = []bus.OutboxKind{bus.OutboxPage, bus.OutboxDuetPost} // the reply is gone; the page and Duet's own post stay
+		}
+		if len(kinds) != len(want) {
+			t.Fatalf("switch off=%v: rows %v, want %v", off, kinds, want)
+		}
+		for i := range want {
+			if kinds[i] != want[i] {
+				t.Fatalf("switch off=%v: rows %v, want %v", off, kinds, want)
+			}
+		}
+	}
+}

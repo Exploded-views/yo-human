@@ -56,7 +56,7 @@ func runServe(args []string, env func(string) string, stdout, stderr io.Writer) 
 	// OAuth (Task 10) and the approval page and policy file (Tasks 10c, 10d, 10f) join here as they
 	// land. Until then Duet cannot connect and no approval is on the policy.
 	var k kicker
-	b := bus.New(d, now, bus.Limits{LinkHosts: cfg.LinkHosts, WalledSwarms: cfg.WalledSwarms, OnCommit: k.kick})
+	b := bus.New(d, now, busLimits(cfg, &k))
 	h := web.New(b, auth.NewVerifier(d, now, cfg.DeskTTL),
 		web.Config{PublicURL: cfg.PublicURL, ApproveOrigin: cfg.ApproveOrigin, OriginAllow: cfg.OriginAllow,
 			ToolDeadline: cfg.ToolDeadline, Log: slog.New(slog.NewTextHandler(stderr, nil))}, nil)
@@ -84,4 +84,10 @@ func (a admin) served(err error) int {
 	}
 	a.say("serve: %v", err)
 	return ExitInternal
+}
+
+// busLimits is the bus's settings from the configuration. The bus kicks the worker after every
+// commit.
+func busLimits(cfg Config, k *kicker) bus.Limits {
+	return bus.Limits{LinkHosts: cfg.LinkHosts, WalledSwarms: cfg.WalledSwarms, OnCommit: k.kick}
 }
