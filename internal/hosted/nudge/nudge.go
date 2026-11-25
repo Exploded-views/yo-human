@@ -192,6 +192,7 @@ func (w *Worker) news(s bus.Severity, u bus.Urgency) bool {
 
 // nudged applies what the channel answered.
 func (w *Worker) nudged(ctx context.Context, now time.Time, p *plan, res error) error {
+	ctx = context.WithoutCancel(ctx) // the push went out: its bookkeeping is a short local write that a shutdown must not cut off
 	switch {
 	case res == nil:
 		w.log.Info("nudge sent", "nudge", p.seq, "counted", len(p.items), "status", 200)
@@ -225,6 +226,7 @@ func (w *Worker) nudged(ctx context.Context, now time.Time, p *plan, res error) 
 // status. A 2xx from anything clears it (clearIn). Without it an outage that answers with a 5xx
 // or a timeout would show nowhere when only a nudge is due.
 func (w *Worker) stuck(ctx context.Context, now time.Time, status int) error {
+	ctx = context.WithoutCancel(ctx) // the push went out: its bookkeeping is a short local write that a shutdown must not cut off
 	return w.s.Tx(ctx, func(x bus.Tx) error {
 		ns, err := x.NudgeState()
 		if err != nil {
@@ -241,6 +243,7 @@ func (w *Worker) stuck(ctx context.Context, now time.Time, status int) error {
 // restore puts back the nudge state and the deferred rows the plan changed, so the next tick
 // looks at the same events again.
 func (w *Worker) restore(ctx context.Context, p *plan) error {
+	ctx = context.WithoutCancel(ctx) // the push went out: its bookkeeping is a short local write that a shutdown must not cut off
 	return w.s.Tx(ctx, func(x bus.Tx) error {
 		if err := x.PutNudgeState(p.prev); err != nil {
 			return err

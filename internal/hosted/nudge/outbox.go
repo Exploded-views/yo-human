@@ -214,6 +214,7 @@ func retryDelay(attempts int, retryAfter time.Duration) time.Duration {
 // it carried, are superseded; every sent row that names an item gets its one ledger row in the
 // same transaction. The 2xx clears the broken flag.
 func (w *Worker) sent(ctx context.Context, now time.Time, g []bus.OutboxRow) error {
+	ctx = context.WithoutCancel(ctx) // the push went out: its bookkeeping is a short local write that a shutdown must not cut off
 	low := g[0]
 	for _, r := range g {
 		low = lowerID(low, r)
@@ -249,6 +250,7 @@ func ledger(x bus.Tx, r bus.OutboxRow, now time.Time) error {
 
 // settle counts an attempt on every row of the group, applies change to each, and logs it.
 func (w *Worker) settle(ctx context.Context, g []bus.OutboxRow, msg string, status int, change func(*bus.OutboxRow)) error {
+	ctx = context.WithoutCancel(ctx) // the push went out: its bookkeeping is a short local write that a shutdown must not cut off
 	err := w.s.Tx(ctx, func(x bus.Tx) error {
 		for _, r := range g {
 			r.Attempts, r.LastStatus = r.Attempts+1, status

@@ -168,6 +168,7 @@ func (w *Worker) readFlag(ctx context.Context) (f bus.BrokenFlag, err error) {
 // raise sets the sticky flag, with the time and status of this refusal: a refused probe
 // re-raises it with the new time.
 func (w *Worker) raise(ctx context.Context, now time.Time, status int) error {
+	ctx = context.WithoutCancel(ctx)  // the push went out: its bookkeeping is a short local write that a shutdown must not cut off
 	w.broken, w.lastProbe = true, now // the next probe is probeEvery from this refusal
 	return w.s.Tx(ctx, func(x bus.Tx) error {
 		return x.PutBrokenFlag(bus.BrokenFlag{Raised: true, Since: now, Status: status})

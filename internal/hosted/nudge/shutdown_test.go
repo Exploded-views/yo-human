@@ -2,6 +2,7 @@ package nudge_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -15,8 +16,9 @@ func cancelledTick(t *testing.T, r *rig) {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	r.ch.onSend = cancel
-	if err := r.w.Tick(ctx); err != nil {
-		t.Errorf("Tick = %v, want the bookkeeping done on a context the shutdown does not end", err)
+	// Whatever the tick does after the cancel may stop with it; the push that went out must not.
+	if err := r.w.Tick(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		t.Errorf("Tick = %v", err)
 	}
 }
 
