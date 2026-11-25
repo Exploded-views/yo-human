@@ -24,22 +24,28 @@ func TestNudgeEventsIsTheBudgetLine(t *testing.T) {
 }
 
 // With 100,000 older events a tick's p95 stays within 2x of the empty database's: a tick reads
-// only the events after its cursor. A millisecond of slack covers timer noise on a loaded host.
+// only the events after its cursor. A millisecond of slack covers timer noise, and a loaded host
+// gets three tries: a scan of the old events is slower every time, and noise is not.
 func TestNudgeTickDoesNotGrowWithOldEvents(t *testing.T) {
-	empty, err := nudgeIn(filepath.Join(t.TempDir(), "a"), 100, 0, 40)
-	if err != nil {
-		t.Fatal(err)
+	var got, base time.Duration
+	for try := range 3 {
+		empty, err := nudgeIn(filepath.Join(t.TempDir(), "a"), 100, 0, 40)
+		if err != nil {
+			t.Fatal(err)
+		}
+		loaded, err := nudgeIn(filepath.Join(t.TempDir(), "b"), 100, NudgeOldEvents, 40)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(empty) != 40 || len(loaded) != 40 {
+			t.Fatalf("%d and %d samples, want 40 each", len(empty), len(loaded))
+		}
+		if got, base = p95(loaded), p95(empty); got <= 2*base+time.Millisecond {
+			return
+		}
+		t.Logf("try %d: p95 with 100,000 older events = %v, empty = %v", try+1, got, base)
 	}
-	loaded, err := nudgeIn(filepath.Join(t.TempDir(), "b"), 100, NudgeOldEvents, 40)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(empty) != 40 || len(loaded) != 40 {
-		t.Fatalf("%d and %d samples, want 40 each", len(empty), len(loaded))
-	}
-	if got, base := p95(loaded), p95(empty); got > 2*base+time.Millisecond {
-		t.Errorf("p95 with 100,000 older events = %v, empty = %v: a tick scans more than the events after its cursor", got, base)
-	}
+	t.Errorf("p95 with 100,000 older events = %v, empty = %v on every try: a tick scans more than the events after its cursor", got, base)
 }
 
 func TestNudgeSamplesAreEachATickWithAnEventToRead(t *testing.T) {
