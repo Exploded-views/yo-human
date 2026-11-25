@@ -195,8 +195,8 @@ func TestPageIsNotHeldByANudgeOrADuetPost(t *testing.T) {
 
 	b := r.post(crewNode, quietItem("b"))
 	r.duetSays(b, "looking at it")
-	r.tick() // Duet's message goes out and is in the ledger
-	r.advance(time.Minute)
+	r.tick()                    // Duet's message goes out and is in the ledger
+	r.advance(10 * time.Minute) // past the swarm's page spacing
 	r.reply(crewNode, b.ID, "now it is on fire", bus.SeverityHigh, bus.UrgencyPage)
 	r.tick()
 	wantBodies(t, r.pushes(), "1 page for Claude", "looking at it", "1 page for Claude")

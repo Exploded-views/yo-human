@@ -110,19 +110,26 @@ func (w *Worker) judge(x bus.Tx, now time.Time, r *bus.OutboxRow) (verdict, erro
 	return held, x.UpdateOutbox(*r)
 }
 
-// holdUntil is when a capped row may next go, or the zero time when it may go now.
+// holdUntil is when a capped row may next go, or the zero time when it may go now. A Duet post
+// waits out the hour after any push of its item. A page is bounded by the last page for its item
+// and by its swarm's spacing, never by a nudge or a Duet post: it does not wait in their queue.
 func (w *Worker) holdUntil(x bus.Tx, now time.Time, r bus.OutboxRow) (time.Time, error) {
+	if r.Kind != bus.OutboxPage {
+		isHeld, until, err := heldUntil(x, now, r.ItemID)
+		if !isHeld {
+			until = time.Time{}
+		}
+		return until, err
+	}
 	var until time.Time
 	if r.ItemID != "" {
-		if h, u, err := heldUntil(x, now, r.ItemID); err != nil || h {
-			if err != nil {
-				return until, err
-			}
+		last, ok, err := x.LastPageSentForItem(r.ItemID)
+		if err != nil {
+			return until, err
+		}
+		if u := last.Add(pushWindow); ok && now.Before(u) {
 			until = u
 		}
-	}
-	if r.Kind != bus.OutboxPage {
-		return until, nil
 	}
 	last, ok, err := x.LastPageSent(r.Swarm)
 	if err != nil || !ok {

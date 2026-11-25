@@ -120,6 +120,13 @@ func (t faultTx) LastPageSent(s string) (time.Time, bool, error) {
 	return t.Tx.LastPageSent(s)
 }
 
+func (t faultTx) LastPageSentForItem(id string) (time.Time, bool, error) {
+	if err := t.fail("LastPageSentForItem"); err != nil {
+		return time.Time{}, false, err
+	}
+	return t.Tx.LastPageSentForItem(id)
+}
+
 func (t faultTx) PendingOutbox(now time.Time, n int) ([]bus.OutboxRow, error) {
 	if err := t.fail("PendingOutbox"); err != nil {
 		return nil, err
@@ -170,7 +177,7 @@ func (t faultTx) ListInboxItems(since int64) ([]bus.Item, error) {
 }
 
 var faultMethods = []string{"NudgeState", "PutNudgeState", "EventsSince", "ItemByID", "Messages", "Deferred", "PutDeferred", "DeleteDeferred",
-	"LastPush", "InsertPush", "LastPageSent", "PendingOutbox", "UpdateOutbox", "FailedSince", "Decision", "BrokenFlag", "PutBrokenFlag", "ListInboxItems"}
+	"LastPush", "InsertPush", "LastPageSent", "LastPageSentForItem", "PendingOutbox", "UpdateOutbox", "FailedSince", "Decision", "BrokenFlag", "PutBrokenFlag", "ListInboxItems"}
 
 // busyRig is a database where one tick has something of everything to do: a nudge, a deferred
 // item, a Duet message, a page, a held Duet message, a test row and a young refused row.
