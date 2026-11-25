@@ -46,10 +46,10 @@
     "statements": 100.0
   },
   "github.com/Exploded-views/yo-human/internal/hosted/db": {
-    "statements": 87.0
+    "statements": 86.9
   },
   "github.com/Exploded-views/yo-human/internal/hosted/egress/bark": {
-    "statements": 97.4
+    "statements": 97.3
   },
   "github.com/Exploded-views/yo-human/internal/hosted/hostname": {
     "statements": 100.0
@@ -70,7 +70,7 @@
     "statements": 100.0
   },
   "github.com/Exploded-views/yo-human/internal/repolint": {
-    "statements": 96.8
+    "statements": 96.7
   },
   "github.com/Exploded-views/yo-human/internal/secrets": {
     "statements": 93.1

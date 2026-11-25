@@ -14,9 +14,13 @@ import (
 // NudgeOldEvents is how many events the nudge scenario's database holds before its cursor.
 const NudgeOldEvents = 100000
 
+// nudgeOldEvents is NudgeOldEvents, a variable so the tests of the helper's plumbing can use a
+// small database, as they do with seedItems.
+var nudgeOldEvents = NudgeOldEvents
+
 // NudgeIn times n nudge ticks against a database of items items and NudgeOldEvents older events.
 func NudgeIn(dir string, items, n int) ([]time.Duration, error) {
-	return nudgeIn(dir, items, NudgeOldEvents, n)
+	return nudgeIn(dir, items, nudgeOldEvents, n)
 }
 
 // quiet is a channel that accepts everything: the scenario times the tick, not the network.

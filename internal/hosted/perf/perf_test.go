@@ -13,6 +13,8 @@ import (
 	"github.com/Exploded-views/yo-human/internal/hosted/bus"
 )
 
+func init() { nudgeOldEvents = 50 } // plumbing tests need no 100,000 events; the budget test says so itself
+
 var samplers = map[string]sampler{"post": PostIn, "revise": ReviseIn, "wake": WakeIn, "nudge": NudgeIn}
 
 func TestSeedItemsIsTheBudgetLine(t *testing.T) {
