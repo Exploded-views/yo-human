@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -149,4 +150,10 @@ func (x *txn) countFailed(ds *bus.DeliveryState, cutoff string) error {
 		}
 	}
 	return rows.Err()
+}
+
+// Delivery is DeliveryState read outside a transaction of the caller's, for `check`.
+func (d *DB) Delivery(ctx context.Context, now time.Time) (ds *bus.DeliveryState, err error) {
+	err = d.Tx(ctx, func(x bus.Tx) (err error) { ds, err = x.DeliveryState(now); return })
+	return ds, err
 }

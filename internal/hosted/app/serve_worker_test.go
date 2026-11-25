@@ -1,14 +1,19 @@
 package app
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/Exploded-views/yo-human/internal/hosted/bus"
+	"github.com/Exploded-views/yo-human/internal/hosted/db"
 )
 
 // fakeBark is a Bark server that records the push bodies it gets.
@@ -89,5 +94,48 @@ func TestServeRefusesAHalfConfiguredBark(t *testing.T) {
 		if code != ExitConfig || !strings.Contains(errb.String(), "YH_BARK") || strings.Contains(errb.String(), "https://bark") {
 			t.Errorf("%v: code=%d err=%q, want a config refusal that names the variable and no value", kv, code, errb.String())
 		}
+	}
+}
+
+func TestKickerIsSafeBeforeAndAfterTheWorkerExists(t *testing.T) {
+	var k kicker
+	k.kick() // no worker yet: the bus may commit before serve has built one
+	var out strings.Builder
+	a := admin{name: "serve", stderr: &out, env: noEnv}
+	cfg := Config{NudgeWindow: time.Minute, NudgeMinSeverity: "normal", NudgeLevel: "active"}
+	ch, err := barkChannel(Config{BarkURL: "https://bark.example.com", BarkUser: "u", BarkPassword: "p", BarkDeviceKey: "k"})
+	if err != nil || ch == nil {
+		t.Fatalf("barkChannel = %v, %v", ch, err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	d, err := db.Open(filepath.Join(t.TempDir(), "data", "bus.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = d.Close() }()
+	wait := a.startWorker(ctx, cfg, ch, bus.New(d, now, bus.Limits{}), d, &k, io.Discard)
+	k.kick()
+	cancel()
+	wait()
+	k.kick() // a worker whose Run has ended: Kick still never blocks
+}
+
+func TestCheckCallsARefusedMessageRefused(t *testing.T) {
+	a := newAdmin(t)
+	a.seedDB()
+	d, err := db.Open(a.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	failed := time.Now().UTC().Add(-time.Minute)
+	_ = d.Tx(context.Background(), func(x bus.Tx) error {
+		_, err := x.InsertOutbox(bus.OutboxRow{Kind: bus.OutboxTest, Level: "passive", Title: "t", Body: "b", State: bus.OutboxFailed,
+			NextAt: failed, Created: failed, FailedAt: failed, LastStatus: 400})
+		return err
+	})
+	_ = d.Close()
+	code, out, _ := a.run("check")
+	if code != ExitDegraded || !strings.Contains(out, "delivery: refused\n") || !strings.Contains(out, "delivery_status: 400\n") || !strings.Contains(out, "delivery_failed: 1\n") {
+		t.Errorf("code=%d out=%q", code, out)
 	}
 }

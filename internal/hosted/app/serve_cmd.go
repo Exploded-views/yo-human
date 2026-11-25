@@ -42,24 +42,34 @@ func runServe(args []string, env func(string) string, stdout, stderr io.Writer) 
 		a.say("serve: %v", err)
 		return ExitConfig
 	}
+	ch, err := barkChannel(cfg)
+	if err != nil {
+		a.say("serve: %v", err)
+		return ExitConfig
+	}
 	d, err := db.Open(cfg.DBPath)
 	if err != nil {
 		a.say("serve: %v", err)
 		return ExitStore
 	}
 	defer func() { _ = d.Close() }()
-	// OAuth (Task 10), the approval page and policy file (Tasks 10c, 10d, 10f) and the nudge worker
-	// (Task 11) join here as they land. Until then Duet cannot connect, no approval is on the
-	// policy, and nothing is sent.
-	h := web.New(bus.New(d, now, bus.Limits{LinkHosts: cfg.LinkHosts, WalledSwarms: cfg.WalledSwarms}),
-		auth.NewVerifier(d, now, cfg.DeskTTL),
+	// OAuth (Task 10) and the approval page and policy file (Tasks 10c, 10d, 10f) join here as they
+	// land. Until then Duet cannot connect and no approval is on the policy.
+	var k kicker
+	b := bus.New(d, now, bus.Limits{LinkHosts: cfg.LinkHosts, WalledSwarms: cfg.WalledSwarms, OnCommit: k.kick})
+	h := web.New(b, auth.NewVerifier(d, now, cfg.DeskTTL),
 		web.Config{PublicURL: cfg.PublicURL, ApproveOrigin: cfg.ApproveOrigin, OriginAllow: cfg.OriginAllow,
 			ToolDeadline: cfg.ToolDeadline, Log: slog.New(slog.NewTextHandler(stderr, nil))}, nil)
 	ctx, stop := notifyContext()
 	defer stop()
 	// The first signal ends ctx; restore the default handling then, so a second one kills the drain.
 	context.AfterFunc(ctx, stop)
-	return a.served(serveFn(ctx, h, web.ServeConfig{MCPAddr: cfg.ListenMCP, ApproveAddr: cfg.ListenApprove, Grace: serveGrace}))
+	wctx, cancel := context.WithCancel(ctx)
+	wait := a.startWorker(wctx, cfg, ch, b, d, &k, stderr)
+	code := a.served(serveFn(ctx, h, web.ServeConfig{MCPAddr: cfg.ListenMCP, ApproveAddr: cfg.ListenApprove, Grace: serveGrace}))
+	cancel() // the worker stops before the database closes
+	wait()
+	return code
 }
 
 // served maps what Serve returned to an exit code. A forced close is the deploy cutting a

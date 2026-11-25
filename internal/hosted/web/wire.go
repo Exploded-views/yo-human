@@ -192,4 +192,9 @@ type deliveryWire struct {
 	Pending int    `json:"pending"`
 }
 
-func deliveryOf(d *bus.DeliveryState) *deliveryWire { return nil }
+func deliveryOf(d *bus.DeliveryState) *deliveryWire {
+	if d == nil {
+		return nil
+	}
+	return &deliveryWire{Broken: d.Broken, Since: ts(d.Since), Status: d.Status, Failed: d.Failed, Pending: d.Pending}
+}
