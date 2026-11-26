@@ -1,0 +1,11 @@
+# Example Litestream config: the bus database, replicated to object storage. Every name is a
+# placeholder. The replica's access key id and secret are not here: they reach Litestream as the
+# secrets LITESTREAM_ACCESS_KEY_ID and LITESTREAM_SECRET_ACCESS_KEY (fly secrets import).
+dbs:
+  - path: /data/bus.db
+    replica:
+      type: s3
+      bucket: <bucket>
+      path: bus
+      region: <region>
+      endpoint: <endpoint>

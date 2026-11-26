@@ -1,0 +1,302 @@
+# H1 Task 12, slice 12b (image and example deploy): the tests against the missing deploy/example files and missing scripts, 2026-11-21T05:02:09Z.
+
+$ sh scripts/hosted_entrypoint_test.sh
+FAIL deploy/example/Dockerfile is missing
+exit=1
+
+$ sh scripts/hosted_placeholders_test.sh
+FAIL clean: want exit 0, got 127
+FAIL repo-example: want exit 0, got 127
+FAIL host-fly.dev: want exit 1, got 127
+FAIL host-workers.dev: want exit 1, got 127
+FAIL host-trycloudflare.com: want exit 1, got 127
+FAIL host-cfargotunnel.com: want exit 1, got 127
+FAIL host-herokuapp.com: want exit 1, got 127
+FAIL host-vercel.app: want exit 1, got 127
+FAIL host-onrender.com: want exit 1, got 127
+FAIL host-railway.app: want exit 1, got 127
+FAIL host-pages.dev: want exit 1, got 127
+FAIL host-netlify.app: want exit 1, got 127
+FAIL host-ngrok.io: want exit 1, got 127
+FAIL host-tigris.dev: want exit 1, got 127
+FAIL host-flycast: want exit 1, got 127
+FAIL host-in-dockerfile: want exit 1, got 127
+FAIL host-upper: want exit 1, got 127
+FAIL home-users: want exit 1, got 127
+FAIL home-linux: want exit 1, got 127
+FAIL home-tilde: want exit 1, got 127
+FAIL home-in-yaml: want exit 1, got 127
+FAIL value-app: want exit 1, got 127
+FAIL value-app-double: want exit 1, got 127
+FAIL value-region: want exit 1, got 127
+FAIL value-bucket: want exit 1, got 127
+FAIL value-bucket-list: want exit 1, got 127
+FAIL value-region-yaml: want exit 1, got 127
+FAIL value-endpoint: want exit 1, got 127
+FAIL value-partial: want exit 1, got 127
+FAIL value-empty: want exit 1, got 127
+FAIL value-rule-name: want exit 1, got 127
+FAIL url-real: want exit 1, got 127
+FAIL url-http: want exit 1, got 127
+FAIL url-in-env: want exit 1, got 127
+FAIL url-sub: want exit 1, got 127
+FAIL url-userinfo: want exit 1, got 127
+FAIL url-in-dockerfile: want exit 1, got 127
+FAIL url-rule-name: want exit 1, got 127
+FAIL many-findings: want exit 1, got 127
+FAIL empty-dir: want exit 2, got 127
+exit=1
+
+$ sh scripts/hosted_deploy_check_test.sh
+FAIL pristine: want exit 0, got 127
+FAIL repo-example: want exit 0, got 127
+FAIL digest-golang: Dockerfile is missing from the example
+FAIL digest-litestream: Dockerfile is missing from the example
+FAIL digest-cloudflared: Dockerfile is missing from the example
+FAIL digest-final: Dockerfile is missing from the example
+FAIL digest-short: Dockerfile is missing from the example
+FAIL go-old: Dockerfile is missing from the example
+FAIL go-minor: Dockerfile is missing from the example
+FAIL litestream-old: Dockerfile is missing from the example
+FAIL litestream-latest: Dockerfile is missing from the example
+FAIL no-cloudflared: Dockerfile is missing from the example
+FAIL user-root: Dockerfile is missing from the example
+FAIL user-zero: Dockerfile is missing from the example
+FAIL user-named-root: Dockerfile is missing from the example
+FAIL user-missing: Dockerfile is missing from the example
+FAIL final-alpine: Dockerfile is missing from the example
+FAIL no-file-note: Dockerfile is missing from the example
+FAIL entrypoint-line: Dockerfile is missing from the example
+FAIL kill-timeout: fly.toml is missing from the example
+FAIL kill-timeout-missing: fly.toml is missing from the example
+FAIL auto-stop: fly.toml is missing from the example
+FAIL min-machines: fly.toml is missing from the example
+FAIL port-8081: fly.toml is missing from the example
+FAIL port-extra: want exit 1, got 127
+FAIL mount: fly.toml is missing from the example
+FAIL healthz: fly.toml is missing from the example
+FAIL vm-size: fly.toml is missing from the example
+FAIL vm-memory: fly.toml is missing from the example
+FAIL app-name: fly.toml is missing from the example
+FAIL secret-in-env: want exit 1, got 127
+FAIL mcp-listen: fly.toml is missing from the example
+FAIL approve-listen: fly.toml is missing from the example
+FAIL litestream-db: litestream.yml is missing from the example
+FAIL litestream-bucket: litestream.yml is missing from the example
+FAIL missing-Dockerfile: want exit 1, got 127
+FAIL missing-fly.toml: want exit 1, got 127
+FAIL missing-litestream.yml: want exit 1, got 127
+FAIL missing-entrypoint.sh: want exit 1, got 127
+FAIL missing-dir: want exit 2, got 127
+exit=1
+
+# Appended after review round 1 (S9): the same tests against stubs, so that assertions are seen to fail. The stubs: deploy/example/entrypoint.sh is 'exec sleep 600'; scripts/hosted_placeholders.sh and scripts/hosted_deploy_check.sh are 'exit 0'. 2026-11-21T07:03:41Z.
+
+$ sh scripts/hosted_entrypoint_test.sh   (stubs)
+Killed
+FAIL token-missing: the entrypoint hung
+FAIL token-missing: want exit 78, got 137
+FAIL token-missing: the message does not name TUNNEL_TOKEN
+Killed
+FAIL token-empty: the entrypoint hung
+FAIL token-empty: want exit 78, got 137
+FAIL token-empty: the message does not name TUNNEL_TOKEN
+FAIL happy: the children did not start
+FAIL kill-serve: the children did not start
+FAIL kill-cloudflared: the children did not start
+cat: can't open '/out/cloudflared.pid': No such file or directory
+Killed
+FAIL cloudflared-term: want a non-zero exit, got 137 (timed out: 1)
+cat: can't open '/out/cloudflared.pid': No such file or directory
+Killed
+FAIL serve-exits-0: want a non-zero exit, got 137 (timed out: 1)
+FAIL serve-exits-0: cloudflared kept running
+FAIL restore-fails: want a non-zero exit, got 137 (timed out: 1)
+Killed
+hosted_entrypoint_inner: 13 failure(s)
+exit=1
+
+$ sh scripts/hosted_placeholders_test.sh   (stubs)
+FAIL host-fly.dev: want exit 1, got 0
+FAIL host-workers.dev: want exit 1, got 0
+FAIL host-trycloudflare.com: want exit 1, got 0
+FAIL host-cfargotunnel.com: want exit 1, got 0
+FAIL host-herokuapp.com: want exit 1, got 0
+FAIL host-vercel.app: want exit 1, got 0
+FAIL host-onrender.com: want exit 1, got 0
+FAIL host-railway.app: want exit 1, got 0
+FAIL host-pages.dev: want exit 1, got 0
+FAIL host-netlify.app: want exit 1, got 0
+FAIL host-ngrok.io: want exit 1, got 0
+FAIL host-tigris.dev: want exit 1, got 0
+FAIL host-flycast: want exit 1, got 0
+FAIL host-in-dockerfile: want exit 1, got 0
+FAIL host-upper: want exit 1, got 0
+FAIL home-users: want exit 1, got 0
+FAIL home-linux: want exit 1, got 0
+FAIL home-tilde: want exit 1, got 0
+FAIL home-in-yaml: want exit 1, got 0
+FAIL value-app: want exit 1, got 0
+FAIL value-app-double: want exit 1, got 0
+FAIL value-region: want exit 1, got 0
+FAIL value-bucket: want exit 1, got 0
+FAIL value-bucket-list: want exit 1, got 0
+FAIL value-region-yaml: want exit 1, got 0
+FAIL value-endpoint: want exit 1, got 0
+FAIL value-partial: want exit 1, got 0
+FAIL value-empty: want exit 1, got 0
+FAIL value-rule-name: want exit 1, got 0
+FAIL url-real: want exit 1, got 0
+FAIL url-http: want exit 1, got 0
+FAIL url-in-env: want exit 1, got 0
+FAIL url-sub: want exit 1, got 0
+FAIL url-userinfo: want exit 1, got 0
+FAIL url-in-dockerfile: want exit 1, got 0
+FAIL url-rule-name: want exit 1, got 0
+FAIL many-findings: want exit 1, got 0
+FAIL empty-dir: want exit 2, got 0
+FAIL missing-dir: want exit 2, got 0
+FAIL not-a-dir: want exit 2, got 0
+FAIL two-args: want exit 2
+hosted_placeholders_test: 41 failure(s)
+exit=1
+
+$ sh scripts/hosted_deploy_check_test.sh   (stubs)
+FAIL digest-golang: want exit 1, got 0
+FAIL digest-litestream: want exit 1, got 0
+FAIL digest-cloudflared: want exit 1, got 0
+FAIL digest-final: want exit 1, got 0
+FAIL digest-short: want exit 1, got 0
+FAIL go-old: want exit 1, got 0
+FAIL go-minor: want exit 1, got 0
+FAIL litestream-old: want exit 1, got 0
+FAIL litestream-latest: want exit 1, got 0
+FAIL no-cloudflared: want exit 1, got 0
+FAIL user-root: want exit 1, got 0
+FAIL user-zero: want exit 1, got 0
+FAIL user-named-root: want exit 1, got 0
+FAIL user-missing: want exit 1, got 0
+FAIL final-alpine: want exit 1, got 0
+FAIL no-file-note: want exit 1, got 0
+FAIL entrypoint-line: want exit 1, got 0
+FAIL kill-timeout: want exit 1, got 0
+FAIL kill-timeout-missing: want exit 1, got 0
+FAIL auto-stop: want exit 1, got 0
+FAIL min-machines: want exit 1, got 0
+FAIL port-8081: want exit 1, got 0
+FAIL port-extra: want exit 1, got 0
+FAIL mount: want exit 1, got 0
+FAIL healthz: want exit 1, got 0
+FAIL vm-size: want exit 1, got 0
+FAIL vm-memory: want exit 1, got 0
+FAIL app-name: want exit 1, got 0
+FAIL secret-in-env: want exit 1, got 0
+FAIL mcp-listen: want exit 1, got 0
+FAIL approve-listen: want exit 1, got 0
+FAIL region-placeholder: want exit 1, got 0
+FAIL port-9090: want exit 1, got 0
+FAIL port-dup: want exit 1, got 0
+FAIL port-8081-mapped: want exit 1, got 0
+FAIL user-earlier-stage: want exit 1, got 0
+FAIL unreadable: want exit 2, got 0
+FAIL litestream-db: want exit 1, got 0
+FAIL litestream-bucket: want exit 1, got 0
+FAIL missing-Dockerfile: want exit 1, got 0
+FAIL missing-fly.toml: want exit 1, got 0
+FAIL missing-litestream.yml: want exit 1, got 0
+FAIL missing-entrypoint.sh: want exit 1, got 0
+FAIL missing-dir: want exit 2, got 0
+FAIL two-args: want exit 2
+exit=1
+
+# Review round 1, cluster A (entrypoint: M1 inherited TUNNEL_METRICS, S-restore environment, S-stop bounded stop, N2 second SIGTERM, N6 clean cloudflared exit, N7 replica key), against the round-0 entrypoint, 2026-11-21T07:07:47Z.
+
+$ sh scripts/hosted_entrypoint_test.sh
+FAIL happy: restore's environment holds the tunnel token or an app secret
+FAIL metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+Killed
+FAIL stuck-cf: want a non-zero exit, got 137 (timed out: 1)
+FAIL stuck-cf: the stop took 25 s, over the platform's 15 s
+FAIL stuck-cf: cloudflared is still alive
+Killed
+FAIL stuck-term: the entrypoint did not exit
+FAIL stuck-term: the stop took 25 s, over the platform's 15 s
+FAIL stuck-term: cloudflared is still alive
+hosted_entrypoint_inner: 8 failure(s)
+exit=1
+# the double-SIGTERM case already passed on the round-0 code (kept as a pin for the trap change)
+
+# Review round 1, cluster B (S-secret-rule, S-placeholders, S-copyfrom), against the round-0 check scripts, 2026-11-21T07:10:12Z.
+
+$ sh scripts/hosted_placeholders_test.sh
+FAIL value-rp-id: want exit 1, got 0
+FAIL value-owner-id: want exit 1, got 0
+FAIL value-client-id: want exit 1, got 0
+FAIL value-host-suffix: want exit 1, got 0
+FAIL value-nudge: want exit 1, got 0
+hosted_placeholders_test: 5 failure(s)
+exit=1
+
+$ sh scripts/hosted_deploy_check_test.sh
+FAIL secret-tunnel: want exit 1, got 0
+FAIL secret-litestream: want exit 1, got 0
+FAIL secret-litestream-id: want exit 1, got 0
+FAIL secret-aws: want exit 1, got 0
+FAIL litestream-key: want exit 1, got 0
+FAIL litestream-key-id: want exit 1, got 0
+FAIL copy-from-image: want exit 1, got 0
+FAIL copy-from-unknown-stage: want exit 1, got 0
+FAIL copy-from-index: want exit 1, got 0
+hosted_deploy_check_test: 9 failure(s)
+exit=1
+
+# Review round 2, M1 (the ignore-SIGTERM flag files were swapped in the harness: stuck-cf tested nothing), 2026-11-21T08:01:01Z. The corrected harness (cloudflared fake checks /ctl/cf-ignore-term, serve fake /ctl/serve-ignore-term, stuck-cf asserts the fake survives a TERM) passes on the entrypoint at HEAD (exit=0), and fails on the ep31-style mutant (stop_children's KILL bound 13 s raised to 40 s), which the swapped harness did not catch (per the review: stuck-cf passed whatever stop_children did).
+
+$ sh scripts/hosted_entrypoint_test.sh   (entrypoint at HEAD)
+exit=0
+
+$ sh scripts/hosted_entrypoint_test.sh   (ep31 applied: wait_gone 13 -> 40 in stop_children)
+mutant ep31 stop bound 13 to 40: KILLED (exit 1)
+FAIL stuck-cf: want a non-zero exit, got 137 (timed out: 1)
+FAIL stuck-cf: the stop took 25 s, over the platform's 15 s
+FAIL stuck-cf: cloudflared is still alive
+hosted_entrypoint_inner: 3 failure(s)
+exit=1
+
+# Review round 2, should-fix: S1 (a second SIGTERM must not restart the stop's clock; ep34 is not equivalent), S2 (worst-case stop budget), S3 (image smoke test), N1 (an inherited lowercase cf_metrics), 2026-11-21T08:06:06Z.
+
+$ sh scripts/hosted_entrypoint_test.sh   (entrypoint at HEAD: only N1 is a RED here)
+FAIL cf-metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+hosted_entrypoint_inner: 1 failure(s)
+exit=1
+
+$ sh scripts/hosted_entrypoint_test.sh   (ep34 applied: the trap at the top of terminate removed; the S1 RED)
+mutant ep34 terminate takes a second signal: KILLED (exit 1)
+FAIL double-term-stuck: the stop took 18 s, over the platform's 15 s
+FAIL cf-metrics-env: cloudflared's arguments are not 'tunnel --no-autoupdate --metrics 127.0.0.1:20241 run'
+hosted_entrypoint_inner: 2 failure(s)
+exit=1
+
+$ sh scripts/hosted_entrypoint_test.sh   (ep33 applied: terminate's cloudflared bound 2 s -> 40 s; the S2 worst-case case is among those that fail)
+mutant ep33 terminate cloudflared bound 2 to 40: KILLED (exit 1)
+FAIL stuck-term: the entrypoint did not exit
+FAIL stuck-term: the stop took 25 s, over the platform's 15 s
+FAIL stuck-term: cloudflared is still alive
+FAIL worst-case: want exit 0, got 137 (timed out: 1)
+exit=1
+
+$ HOSTED_IMAGE=<the pinned busybox image> sh scripts/hosted_image_smoke.sh   (a stub image, not the built one)
+FAIL no token: want exit 78, got 0
+FAIL no token: the output is not the one line naming TUNNEL_TOKEN
+FAIL the image's uid is not 65532
+FAIL the image's USER is not 65532:65532
+hosted_image_smoke: 4 failure(s)
+exit=1
+
+# Review round 2, ep40 (stop_children's bound 13 s cut to 5 s) survived the first round-2 pass: no test checked that serve gets its drain when cloudflared dies. The case drain-after-cf-death (and a drained check in worst-case) was added; the harness passes at HEAD (exit=0) and fails the mutant. 2026-11-21T09:39:06Z
+
+$ sh scripts/hosted_entrypoint_test.sh   (ep40 applied: stop_children's wait_gone 13 -> 5)
+mutant ep40 stop_children bound cut to 5 s: KILLED (exit 1)
+FAIL drain-after-cf-death: serve was killed before its drain finished
+hosted_entrypoint_inner: 1 failure(s)
+exit=1
