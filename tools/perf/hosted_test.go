@@ -18,7 +18,7 @@ func TestHostedScenariosAreRegistered(t *testing.T) {
 	for _, s := range scenarios {
 		have[s.Name] = s.Sample != nil
 	}
-	for _, name := range []string{"hosted-post", "hosted-revise", "hosted-answers-wake"} {
+	for _, name := range []string{"hosted-post", "hosted-revise", "hosted-answers-wake", "hosted-nudge-tick"} {
 		if !have[name] {
 			t.Errorf("scenario %s is not registered with a Sample", name)
 		}
@@ -105,5 +105,16 @@ func TestWakeBudgetIsUnderTheCeiling(t *testing.T) {
 	// CI judges against the budget times the headroom, so that product is what the ceiling bounds.
 	if limit := float64(bud.P95Ms) * b.CIHeadroom; bud.P95Ms < 1 || limit > 200 {
 		t.Errorf("hosted-answers-wake budget %dms (%.0fms in CI): must be at least 1ms and at most 200ms in CI (the plan's ceiling)", bud.P95Ms, limit)
+	}
+}
+
+// The nudge tick has a budget, recorded from the measured p95 and never raised.
+func TestNudgeTickHasABudget(t *testing.T) {
+	b, err := ReadBudgets("../../perf-budgets.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bud, ok := b.Budgets["hosted-nudge-tick"]; !ok || bud.P95Ms < 1 {
+		t.Errorf("hosted-nudge-tick budget = %+v, %v, want a budget of at least 1 ms", bud, ok)
 	}
 }

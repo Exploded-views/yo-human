@@ -1,0 +1,481 @@
+$ go test -race -count=1 ./internal/hosted/notify ./internal/hosted/egress/bark
+--- FAIL: TestClassesAreDistinct (0.00s)
+    notify_test.go:25: permanent: permanent=false broken=false, want true false
+    notify_test.go:25: broken: permanent=false broken=false, want false true
+    notify_test.go:25: wrapped permanent: permanent=false broken=false, want true false
+    notify_test.go:25: wrapped broken: permanent=false broken=false, want false true
+--- FAIL: TestStatusSurvivesClassing (0.00s)
+    notify_test.go:41: status 0 permanent false, want 413 true
+    notify_test.go:45: status 0 broken false, want 401 true
+--- FAIL: TestRetryAfter (0.00s)
+    notify_test.go:68: two minutes: RetryAfter = 0s, want 2m0s
+    notify_test.go:68: capped at an hour: RetryAfter = 0s, want 1h0m0s
+    notify_test.go:68: exactly an hour: RetryAfter = 0s, want 1h0m0s
+    notify_test.go:68: kept through a class: RetryAfter = 0s, want 1m0s
+    notify_test.go:68: kept through a wrap: RetryAfter = 0s, want 1m0s
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/notify	0.085s
+--- FAIL: TestBarkRequestShape (0.00s)
+    bark_test.go:87: Bark got no request
+--- FAIL: TestBarkLevelMapping (0.00s)
+    bark_test.go:109: Bark got no request
+--- FAIL: TestBarkSendsIDOnlyWhenSet (0.00s)
+    bark_test.go:120: Bark got no request
+--- FAIL: TestBarkNameAndLevels (0.00s)
+    bark_test.go:128: Name = ""
+    bark_test.go:136: Levels lacks passive
+    bark_test.go:136: Levels lacks active
+    bark_test.go:136: Levels lacks time-sensitive
+    bark_test.go:136: Levels lacks critical
+--- FAIL: TestBarkErrorsCarryNoSecrets (0.00s)
+    bark_test.go:146: err = <nil>, want one naming status 500
+--- FAIL: TestBarkErrorClasses (0.00s)
+    bark_test.go:179: 400: err=<nil> permanent=false broken=false status=0, want permanent=true broken=false
+    bark_test.go:179: 404: err=<nil> permanent=false broken=false status=0, want permanent=true broken=false
+    bark_test.go:179: 413: err=<nil> permanent=false broken=false status=0, want permanent=true broken=false
+    bark_test.go:179: 401: err=<nil> permanent=false broken=false status=0, want permanent=false broken=true
+    bark_test.go:179: 403: err=<nil> permanent=false broken=false status=0, want permanent=false broken=true
+    bark_test.go:179: 408: err=<nil> permanent=false broken=false status=0, want permanent=false broken=false
+    bark_test.go:179: 429: err=<nil> permanent=false broken=false status=0, want permanent=false broken=false
+    bark_test.go:179: 500: err=<nil> permanent=false broken=false status=0, want permanent=false broken=false
+    bark_test.go:179: 503: err=<nil> permanent=false broken=false status=0, want permanent=false broken=false
+--- FAIL: TestBarkSuccessAndClosedServer (0.00s)
+    bark_test.go:195: a closed server: <nil>, want a transient error
+--- FAIL: TestBarkRetryAfter (0.00s)
+    bark_test.go:214: 429 Retry-After "120": RetryAfter = 0s, want 2m0s
+    bark_test.go:214: 503 Retry-After "30": RetryAfter = 0s, want 30s
+    bark_test.go:214: 429 Retry-After "99999": RetryAfter = 0s, want 1h0m0s
+--- FAIL: TestBarkHonoursTheContext (0.00s)
+    bark_test.go:225: err = <nil>, want one wrapping context.Canceled
+--- FAIL: TestBarkNilHTTPUsesFiveSecondClient (0.00s)
+    bark_test.go:245: a stalled server gave <nil> after 125ns, want a transient error near 5 s
+--- FAIL: TestBarkTrailingSlashBaseURL (0.00s)
+    bark_test.go:259: Bark got no request
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/egress/bark	0.209s
+FAIL
+exit=1
+
+$ go test -race -count=1 ./internal/hosted/bus ./internal/hosted/db
+--- FAIL: TestInboxAndItemShowABrokenChannel (0.06s)
+    delivery_test.go:36: inbox delivery = <nil> (<nil>), want broken with status 401 since t0
+    delivery_test.go:40: item delivery = <nil> (<nil>), want the same
+--- FAIL: TestWaitingCountsTheGroupsOnly (0.07s)
+    delivery_test.go:69: Waiting = 0, <nil>, want 1: the question, since a notice has no inbox group
+--- FAIL: TestDuetPostToHumanQueuesOneMessage (0.05s)
+    queue_test.go:36: low: 0 rows, want 1
+--- FAIL: TestDuetPostCarriesAtMostABoundedBody (0.06s)
+    queue_test.go:54: 0 rows, want 1
+--- FAIL: TestNodePageQueuesAPageRow (0.05s)
+    queue_test.go:69: 0 rows, want 1
+--- FAIL: TestRepostQueuesOnlyWhenTheItemChanged (0.06s)
+    queue_test.go:101: 0 rows after an unchanged repost, want 1
+--- FAIL: TestOutboxRowIsInTheSameTransactionAsThePost (0.06s)
+    queue_test.go:131: err = <nil>, want a refusal that names no path
+--- FAIL: TestDuetReplyOnAnOwnerItemQueuesAMessage (0.07s)
+    queue_test.go:150: 0 rows, want 1
+--- FAIL: TestNodePageReplyQueuesAPageRow (0.06s)
+    queue_test.go:191: rows = [], want one page row for the thread
+--- FAIL: TestOnCommitIsCalledAfterACommittedWrite (0.06s)
+    queue_test.go:204: after a post: calls=0 err=<nil>, want 1
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	23.578s
+--- FAIL: TestOpenMigratesAndReopens (0.05s)
+    db_test.go:40: user_version = 3, want 4
+--- FAIL: TestNudgeStateStartsZeroAndRoundTrips (0.05s)
+    nudge_test.go:23: state = {LastSeq:0 Count:0 LastSent:0001-01-01 00:00:00 +0000 UTC FailedAt:0001-01-01 00:00:00 +0000 UTC LastStatus:0}, want {LastSeq:42 Count:7 LastSent:2026-10-28 09:30:15.123456 +0000 UTC FailedAt:2026-10-28 09:31:15.123456 +0000 UTC LastStatus:400}
+    nudge_test.go:28: state after a second put = {LastSeq:0 Count:0 LastSent:0001-01-01 00:00:00 +0000 UTC FailedAt:0001-01-01 00:00:00 +0000 UTC LastStatus:0}, want the second alone
+--- FAIL: TestDeferredPutReplacesAndDeleteRemoves (0.05s)
+    nudge_test.go:51: deferred = [], want a then b, with b's second due time
+    nudge_test.go:56: deferred after delete = [], want b
+--- FAIL: TestBrokenFlagRoundTrip (0.06s)
+    nudge_test.go:79: flag after reopen = {Raised:false Since:0001-01-01 00:00:00 +0000 UTC Status:0}, want {Raised:true Since:2026-10-28 09:30:15.123456 +0000 UTC Status:403}
+--- FAIL: TestDeliveryStateBrokenCarriesSinceAndStatus (0.05s)
+    nudge_test.go:116: state = <nil>, want broken since t0 with status 401
+--- FAIL: TestDeliveryStateFailedAgesOutAfter24Hours (0.05s)
+    nudge_test.go:126: just under 24 h: <nil>, want one failed with status 400
+--- FAIL: TestDeliveryStateCountsARefusedNudge (0.05s)
+    nudge_test.go:140: state = <nil>, want the refused nudge counted with its status
+--- FAIL: TestDeliveryStatePendingIsOverdueAfterTenMinutes (0.05s)
+    nudge_test.go:156: overdue: <nil>, want one pending
+    nudge_test.go:160: pending counts every pending row: <nil>, want 2
+--- FAIL: TestOutboxRoundTrip (0.05s)
+    outbox_test.go:68: ids = 0, 0, want increasing from 1
+--- FAIL: TestOutboxRefusesAnUnknownKindOrState (0.06s)
+    outbox_test.go:90: row {ID:0 Kind:loud Swarm:duet ItemID: Revision:2 Level:active Title:Title one Body:Body one State:pending Attempts:0 NextAt:2026-10-28 09:30:15.123456 +0000 UTC Created:2026-10-28 09:30:15.123456 +0000 UTC SentAt:0001-01-01 00:00:00 +0000 UTC FailedAt:0001-01-01 00:00:00 +0000 UTC LastStatus:0 Retried:false} was stored
+    outbox_test.go:90: row {ID:0 Kind:test Swarm:duet ItemID: Revision:2 Level:active Title:Title one Body:Body one State:done Attempts:0 NextAt:2026-10-28 09:30:15.123456 +0000 UTC Created:2026-10-28 09:30:15.123456 +0000 UTC SentAt:0001-01-01 00:00:00 +0000 UTC FailedAt:0001-01-01 00:00:00 +0000 UTC LastStatus:0 Retried:false} was stored
+--- FAIL: TestPendingOutboxIsDueOldestFirstAndLimited (0.05s)
+    outbox_test.go:114: due rows = [], want [0 0 0] (oldest created first, then id)
+    outbox_test.go:117: limit 2 = [], want the two oldest
+--- FAIL: TestUpdateOutboxChangesOnlyTheMutableFields (0.05s)
+    outbox_test.go:131: 0 rows after the update, want 1
+--- FAIL: TestFailedSince (0.05s)
+    outbox_test.go:159: failed since = [], want [0 0]
+--- FAIL: TestLedgerKeepsOneRowPerSourceAndItem (0.05s)
+    outbox_test.go:178: a second ledger row for one source and item: <nil>, want a conflict
+--- FAIL: TestLastPushIsTheNewestOfAnyRevision (0.05s)
+    outbox_test.go:204: LastPush(itm_1) = 0001-01-01 00:00:00 +0000 UTC false, itm_9 found=false; want the newest of any revision, and none for another item
+--- FAIL: TestPushesAreInTimeOrder (0.05s)
+    outbox_test.go:214: Pushes = [], want the two rows for itm_1 in time order
+--- FAIL: TestLastPageSentIsPerSwarmAndPagesOnly (0.05s)
+    outbox_test.go:241: LastPageSent(crew) = 0001-01-01 00:00:00 +0000 UTC false, client found=false; want the newest sent page of that swarm
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	5.533s
+FAIL
+exit=1
+
+$ go test -race -count=1 -timeout 120s ./internal/hosted/nudge
+--- FAIL: TestChannelBrokenRaisesFlag (0.07s)
+    broken_test.go:17: 0 attempts, want the pass to stop at the broken channel
+--- FAIL: TestBrokenChannelIsProbedEveryFiveMinutesAndClearsOnA2xx (0.07s)
+    broken_test.go:39: 0 attempts inside the probe spacing
+--- FAIL: TestBrokenSendsOnlyTheProbe (0.07s)
+    broken_test.go:68: 0 attempts in four minutes, want one probe and nothing else
+--- FAIL: TestBrokenFlagReRaisedAfterRestartWithBadKey (0.06s)
+    broken_test.go:85: 0 attempts, want the restart's probe
+--- FAIL: TestBrokenFlagStaysWhenTheOnlyRowIsSuperseded (0.08s)
+    broken_test.go:103: row is pending, want superseded
+--- FAIL: TestBrokenFlagClearsOnFirst2xx (0.08s)
+    broken_test.go:120: flag {Raised:true Since:2026-11-02 09:00:00 +0000 UTC Status:401}, 0 delivered, want the probe's 200 to clear it
+--- FAIL: TestOutboxTestClearsBrokenFlag (0.07s)
+    broken_test.go:141: flag {Raised:true Since:2026-11-02 09:00:00 +0000 UTC Status:401}, want it cleared by the test push's 200
+--- FAIL: TestRefusedAgesOutAfter24h (0.07s)
+    broken_test.go:151: delivery = <nil>, want one refused with status 400
+--- FAIL: TestNudgeBrokenRaisesTheFlagAndRollsBack (0.07s)
+    broken_test.go:165: flag = {Raised:false Since:0001-01-01 00:00:00 +0000 UTC Status:0}
+--- FAIL: TestSameItemNotPushedTwiceWithin60m (0.08s)
+    cap_test.go:24: delivered [], want ["first"]
+--- FAIL: TestNewRevisionWaitsForItemWindow (0.09s)
+    cap_test.go:53: delivered [], want ["at revision one"]
+--- FAIL: TestHeldDuetPostSupersededOnDecision (0.09s)
+    cap_test.go:72: delivered [], want ["first"]
+--- FAIL: TestHeldDuetPostSupersededOnRepost (0.08s)
+    cap_test.go:91: delivered [], want ["first"]
+--- FAIL: TestEscalationBypassesCap (0.08s)
+    cap_test.go:105: delivered [], want ["first" "escalated"]
+--- FAIL: TestCoalescedPushHasStableID (0.10s)
+    cap_test.go:136: attempts = [], want the same id and text twice: "yh-2 third (+1 more)"
+--- FAIL: TestProbeRespectsCapAndSupersede (0.07s)
+    cap_test.go:151: next_at = 2026-11-02 09:00:00 +0000 UTC, want the push plus 60 minutes
+--- FAIL: TestPageNeverWaits (0.09s)
+    lanes_test.go:49: delivered "", want the page alone in the minute after a nudge
+--- FAIL: TestPageBoundedPerItemAndSwarm (0.08s)
+    lanes_test.go:66: delivered [], want ["1 page for Claude"]
+--- FAIL: TestRepostEvery30mNudgesHourly (0.10s)
+    lanes_test.go:95: nudges at [], want [0s 1h0m0s 2h0m0s 3h0m0s]
+--- FAIL: TestDeferredItemNudgedWhenWindowOpens (0.07s)
+    lanes_test.go:120: delivered [], want one nudge counting the deferred item
+--- FAIL: TestNudgeSkipsRecentlyPushedItem (0.09s)
+    lanes_test.go:152: delivered [], want a nudge counting only the free item
+--- FAIL: TestDuetRepliesAndItsOwnThreadNeverNudge (0.09s)
+    lanes_test.go:178: delivered [], want one nudge
+--- FAIL: TestDuetPostToHumanSendsItsOwnMessage (0.08s)
+    outbox_test.go:26: delivered 0, want one message for each of Duet's three posts
+--- FAIL: TestOutboxSentNotResent (0.06s)
+    outbox_test.go:48: 0 sends, want the one
+    outbox_test.go:51: row = {ID:1 Kind:test Swarm: ItemID: Revision:0 Level:active Title:yo-human Body:test push State:pending Attempts:0 NextAt:2026-11-02 09:00:00 +0000 UTC Created:2026-11-02 09:00:00 +0000 UTC SentAt:0001-01-01 00:00:00 +0000 UTC FailedAt:0001-01-01 00:00:00 +0000 UTC LastStatus:0 Retried:false}, want sent at t0 after one attempt
+--- FAIL: TestOutboxUnsentSentAfterRestart (0.07s)
+    outbox_test.go:61: delivered [], want ["hello"]
+--- FAIL: TestOutboxCrashAfterSendResendsSameID (0.07s)
+    outbox_test.go:77: delivered [], want the same id twice
+--- FAIL: TestOutboxTransientBackoff (0.06s)
+    outbox_test.go:99: attempts at [], want [0s 30s 1m30s 3m30s]
+--- FAIL: TestOutboxBackoffIsCappedAtFiveMinutes (0.08s)
+    outbox_test.go:125: waits = [0s 0s 0s 0s 0s 0s 0s 0s], want [30s 1m0s 2m0s 4m0s 5m0s 5m0s 5m0s 5m0s]
+--- FAIL: TestOutboxRetryAfterHonoured (0.06s)
+    outbox_test.go:138: 0 attempts inside the Retry-After
+--- FAIL: TestRetryAfterCappedAtFiveMinutes (0.06s)
+    outbox_test.go:155: 0 attempts before 5 min
+--- FAIL: TestOutboxPassStopsAtFirstTransient (0.08s)
+    outbox_test.go:172: 0 attempts, want the pass to stop at the first transient error
+--- FAIL: TestOutboxOldestFirstCapped (0.10s)
+    outbox_test.go:194: sends per tick = [0 0 0], want 10, 10, 5
+--- FAIL: TestOutboxRefusedMessageFails (0.07s)
+    outbox_test.go:209: row = {ID:1 Kind:test Swarm: ItemID: Revision:0 Level:active Title:yo-human Body:test push State:pending Attempts:0 NextAt:2026-11-02 09:00:00 +0000 UTC Created:2026-11-02 09:00:00 +0000 UTC SentAt:0001-01-01 00:00:00 +0000 UTC FailedAt:0001-01-01 00:00:00 +0000 UTC LastStatus:0 Retried:false}, want failed at t0 with status 400
+--- FAIL: TestRefusedMessageGetsOneMoreTryAfterARestartIfYoung (0.06s)
+    outbox_test.go:237: attempts after the restart = [], want one, for row 2 and not 1
+--- FAIL: TestRetriedPushRecordedOnceInLedger (0.07s)
+    outbox_test.go:265: ledger = [], want exactly one row, written with sent
+--- FAIL: TestOutboxLogCarriesIdsOnly (0.07s)
+    outbox_test.go:287: the log lacks "outbox_id=1":
+    outbox_test.go:287: the log lacks "item_id=itm_ty6cj5pkwowb57rixxx3jxbmle":
+    outbox_test.go:287: the log lacks "kind=duet_post":
+    outbox_test.go:287: the log lacks "status=500":
+    outbox_test.go:287: the log lacks "attempts=1":
+    outbox_test.go:287: the log lacks "attempts=2":
+--- FAIL: TestDuetPostSurvivesRestart (0.06s)
+    outbox_test.go:297: delivered [], want ["A summary"]
+--- FAIL: TestNudgeConfigRefusesLoudLevels (0.00s)
+    worker_test.go:34: critical: Validate accepted {Window:1m0s MinSeverity:normal Level:critical Log:<nil>}
+    worker_test.go:34: time-sensitive: Validate accepted {Window:1m0s MinSeverity:normal Level:time-sensitive Log:<nil>}
+    worker_test.go:34: no level: Validate accepted {Window:1m0s MinSeverity:normal Level: Log:<nil>}
+    worker_test.go:34: no window: Validate accepted {Window:0s MinSeverity:normal Level:active Log:<nil>}
+    worker_test.go:34: no severity: Validate accepted {Window:1m0s MinSeverity: Level:active Log:<nil>}
+    worker_test.go:34: unknown severity: Validate accepted {Window:1m0s MinSeverity:urgent Level:active Log:<nil>}
+--- FAIL: TestWorkerWithALoudConfigSendsNothing (0.07s)
+    worker_test.go:52: Tick accepted a critical nudge level
+--- FAIL: TestOneNudgeForBurst (0.09s)
+    worker_test.go:67: delivered [], want ["5 new, 5 waiting for Claude"]
+--- FAIL: TestNudgeCountsOnlyNew (0.09s)
+    worker_test.go:88: delivered [], want ["3 new, 3 waiting for Claude" "1 new, 4 waiting for Claude"]
+--- FAIL: TestNudgeCountsAnItemOnceWhateverItsEvents (0.08s)
+    worker_test.go:98: delivered [], want ["1 new, 1 waiting for Claude"]
+--- FAIL: TestWindowCollapses (0.08s)
+    worker_test.go:109: 0 sends 10 minutes after a nudge, want still 1
+--- FAIL: TestLowSeverityAndDuetToCrewDontNudge (0.08s)
+    worker_test.go:135: delivered [], want ["1 new, 2 waiting for Claude"]
+--- FAIL: TestFailedSendRetriesNextTick (0.10s)
+    worker_test.go:162: delivered [], want ["1 new, 1 waiting for Claude"]
+--- FAIL: TestRefusedNudgeNotRetried (0.08s)
+    worker_test.go:183: 0 attempts, want the refused nudge tried once
+--- FAIL: TestRefusedNudgeIsNotACrash (0.10s)
+    worker_test.go:203: 0 attempts after a restart, want the refused nudge not re-sent
+--- FAIL: TestRestartDoesNotResend (0.07s)
+    worker_test.go:215: delivered [], want ["1 new, 1 waiting for Claude"]
+--- FAIL: TestNudgeCarriesNoItemText (0.11s)
+    worker_test.go:233: no nudge went out
+--- FAIL: TestRunTicksOnStart (5.07s)
+    worker_test.go:261: timed out
+--- FAIL: TestRunTicksOnKickAndOnTheInterval (5.07s)
+    worker_test.go:273: timed out
+--- FAIL: TestTicksNeverOverlap (2.07s)
+    worker_test.go:295: the first tick never reached its send
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/nudge	16.571s
+FAIL
+exit=1
+
+$ go test -race -count=1 -timeout 120s ./internal/hosted/web ./internal/hosted/app
+--- FAIL: TestInboxAndItemShowDeliveryOnlyWhileItIsNotHealthy (0.13s)
+    delivery_test.go:31: inbox_for_claude delivery = <nil>, want map[broken:true failed:0 pending:0 since:2026-10-28T09:00:00Z status:401]
+    delivery_test.go:31: item delivery = <nil>, want map[broken:true failed:0 pending:0 since:2026-10-28T09:00:00Z status:401]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/web	7.493s
+--- FAIL: TestOutboxTestQueuesOneTestPush (0.07s)
+    outbox_cmd_test.go:37: code=64 out="" err="yo-human-hosted: unknown command \"outbox\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version    print the version\n  token      create, list and revoke node tokens and desk starters\n  check      check the database's integrity and count its rows\n  serve      run the MCP and approval listeners until SIGTERM or SIGINT\n  selfcheck  post an approval and a question, record Duet's words and read the answer, offline\n"
+--- FAIL: TestOutboxRefusesAMissingDatabaseAndBadUsage (0.00s)
+    outbox_cmd_test.go:62: missing database: code=64 out="" err="yo-human-hosted: unknown command \"outbox\"\n\nusage: yo-human-hosted <command>\n\ncommands:\n  version    print the version\n  token      create, list and revoke node tokens and desk starters\n  check      check the database's integrity and count its rows\n  serve      run the MCP and approval listeners until SIGTERM or SIGINT\n  selfcheck  post an approval and a question, record Duet's words and read the answer, offline\n"
+--- FAIL: TestUsageNamesOutbox (0.00s)
+    outbox_cmd_test.go:73: the usage text does not mention outbox
+--- FAIL: TestCheckExitsOneAndPrintsTheCountsWhileDeliveryIsNotHealthy (0.09s)
+    outbox_cmd_test.go:100: output lacks "delivery: broken\n":
+        integrity: ok
+        items: 0
+        decisions: 0
+        relays: 0
+        events: 0
+        messages: 0
+        tokens: 1
+    outbox_cmd_test.go:100: output lacks "delivery_since: 2026-11-02T09:00:00Z\n":
+        integrity: ok
+        items: 0
+        decisions: 0
+        relays: 0
+        events: 0
+        messages: 0
+        tokens: 1
+    outbox_cmd_test.go:100: output lacks "delivery_status: 401\n":
+        integrity: ok
+        items: 0
+        decisions: 0
+        relays: 0
+        events: 0
+        messages: 0
+        tokens: 1
+    outbox_cmd_test.go:100: output lacks "delivery_failed: 0\n":
+        integrity: ok
+        items: 0
+        decisions: 0
+        relays: 0
+        events: 0
+        messages: 0
+        tokens: 1
+    outbox_cmd_test.go:100: output lacks "delivery_pending: 0\n":
+        integrity: ok
+        items: 0
+        decisions: 0
+        relays: 0
+        events: 0
+        messages: 0
+        tokens: 1
+    outbox_cmd_test.go:104: code=0 err="", want exit 1 with a word on stderr
+--- FAIL: TestCheckExitsOneForARefusedMessageAndAnOverduePushOnly (0.09s)
+    outbox_cmd_test.go:123: code=0 out="integrity: ok\nitems: 0\ndecisions: 0\nrelays: 0\nevents: 0\nmessages: 0\ntokens: 1\n", want an overdue pending row called stuck
+--- FAIL: TestServeSendsTheOutboxThroughBark (0.07s)
+    serve_worker_test.go:46: outbox test: 64 yo-human-hosted: unknown command "outbox"
+        
+        usage: yo-human-hosted <command>
+        
+        commands:
+          version    print the version
+          token      create, list and revoke node tokens and desk starters
+          check      check the database's integrity and count its rows
+          serve      run the MCP and approval listeners until SIGTERM or SIGINT
+          selfcheck  post an approval and a question, record Duet's words and read the answer, offline
+--- FAIL: TestServeWithoutBarkSaysSoAndRuns (0.10s)
+    serve_worker_test.go:79: stderr "" does not say no push will be sent
+--- FAIL: TestServeRefusesAHalfConfiguredBark (0.26s)
+    serve_worker_test.go:90: [YH_BARK_URL https://bark.example.com]: code=0 err="", want a config refusal that names the variable and no value
+    serve_worker_test.go:90: [YH_BARK_URL https://bark.example.com YH_BARK_USER u YH_BARK_PASSWORD p]: code=0 err="", want a config refusal that names the variable and no value
+    serve_worker_test.go:90: [YH_BARK_USER u YH_BARK_PASSWORD p YH_BARK_DEVICE_KEY k]: code=0 err="", want a config refusal that names the variable and no value
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	5.958s
+FAIL
+exit=1
+
+$ go test -race -count=1 -run NeverWakes ./internal/repolint
+--- FAIL: TestNeverWakesSessionsFixtures (0.00s)
+    herdr_test.go:26: paths = [], want [cmd/yo-human-approved/bad.go cmd/yo-human-desk/bad.go internal/hosted/nudge/bad_test.go internal/hosted/web/bad_alias.go internal/hosted/web/bad_dial.go internal/hosted/web/bad_dialer.go internal/hosted/web/bad_dialtimeout.go internal/hosted/web/bad_dialunix.go internal/hosted/web/bad_dot.go internal/hosted/web/bad_dotaddr.go internal/hosted/web/bad_import.go internal/hosted/web/bad_literal.go internal/hosted/web/bad_unixaddr.go]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/repolint	0.162s
+FAIL
+exit=1
+
+$ go test -race -count=1 -timeout 120s ./internal/hosted/perf ./tools/perf
+--- FAIL: TestNudgeTickDoesNotGrowWithOldEvents (0.00s)
+    nudge_test.go:34: 0 and 0 samples, want 40 each
+--- FAIL: TestNudgeSamplesAreEachATickWithAnEventToRead (0.00s)
+    nudge_test.go:44: samples = [], <nil>, want 5
+--- FAIL: TestSamplersTimeEachCall (0.41s)
+    perf_test.go:31: nudge: 0 samples, want 4
+--- FAIL: TestSamplersReportSetupErrors (0.00s)
+    perf_test.go:49: nudge: no error for an unusable directory
+--- FAIL: TestRunPrintsOneTimingPerLine (0.36s)
+    perf_test.go:61: nudge: code 2, stderr "usage: perf post|revise|wake N\n"
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/perf	58.662s
+--- FAIL: TestHostedScenariosAreRegistered (0.00s)
+    hosted_test.go:23: scenario hosted-nudge-tick is not registered with a Sample
+--- FAIL: TestNudgeTickHasABudget (0.00s)
+    hosted_test.go:118: hosted-nudge-tick budget = {P95Ms:0}, false, want a budget of at least 1 ms
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/perf	7.997s
+FAIL
+exit=1
+
+$ go test -race -count=1 ./internal/hosted/egress/bark   # review of my own slice A: an unusable base URL was classed transient and retried forever
+--- FAIL: TestBarkWithAnUnusableBaseURLIsABrokenChannel (0.00s)
+    bark_test.go:268: err = bark: the base URL is not usable, want a broken channel (nothing it sends will arrive) that does not echo the URL
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/egress/bark	5.220s
+FAIL
+exit=1
+
+$ go test -race -count=1 ./internal/hosted/db ./internal/hosted/nudge   # review must-fix 1: a page was held by the general ledger
+--- FAIL: TestLastPageSentForItemIsThatItemsPagesOnly (0.07s)
+    outbox_test.go:267: LastPageSentForItem(itm_1) = 0001-01-01 00:00:00 +0000 UTC false, itm_9 found=false; want the newest sent page of that item only
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	6.534s
+--- FAIL: TestPageIsNotHeldByANudgeOrADuetPost (0.08s)
+    lanes_test.go:194: delivered [], want ["1 page for Claude"]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/nudge	27.369s
+FAIL
+exit=1
+
+$ go test -count=1 -timeout 100s ./internal/hosted/db ./internal/hosted/nudge ./internal/hosted/app   # review must-fix 2: a transient outage was invisible
+--- FAIL: TestOpenMigratesAndReopens (0.01s)
+    db_test.go:40: user_version = 4, want 5
+--- FAIL: TestNudgeStateStartsZeroAndRoundTrips (0.00s)
+    nudge_test.go:23: state = {LastSeq:42 Count:7 LastSent:2026-10-28 09:30:15.123456 +0000 UTC FailedAt:2026-10-28 09:31:15.123456 +0000 UTC LastStatus:400 StuckSince:0001-01-01 00:00:00 +0000 UTC StuckStatus:0}, want {LastSeq:42 Count:7 LastSent:2026-10-28 09:30:15.123456 +0000 UTC FailedAt:2026-10-28 09:31:15.123456 +0000 UTC LastStatus:400 StuckSince:2026-10-28 09:32:15.123456 +0000 UTC StuckStatus:503}
+--- FAIL: TestDeliveryStateCountsARowStillRetryingAfterTenMinutes (0.01s)
+    nudge_test.go:187: a retrying row older than 10 min: <nil>, want one pending
+    nudge_test.go:193: pending = <nil>, want both rows counted but only the tried one making it unhealthy
+--- FAIL: TestDeliveryStateCountsANudgeThatKeepsFailing (0.00s)
+    nudge_test.go:205: a nudge failing for over 10 min: <nil>, want status 503
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/db	0.830s
+--- FAIL: TestAnOutageThatAnswersTransientlyIsVisible (0.01s)
+    broken_test.go:185: delivery after 20 min of 503s = <nil>, want one pending row
+--- FAIL: TestANudgeOutageIsVisibleAndClearedByA2xx (0.01s)
+    broken_test.go:204: delivery after 20 min of failed nudges = <nil>, want it unhealthy
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/nudge	2.308s
+--- FAIL: TestCheckExitsOneForARowThatKeepsFailing (0.01s)
+    outbox_cmd_test.go:142: code=0 out="integrity: ok\nitems: 0\ndecisions: 0\nrelays: 0\nevents: 0\nmessages: 0\ntokens: 1\n", want exit 1 for a row retried for an hour
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	6.036s
+FAIL
+exit=1
+
+$ go test -count=1 -run TestBarkURL ./internal/hosted/app   # review should-fix 3
+--- FAIL: TestBarkURLIsAnAbsoluteHTTPSURLOrLoopbackHTTP (0.00s)
+    config_bark_test.go:19: "bark.example.com": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "ftp://bark.example.com": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "http://bark.example.com": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "https://": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "https:///push": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "https://user:PASS-FAKE@bark.example.com": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "https://bark.example.com?key=DEVICE-KEY-FAKE": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "https://bark.example.com#x": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: " ": err = <nil>, want a refusal naming YH_BARK_URL
+    config_bark_test.go:19: "//bark.example.com": err = <nil>, want a refusal naming YH_BARK_URL
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.235s
+FAIL
+exit=1
+
+$ go test -count=1 -run Redirect ./internal/hosted/egress/bark   # review should-fix 4
+--- FAIL: TestBarkNeverFollowsARedirectAndTreatsItAsBroken (0.01s)
+    bark_test.go:284: 301: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 301: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 302: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 302: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 303: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 303: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 307: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 307: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 308: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:284: 308: err = <nil> (broken false, status 0), want a broken channel with that status
+    bark_test.go:295: the second host got 10 requests, want none: the device key must never be re-sent
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/egress/bark	0.179s
+FAIL
+exit=1
+
+$ go test -count=1 -run Shutdown ./internal/hosted/nudge   # review should-fix 7
+--- FAIL: TestShutdownBetweenAnOutboxSendAndItsLedgerWrite (0.01s)
+    shutdown_test.go:27: Tick = db: begin: context canceled, want the bookkeeping done on a context the shutdown does not end
+    shutdown_test.go:29: row is pending, want sent
+    shutdown_test.go:32: 0 ledger rows, want the push recorded
+--- FAIL: TestShutdownBetweenANudgeSendAndItsLedgerWrite (0.01s)
+    shutdown_test.go:39: Tick = db: begin: context canceled, want the bookkeeping done on a context the shutdown does not end
+    shutdown_test.go:41: 0 ledger rows, want the nudge recorded
+--- FAIL: TestShutdownAfterATransientNudgeFailureStillRestoresTheState (0.01s)
+    shutdown_test.go:49: Tick = db: begin: context canceled
+        db: begin: context canceled, want the bookkeeping done on a context the shutdown does not end
+    shutdown_test.go:53: delivered [], want ["1 new, 1 waiting for Claude"]
+--- FAIL: TestShutdownAfterABrokenChannelStillRaisesTheFlag (0.00s)
+    shutdown_test.go:60: Tick = db: begin: context canceled, want the bookkeeping done on a context the shutdown does not end
+    shutdown_test.go:62: the flag was not raised
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/nudge	0.218s
+FAIL
+exit=1
+
+$ go test -count=1 -run "DuetReply|BusLimits" ./internal/hosted/bus ./internal/hosted/app   # ruling ev-1794: finding 5 behind a switch
+--- FAIL: TestDuetReplyPushSwitch (0.01s)
+    queue_test.go:245: switch off=true: rows [duet_post page duet_post], want [page duet_post]
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/bus	0.210s
+--- FAIL: TestDuetReplyPushDefaultsOnAndTakesOffAndOn (0.00s)
+    config_bark_test.go:37: "": DuetReplyPush=false err=<nil>, want true
+    config_bark_test.go:37: "on": DuetReplyPush=false err=<nil>, want true
+    config_bark_test.go:42: "yes": err = <nil>, want a refusal naming the variable
+    config_bark_test.go:42: "OFF": err = <nil>, want a refusal naming the variable
+    config_bark_test.go:42: "0": err = <nil>, want a refusal naming the variable
+--- FAIL: TestBusLimitsFollowTheDuetReplySwitch (0.00s)
+    config_bark_test.go:52: DuetReplyPush=false: limits {LinkHosts:[github.com] Policy:{V:0 Rules:[]} WalledSwarms:[client] OnCommit:0x100dfc790 NoDuetReplyPush:false}
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/app	0.219s
+FAIL
+exit=1
+
+# Delta review (a85ad9f), must-fix: a row held by the cap after a 2xx counted as an outage.
+$ go test -count=1 -run 'TestAHeldRowThatFailed|TestARowTriedAfter' ./internal/hosted/nudge
+--- FAIL: TestAHeldRowThatFailedOnceInABlipIsNotAnOutage (0.01s)
+    lastok_test.go:27: delivery = &{Broken:false Since:0001-01-01 00:00:00 +0000 UTC Status:0 Failed:0 Pending:1} at t+16m with the channel healthy, want nil
+FAIL
+FAIL	github.com/Exploded-views/yo-human/internal/hosted/nudge	0.253s
+FAIL
+exit=1

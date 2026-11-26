@@ -4,7 +4,7 @@ You must follow the constitution in [constitution.md](constitution.md) when doin
 
 The one way AI agents reach their human: a Go CLI, called on demand (no daemon), delivering through channels (PagerDuty, ntfy, Bark; Heeler later).
 
-Status: the M0 scaffold and M1 (v1 notify) exist: `notify`, `resolve`, `flush`, `status`, `levels`, `page`, `channel test`, `config init|check|schema|trust` and `secret set|list`, over ntfy, Bark and PagerDuty. The contract is `docs/specs/2026-10-26-m1-contract-design.md` with its amendments; the agent skill is `skills/yo-human/SKILL.md`. Hosted mode (H1, `docs/plans/2026-10-27-hosted-h1.md`) has `yo-human-hosted version|token|check|serve|selfcheck` (`serve` runs the MCP listener on loopback and the approval listener; OAuth and the nudge worker are not built yet; `docs/hosted/local.md` runs one instance on a Mac), its own layer rules and the token leak rule.
+Status: the M0 scaffold and M1 (v1 notify) exist: `notify`, `resolve`, `flush`, `status`, `levels`, `page`, `channel test`, `config init|check|schema|trust` and `secret set|list`, over ntfy, Bark and PagerDuty. The contract is `docs/specs/2026-10-26-m1-contract-design.md` with its amendments; the agent skill is `skills/yo-human/SKILL.md`. Hosted mode (H1, `docs/plans/2026-10-27-hosted-h1.md`) has `yo-human-hosted version|token|check|serve|selfcheck|outbox` (`serve` runs the MCP listener on loopback and the approval listener, and, with `YH_BARK_*` set, the nudge worker: quiet nudges and the outbox through Bark; `check` exits 1 while delivery is not healthy and `outbox test` queues a test push that clears a broken channel; OAuth is not built yet; `docs/hosted/local.md` runs one instance on a Mac), its own layer rules and the token leak rule.
 
 ## Commands
 

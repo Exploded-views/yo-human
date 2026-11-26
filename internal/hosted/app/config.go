@@ -49,6 +49,8 @@ type Config struct {
 	WebAuthnRPID, ApproveOrigin                      string
 	ChallengeTTL, DeskTTL                            time.Duration
 	ListenMCP, ListenApprove                         string
+	// DuetReplyPush: Duet's reply in a thread on an owner item pushes to his phone (YH_DUET_REPLY_PUSH).
+	DuetReplyPush bool
 }
 
 // The ceilings the plan puts on three durations.
@@ -77,7 +79,7 @@ func LoadConfig(env func(string) string) (Config, error) {
 		CIMDHosts:          l.list("YH_CIMD_HOSTS", "claude.ai,claude.com"),
 		OriginAllow:        l.shaped("YH_ORIGIN_ALLOW", l.list("YH_ORIGIN_ALLOW", "https://claude.ai,https://claude.com"), browserOrigin, "an https origin as a browser sends it: scheme and host in lower case, no path, query, fragment, userinfo or :443"),
 		LinkHosts:          l.shaped("YH_LINK_HOSTS", l.list("YH_LINK_HOSTS", "github.com"), bareHost, "bare hosts, with no scheme, port, path or wildcard"),
-		BarkURL:            l.str("YH_BARK_URL", ""),
+		BarkURL:            l.barkURL(),
 		BarkUser:           l.str("YH_BARK_USER", ""),
 		BarkPassword:       Secret(l.str("YH_BARK_PASSWORD", "")),
 		BarkDeviceKey:      Secret(l.str("YH_BARK_DEVICE_KEY", "")),
@@ -93,6 +95,7 @@ func LoadConfig(env func(string) string) (Config, error) {
 		ApproveOrigin:      l.approveOrigin(l.required("YH_APPROVE_ORIGIN")),
 		ChallengeTTL:       l.dur("YH_CHALLENGE_TTL", "5m", maxChallengeTTL),
 		DeskTTL:            l.dur("YH_DESK_TTL", "15m", maxDeskTTL),
+		DuetReplyPush:      l.oneOf("YH_DUET_REPLY_PUSH", "on", "on", "off") == "on",
 	}
 	c.WalledSwarms = l.walled()
 	c.ListenMCP, c.ListenApprove = l.listeners()
@@ -255,6 +258,34 @@ func (l *loader) walled() []string {
 		}
 	}
 	return names
+}
+
+// barkURL reads YH_BARK_URL: empty (no Bark), or an absolute https URL with a host, and no
+// credentials, query or fragment. http is for a loopback host only. The error names the variable
+// and never the value, which a mistake may have put a key in.
+func (l *loader) barkURL() string {
+	raw := l.env("YH_BARK_URL")
+	if raw == "" {
+		return ""
+	}
+	if u, err := url.Parse(raw); err != nil || !barkURLOK(u) {
+		l.fail("YH_BARK_URL", "must be an absolute https URL with a host and no credentials, query or fragment (http only for a loopback host)")
+	}
+	return raw
+}
+
+// barkURLOK is the shape rule: a host, no credentials, query or fragment, and https (or http to a
+// loopback host).
+func barkURLOK(u *url.URL) bool {
+	if u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" {
+		return false
+	}
+	return u.Scheme == "https" || (u.Scheme == "http" && (u.Hostname() == "localhost" || isLoopbackIP(u.Hostname())))
+}
+
+func isLoopbackIP(host string) bool {
+	a, err := netip.ParseAddr(host)
+	return err == nil && a.IsLoopback()
 }
 
 // origin checks a scheme-and-host URL with no path, query, fragment or credentials, and drops

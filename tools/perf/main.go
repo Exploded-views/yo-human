@@ -54,6 +54,8 @@ var scenarios = []Scenario{
 	{Name: "hosted-post", Sample: hostedSample("post")},
 	{Name: "hosted-revise", Sample: hostedSample("revise")},
 	{Name: "hosted-answers-wake", Sample: hostedSample("wake")},
+	// One nudge tick with one new event to read, over 100,000 older events: it reads only what is after its cursor.
+	{Name: "hosted-nudge-tick", Sample: hostedSample("nudge")},
 	// A fresh database, one approval posted, recorded and read, with no network: the whole command.
 	{Name: "hosted-selfcheck", Argv: []string{"dist/yo-human-hosted", "selfcheck"}},
 }

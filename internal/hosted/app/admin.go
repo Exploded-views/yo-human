@@ -27,6 +27,9 @@ var errNoLiveToken = errors.New("no live token has that name")
 // are still printed first.
 var errDamaged = errors.New("the database failed its integrity check")
 
+// errDegraded is what `check` returns when the database is sound but delivery is not.
+var errDegraded = errors.New("delivery is not healthy: see the delivery lines on stdout")
+
 // maxLiveStarters is the cap on live desk starters.
 const maxLiveStarters = 2
 
@@ -90,6 +93,9 @@ func (a admin) result(err error) int {
 	case db.IsConflict(err):
 		a.say("a live token with that name already exists")
 		return ExitFailed
+	case errors.Is(err, errDegraded):
+		a.say("%v", err)
+		return ExitDegraded
 	case errors.Is(err, errNoLiveToken):
 		a.say("%v", err)
 		return ExitFailed

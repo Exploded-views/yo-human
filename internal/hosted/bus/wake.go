@@ -43,7 +43,12 @@ func (w *wakes) fire(swarm string) {
 // write calls it: Post, Reply, PushStatus, RecordAnswer, RecordApproval, RelayWords and
 // RelayApproval. A relay's words_relayed is never returned by Answers, so its waiter looks again
 // and waits on; waking is harmless, and one rule is easier to keep than a list of exceptions.
-func (b *Bus) committed(swarm string) { b.wakes.fire(swarm) }
+func (b *Bus) committed(swarm string) {
+	b.wakes.fire(swarm)
+	if b.onSave != nil {
+		b.onSave()
+	}
+}
 
 // timerFunc starts a timer: the channel fires once after d, and stop releases it early.
 type timerFunc func(d time.Duration) (fired <-chan time.Time, stop func())

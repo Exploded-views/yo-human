@@ -3,7 +3,9 @@ package app
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/Exploded-views/yo-human/internal/hosted/bus"
 	"github.com/Exploded-views/yo-human/internal/hosted/db"
 )
 
@@ -23,6 +25,27 @@ func (a admin) check(args []string) int {
 		if c.Integrity != "ok" {
 			return errDamaged
 		}
-		return nil
+		ds, err := d.Delivery(context.Background(), now())
+		if err != nil || ds == nil {
+			return err
+		}
+		a.printDelivery(ds)
+		return errDegraded
 	})
+}
+
+// printDelivery says why delivery is not healthy, with the same counts Duet's views carry.
+func (a admin) printDelivery(ds *bus.DeliveryState) {
+	why := "stuck"
+	switch {
+	case ds.Broken:
+		why = "broken"
+	case ds.Failed > 0:
+		why = "refused"
+	}
+	_, _ = fmt.Fprintf(a.stdout, "delivery: %s\n", why)
+	if ds.Broken {
+		_, _ = fmt.Fprintf(a.stdout, "delivery_since: %s\n", ds.Since.UTC().Format(time.RFC3339))
+	}
+	_, _ = fmt.Fprintf(a.stdout, "delivery_status: %d\ndelivery_failed: %d\ndelivery_pending: %d\n", ds.Status, ds.Failed, ds.Pending)
 }

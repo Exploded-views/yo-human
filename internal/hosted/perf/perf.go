@@ -129,10 +129,10 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	n := 0
 	if len(args) == 2 {
 		n, _ = strconv.Atoi(args[1])
-		fn = map[string]sampler{"post": PostIn, "revise": ReviseIn, "wake": WakeIn}[args[0]]
+		fn = map[string]sampler{"post": PostIn, "revise": ReviseIn, "wake": WakeIn, "nudge": NudgeIn}[args[0]]
 	}
 	if fn == nil || n < 1 {
-		_, _ = fmt.Fprintln(stderr, "usage: perf post|revise|wake N")
+		_, _ = fmt.Fprintln(stderr, "usage: perf post|revise|wake|nudge N")
 		return 2
 	}
 	samples, err := inTempDir(seedItems, n, fn)
@@ -203,9 +203,15 @@ func seeded(dir string, items int) (*bus.Bus, func(), error) {
 
 // seededWarm is seeded with the warm-up draft given, so a failing warm-up can be tested.
 func seededWarm(dir string, items int, warm bus.Draft) (*bus.Bus, func(), error) {
+	b, _, closeDB, err := seededStore(dir, items, warm)
+	return b, closeDB, err
+}
+
+// seededStore is seededWarm that also returns the store, for a scenario that reads it directly.
+func seededStore(dir string, items int, warm bus.Draft) (*bus.Bus, *db.DB, func(), error) {
 	d, err := db.Open(filepath.Join(dir, "bus.db"))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	closeDB := func() { _ = d.Close() }
 	at := time.Date(2026, 10, 28, 9, 0, 0, 0, time.UTC)
@@ -230,14 +236,14 @@ func seededWarm(dir string, items int, warm bus.Draft) (*bus.Bus, func(), error)
 	})
 	if err != nil {
 		closeDB()
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	b := bus.New(d, time.Now, bus.Limits{})
 	// Measured locally: the first commit after the 10,000-item bulk seed took 8.6-10.3 ms, the
 	// rest 0.16-0.37 ms. The seed creates that one-off, so the scenarios must not time it.
 	if _, err := b.Post(context.Background(), perfNode, warm); err != nil {
 		closeDB()
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return b, closeDB, nil
+	return b, d, closeDB, nil
 }

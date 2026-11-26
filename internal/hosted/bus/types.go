@@ -187,4 +187,10 @@ type Limits struct {
 	// WalledSwarms are the swarms behind the client wall (the deployment's YH_WALLED_SWARMS).
 	// New copies them once; nothing a caller sends can add or remove one.
 	WalledSwarms []string
+	// OnCommit, if set, is called after every write that has committed, so a delivery worker can
+	// look again at once instead of at its next tick. It must not block.
+	OnCommit func()
+	// NoDuetReplyPush stops Duet's reply in a thread on an item addressed to the owner from
+	// pushing to his phone (YH_DUET_REPLY_PUSH=off). The zero value pushes it.
+	NoDuetReplyPush bool
 }

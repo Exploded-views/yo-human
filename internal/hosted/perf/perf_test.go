@@ -13,7 +13,9 @@ import (
 	"github.com/Exploded-views/yo-human/internal/hosted/bus"
 )
 
-var samplers = map[string]sampler{"post": PostIn, "revise": ReviseIn, "wake": WakeIn}
+func init() { nudgeOldEvents = 50 } // plumbing tests need no 100,000 events; the budget test says so itself
+
+var samplers = map[string]sampler{"post": PostIn, "revise": ReviseIn, "wake": WakeIn, "nudge": NudgeIn}
 
 func TestSeedItemsIsTheBudgetLine(t *testing.T) {
 	if SeedItems != 10000 {
@@ -55,7 +57,7 @@ func TestRunPrintsOneTimingPerLine(t *testing.T) {
 	old := seedItems
 	seedItems = 20
 	t.Cleanup(func() { seedItems = old })
-	for _, kind := range []string{"post", "revise", "wake"} {
+	for _, kind := range []string{"post", "revise", "wake", "nudge"} {
 		var out, errOut bytes.Buffer
 		if code := Run([]string{kind, "3"}, &out, &errOut); code != 0 {
 			t.Fatalf("%s: code %d, stderr %q", kind, code, errOut.String())

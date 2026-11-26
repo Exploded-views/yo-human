@@ -38,6 +38,7 @@ type inboxOut struct {
 	Interrupt []summaryWire              `json:"interrupt"`
 	Threads   []summaryWire              `json:"threads"`
 	Next      int64                      `json:"next"`
+	Delivery  *deliveryWire              `json:"delivery,omitempty"`
 }
 
 func inbox(ctx context.Context, b *bus.Bus, p bus.Principal, in sinceIn) (any, error) {
@@ -49,7 +50,7 @@ func inbox(ctx context.Context, b *bus.Bus, p bus.Principal, in sinceIn) (any, e
 	for k, g := range r.Groups {
 		groups[k] = summariesOf(g)
 	}
-	return inboxOut{v1(), groups, summariesOf(r.Interrupt), summariesOf(r.Threads), r.Next}, nil
+	return inboxOut{v1(), groups, summariesOf(r.Interrupt), summariesOf(r.Threads), r.Next, deliveryOf(r.Delivery)}, nil
 }
 
 type itemViewOut struct {
@@ -57,6 +58,7 @@ type itemViewOut struct {
 	Item     itemWire      `json:"item"`
 	Thread   []messageWire `json:"thread"`
 	Decision *recordWire   `json:"decision,omitempty"`
+	Delivery *deliveryWire `json:"delivery,omitempty"`
 }
 
 func itemView(ctx context.Context, b *bus.Bus, p bus.Principal, in idIn) (any, error) {
@@ -64,7 +66,7 @@ func itemView(ctx context.Context, b *bus.Bus, p bus.Principal, in idIn) (any, e
 	if err != nil {
 		return nil, err
 	}
-	out := itemViewOut{envelope: v1(), Item: itemOf(v.Item), Thread: messagesOf(v.Messages)}
+	out := itemViewOut{envelope: v1(), Item: itemOf(v.Item), Thread: messagesOf(v.Messages), Delivery: deliveryOf(v.Delivery)}
 	if v.Decision != nil {
 		r := recordOf(*v.Decision)
 		out.Decision = &r
