@@ -23,6 +23,7 @@ Status: the M0 scaffold and M1 (v1 notify) exist: `notify`, `resolve`, `flush`, 
 - `make release-check`: a goreleaser snapshot, each archive checked against `checksums.txt` and for test hooks (needs the network and a clone with its git history; not in `make ci`)
 - `make workflows`: lint `.github/workflows`
 - `make tools`: install the pinned tools; `make hooks`: install the lefthook pre-commit hook
+- `make hosted-image`: build the example image (`deploy/example/Dockerfile`); build only, it never pushes. `make hosted-image-test`: builds the image, runs the entrypoint's kill and secret tests in the pinned busybox image, with fake cloudflared, litestream and server binaries, then a smoke run of the built image: exit 78 without a token, uid 65532 (needs Docker; local only, not in `make ci`). `make hosted-deploy-check`: `deploy/example/` holds only placeholders and meets the image and `fly.toml` rules, plus those checks' tests (in `make ci` and CI)
 - `make smoke`: build, then run `dist/yo-human version` and `dist/yo-human-hosted version`
 - `make ci`: everything CI runs, in CI's order, without a base
 - `make ci-base`: `make ci` with floors and budgets compared to the merge base with `BASE` (default `origin/main`), plus advisory `make vuln`; gaps in CONTRIBUTING.md
