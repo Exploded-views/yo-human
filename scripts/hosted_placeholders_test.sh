@@ -114,6 +114,29 @@ d=$(fixture value-literals)
 printf '%s\n' "  YH_LISTEN_APPROVE = ':8080'" "  YH_DB_PATH = '/data/bus.db'" "  YH_WEBAUTHN_RP_ID = '<approve-host>'" "  YH_APPROVE_ORIGIN = 'https://<approve-host>'" >>"$d/fly.toml"
 check value-literals 0 "$d"
 
+# YH_DUET_REPLY_PUSH holds on or off, keyed by name: any other value is a finding, and so is
+# on or off under any other key.
+for v in off on; do
+  d=$(fixture "reply-push-$v")
+  printf '%s\n' "  YH_DUET_REPLY_PUSH = '$v'" >>"$d/fly.toml"
+  check "reply-push-$v" 0 "$d"
+done
+bad value-reply-push fly.toml "  YH_DUET_REPLY_PUSH = 'maybe'"
+bad value-other-off fly.toml "  YH_OTHER = 'off'"
+bad value-other-on fly.toml "  YH_OTHER = 'on'"
+d=$(fixture value-reply-push-rule)
+echo "  YH_DUET_REPLY_PUSH = 'maybe'" >>"$d/fly.toml"
+check value-reply-push-rule 1 "$d" && expect value-reply-push-rule placeholder-value
+
+# The repo's example has no active YH_BARK_ line: the notify worker starts only with all four, and
+# serve refuses a partial set. The three secret ones cannot sit in fly.toml, so none.
+grep -q '^[[:space:]]*YH_BARK_' "$root/deploy/example/fly.toml"
+case $? in
+  0) echo "FAIL example-no-bark: deploy/example/fly.toml sets a YH_BARK_ variable"; fails=$((fails + 1)) ;;
+  1) echo "ok   example-no-bark" ;;
+  *) echo "FAIL example-no-bark: cannot read deploy/example/fly.toml"; fails=$((fails + 1)) ;;
+esac
+
 # Rule url-host: a URL names only a loopback address, example.com or a placeholder.
 bad url-real fly.toml "# docs: https://docs.real-service.net/x"
 bad url-http fly.toml "# docs: http://real-service.net"
