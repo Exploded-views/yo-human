@@ -35,7 +35,8 @@ repo() {
 # want NAME CODE PATTERN BASEREF [ENV]: (NAME is the case and its repo's directory) runs the script
 # in repo $t/NAME with the head floors in $t/NAME/head.json; fails the case unless it exits CODE and
 # prints a line containing PATTERN. BASEREF - leaves FLOORS_BASE unset; ENV is one more NAME=VALUE.
-# BASE and FLOORS_BASE from the caller never leak in. $cf is the COVERFLOORS setting (empty runs
+# BASE and FLOORS_BASE from the caller never leak in (nor do its make variables, for the probe
+# below). $cf is the COVERFLOORS setting (empty runs
 # the script's default path).
 cf="COVERFLOORS=$t/coverfloors"
 want() {
@@ -137,7 +138,8 @@ git -C "$t/stale" branch origin/main
 echo '{"example.com/a":{"statements":75.0}}' >"$t/stale/head.json"
 printf 'probe-base:\n\t@echo $(BASE)\n' >"$t/probe.mk"
 probe_base() {
-  (cd "$root" && env -u BASE make -s -f Makefile -f "$t/probe.mk" probe-base)
+  (cd "$root" && env -u BASE -u MAKEFLAGS -u MFLAGS -u MAKEOVERRIDES -u MAKELEVEL \
+    make -s -f Makefile -f "$t/probe.mk" probe-base)
 }
 mkbase=$(probe_base)
 if [ -z "$mkbase" ]; then
