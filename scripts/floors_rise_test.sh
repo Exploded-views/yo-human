@@ -101,6 +101,60 @@ git -C "$t/ahead" checkout -q -
 echo '{"example.com/a":{"statements":80.0}}' >"$t/ahead/head.json"
 want ahead 1 "floors-rise: main-ahead has moved past this commit; merge main in and re-run" main-ahead
 
+# A real lowered floor against a base that is an ancestor of HEAD does not claim the base moved on.
+repo nohint '{"example.com/a":{"statements":80.0}}'
+echo '{"example.com/a":{"statements":79.9}}' >"$t/nohint/head.json"
+want nohint 1 "example.com/a: floor lowered 80.0" HEAD
+if grep -qF "has moved past this commit" "$t/out"; then
+  echo "FAIL nohint: the merge-main-in hint is printed for an ancestor base"; fails=$((fails + 1))
+else
+  echo "ok   nohint: no hint for an ancestor base"
+fi
+
+# FLOORS_BASE wins over BASE: b80 holds floor 80.0, b70 holds 70.0, the head is 75.0.
+twobase() {
+  repo "$1" '{"example.com/a":{"statements":80.0}}'
+  git -C "$t/$1" branch b80
+  echo '{"example.com/a":{"statements":70.0}}' >"$t/$1/coverage-floors.json"
+  git -C "$t/$1" commit -q -am lower
+  git -C "$t/$1" branch b70
+  echo '{"example.com/a":{"statements":75.0}}' >"$t/$1/head.json"
+}
+twobase order
+want order 1 "example.com/a: floor lowered 80.0" b80 BASE=b70
+twobase orderrev
+want orderrev 0 "floors-rise: base " b70 BASE=b80
+
+# make ci-base's default BASE must not name a branch that can shadow the remote-tracking ref: refs/
+# remotes/origin/main holds floor 80.0, a local branch origin/main 70.0, the head is 75.0. stale runs
+# floors_rise.sh with the BASE the Makefile defaults to (read through a probe makefile); stalecibase
+# and stalecihead run scripts/ci-base.sh, with a stub make, with BASE unset and BASE=HEAD.
+repo stale '{"example.com/a":{"statements":80.0}}'
+git -C "$t/stale" update-ref refs/remotes/origin/main HEAD
+echo '{"example.com/a":{"statements":70.0}}' >"$t/stale/coverage-floors.json"
+git -C "$t/stale" commit -q -am lower
+git -C "$t/stale" branch origin/main
+echo '{"example.com/a":{"statements":75.0}}' >"$t/stale/head.json"
+printf 'probe-base:\n\t@echo $(BASE)\n' >"$t/probe.mk"
+mkbase=$(cd "$root" && env -u BASE make -s -f Makefile -f "$t/probe.mk" probe-base)
+if [ -z "$mkbase" ]; then
+  echo "FAIL stale: cannot read the Makefile's default BASE"; fails=$((fails + 1))
+else
+  want stale 1 "example.com/a: floor lowered 80.0" - "BASE=$mkbase"
+fi
+mkdir -p "$t/bin" && printf '#!/bin/sh\nexit 0\n' >"$t/bin/make" && chmod +x "$t/bin/make"
+cibase() {
+  (cd "$t/stale" && env -u BASE PATH="$t/bin:$PATH" ${3:-} sh "$root/scripts/ci-base.sh") >"$t/out" 2>&1
+  got=$?
+  if [ "$got" != 0 ] || ! grep -qF -e "$2" "$t/out"; then
+    echo "FAIL $1: exit $got, want 0 and a line containing '$2'"; sed 's/^/    /' "$t/out"; fails=$((fails + 1))
+  else
+    echo "ok   $1"
+  fi
+}
+cibase stalecibase "(refs/remotes/origin/main)"
+cibase stalecihead "(HEAD)" BASE=HEAD
+
 # A git error reading the base is not "no floors file": a base whose tree object is gone fails closed.
 repo gitfail '{"example.com/a":{"statements":80.0}}'
 tree=$(git -C "$t/gitfail" rev-parse 'HEAD^{tree}')
