@@ -31,3 +31,27 @@ M8a ci-base.sh: base_ref=${BASE:-origin/main}                                   
    sh: case "stalecibase" no line containing '(refs/remotes/origin/main)' (git warns refname 'origin/main' is ambiguous)
 M8b Makefile: BASE ?= origin/main                                                KILLED
    sh: case "stale" exit 0, want 1 (the probe makefile reads the default; the lowered floor passes against the shadowing branch)
+
+# fu-yhh-26 review fixes (ruling ev-1863): raw failing lines of M6 to M9 (sh scripts/floors_rise_test.sh,
+# line restored, git diff empty after each). The 40-hex shas of the indented lines are left out.
+M6 floors_rise.sh: ref=${BASE:-${FLOORS_BASE:-...}}                  KILLED
+   FAIL order: exit 0, want 1
+   FAIL orderrev: exit 1, want 0
+   floors_rise_test: 2 case(s) failed
+   exit=1
+M7 floors_rise.sh: the hint printed on every exit 1                   KILLED
+   FAIL nohint: the merge-main-in hint is printed for an ancestor base
+   floors_rise_test: 1 case(s) failed
+   exit=1
+M8a ci-base.sh: base_ref=${BASE:-origin/main} (re-run with the sha check)   KILLED
+   FAIL stalecibase: exit 0, want 0 and a line containing 'base=<sha of refs/remotes/origin/main> (refs/remotes/origin/main)'
+       warning: refname 'origin/main' is ambiguous.
+       ci-base: base=<sha> (origin/main) floors: compared; budgets: skipped, no file at base
+   floors_rise_test: 1 case(s) failed
+   exit=1
+M9 Makefile ci-base recipe: BASE=origin/main sh scripts/ci-base.sh (was BASE=$(BASE))   KILLED
+   FAIL cibaserecipe: the ci-base recipe line is 'BASE=origin/main sh scripts/ci-base.sh', want BASE=refs/remotes/origin/main sh scripts/ci-base.sh
+   floors_rise_test: 1 case(s) failed
+   exit=1
+# cibaserecipe, the stalecibase sha check and the stalemf probe case (stalemf failed in the RED run) were
+# characterization or RED as noted in floors-rise-red.txt; M9 is what shows cibaserecipe bites.
