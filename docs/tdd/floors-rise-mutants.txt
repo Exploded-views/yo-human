@@ -20,3 +20,14 @@ M4 floors_rise.sh: exit 0 where the ref does not resolve (re-run)      KILLED
    sh: case "noref" exit 0, want 2; case "treeref" exit 0, want 2
 M5 floors_rise.sh: the "has moved past this commit" hint never printed  KILLED
    sh: case "ahead" no line containing the hint (exit 1 as wanted)
+
+# fu-yhh-26 (ruling ev-1863): mutants on the base choice and the hint. One line changed, sh
+# scripts/floors_rise_test.sh run, line restored (git diff empty after each).
+M6 floors_rise.sh: ref=${BASE:-${FLOORS_BASE:-...}} (BASE before FLOORS_BASE)   KILLED
+   sh: case "order" exit 0, want 1; case "orderrev" exit 1, want 0
+M7 floors_rise.sh: the hint printed on every exit 1, not only a base that is not an ancestor   KILLED
+   sh: case "nohint": the merge-main-in hint is printed for an ancestor base
+M8a ci-base.sh: base_ref=${BASE:-origin/main}                                    KILLED
+   sh: case "stalecibase" no line containing '(refs/remotes/origin/main)' (git warns refname 'origin/main' is ambiguous)
+M8b Makefile: BASE ?= origin/main                                                KILLED
+   sh: case "stale" exit 0, want 1 (the probe makefile reads the default; the lowered floor passes against the shadowing branch)
