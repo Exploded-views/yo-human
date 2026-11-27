@@ -1,0 +1,16 @@
+# Mutants on the floors-rise compare (ruling ev-1853). Each: one line changed, go test ./tools/coverfloors
+# and sh scripts/floors_rise_test.sh run, line restored (git diff empty after).
+
+M1 floors.go checkBase: f.Statements < b.Statements  ->  <=            KILLED
+   go: TestCheckRiseEqualRaisedAndNewPass, TestRunRiseOnlyExitCodes (equal), TestCheckAtFloorPasses,
+       TestRunExemptionInBasePasses, TestCheckRiseExemptionAddedFails
+   sh: case "raised" (equal floor on one package) exit 1, want 0
+M2 floors.go checkBase: the removed-floor case returns nil             KILLED
+   go: TestCheckRiseRemovedFails, TestCheckFloorRemovedFails, TestRunRiseOnlyExitCodes (removed)
+   sh: case "removed" exit 0, want 1
+M3 floors.go CheckRise: drop the CheckExemptions result                KILLED
+   go: TestCheckRiseExemptionAddedFails, TestCheckRiseSortedByPackage, TestRunRiseOnlyExitCodes (exemption)
+   sh: case "exempt" exit 0, want 1
+M4 floors_rise.sh: exit 0 where the ref does not resolve               KILLED
+   go: not covered (script only)
+   sh: case "noref" exit 0, want 2
