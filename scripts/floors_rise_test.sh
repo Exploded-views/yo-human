@@ -32,7 +32,8 @@ repo() {
   git -C "$t/$1" add -A && git -C "$t/$1" commit -q -m base || exit 1
 }
 
-# want NAME CODE PATTERN BASEREF: runs the script in repo $t/NAME with the head floors in
+# want NAME CODE PATTERN BASEREF: (NAME is the case and its repo's directory) runs the script in
+# repo $t/NAME with the head floors in
 # $t/NAME/head.json; fails the case unless it exits CODE and prints a line containing PATTERN.
 want() {
   name=$1 code=$2 pat=$3 ref=$4
@@ -62,15 +63,15 @@ want exempt 1 "example.com/a: exemption added" HEAD
 
 repo raised '{"example.com/a":{"statements":80.0},"example.com/b":{"statements":50.0}}'
 echo '{"example.com/a":{"statements":80.0},"example.com/b":{"statements":50.1}}' >"$t/raised/head.json"
-want "equal and raised floors" 0 "floors-rise: base " HEAD
+want raised 0 "floors-rise: base " HEAD
 
 repo noref '{"example.com/a":{"statements":80.0}}'
 echo '{"example.com/a":{"statements":80.0}}' >"$t/noref/head.json"
-want "the ref does not resolve" 2 "cannot resolve no-such-ref" no-such-ref
+want noref 2 "cannot resolve no-such-ref" no-such-ref
 
 repo nofile ''
 echo '{"example.com/a":{"statements":1.0}}' >"$t/nofile/head.json"
-want "the base has no floors file" 0 "skipped, no coverage-floors.json at base" HEAD
+want nofile 0 "skipped, no coverage-floors.json at base" HEAD
 
 [ "$fails" = 0 ] && { echo "floors_rise_test: all cases pass"; exit 0; }
 echo "floors_rise_test: $fails case(s) failed"

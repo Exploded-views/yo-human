@@ -126,9 +126,7 @@ func Check(cov map[string]float64, pkgs []string, floors, base map[string]Floor)
 	for p := range names {
 		vs = append(vs, checkOne(p, cov, floors)...)
 	}
-	for p, b := range base {
-		vs = append(vs, checkBase(p, b, floors)...)
-	}
+	vs = append(vs, checkLowered(floors, base)...)
 	for p, f := range floors {
 		if _, old := base[p]; base != nil && !old {
 			vs = append(vs, checkNew(p, f, cov)...)
@@ -195,8 +193,24 @@ func CheckExemptions(exempt, base map[string]string) []Violation {
 	return vs
 }
 
-// CheckRise is a stub so the RED tests compile; the fix replaces it.
-func CheckRise(cur, base FloorsFile) []Violation { return nil }
+// CheckRise compares two floors files alone, with no coverage: every floor
+// removed or lowered since base, and every exemption base lacks. A floor new
+// since base passes here; its window needs coverage (Check). Sorted by package.
+func CheckRise(cur, base FloorsFile) []Violation {
+	vs := checkLowered(cur.Floors, base.Floors)
+	vs = append(vs, CheckExemptions(cur.Exempt, base.Exempt)...)
+	sort.SliceStable(vs, func(i, j int) bool { return vs[i].Pkg < vs[j].Pkg })
+	return vs
+}
+
+// checkLowered reports each base floor that floors removed or lowered.
+func checkLowered(floors, base map[string]Floor) []Violation {
+	var vs []Violation
+	for p, b := range base {
+		vs = append(vs, checkBase(p, b, floors)...)
+	}
+	return vs
+}
 
 // Update returns floors for pkgs: current coverage rounded down, but never
 // below an existing floor. Packages outside pkgs keep their old floor.

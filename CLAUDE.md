@@ -17,6 +17,7 @@ Status: the M0 scaffold and M1 (v1 notify) exist: `notify`, `resolve`, `flush`, 
 - `make release-net-check`: per release target, `go list -deps ./cmd/yo-human` with the release settings imports no network package outside the channel implementations
 - `RELEASE_TARGETS`: the release GOOS/GOARCH list every release-side gate reads
 - `make floors`: coverage per package against `coverage-floors.json` (floors only rise)
+- `make floors-rise`: `coverage-floors.json` against the copy on `origin/main` (`FLOORS_BASE`), no coverage run; fails on a lowered or removed floor or an added exemption
 - `make perf`: p95 of each scenario against `perf-budgets.json`
 - `make secrets` / `make secrets-test`: gitleaks over full history / its tests
 - `make vuln`: govulncheck (advisory per PR, blocking at release)

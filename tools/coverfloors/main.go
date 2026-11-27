@@ -14,7 +14,16 @@ import (
 
 type options struct {
 	profile, packages, floors, baseFloors string
-	update                                bool
+	update, riseOnly                      bool
+}
+
+// valid says whether the flags make a run: --rise-only needs a base and no update, and takes no
+// profile; the full check needs both a profile and a package list.
+func (o options) valid() bool {
+	if o.riseOnly {
+		return o.baseFloors != "" && !o.update
+	}
+	return o.profile != "" && o.packages != ""
 }
 
 func main() { os.Exit(run(os.Args[1:], os.Stdout, os.Stderr)) }
@@ -28,11 +37,17 @@ func run(args []string, stdout, stderr io.Writer) int {
 	fs.StringVar(&o.floors, "floors", "coverage-floors.json", "floors file")
 	fs.StringVar(&o.baseFloors, "base-floors", "", "floors file from the merge base")
 	fs.BoolVar(&o.update, "update", false, "raise floors to current coverage and write the floors file")
-	if err := fs.Parse(args); err != nil || o.profile == "" || o.packages == "" {
+	fs.BoolVar(&o.riseOnly, "rise-only", false, "compare --floors with --base-floors only; no --profile or --packages")
+	if err := fs.Parse(args); err != nil || !o.valid() {
 		_, _ = fmt.Fprintln(stderr, "usage: coverfloors --profile F --packages F [--floors F] [--base-floors F] [--update]")
+		_, _ = fmt.Fprintln(stderr, "       coverfloors --rise-only --base-floors F [--floors F]")
 		return 2
 	}
-	code, err := execute(o, stdout)
+	exec := execute
+	if o.riseOnly {
+		exec = executeRise
+	}
+	code, err := exec(o, stdout)
 	if err != nil {
 		_, _ = fmt.Fprintln(stderr, "coverfloors:", err)
 		return 2
@@ -63,6 +78,19 @@ func execute(o options, stdout io.Writer) (int, error) {
 		vs = append(vs, CheckExemptions(ff.Exempt, bf.Exempt)...)
 	}
 	return report(stdout, append(vs, Check(cov, pkgs, ff.Floors, base)...)), nil
+}
+
+// executeRise reports the floors and exemptions that fell or grew since the base file.
+func executeRise(o options, stdout io.Writer) (int, error) {
+	cur, err := readFloors(o.floors, false)
+	if err != nil {
+		return 2, err
+	}
+	base, err := readFloors(o.baseFloors, false)
+	if err != nil {
+		return 2, err
+	}
+	return report(stdout, CheckRise(cur, base)), nil
 }
 
 func load(o options) (map[string]float64, []string, FloorsFile, error) {

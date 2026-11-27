@@ -34,7 +34,11 @@ as in CI. `make ci` alone needs no base.
 
 `make cover` runs the tests with coverage and fails when a package is below its
 floor in `coverage-floors.json`. That is CI's floor check without the comparison
-with the base's floors, which `make ci-base` adds.
+with the base's floors, which `make ci-base` adds. `make floors-rise` (also run
+by `make floors` and `make ci`) is the cheap half of that comparison: it checks
+`coverage-floors.json` against the copy on `origin/main` itself (`FLOORS_BASE`
+overrides the ref), with no coverage run, and fails when a floor is lowered or
+removed or an exemption is added. It fails closed when the ref does not resolve.
 
 Perf runs each command scenario once untimed first (the hosted `Sample`
 scenarios time their own calls), and a scenario that misses its budget is
