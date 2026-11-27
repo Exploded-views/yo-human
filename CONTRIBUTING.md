@@ -30,15 +30,23 @@ order) plus what CI does with a base: coverage floors and perf budgets compared
 with the merge base of HEAD and `BASE` (default `origin/main`; pass
 `BASE=<commit>` in a clone without it), and `make vuln`, advisory as in CI.
 When the base commit has no floors or budgets file, that comparison is skipped,
-as in CI. `make ci` alone needs no base.
+as in CI. `make ci` needs no merge base, but it does need the remote-tracking
+ref `refs/remotes/origin/main` (or `BASE=<commit>` or `FLOORS_BASE=<commit>`),
+because `make floors` runs `make floors-rise`. Without one it fails closed with
+"cannot resolve"; a fork or a `--single-branch` clone needs `git fetch origin main`
+or one of those variables.
 
 `make cover` runs the tests with coverage and fails when a package is below its
 floor in `coverage-floors.json`. That is CI's floor check without the comparison
 with the base's floors, which `make ci-base` adds. `make floors-rise` (also run
-by `make floors` and `make ci`) is the cheap half of that comparison: it checks
-`coverage-floors.json` against the copy on `origin/main` itself (`FLOORS_BASE`
-overrides the ref), with no coverage run, and fails when a floor is lowered or
-removed or an exemption is added. It fails closed when the ref does not resolve.
+by `make floors`, so by `make cover`, `make ci` and, through `make floors`,
+`make ci-base`) is the cheap half of that comparison: it checks
+`coverage-floors.json` against the copy on `refs/remotes/origin/main` itself,
+with no coverage run, and fails when a floor is lowered or removed or an
+exemption is added. `FLOORS_BASE` overrides the ref; so does `BASE`, which
+`make ci-base BASE=<commit>` passes. It fails closed when the ref does not
+resolve or git cannot read the base. When `origin/main` has moved past your
+commit and raised a floor, it fails and says so; merge main in and re-run.
 
 Perf runs each command scenario once untimed first (the hosted `Sample`
 scenarios time their own calls), and a scenario that misses its budget is
