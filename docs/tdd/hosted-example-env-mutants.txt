@@ -1,0 +1,20 @@
+# fu-yhh-25 (ruling ev-1868): mutation checks of the YH_DUET_REPLY_PUSH allowance in
+# scripts/hosted_placeholders.sh. Each mutant changes the one line below; the baseline passes.
+# E3 (a partial YH_BARK_ set accepted) does not exist: no deploy-check rule was added; the static
+# check is the example-no-bark case in hosted_placeholders_test.sh.
+#
+# E1: the allowance accepts any value for YH_DUET_REPLY_PUSH
+#   -    if (key == "YH_DUET_REPLY_PUSH" && (v == "on" || v == "off")) ok = 1
+#   +    if (key == "YH_DUET_REPLY_PUSH") ok = 1
+FAIL value-reply-push: want exit 1, got 0
+FAIL value-reply-push-rule: want exit 1, got 0
+hosted_placeholders_test: 2 failure(s)
+exit=1
+#
+# E2: the allowance applies to every YH_* key
+#   -    if (key == "YH_DUET_REPLY_PUSH" && (v == "on" || v == "off")) ok = 1
+#   +    if (v == "on" || v == "off") ok = 1
+FAIL value-other-off: want exit 1, got 0
+FAIL value-other-on: want exit 1, got 0
+hosted_placeholders_test: 2 failure(s)
+exit=1
