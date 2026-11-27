@@ -15,7 +15,9 @@ kill_timeout = 15
   YH_PUBLIC_URL = 'https://<mcp-host>'
   YH_OWNER_GITHUB_ID = '<owner-github-id>'
   YH_GITHUB_CLIENT_ID = '<github-client-id>'
-  YH_BARK_URL = 'https://<bark-host>'
+  # Bark push needs all four YH_BARK_* together: YH_BARK_URL here (as 'https://<bark-host>') and
+  # YH_BARK_USER, YH_BARK_PASSWORD and YH_BARK_DEVICE_KEY as Fly secrets. serve refuses a partial
+  # set; leave them all out to run without push.
   YH_WEBAUTHN_RP_ID = '<approve-host>'
   YH_APPROVE_ORIGIN = 'https://<approve-host>'
   # The MCP listener is loopback only: the tunnel connector in the same machine reaches it.
