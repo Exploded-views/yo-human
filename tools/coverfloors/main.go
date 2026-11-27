@@ -17,11 +17,11 @@ type options struct {
 	update, riseOnly                      bool
 }
 
-// valid says whether the flags make a run: --rise-only needs a base and no update, and takes no
-// profile; the full check needs both a profile and a package list.
+// valid says whether the flags make a run: --rise-only needs a base and takes no update, profile or
+// package list; the full check needs both a profile and a package list.
 func (o options) valid() bool {
 	if o.riseOnly {
-		return o.baseFloors != "" && !o.update
+		return o.baseFloors != "" && !o.update && o.profile == "" && o.packages == ""
 	}
 	return o.profile != "" && o.packages != ""
 }

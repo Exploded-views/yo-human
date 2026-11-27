@@ -94,8 +94,10 @@ cover-profile:
 	go list ./... > .cache/pkgs.txt
 	go test -race -coverprofile=.cache/cover.out ./...
 
-# Floors only rise: coverage-floors.json against the copy on origin/main (FLOORS_BASE), before any
-# coverage run (scripts/floors_rise.sh). Fails closed when the ref does not resolve.
+# Floors only rise: coverage-floors.json against the copy on origin/main (FLOORS_BASE, else BASE,
+# else refs/remotes/origin/main), before any coverage run (scripts/floors_rise.sh). Fails closed
+# when the ref does not resolve. make floors runs it, so ci and ci-base (through ci-base.sh) do not
+# list it again.
 floors-rise:
 	sh scripts/floors_rise.sh
 
@@ -165,12 +167,12 @@ hosted-deploy-check:
 	sh scripts/hosted_placeholders_test.sh
 	sh scripts/hosted_deploy_check_test.sh
 
-ci: hooks-check hooks-test workflows lint lint-rules-test release-net-check test e2e smoke nohooks nodeps floors-rise floors perf secrets secrets-test scripts-test hosted-deploy-check
+ci: hooks-check hooks-test workflows lint lint-rules-test release-net-check test e2e smoke nohooks nodeps floors perf secrets secrets-test scripts-test hosted-deploy-check
 
 # ci plus what CI does with a base: floors and budgets compared with the merge base of HEAD and
 # BASE (default origin/main), and govulncheck, advisory as in CI (its failure is reported and
 # ignored). Gaps CI has that this cannot reproduce are listed in CONTRIBUTING.md.
 BASE ?= origin/main
-ci-base: hooks-check hooks-test workflows lint lint-rules-test release-net-check test e2e smoke nohooks nodeps floors-rise secrets secrets-test scripts-test hosted-deploy-check
+ci-base: hooks-check hooks-test workflows lint lint-rules-test release-net-check test e2e smoke nohooks nodeps secrets secrets-test scripts-test hosted-deploy-check
 	BASE=$(BASE) sh scripts/ci-base.sh
 	-$(MAKE) vuln
