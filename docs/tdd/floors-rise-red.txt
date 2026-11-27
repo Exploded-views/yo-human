@@ -34,3 +34,21 @@ $ go test -count=1 ./tools/coverfloors
     rise_test.go:77: exemption: exit 2 ... want exit 1 containing "example.com/a: exemption added"
 FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.175s
 exit=1
+
+# SECOND RED record: the final scripts/floors_rise_test.sh run against a stub scripts/floors_rise.sh
+# (set -eu; exit 0) at c174604, because the first record's shell block was only the test's missing-file
+# guard and never ran a case. Output below is raw and unedited. The Go block of the first record above
+# was trimmed by hand (its rise_test.go:77 line is not the t.Errorf output).
+$ sh scripts/floors_rise_test.sh
+FAIL lowered: exit 0, want 1
+FAIL removed: exit 0, want 1
+FAIL exempt: exit 0, want 1
+FAIL raised: no line containing 'floors-rise: base '
+FAIL noref: exit 0, want 2
+FAIL nofile: no line containing 'skipped, no coverage-floors.json at base'
+floors_rise_test: 6 case(s) failed
+exit=1
+
+$ go test -count=1 ./tools/coverfloors
+ok  	github.com/Exploded-views/yo-human/tools/coverfloors	0.159s
+exit=0
