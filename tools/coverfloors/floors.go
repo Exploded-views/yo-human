@@ -195,6 +195,9 @@ func CheckExemptions(exempt, base map[string]string) []Violation {
 	return vs
 }
 
+// CheckRise is a stub so the RED tests compile; the fix replaces it.
+func CheckRise(cur, base FloorsFile) []Violation { return nil }
+
 // Update returns floors for pkgs: current coverage rounded down, but never
 // below an existing floor. Packages outside pkgs keep their old floor.
 func Update(cov map[string]float64, pkgs []string, old map[string]Floor) map[string]Floor {
