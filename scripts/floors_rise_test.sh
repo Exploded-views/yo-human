@@ -136,11 +136,31 @@ git -C "$t/stale" commit -q -am lower
 git -C "$t/stale" branch origin/main
 echo '{"example.com/a":{"statements":75.0}}' >"$t/stale/head.json"
 printf 'probe-base:\n\t@echo $(BASE)\n' >"$t/probe.mk"
-mkbase=$(cd "$root" && env -u BASE make -s -f Makefile -f "$t/probe.mk" probe-base)
+probe_base() {
+  (cd "$root" && env -u BASE make -s -f Makefile -f "$t/probe.mk" probe-base)
+}
+mkbase=$(probe_base)
 if [ -z "$mkbase" ]; then
   echo "FAIL stale: cannot read the Makefile's default BASE"; fails=$((fails + 1))
 else
   want stale 1 "example.com/a: floor lowered 80.0" - "BASE=$mkbase"
+fi
+# A caller's make command-line variables (make scripts-test BASE=HEAD reaches here as MAKEFLAGS) must
+# not change what the probe reads: the Makefile's default is wanted.
+got_mf=$(MAKEFLAGS=' -- BASE=HEAD' MAKELEVEL=1 probe_base)
+if [ "$got_mf" = "refs/remotes/origin/main" ]; then
+  echo "ok   stalemf"
+else
+  echo "FAIL stalemf: the probe read '$got_mf' under MAKEFLAGS=' -- BASE=HEAD', want refs/remotes/origin/main"
+  fails=$((fails + 1))
+fi
+# The ci-base recipe passes the Makefile's own BASE on to scripts/ci-base.sh, not a literal ref.
+cibase_line=$(cd "$root" && env -u BASE -u MAKEFLAGS -u MFLAGS -u MAKEOVERRIDES -u MAKELEVEL make -n ci-base 2>&1 | grep -F "sh scripts/ci-base.sh")
+if [ "$cibase_line" = "BASE=refs/remotes/origin/main sh scripts/ci-base.sh" ]; then
+  echo "ok   cibaserecipe"
+else
+  echo "FAIL cibaserecipe: the ci-base recipe line is '$cibase_line', want BASE=refs/remotes/origin/main sh scripts/ci-base.sh"
+  fails=$((fails + 1))
 fi
 mkdir -p "$t/bin" && printf '#!/bin/sh\nexit 0\n' >"$t/bin/make" && chmod +x "$t/bin/make"
 cibase() {
@@ -152,7 +172,8 @@ cibase() {
     echo "ok   $1"
   fi
 }
-cibase stalecibase "(refs/remotes/origin/main)"
+remote_sha=$(git -C "$t/stale" rev-parse refs/remotes/origin/main)
+cibase stalecibase "base=$remote_sha (refs/remotes/origin/main)"
 cibase stalecihead "(HEAD)" BASE=HEAD
 
 # A git error reading the base is not "no floors file": a base whose tree object is gone fails closed.
