@@ -17,6 +17,7 @@ Status: the M0 scaffold and M1 (v1 notify) exist: `notify`, `resolve`, `flush`, 
 - `make release-net-check`: per release target, `go list -deps ./cmd/yo-human` with the release settings imports no network package outside the channel implementations
 - `RELEASE_TARGETS`: the release GOOS/GOARCH list every release-side gate reads
 - `make floors`: coverage per package against `coverage-floors.json` (floors only rise)
+- `make floors-rise`: `coverage-floors.json` against the copy on `refs/remotes/origin/main` (`FLOORS_BASE`, else `BASE`), no coverage run; fails on a lowered or removed floor or an added exemption
 - `make perf`: p95 of each scenario against `perf-budgets.json`
 - `make secrets` / `make secrets-test`: gitleaks over full history / its tests
 - `make vuln`: govulncheck (advisory per PR, blocking at release)
@@ -25,7 +26,7 @@ Status: the M0 scaffold and M1 (v1 notify) exist: `notify`, `resolve`, `flush`, 
 - `make tools`: install the pinned tools; `make hooks`: install the lefthook pre-commit hook
 - `make hosted-image`: build the example image (`deploy/example/Dockerfile`); build only, it never pushes. `make hosted-image-test`: builds the image, runs the entrypoint's kill and secret tests in the pinned busybox image, with fake cloudflared, litestream and server binaries, then a smoke run of the built image: exit 78 without a token, uid 65532 (needs Docker; local only, not in `make ci`). `make hosted-deploy-check`: `deploy/example/` holds only placeholders and meets the image and `fly.toml` rules, plus those checks' tests (in `make ci` and CI)
 - `make smoke`: build, then run `dist/yo-human version` and `dist/yo-human-hosted version`
-- `make ci`: everything CI runs, in CI's order, without a base
+- `make ci`: everything CI runs, in CI's order, without a merge base; it needs `refs/remotes/origin/main` (or `BASE`/`FLOORS_BASE`) for `make floors-rise` and fails closed without it
 - `make ci-base`: `make ci` with floors and budgets compared to the merge base with `BASE` (default `origin/main`), plus advisory `make vuln`; gaps in CONTRIBUTING.md
 
 ## Read first

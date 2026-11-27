@@ -6,7 +6,7 @@ VERSION := $(shell git describe --tags --always --dirty | sed 's/^v//')
 COMMIT  := $(shell git rev-parse --short=12 HEAD)
 LDFLAGS := -s -w -X $(MODULE)/internal/version.Version=$(VERSION) -X $(MODULE)/internal/version.Commit=$(COMMIT)
 
-.PHONY: build smoke test e2e nohooks nodeps lint lint-rules-test release-net-check tools hooks hooks-check hooks-test workflows ci ci-base cover cover-profile floors perf secrets secrets-test scripts-test vuln release-check hosted-image hosted-image-test hosted-deploy-check
+.PHONY: build smoke test e2e nohooks nodeps lint lint-rules-test release-net-check tools hooks hooks-check hooks-test workflows ci ci-base cover cover-profile floors floors-rise perf secrets secrets-test scripts-test vuln release-check hosted-image hosted-image-test hosted-deploy-check
 
 # The release's settings: CGO_ENABLED=0; no GOFLAGS, GOEXPERIMENT, GOAMD64, GOARM64 or go env
 # file from the developer's setup; no go.work.
@@ -94,7 +94,14 @@ cover-profile:
 	go list ./... > .cache/pkgs.txt
 	go test -race -coverprofile=.cache/cover.out ./...
 
-floors: cover-profile
+# Floors only rise: coverage-floors.json against the copy on origin/main (FLOORS_BASE, else BASE,
+# else refs/remotes/origin/main), before any coverage run (scripts/floors_rise.sh). Fails closed
+# when the ref does not resolve. make floors runs it, so ci and ci-base (through ci-base.sh) do not
+# list it again.
+floors-rise:
+	sh scripts/floors_rise.sh
+
+floors: floors-rise cover-profile
 	go run ./tools/coverfloors --profile .cache/cover.out --packages .cache/pkgs.txt $(FLOORS_ARGS)
 
 perf: build
@@ -113,6 +120,7 @@ scripts-test:
 	sh scripts/nodeps_test.sh
 	sh scripts/release_build_test.sh
 	sh scripts/lint_touched_test.sh
+	sh scripts/floors_rise_test.sh
 
 vuln:
 	govulncheck ./...
