@@ -157,3 +157,68 @@ scripts/floors_rise_test.sh: line 149: 20698 Terminated: 15          ( cd "$t/si
 FAIL sigterm: the temp dir is left behind
 floors_rise_test: 8 case(s) failed
 exit=1
+
+# fu-yhh-26 (ruling ev-1863): floors-rise gaps, RED at 06b5524. Raw output. The new cases are order,
+# orderrev (FLOORS_BASE wins over BASE) and nohint (no "has moved past" hint when the base is an
+# ancestor of HEAD): they pass at once, so they are characterization tests, and the mutants M6 and M7
+# (floors-rise-mutants.txt) show they bite. stale (the Makefile's default BASE, read through a probe
+# makefile, handed to floors_rise.sh) and stalecibase (scripts/ci-base.sh with BASE unset and a stub
+# make) fail: both default to origin/main, which a local branch of that name shadows.
+$ sh scripts/floors_rise_test.sh
+ok   lowered
+ok   removed
+ok   exempt
+ok   raised
+ok   noref
+ok   nofile
+ok   baseonly
+ok   shadow
+ok   ahead
+ok   nohint
+ok   nohint: no hint for an ancestor base
+ok   order
+ok   orderrev
+FAIL stale: exit 0, want 1
+    floors-rise: base ff01566f7bf743fdfc368b62476bc0ac2b084dd7 (origin/main)
+FAIL stalecibase: exit 0, want 0 and a line containing '(refs/remotes/origin/main)'
+    warning: refname 'origin/main' is ambiguous.
+    ci-base: base=ff01566f7bf743fdfc368b62476bc0ac2b084dd7 (origin/main) floors: compared; budgets: skipped, no file at base
+ok   stalecihead
+ok   gitfail
+ok   treeref
+ok   badjson
+ok   Makefile: ci does not list floors-rise
+ok   Makefile: ci-base does not list floors-rise
+ok   sigterm
+floors_rise_test: 2 case(s) failed
+exit=1
+
+# fu-yhh-26 review fixes (ruling ev-1863, review of 0ba2b8e): the stale probe under a caller MAKEFLAGS.
+# stalemf FAILS (the probe reads the caller BASE). cibaserecipe and the stalecibase sha check pass
+# at once (characterization; mutant M9 follows). Raw output:
+ok   lowered
+ok   removed
+ok   exempt
+ok   raised
+ok   noref
+ok   nofile
+ok   baseonly
+ok   shadow
+ok   ahead
+ok   nohint
+ok   nohint: no hint for an ancestor base
+ok   order
+ok   orderrev
+ok   stale
+FAIL stalemf: the probe read 'HEAD' under MAKEFLAGS=' -- BASE=HEAD', want refs/remotes/origin/main
+ok   cibaserecipe
+ok   stalecibase
+ok   stalecihead
+ok   gitfail
+ok   treeref
+ok   badjson
+ok   Makefile: ci does not list floors-rise
+ok   Makefile: ci-base does not list floors-rise
+ok   sigterm
+floors_rise_test: 1 case(s) failed
+exit=1

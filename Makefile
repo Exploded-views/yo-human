@@ -170,9 +170,10 @@ hosted-deploy-check:
 ci: hooks-check hooks-test workflows lint lint-rules-test release-net-check test e2e smoke nohooks nodeps floors perf secrets secrets-test scripts-test hosted-deploy-check
 
 # ci plus what CI does with a base: floors and budgets compared with the merge base of HEAD and
-# BASE (default origin/main), and govulncheck, advisory as in CI (its failure is reported and
-# ignored). Gaps CI has that this cannot reproduce are listed in CONTRIBUTING.md.
-BASE ?= origin/main
+# BASE (default refs/remotes/origin/main: a local branch named origin/main would shadow the short
+# name), and govulncheck, advisory as in CI (its failure is reported and ignored). Gaps CI has
+# that this cannot reproduce are listed in CONTRIBUTING.md.
+BASE ?= refs/remotes/origin/main
 ci-base: hooks-check hooks-test workflows lint lint-rules-test release-net-check test e2e smoke nohooks nodeps secrets secrets-test scripts-test hosted-deploy-check
 	BASE=$(BASE) sh scripts/ci-base.sh
 	-$(MAKE) vuln

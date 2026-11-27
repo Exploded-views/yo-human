@@ -27,7 +27,8 @@ The hooks (lefthook, see `lefthook.yml`):
 
 Run `make ci-base` before every push. It runs `make ci` (every gate, in CI's
 order) plus what CI does with a base: coverage floors and perf budgets compared
-with the merge base of HEAD and `BASE` (default `origin/main`; pass
+with the merge base of HEAD and `BASE` (default `refs/remotes/origin/main`, which a local branch named
+`origin/main` cannot shadow; pass
 `BASE=<commit>` in a clone without it), and `make vuln`, advisory as in CI.
 When the base commit has no floors or budgets file, that comparison is skipped,
 as in CI. `make ci` needs no merge base, but it does need the remote-tracking
