@@ -1,12 +1,12 @@
 #!/bin/sh
 # ci-base.sh: the ratchet half of CI that `make ci` cannot do without a base. It finds the merge
-# base of HEAD and BASE (default origin/main), the way the coverage and perf jobs do on a pull
+# base of HEAD and BASE (default refs/remotes/origin/main), the way the coverage and perf jobs do on a pull
 # request, and runs `make floors` with --base-floors and `make perf` with --base-budgets taken
 # from that commit. When the base commit has no floors or budgets file, that comparison is
 # skipped, as in CI, and the script says so.
 # Exit: 0 clean, non-zero when a gate fails or the base cannot be resolved (fails closed).
 set -eu
-base_ref=${BASE:-origin/main}
+base_ref=${BASE:-refs/remotes/origin/main}
 if ! base=$(git merge-base HEAD "$base_ref"); then
   echo "ci-base: cannot find the merge base of HEAD and $base_ref; fetch it or pass BASE=<commit>" >&2
   exit 2
