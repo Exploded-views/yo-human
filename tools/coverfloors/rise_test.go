@@ -79,6 +79,18 @@ func TestRunRiseOnlyExitCodes(t *testing.T) {
 	}
 }
 
+func TestRunRiseOnlyInvalidJSONExits2(t *testing.T) {
+	for name, a := range map[string][]string{
+		"base": riseArgs(t, `{}`, `{"example.com/a":`),
+		"head": riseArgs(t, `not json`, `{}`),
+	} {
+		var out, errb bytes.Buffer
+		if code := run(a, &out, &errb); code != 2 {
+			t.Errorf("invalid %s file: exit %d, want 2 (out %q err %q)", name, code, out.String(), errb.String())
+		}
+	}
+}
+
 func TestRunRiseOnlyUsageErrors(t *testing.T) {
 	args := riseArgs(t, `{}`, `{}`)
 	for name, a := range map[string][]string{
@@ -86,6 +98,8 @@ func TestRunRiseOnlyUsageErrors(t *testing.T) {
 		"with update":    append(append([]string{}, args...), "--update"),
 		"base missing":   {"--rise-only", "--base-floors", "/nonexistent/base.json", "--floors", args[4]},
 		"floors missing": {"--rise-only", "--base-floors", args[2], "--floors", "/nonexistent/floors.json"},
+		"with profile":   append(append([]string{}, args...), "--profile", "cover.out"),
+		"with packages":  append(append([]string{}, args...), "--packages", "pkgs.txt"),
 	} {
 		var out, errb bytes.Buffer
 		if code := run(a, &out, &errb); code != 2 {

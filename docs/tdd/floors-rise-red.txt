@@ -52,3 +52,108 @@ exit=1
 $ go test -count=1 ./tools/coverfloors
 ok  	github.com/Exploded-views/yo-human/tools/coverfloors	0.159s
 exit=0
+
+# THIRD RED record: review fixes (findings 3, 4, 6, 7, 8, 9, 11) at the RED commit. Raw output; the Go
+# invalid-JSON and treeref cases pass at once: they are characterization tests for coverage gaps.
+$ sh scripts/floors_rise_test.sh
+ok   lowered
+ok   removed
+ok   exempt
+ok   raised
+ok   noref
+ok   nofile
+FAIL baseonly: exit 2, want 1
+    floors-rise: cannot resolve origin/main; fetch it or pass FLOORS_BASE=<commit>
+FAIL shadow: exit 0, want 1
+    floors-rise: base 948f6a59423d38aa1245bf3f15db8574fd93f366 (origin/main)
+FAIL ahead: no line containing 'floors-rise: main-ahead has moved past this commit; merge main in and re-run'
+    floors-rise: base 19099ed68aba6ae9e3cf1a8bf4018eb3e5c68660 (main-ahead)
+    example.com/a: floor lowered 85.0 → 80.0
+FAIL gitfail: exit 0, want 2
+    floors-rise: base b5b202275b29a7ae52c35b151baa57af0a467ac1 (HEAD)
+    floors-rise: skipped, no coverage-floors.json at base
+ok   treeref
+FAIL badjson: exit 1, want 2
+    floors-rise: base b5b202275b29a7ae52c35b151baa57af0a467ac1 (HEAD)
+    go: cannot find main module, but found .git/config in /var/folders/vg/mt07nv191sjd7w8t12qhv01m0000gn/T/tmp.R3avX7sMHn/badjson
+    	to create a module there, run:
+    	go mod init
+FAIL Makefile: ci lists floors-rise, which make floors already runs
+FAIL Makefile: ci-base lists floors-rise, which make floors already runs
+scripts/floors_rise_test.sh: line 142: kill: (19412) - No such process
+ok   sigterm
+floors_rise_test: 7 case(s) failed
+exit=1
+
+$ go test -count=1 ./tools/coverfloors
+--- FAIL: TestRunRiseOnlyUsageErrors (0.00s)
+    rise_test.go:106: with profile: exit 0, want 2 (out "" err "")
+    rise_test.go:106: with packages: exit 0, want 2 (out "" err "")
+FAIL
+FAIL	github.com/Exploded-views/yo-human/tools/coverfloors	0.179s
+FAIL
+exit=1
+
+# The sigterm case above was a faulty test (macOS mktemp ignores TMPDIR, so it never saw the temp dir).
+# Fixed in the test only; the run below is the committed RED test. Raw output.
+$ sh scripts/floors_rise_test.sh
+ok   lowered
+ok   removed
+ok   exempt
+ok   raised
+ok   noref
+ok   nofile
+FAIL baseonly: exit 2, want 1
+    floors-rise: cannot resolve origin/main; fetch it or pass FLOORS_BASE=<commit>
+FAIL shadow: exit 0, want 1
+    floors-rise: base e05db3e0d01d743fc491cf46bdecd4b673c815a3 (origin/main)
+FAIL ahead: no line containing 'floors-rise: main-ahead has moved past this commit; merge main in and re-run'
+    floors-rise: base f5701519860cb88a98eee4d8b2277cb60ba7f8c4 (main-ahead)
+    example.com/a: floor lowered 85.0 → 80.0
+FAIL gitfail: exit 0, want 2
+    floors-rise: base 5381bc149a54ad460631a7c27cb3cb634555568b (HEAD)
+    floors-rise: skipped, no coverage-floors.json at base
+ok   treeref
+FAIL badjson: exit 1, want 2
+    floors-rise: base 5381bc149a54ad460631a7c27cb3cb634555568b (HEAD)
+    go: cannot find main module, but found .git/config in /var/folders/vg/mt07nv191sjd7w8t12qhv01m0000gn/T/tmp.yHRvTozp8R/badjson
+    	to create a module there, run:
+    	go mod init
+FAIL Makefile: ci lists floors-rise, which make floors already runs
+FAIL Makefile: ci-base lists floors-rise, which make floors already runs
+scripts/floors_rise_test.sh: line 145: 20310 Terminated: 15          ( cd "$t/sig" && exec env FLOORS_BASE=HEAD FLOORS_FILE="$t/sig/head.json" COVERFLOORS="sh $t/slow.sh" sh "$root/scripts/floors_rise.sh" ) > "$t/sig.out" 2>&1
+ok   sigterm
+floors_rise_test: 7 case(s) failed
+exit=1
+
+# The sigterm case ran under bash (/bin/sh), which runs the EXIT trap on a signal, so it passed vacuously.
+# Now it runs under dash when installed, and says so when it is not. This run is the committed RED test.
+$ sh scripts/floors_rise_test.sh
+ok   lowered
+ok   removed
+ok   exempt
+ok   raised
+ok   noref
+ok   nofile
+FAIL baseonly: exit 2, want 1
+    floors-rise: cannot resolve origin/main; fetch it or pass FLOORS_BASE=<commit>
+FAIL shadow: exit 0, want 1
+    floors-rise: base ec1ee1fc23f9911d5c5c2f65f23519bea4536372 (origin/main)
+FAIL ahead: no line containing 'floors-rise: main-ahead has moved past this commit; merge main in and re-run'
+    floors-rise: base 06285d86c543eb684862729dec08f99d16819d25 (main-ahead)
+    example.com/a: floor lowered 85.0 → 80.0
+FAIL gitfail: exit 0, want 2
+    floors-rise: base 23cc73179a7bd4f189a3d184aa26bfc1d9a355f8 (HEAD)
+    floors-rise: skipped, no coverage-floors.json at base
+ok   treeref
+FAIL badjson: exit 1, want 2
+    floors-rise: base 23cc73179a7bd4f189a3d184aa26bfc1d9a355f8 (HEAD)
+    go: cannot find main module, but found .git/config in /var/folders/vg/mt07nv191sjd7w8t12qhv01m0000gn/T/tmp.TGPRIhenxD/badjson
+    	to create a module there, run:
+    	go mod init
+FAIL Makefile: ci lists floors-rise, which make floors already runs
+FAIL Makefile: ci-base lists floors-rise, which make floors already runs
+scripts/floors_rise_test.sh: line 149: 20698 Terminated: 15          ( cd "$t/sig" && exec env FLOORS_BASE=HEAD FLOORS_FILE="$t/sig/head.json" COVERFLOORS="sh $t/slow.sh" "$dash" "$root/scripts/floors_rise.sh" ) > "$t/sig.out" 2>&1
+FAIL sigterm: the temp dir is left behind
+floors_rise_test: 8 case(s) failed
+exit=1
